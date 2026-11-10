@@ -1,6 +1,7 @@
 -- Independent HanJin adaptation rules. Metadata and execution state are per card/use,
 -- never inferred from a view-as card's physical subcards or shared across uses.
 local A = {}
+local Config = require "packages.hanjin.pkg.hanjin_mode.rules.config"
 local states = setmetatable({}, { __mode = "k" })
 local conditions = { "fujia", "canqu", "zhuzhan", "kongchao", "gujun" }
 local effects = {}
@@ -120,7 +121,12 @@ end
 function A.prepare(room, use)
   if states[use] then return states[use].result end
   local entries = A.getEntries(use.card, use)
-  local state = { entries = entries, snapshot = A.snapshot(room, use), result = {
+  local timing = Config.adaptation_condition_timing
+  assert(timing == "sequential" or timing == "snapshot", "Invalid adaptation condition timing")
+  local state = { entries = entries, timing = timing,
+    snapshot = timing == "snapshot" and A.snapshot(room, use) or nil,
+    tokens = table.clone((use.extra_data or {}).hanjin_adaptation_ignores or {}), result = {
+    condition_timing = timing,
     is_adaptation_card = #entries > 0, triggered = false, triggered_count = 0, entries = {}, effects = {},
   } }
   states[use] = state
@@ -131,34 +137,55 @@ function A.prepare(room, use)
     seen[e.id] = true
     assert(table.contains(conditions, e.condition), "Unknown adaptation condition: " .. tostring(e.condition))
     assert(effects[e.effect], "Unimplemented adaptation effect: " .. tostring(e.effect))
-    e.satisfied = state.snapshot[e.condition] == true
-  end
-  for _, token in ipairs((use.extra_data or {}).hanjin_adaptation_ignores or {}) do
-    local available = table.filter(entries, function(e) return not e.satisfied end)
-    local selected
-    if token.entry_id then
-      selected = table.find(available, function(e) return e.id == token.entry_id end)
-    elseif #available == 1 then
-      selected = available[1]
-    elseif #available > 1 then
-      local choices = table.map(available, function(e, i)
-        return "hanjin_ignore_option:::" .. i .. ":hanjin_condition_" .. e.condition
-      end)
-      local choice = room:askToChoice(use.from, { choices = choices, cancelable = false,
-        skill_name = "#hanjin_adaptation_rule", prompt = "#hanjin_adaptation_ignore" })
-      selected = available[table.indexOf(choices, choice)] or available[1]
-    end
-    if selected then selected.satisfied = true; selected.ignored_by = token.source end
   end
   return state.result
+end
+
+local function tryIgnore(room, use, state, entry, natural)
+  for _, token in ipairs(state.tokens) do
+    if not token.spent then
+      local chosenId = token.entry_id or token.chosen_id
+      if not chosenId then
+        local available = table.filter(state.entries, function(e)
+          return (e == entry or not e.settled) and natural[e.condition] ~= true
+            and not table.find(state.tokens, function(other)
+              return other ~= token and not other.spent and (other.entry_id or other.chosen_id) == e.id
+            end)
+        end)
+        local selected
+        if #available == 1 then
+          selected = available[1]
+        elseif #available > 1 then
+          local choices = table.map(available, function(e, i)
+            return "hanjin_ignore_option:::" .. i .. ":hanjin_condition_" .. e.condition
+          end)
+          local choice = room:askToChoice(use.from, { choices = choices, cancelable = false,
+            skill_name = "#hanjin_adaptation_rule", prompt = "#hanjin_adaptation_ignore" })
+          selected = available[table.indexOf(choices, choice)] or available[1]
+        end
+        if selected then token.chosen_id = selected.id; chosenId = selected.id end
+      end
+      if chosenId == entry.id then
+        token.spent = true
+        entry.ignored_by = token.source
+        return true
+      end
+    end
+  end
+  return false
 end
 
 function A.resolve(room, use)
   A.prepare(room, use)
   local state = states[use]
+  if state.resolving then return state.result end
+  state.resolving = true
   for _, entry in ipairs(state.entries) do
     if not entry.settled then
       entry.settled = true -- Guard against reentrant event listeners and duplicate event hooks.
+      local natural = state.snapshot or A.snapshot(room, use)
+      entry.satisfied = natural[entry.condition] == true
+      if not entry.satisfied then entry.satisfied = tryIgnore(room, use, state, entry, natural) end
       if entry.condition == "zhuzhan" and not entry.satisfied then
         entry.satisfied, entry.support = A.askForSupport(room, use)
       end
@@ -182,6 +209,7 @@ function A.resolve(room, use)
       end
     end
   end
+  state.resolving = false
   return state.result
 end
 

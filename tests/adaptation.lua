@@ -131,7 +131,7 @@ function Testhanjin_adaptation:testAcceptedTargetChangeTriggersExactlyOnce()
   lu.assertEquals(#data.tos, 0)
 end
 
-function Testhanjin_adaptation:testMultipleConditionsUseTheSameUsageSnapshot()
+function Testhanjin_adaptation:testSequentialConditionsSeeThePreviousDraw()
   local room = FkTest.room
   local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
   FkTest.runInRoom(function()
@@ -139,8 +139,75 @@ function Testhanjin_adaptation:testMultipleConditionsUseTheSameUsageSnapshot()
     A.prepare(room, data); A.resolve(room, data)
   end)
   lu.assertEquals(data.from:getHandcardNum(), 1)
+  lu.assertNil(data.additionalDamage)
+  lu.assertEquals(A.getResult(data).triggered_count, 1)
+  lu.assertEquals(A.getResult(data).condition_timing, "sequential")
+end
+
+function Testhanjin_adaptation:testSnapshotPolicyCanStillBeEnabledForFutureRules()
+  local Config = require "packages.hanjin.pkg.hanjin_mode.rules.config"
+  local room = FkTest.room
+  local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
+  local previous = Config.adaptation_condition_timing
+  Config.adaptation_condition_timing = "snapshot"
+  FkTest.runInRoom(function()
+    room:throwCard(data.from:getCardIds("h"), "test", data.from, data.from)
+    A.prepare(room, data)
+  end)
+  Config.adaptation_condition_timing = previous
+  -- The policy is fixed for this use even if configuration changes before resolution.
+  FkTest.runInRoom(function() A.resolve(room, data) end)
   lu.assertEquals(data.additionalDamage, 1)
   lu.assertEquals(A.getResult(data).triggered_count, 2)
+  lu.assertEquals(A.getResult(data).condition_timing, "snapshot")
+end
+
+function Testhanjin_adaptation:testIgnoreCanCoverAConditionThatOnlyFailsAfterAnEarlierEffect()
+  local room = FkTest.room
+  local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
+  A.grantIgnore(data, "late_failure")
+  FkTest.runInRoom(function()
+    room:throwCard(data.from:getCardIds("h"), "test", data.from, data.from)
+    A.prepare(room, data); A.resolve(room, data)
+  end)
+  lu.assertEquals(data.additionalDamage, 1)
+  lu.assertEquals(A.getResult(data).entries[2].ignored_by, "late_failure")
+end
+
+function Testhanjin_adaptation:testLaterConditionCanBecomeSatisfiedAfterAnEarlierEffect()
+  local room = FkTest.room
+  local data = use({ {condition="canqu",effect="draw"}, {condition="fujia",effect="damage"} })
+  data.from.hp = 1
+  FkTest.runInRoom(function()
+    local id = assert(table.find(room.draw_pile, function(id) return Fk:getCardById(id).type == Card.TypeBasic end))
+    room:obtainCard(room.players[3], id, true, fk.ReasonJustMove, room.players[3], "test")
+    lu.assertFalse(A.snapshot(room, data).fujia)
+    A.prepare(room, data); A.resolve(room, data)
+  end)
+  lu.assertEquals(data.additionalDamage, 1)
+  lu.assertEquals(A.getResult(data).triggered_count, 2)
+end
+
+function Testhanjin_adaptation:testReentrantListenersCannotResolveTheNextEntryTooEarly()
+  local room = FkTest.room
+  local data = use({ {id="first",condition="canqu",effect="damage"}, {id="second",condition="canqu",effect="damage"} })
+  data.from.hp = 1
+  local skel = fk.CreateSkill { name = "#hanjin_test_adaptation_reentrant_observer" }
+  skel:addEffect(A.Triggered, {
+    global = true, can_refresh = function(self, event, target, player, result)
+      return target == player and result.entry.id == "first"
+    end,
+    on_refresh = function(self, event, target, player, result)
+      A.resolve(room, result.use)
+      player.hp = 2
+    end,
+  })
+  FkTest.runInRoom(function()
+    room:addSkill(skel:createSkill())
+    A.prepare(room, data); A.resolve(room, data)
+  end)
+  lu.assertEquals(data.additionalDamage, 1)
+  lu.assertFalse(A.getResult(data).entries[2].satisfied)
 end
 
 local function giveType(room, player, cardType)
