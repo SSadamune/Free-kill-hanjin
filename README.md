@@ -95,9 +95,9 @@ Cursor 的“终端 → 运行任务 → 紫乔汉晋：运行自动化测试”
 python scripts/setup_dependencies.py --references
 ```
 
-正式武将和卡牌包目前为空，尚未实现统领与翼从。模式可见，但内容不足时禁止创建汉晋对局，
-不会自动借原版内容补齐。赤霄剑、临筱玉舆等目前只登记禁选/替换策略，
-未编造装备技能、花色和点数；临筱玉舆的双坐骑副类别需在后续卡牌实装时显式处理。
+正式武将包目前为空，卡牌包仅有独立雷杀♠9/♠10（孤军→无视次数），尚未实现统领与翼从。
+模式可见，但内容不足时禁止创建汉晋对局，不会自动借原版内容补齐。赤霄剑、临筱玉舆等目前只登记
+禁选/替换策略，未编造装备技能、花色和点数；临筱玉舆的双坐骑副类别需在后续卡牌实装时显式处理。
 
 首次安装和日常核验：
 
@@ -116,7 +116,7 @@ python scripts/setup_dependencies.py --check
 - `init.lua`：扩展入口，加载子包。
 - `pkg/hanjin_generals/init.lua`：武将子包；目前无武将，等待设计。
 - `pkg/hanjin_generals/skills/`：每个技能独立一个 Lua 文件。
-- `pkg/hanjin_cards/`：独立卡牌包，目前为空。
+- `pkg/hanjin_cards/`：独立卡牌包，目前含雷杀♠9/♠10；`skills/` 为卡牌技能。
 - `pkg/hanjin_mode/`：汉晋模式和公共规则模块。
 - `rules/faction-ban.md`：供 agent 使用的已确认规则规范。
 - `image/generals/`：武将立绘。

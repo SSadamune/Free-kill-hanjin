@@ -53,15 +53,77 @@ function A.grantIgnore(use, source, entryId)
   table.insert(data.hanjin_adaptation_ignores, { source = source, entry_id = entryId })
 end
 
+-- Read-only condition check. Selection-time code may call this; it must never
+-- draw, discard, ask a question or emit an event.
+function A.conditionSatisfied(room, player, condition)
+  local H = require "packages.hegemony.util"
+  if condition == "fujia" then
+    return table.every(room.alive_players, function(p) return player:getHandcardNum() >= p:getHandcardNum() end)
+  elseif condition == "canqu" then
+    return player.hp == 1
+  elseif condition == "kongchao" then
+    return player:isKongcheng()
+  elseif condition == "gujun" then
+    return player.kingdom ~= "unknown" and H.getSameKingdomPlayersNum(room, player) == 1
+  end
+  return false
+end
+
 function A.snapshot(room, use)
   local from = use.from
-  local H = require "packages.hegemony.util"
-  return {
-    fujia = table.every(room.alive_players, function(p) return from:getHandcardNum() >= p:getHandcardNum() end),
-    canqu = from.hp == 1,
-    kongchao = from:isKongcheng(),
-    gujun = from.kingdom ~= "unknown" and H.getSameKingdomPlayersNum(room, from) == 1,
-  }
+  local result = {}
+  for _, condition in ipairs({ "fujia", "canqu", "kongchao", "gujun" }) do
+    result[condition] = A.conditionSatisfied(room, from, condition)
+  end
+  return result
+end
+
+function A.hasEffectEntry(card, use, effectName)
+  if not card then return false end
+  return table.find(A.getEntries(card, use), function(e) return e.effect == effectName end) ~= nil
+end
+
+-- Side-effect-free bypass query used by the card's card-skill while the player
+-- is still selecting the card and its target. It only answers "may this use
+-- exceed the limit"; it does not lock, spend a token or resolve any effect.
+function A.ignoreTimesCandidate(room, player, card, use)
+  for _, entry in ipairs(A.getEntries(card, use)) do
+    if entry.effect == "ignore_times" and A.conditionSatisfied(room, player, entry.condition) then
+      return true, entry
+    end
+  end
+  return false
+end
+
+-- Called once at PreCardUse, before UseCard:main records the use in history.
+-- The result is fixed for this use: later condition changes cannot undo or
+-- create the exemption. A token can enable this entry only when it explicitly
+-- names the entry and is granted before this point.
+function A.lockIgnoreTimes(room, use)
+  local data = extra(use)
+  data.hanjin_ignore_times_locked = true
+  data.hanjin_adaptation_locked = data.hanjin_adaptation_locked or {}
+  local tokens = data.hanjin_adaptation_ignores or {}
+  for _, entry in ipairs(A.getEntries(use.card, use)) do
+    if entry.effect == "ignore_times" and not data.hanjin_adaptation_locked[entry.id] then
+      local satisfied = A.conditionSatisfied(room, use.from, entry.condition)
+      local ignoredBy
+      if not satisfied then
+        local token = table.find(tokens, function(t)
+          return not t.spent and (t.entry_id or t.chosen_id) == entry.id
+        end)
+        if token then
+          token.spent = true
+          token.chosen_id = entry.id
+          ignoredBy = token.source
+          satisfied = true
+        end
+      end
+      data.hanjin_adaptation_locked[entry.id] = { satisfied = satisfied, ignored_by = ignoredBy }
+      if satisfied then use.extraUse = true end
+    end
+  end
+  return data.hanjin_adaptation_locked
 end
 
 function A.registerEffect(name, spec)
@@ -123,8 +185,13 @@ function A.prepare(room, use)
   local entries = A.getEntries(use.card, use)
   local timing = Config.adaptation_condition_timing
   assert(timing == "sequential" or timing == "snapshot", "Invalid adaptation condition timing")
+  -- Direct rule/API callers may skip PreCardUse. Locking here keeps their
+  -- ignore_times result consistent, although only PreCardUse is early enough
+  -- to keep the use out of the engine's history count.
+  local locked = A.lockIgnoreTimes(room, use)
   local state = { entries = entries, timing = timing,
     snapshot = timing == "snapshot" and A.snapshot(room, use) or nil,
+    locked = locked,
     tokens = table.clone((use.extra_data or {}).hanjin_adaptation_ignores or {}), result = {
     condition_timing = timing,
     is_adaptation_card = #entries > 0, triggered = false, triggered_count = 0, entries = {}, effects = {},
@@ -183,11 +250,21 @@ function A.resolve(room, use)
   for _, entry in ipairs(state.entries) do
     if not entry.settled then
       entry.settled = true -- Guard against reentrant event listeners and duplicate event hooks.
-      local natural = state.snapshot or A.snapshot(room, use)
-      entry.satisfied = natural[entry.condition] == true
-      if not entry.satisfied then entry.satisfied = tryIgnore(room, use, state, entry, natural) end
-      if entry.condition == "zhuzhan" and not entry.satisfied then
-        entry.satisfied, entry.support = A.askForSupport(room, use)
+      local locked = state.locked[entry.id]
+      entry.locked = locked ~= nil
+      if locked and entry.effect == "ignore_times" then
+        -- The usage-count exemption was fixed before the engine counted this
+        -- use. Do not re-detect the condition or let a later token add a
+        -- second exemption after the fact.
+        entry.satisfied = locked.satisfied == true
+        entry.ignored_by = locked.ignored_by
+      else
+        local natural = state.snapshot or A.snapshot(room, use)
+        entry.satisfied = natural[entry.condition] == true
+        if not entry.satisfied then entry.satisfied = tryIgnore(room, use, state, entry, natural) end
+        if entry.condition == "zhuzhan" and not entry.satisfied then
+          entry.satisfied, entry.support = A.askForSupport(room, use)
+        end
       end
       local handler = effects[entry.effect]
       local applied = false
@@ -197,7 +274,8 @@ function A.resolve(room, use)
         applied = not handler.target_change or result == true
       end
       local record = { id = entry.id, condition = entry.condition, effect = entry.effect,
-        satisfied = entry.satisfied == true, triggered = applied, ignored_by = entry.ignored_by, support = entry.support }
+        satisfied = entry.satisfied == true, triggered = applied, ignored_by = entry.ignored_by, support = entry.support,
+        locked = entry.locked == true }
       table.insert(state.result.entries, record)
       if applied then
         state.result.triggered = true
@@ -221,6 +299,9 @@ A.registerEffect("draw", { apply = function(room, use)
   if not use.from.dead then use.from:drawCards(1, "#hanjin_adaptation_rule") end
 end })
 A.registerEffect("damage", { apply = function(room, use) use.additionalDamage = (use.additionalDamage or 0) + 1 end })
+-- The actual exemption is fixed in A.lockIgnoreTimes before the use is counted.
+-- This handler only confirms it when the entry is reached in adaptation order.
+A.registerEffect("ignore_times", { apply = function(room, use) use.extraUse = true end })
 A.registerEffect("disresponsive", { apply = function(room, use)
   use.disresponsiveList = use.disresponsiveList or {}
   table.insertTableIfNeed(use.disresponsiveList, room.alive_players)

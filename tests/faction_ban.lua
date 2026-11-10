@@ -19,9 +19,15 @@ function Testhanjin_faction_ban:testFourKingdomsDoNotBan()
   lu.assertEquals(Ban.plan(four, { winners = { "wei" }, banned = {} }, first).banned, {})
 end
 
-function Testhanjin_faction_ban:testFormalContentDoesNotBorrowUpstreamCardsOrGenerals()
+function Testhanjin_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUpstream()
   lu.assertEquals(#Fk.packages.hanjin_generals.generals, 0)
-  lu.assertEquals(#Fk.packages.hanjin_cards.cards, 0)
+  -- Formal HanJin content currently has exactly the two independent Thunder Slash cards.
+  lu.assertEquals(#Fk.packages.hanjin_cards.cards, 2)
+  for _, card in ipairs(Fk.packages.hanjin_cards.cards) do
+    lu.assertEquals(card.package, Fk.packages.hanjin_cards)
+    lu.assertEquals(card.package.extensionName, "hanjin")
+    lu.assertEquals(card.name, "hanjin__thunder__slash")
+  end
   lu.assertFalse(table.contains(Fk.game_modes.hanjin_heg_mode.whitelist, "hegemony_standard"))
   lu.assertFalse(table.contains(Fk.game_modes.hanjin_heg_mode.whitelist, "hegemony_cards"))
 end

@@ -108,9 +108,9 @@
 | 选将请求、格式检查 | `pkg/hanjin_mode/rules/selection.lua` |
 | 卡牌归属登记、牌堆策略 | `pkg/hanjin_mode/rules/cards.lua` |
 | 同房间跨局数据 | `pkg/hanjin_mode/rules/session.lua`、`skills/session_history.lua` |
-| 正式内容包 | `pkg/hanjin_generals`、`pkg/hanjin_cards`，目前为空 |
+| 正式内容包 | `pkg/hanjin_generals`（目前为空）、`pkg/hanjin_cards`（独立雷杀♠9/♠10） |
 
-当前模式注册完成，但正式将池及牌堆尚为空，房间可创建条件会拒绝内容不足的配置，不会自动使用上游内容。
+当前模式注册完成，正式牌包已有独立雷杀♠9/♠10；正式将池仍为空，房间可创建条件会拒绝内容不足的配置，不会自动使用上游内容。
 
 ## 8. 自动化验收
 

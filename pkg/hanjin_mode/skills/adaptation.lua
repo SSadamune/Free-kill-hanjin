@@ -5,6 +5,18 @@ local function eligible(target, player, data)
     and A.isAdaptationCard(data.card, data)
 end
 
+-- Count legality is checked before the use event and the engine counts the
+-- use before AfterCardUseDeclared. Locking ignore_times at PreCardUse is the
+-- only point both after formal confirmation and before addCardUseHistory.
+skill:addEffect(fk.PreCardUse, {
+  global = true, priority = -100,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player.room:getSettings("gameMode") == "hanjin_heg_mode"
+      and A.hasEffectEntry(data.card, data, "ignore_times")
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data) A.lockIgnoreTimes(player.room, data) end,
+})
 skill:addEffect(fk.AfterCardUseDeclared, {
   global = true,
   can_refresh = function(self, event, target, player, data) return eligible(target, player, data) end,
@@ -32,6 +44,7 @@ Fk:loadTranslationTable {
   ["hanjin_adaptation_disresponsive"] = "不可响应", ["hanjin_adaptation_execute_both"] = "执行两项",
   ["hanjin_adaptation_obtain_response_card"] = "获得响应的牌",
   ["hanjin_adaptation_add_target"] = "增加目标", ["hanjin_adaptation_remove_target"] = "减少目标",
+  ["hanjin_adaptation_ignore_times"] = "无视次数",
   ["#hanjin_adaptation_support"] = "助战：你可以弃置一张%arg手牌，助战 %src 的应变牌",
   ["#hanjin_adaptation_ignore"] = "选择本次无视的一项应变条件",
   ["hanjin_ignore_option"] = "第%arg项（%arg2）",

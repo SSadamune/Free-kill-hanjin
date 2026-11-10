@@ -1,6 +1,6 @@
 # 紫乔汉晋国战：应变规范
 
-状态：规则框架与自动化测试已实现；铜雀、牵弘、刘渊、贾充及正式应变牌尚未实装，不得声称已完成这些武将或装备。
+状态：规则框架与自动化测试已实现；正式牌包已独立实装雷杀♠9/♠10（孤军→无视次数）。铜雀、牵弘、刘渊、贾充及其余正式应变牌尚未实装，不得声称已完成这些武将或装备。
 
 `MUST` 为必须满足的约束。本规范覆盖汉晋模式 `hanjin_heg_mode`，不改变原版国战或身份局。
 
@@ -112,14 +112,40 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 - `A.Triggered`：每个成功条目的触发事件，数据含 `use` 和本条目的 `entry` 结果。尚未实装的刘渊、贾充等应明确区分检查“是应变牌”还是检查“本次触发应变”。
 - `A.registerEffect(name, {apply = function(room, use, entry) ... end})`：注册明确的新效果。若是增减目标，须声明 `target_change = true` 并以布尔值返回是否实际改变目标。
 
-内置效果：`draw`、`damage`、`disresponsive`、`add_target`、`remove_target`、`obtain_response_card`、`execute_both`。
+内置效果：`draw`、`damage`、`disresponsive`、`add_target`、`remove_target`、`obtain_response_card`、`execute_both`、`ignore_times`。
 
 其中 `execute_both` 仅提供语义标记与次数：未来【逐近弃远】等独立牌的实现 MUST 主动读取并执行两个不同选项；不得把它实现为对原效果再结算一次，也不表示本轮已创建该卡牌。
 
-## 8. 验收
+## 8. ADAPT-006：单张杀的“无视次数”与状态型无次数限制
+
+### 8.1 语义区分
+
+1. `ignore_times` 表示“本次使用不计入次数”，MUST 同时满足“超过上限仍可选择/使用”和“本次不进入 `addCardUseHistory`”。
+2. 咆哮、连弩等状态型效果属于 `TargetModSkill.bypass_times`：只让 `withinTimesLimit` 返回真，绕过上限；本次使用照常计数。二者 MUST 分开实现，不能把状态型效果改成 `extraUse`。
+3. 正式牌包独立创建 `hanjin__thunder__slash`（雷杀），恰好为♠9、♠10，`trueName == "slash"`、雷电伤害，并自带条目 `{ condition = "gujun", effect = "ignore_times" }`。该牌使用独立的 `hanjin__thunder_slash_skill`，不复制上游 `slash_skill` 或 `thunder__slash_skill`。
+
+### 8.2 时点：选牌/选目标 → PreCardUse → 记数 → 应变常规结算
+
+自由场引擎的顺序是：次数合法性检查早于用牌事件；`ltk/server/events/usecard.lua` 在 `PreCardUse`（约225行）之后、`AfterCardUseDeclared`/`AfterCardTargetDeclared`（约270行）之前，于约261行检查 `use.extraUse` 并调用 `addCardUseHistory`。因此：
+
+1. 选牌与选目标阶段 MUST 只做无副作用判定：读取势力/体力/手牌/存活人数，判断 `ignore_times` 条目是否自然满足，从而让该牌在次数已满时仍可被选中、且只对合法距离目标生效。此阶段 MUST NOT 加伤害、摸牌、弃牌、询问助战、消耗令牌、设置 `extraUse` 或发出成功事件。
+2. 正式确认（`fk.PreCardUse`，在记数前）MUST 锁定本条条件的结果，并在需要时设置 `use.extraUse = true`。锁定后，本次使用不再因之后的条件/座次/明置变化而改变。
+3. 应变常规结算仍在 `fk.AfterCardTargetDeclared` 按条目声明顺序进行。`ignore_times` 条目使用锁定结果，只在轮到它时发出一次成功事件；不得在选牌、锁定时或重复 `A.resolve` 时重复发事件。
+4. 其他条目仍保留原有 `sequential`/`snapshot` 策略、逐项独立执行、取消增减目标不计触发，以及“一令牌一项”规则。`ignore_times` 的自然条件不消耗令牌；显式指定该条目 ID 的令牌可在 `PreCardUse` 锁定阶段支付并取得本次豁免；未指定条目的令牌不会被提前挪用，也不会在记数后追认豁免。
+
+### 8.3 实现接口
+
+- `A.ignoreTimesCandidate(room, player, card, use?)`：只读查询，供卡的 `cardskill.can_use` 和 `target_filter` 在次数已满时判断能否选择。不会锁条件或发事件。
+- `A.lockIgnoreTimes(room, use)`：幂等；在 `fk.PreCardUse` 调用，记录 `use.extra_data.hanjin_adaptation_locked[entry.id]` 并按结果设置 `use.extraUse`。直接按规则 API 使用而未经过 `PreCardUse` 时，`A.prepare` 会补锁，但此时已晚于引擎记数，不能替代正式用牌路径。
+- `A.conditionSatisfied(room, player, condition)`：五种条件的只读判定，供 `A.snapshot` 和选牌阶段共用；`zhuzhan` 仍需在实际结算时询问，不能提前判定。
+- 卡的 `target_filter` MUST 继续执行攻击距离检查；无视次数只豁免次数，不改变距离、目标合法性或响应规则。
+
+## 9. 验收
 
 运行 `python scripts/test.py`，或单独运行 `python scripts/test.py --file tests/adaptation.lua`。
 
 覆盖虚拟牌与使用级条目识别、五种条件、强制独立结算、默认逐项重检（条件变为不满足及变为满足）、保留统一快照策略、策略在单次使用中固定、无视令牌延后使用、重入顺序保护、一令牌一条件、两来源令牌、目标选择取消与成功事件、助战同时竞速/只弃一张/非法回复过滤/无人助战/独立助战分别付费，以及真实使用最后一张手牌的空巢检测。测试只使用独立测试内容，不创建正式武将或装备。
+
+`tests/ignore_times.lua` 额外覆盖：正式牌包恰好两张实牌（♠9/♠10）、雷杀身份与雷电伤害、孤军/未确定势力/有同势力存活角色、次数已满/未满、距离仍受限、选牌与选目标无副作用、PreCardUse 锁定后状态变化不改变本次结果、锁定后本次不计数、孤军失去后下一次照常计数、咆哮/连弩只绕过上限且失去状态后计数仍保留、其它条目的逐项顺序与一令牌一项。正式牌不再是测试专用内容；测试仍不创建正式武将。
 
 尚未人工验证多人网络客户端的助战界面与取消请求展示；原生 Request 的并发与取消流程已由自动化测试调用和检查。
