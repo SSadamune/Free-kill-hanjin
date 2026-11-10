@@ -13,7 +13,7 @@ RUNTIME = ROOT / '.dev/runtime/FreeKill-release'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skills', help='Comma-separated skill names (native addTest cases)')
-    parser.add_argument('--file', type=Path, help='External LuaUnit suite; defaults to tests/hegemony.lua')
+    parser.add_argument('--file', type=Path, help='External LuaUnit suite; defaults to tests/all.lua')
     parser.add_argument('--timeout', type=int, default=60)
     args = parser.parse_args()
     if args.skills is not None and args.file is not None:
@@ -34,7 +34,7 @@ def main():
     if args.skills is not None:
         command = [str(exe), '--testskills', args.skills]
     else:
-        suite = (args.file or ROOT / 'tests/hegemony.lua').resolve()
+        suite = (args.file or ROOT / 'tests/all.lua').resolve()
         if not suite.is_file():
             parser.error(f'Missing suite: {suite}')
         command = [str(exe), '--testfile', suite.as_posix()]

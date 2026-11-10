@@ -4,7 +4,7 @@ Testhanjin_hegemony = { setup = support.initRoom, tearDown = support.clearRoom }
 
 function Testhanjin_hegemony:testRegistrationAndPackageScope()
   lu.assertEquals(Fk.game_modes.new_heg_mode.rule, "heg_rule")
-  lu.assertFalse(table.contains(Fk.game_mode_disabled.new_heg_mode, "hanjin_generals"))
+  lu.assertTrue(table.contains(Fk.game_mode_disabled.new_heg_mode, "hanjin_generals"))
   lu.assertTrue(table.contains(Fk.game_mode_disabled.aaa_role_mode, "hanjin_generals"))
   lu.assertTrue(FkTest.room:isGameMode("heg_mode"))
 end
@@ -27,7 +27,10 @@ end
 function Testhanjin_hegemony:testNationalWarGeneralAndCardPools()
   local room = FkTest.room
   lu.assertFalse(table.contains(room.general_pile, "caocao"))
-  lu.assertTrue(table.contains(room.general_pile, "hs__xuchu"))
+  lu.assertTrue(#room.general_pile > 0)
+  for _, name in ipairs(room.general_pile) do
+    lu.assertTrue(table.contains(Fk.game_modes.new_heg_mode.whitelist, Fk.generals[name].package.name))
+  end
   for _, id in ipairs(room.draw_pile) do
     lu.assertTrue(table.contains(Fk.game_modes.new_heg_mode.whitelist,
       Fk:getCardById(id).package.name))
@@ -70,15 +73,6 @@ function Testhanjin_hegemony:testHideAndRevealRestoresSkill()
   lu.assertEquals(me:getMark("__heg_general"), "hs__caocao")
   FkTest.runInRoom(function() me:revealGeneral(false) end)
   lu.assertTrue(me:hasSkill("hs__jianxiong"))
-end
-
--- Run future hanjin skill:addTest callbacks in a real national-war fixture.
-for _, skel in ipairs(Fk.packages.hanjin_generals.skill_skels) do
-  for index, callback in ipairs(skel.tests) do
-    Testhanjin_hegemony["testSkill_" .. skel.name .. "_" .. index] = function()
-      callback(FkTest.room, FkTest.room.players[1])
-    end
-  end
 end
 
 return { name = "hanjin_hegemony" }

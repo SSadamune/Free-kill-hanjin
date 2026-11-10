@@ -38,25 +38,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 
 ```powershell
 python scripts/test.py
-python scripts/test.py --file tests/hegemony.lua
+python scripts/test.py --file tests/hanjin_rules.lua
 ```
 
 Cursor 的“终端 → 运行任务 → 紫乔汉晋：运行自动化测试”提供相同入口。
-默认测试为 `tests/hegemony.lua`，使用真正的 `new_heg_mode` 国战初始化、
-规则技能、白名单和牌堆。测试辅助代码仅替代选将输入和无限回合循环，
-保留国战角色分配、双将设置、体力计算、技能挂载、起始摸牌与游戏开始结算。
-现有六项测试覆盖包的模式限制、暗将与起始手牌、国战将池与牌堆、明置与势力关系、
-暗置再明置、移除副将变为士兵且不改变体力上限。
+默认入口为 `tests/all.lua`，包括上游国战回归、势力禁选纯规则、独立汉晋模式和连续对局场景。
+汉晋场景使用真实房间初始化、请求传输与选将界面数据、规则事件和起始摸牌，
+只替代无限自动回合循环以及原生房间的测试后端。
+`tests/support/hanjin_content.lua` 在测试进程中独立创建六势力和野心家测试武将、
+无效果测试牌；不会借用原版实体内容，也不会同步或发布这些测试对象。
+上游回归套件仍使用原版参考内容，验证基础接口，不将其加入汉晋模式。
 测试超时（默认 60 秒）、断言失败、进程异常、Lua 加载错误或未执行任何测试均返回非零退出码。
 
 新增技能可直接在技能文件中写 `skill:addTest(function(room, me) ... end)`，
 默认国战套件会收集 `hanjin_generals` 下这些回调并在国战测试房间中运行。
-每个回调中的 `me` 默认是国战曹操/夏侯惇组合且双将暗置；测试汉晋技能时应明确
+每个回调中的 `me` 默认是随机合法的独立测试武将组合且双将暗置；测试汉晋技能时应明确
 通过国战接口设置对应武将及位置、明暗状态，不能仅添加技能便声称覆盖了主副将规则。
 测试中用
 `FkTest.setNextReplies` 预设玩家回复，用 `FkTest.runInRoom` 执行结算，
 用 `lu.assertEquals` 等断言结果。按“先写失败测试 → 实现 → 通过 → 重构”的顺序开发。
-`--file` 外部测试的全局表命名和返回值写法见 `tests/hegemony.lua`；外部文件在
+`--file` 外部测试的全局表命名和返回值写法见 `tests/hanjin_rules.lua`；外部文件在
 内置测试收集后加载，应直接定义 LuaUnit 测试表，不能仅在其中调用 `addTest`。
 界面提示、动画与交互表现仍需在游戏内验证。
 
@@ -71,11 +72,18 @@ Cursor 的“终端 → 运行任务 → 紫乔汉晋：运行自动化测试”
 两个仓库独立安装在 `.dev/runtime/FreeKill-release/packages/`，不复制进汉晋发布包。
 经本地 v0.5.25 加载和上述国战测试验证的提交固定在 `dependencies.lock.json`。
 
-`hanjin_generals` 使用 `game_modes_whitelist` 限定国战，并通过上游公开的
-`Fk:addWhiteListPack` 加入国战将池允许列表。当前无自定义武将，选将列表中还不会
-出现汉晋武将。基础国战可直接游玩，尚未实现统领与翼从机制，也未新增独立汉晋模式。
-以后规则实现优先复用 `packages.hegemony.util`（如 `removeGeneral`、势力比较及
-武将移除事件），不在开发副本内改动上游代码。
+独立模式为 **紫乔汉晋国战**（`hanjin_heg_mode`），只允许 `hanjin_generals`、
+`hanjin_cards` 等明确登记的独立汉晋内容，不直接加入上游武将和卡牌。
+`hanjin_generals` 和 `hanjin_cards` 也仅允许在本模式使用。
+
+当前已实现势力禁选规则框架：多于四势力时保留四势力、上一局胜利势力必禁且上局被禁势力必留、
+双势力保留、可配置野心家数量（默认4），以及关联装备/锦囊牌堆策略。
+规范及实现边界见 [势力禁选规则](rules/faction-ban.md)。
+跨局数据使用原生房间 SessionData，随房间关闭销毁；不修改上游模式和引擎源码。
+
+正式武将和卡牌包目前为空，尚未实现统领与翼从。模式可见，但内容不足时禁止创建汉晋对局，
+不会自动借原版内容补齐。赤霄剑、临筱玉舆等目前只登记禁选/替换策略，
+未编造装备技能、花色和点数；临筱玉舆的双坐骑副类别需在后续卡牌实装时显式处理。
 
 首次安装和日常核验：
 
@@ -85,7 +93,8 @@ python scripts/setup_dependencies.py --check
 ```
 
 安装脚本只克隆缺失的依赖并检出锁定提交；已有目录存在修改或版本不符时会停止，
-不会覆盖。测试和启动开发版前都会检查依赖。启动游戏后在创建房间中选择“国战模式”。
+不会覆盖。测试和启动开发版前都会检查依赖。正式内容补齐后可在创建房间中选择“紫乔汉晋国战”。
+上游“国战模式”仍独立保留，供参考和回归。
 当前验证为无界面的规则测试，尚未人工验收选将界面、联网及断线重连。
 
 ## 文件位置
@@ -93,6 +102,9 @@ python scripts/setup_dependencies.py --check
 - `init.lua`：扩展入口，加载子包。
 - `pkg/hanjin_generals/init.lua`：武将子包；目前无武将，等待设计。
 - `pkg/hanjin_generals/skills/`：每个技能独立一个 Lua 文件。
+- `pkg/hanjin_cards/`：独立卡牌包，目前为空。
+- `pkg/hanjin_mode/`：汉晋模式和公共规则模块。
+- `rules/faction-ban.md`：供 agent 使用的已确认规则规范。
 - `image/generals/`：武将立绘。
 - `audio/skill/`、`audio/death/`：技能及阵亡语音。
 - `.dev/`：本地运行环境与下载包，不纳入 Git。
