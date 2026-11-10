@@ -12,13 +12,16 @@ def git(*args, cwd=None):
     return subprocess.check_output(['git', *args], cwd=cwd, text=True, encoding='utf-8').strip()
 
 
-def verify(install=False):
+def verify(install=False, include_references=False):
     lock = json.loads((ROOT / 'dependencies.lock.json').read_text(encoding='utf-8'))
     version = (RUNTIME / 'fk_ver').read_text(encoding='utf-8').strip()
     if version != lock['runtime']:
         raise RuntimeError(f'Expected runtime {lock["runtime"]}, found {version}')
-    for package in lock['packages']:
-        path = RUNTIME / 'packages' / package['name']
+    entries = [(package, RUNTIME / 'packages') for package in lock['packages']]
+    if include_references:
+        entries += [(reference, ROOT / '.dev/reference') for reference in lock.get('references', [])]
+    for package, parent in entries:
+        path = parent / package['name']
         if not path.exists() and install:
             subprocess.run(['git', 'clone', package['url'], str(path)], check=True)
             subprocess.run(['git', '-C', str(path), 'checkout', '--detach', package['commit']], check=True)
@@ -35,8 +38,9 @@ def verify(install=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true', help='Verify without installing or updating')
+    parser.add_argument('--references', action='store_true', help='Also install/verify optional reference source repositories')
     args = parser.parse_args()
     try:
-        verify(install=not args.check)
+        verify(install=not args.check, include_references=args.references)
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         parser.exit(1, f'FAIL: {error}\n')
