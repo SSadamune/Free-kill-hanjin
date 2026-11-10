@@ -1,0 +1,7 @@
+{
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.associations": {"*.lua": "lua"},
+  "search.exclude": {".dev": true},
+  "files.watcherExclude": {"**/.dev/**": true}
+}

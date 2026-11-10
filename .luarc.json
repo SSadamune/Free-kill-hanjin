@@ -1,0 +1,12 @@
+{
+  "runtime.version": "Lua 5.4",
+  "runtime.path": ["?.lua", "?/init.lua", "lua/?.lua", "lua/?/init.lua"],
+  "workspace.library": [
+    ".dev/runtime/FreeKill-release/lua",
+    ".dev/runtime/FreeKill-release/ltk",
+    ".dev/runtime/FreeKill-release/packages"
+  ],
+  "workspace.checkThirdParty": false,
+  "diagnostics.globals": ["Fk", "fk", "Package", "General", "Skill", "Card", "Player", "GameEvent", "GameLogic", "Util", "UI"],
+  "completion.callSnippet": "Replace"
+}
