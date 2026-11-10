@@ -7,6 +7,6 @@
     ".dev/runtime/FreeKill-release/packages"
   ],
   "workspace.checkThirdParty": false,
-  "diagnostics.globals": ["Fk", "fk", "Package", "General", "Skill", "Card", "Player", "GameEvent", "GameLogic", "Util", "UI"],
+  "diagnostics.globals": ["Fk", "fk", "Package", "General", "Skill", "Card", "Player", "GameEvent", "GameLogic", "Util", "UI", "FkTest", "lu", "Room", "RoomInstance", "ClientInstance", "DrawInitialData", "__dofile", "Testhanjin_hegemony", "Testhanjin_smoke"],
   "completion.callSnippet": "Replace"
 }

@@ -1,5 +1,7 @@
 local extension = Package:new("hanjin_generals")
 extension.extensionName = "hanjin"
+extension.game_modes_whitelist = { "new_heg_mode" }
+Fk:addWhiteListPack("new_heg_mode", extension.name)
 
 extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_generals/skills")
 
