@@ -110,6 +110,34 @@ function Testhanjin_rules:testWildCountUIHasDefaultFourAndPreservesZero()
   lu.assertEquals(value({ hanjin_wild_count = 0 }), 0)
 end
 
+function Testhanjin_rules:testCandidateUIHasKingdomSwitchesAndDynamicLimit()
+  local W = require "ui_emu.preferences"
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local function rows(settings)
+    local result = {}
+    for _, group in ipairs(W.toQmlData(mode.ui_settings, { _mode = settings })) do
+      for _, field in ipairs(group._children) do
+        if field._settingsKey then result[field._settingsKey] = field end
+      end
+    end
+    return result
+  end
+  local default = rows({})
+  local switches = 0
+  for key in pairs(default) do
+    if key:startsWith(Ban.candidatePrefix) then switches = switches + 1 end
+  end
+  lu.assertEquals(switches, #Ban.kingdoms)
+  lu.assertEquals(default["hanjin_candidate_wei"].value, true)
+  lu.assertEquals(default[Ban.limitKey].value, 4)
+  lu.assertEquals(default[Ban.limitKey].from, 1)
+  lu.assertEquals(default[Ban.limitKey].to, #Ban.kingdoms)
+  local custom = rows { hanjin_candidate_wei = false, hanjin_kingdom_limit = 3 }
+  lu.assertEquals(custom["hanjin_candidate_wei"].value, false)
+  lu.assertEquals(custom[Ban.limitKey].value, 3)
+  lu.assertEquals(custom[Ban.limitKey].to, #Ban.kingdoms - 1)
+end
+
 function Testhanjin_rules:testOnlyIndependentContentEntersGame()
   local room = FkTest.room
   for _, name in ipairs(room.general_pile) do lu.assertEquals(Fk.generals[name].package.extensionName, "hanjin") end
@@ -125,7 +153,7 @@ function Testhanjin_rules:testOnlyIndependentContentEntersGame()
     lu.assertEquals(card.package.extensionName, "hanjin")
     local spec = Cards.equipment[card.name]
     local kingdom = spec and spec.kingdom or Cards.tricks[card.name]
-    if kingdom then lu.assertFalse(table.contains(room:getBanner("hanjin_banned_kingdoms"), kingdom)) end
+    if kingdom then lu.assertTrue(table.contains(room:getBanner("all_kingdoms"), kingdom)) end
   end
 end
 

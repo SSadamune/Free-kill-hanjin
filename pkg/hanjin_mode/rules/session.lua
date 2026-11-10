@@ -1,4 +1,5 @@
 -- The engine owns SessionData on the native Room, so it survives games but not rooms.
+local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local M = {}
 local key = "hanjin_faction_ban_v1"
 M.mode = "hanjin_heg_mode"
@@ -20,7 +21,7 @@ function M.finish(room, winners)
   else
     local kingdoms = {}
     for _, p in ipairs(winners or {}) do
-      if p and table.contains({ "wei", "shu", "wu", "qun", "han", "jin" }, p.kingdom) then
+      if p and table.contains(Ban.kingdoms, p.kingdom) then
         table.insertIfNeed(kingdoms, p.kingdom)
       end
     end
