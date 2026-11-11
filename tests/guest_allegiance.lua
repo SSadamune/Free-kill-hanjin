@@ -193,15 +193,31 @@ function Testhanjin_guest_allegiance:testBannedOriginalCannotReturnBySameName()
   end)
 end
 
+-- Deliver intermediate messages while the real final-pair request is open.
+local function redrawDuringSelection(player, count)
+  FkTest.setRoomBreakpoint(player, "CustomDialog", function()
+    local state = player.mini_game_data
+    for _ = 1, count do
+      local cards = state.offers[player]
+      local old, neighbor = cards[1], cards[2]
+      player.room:handleUpdateMini(player.id, { player.id, "updatemini", "redraw", "1", old })
+      lu.assertEquals(cards[2], neighbor)
+      -- A replay must not redraw the replacement or consume another card.
+      local replacement = cards[1]
+      player.room:handleUpdateMini(player.id, { player.id, "updatemini", "redraw", "1", old })
+      lu.assertEquals(cards[1], replacement)
+    end
+    count = 0
+    return false
+  end)
+  FkTest.setNextReplies(player, { {} })
+end
+
 function Testhanjin_guest_allegiance:testChainedGuestRedrawGoesToDiscardAndNeverReturns()
   local room = create {}
   local player = room.players[1]
   local changes, offers, discarded
-  FkTest.setNextReplies(player, {
-    { indices = { 1 } },
-    { indices = { 3 } },
-    { indices = {} },
-  })
+  redrawDuringSelection(player, 2)
   FkTest.runInRoom(function()
     room.general_pile = {
       "hanjin_test__guest_dual_3", "hanjin_test__guest_dual_4", "hanjin_test__wei_2",
@@ -268,7 +284,7 @@ function Testhanjin_guest_allegiance:testFailedReplacementKeepsOriginalCandidate
   local room = create {}
   local player = room.players[1]
   local offers, failures
-  FkTest.setNextReplies(player, { { indices = { 1 } } })
+  redrawDuringSelection(player, 1)
   FkTest.runInRoom(function()
     room.general_pile = { "hanjin_test__qun_1" }
     offers = {
@@ -286,8 +302,8 @@ function Testhanjin_guest_allegiance:testTwoPlayersRedrawInOneRound()
   local room = create {}
   local first, second = room.players[1], room.players[2]
   local offers, changes
-  FkTest.setNextReplies(first, { { indices = { 1 } }, { indices = {} } })
-  FkTest.setNextReplies(second, { { indices = { 1 } }, { indices = {} } })
+  redrawDuringSelection(first, 1)
+  redrawDuringSelection(second, 1)
   FkTest.runInRoom(function()
     room.general_pile = {
       "hanjin_test__wei_2", "hanjin_test__qun_1",
@@ -388,6 +404,7 @@ function Testhanjin_guest_allegiance:testClientDialogContract()
   lu.assertTrue(prop.extraData.pairing["hanjin_test__guest_dual_1"] ~= nil)
   lu.assertTrue(table.contains(prop.extraData.pairing["hanjin_test__guest_dual_1"], "hanjin_test__guest_dual_2"))
   lu.assertEquals(prop.extraData.guests, { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
+  lu.assertEquals(prop.extraData.guestFactions["hanjin_test__guest_dual_1"], { "han" })
   lu.assertTrue(allowed)
   lu.assertFalse(blocked)
 end
@@ -402,8 +419,7 @@ function Testhanjin_guest_allegiance:testDecodeAcceptsLegacyAndArrayShapes()
   local array = Selection.decode({ "a", "b" })
   lu.assertEquals(array, { "a", "b" })
   lu.assertEquals(Selection.decode({ generals = { "a", "b" } }), { "a", "b" })
-  lu.assertEquals(Selection.decodeRedraw(
-    { indices = { "a", "missing", "b", "a" } }, { "a", "b" }), { "a", "b" })
+
 end
 
 return { name = "hanjin_guest_allegiance" }

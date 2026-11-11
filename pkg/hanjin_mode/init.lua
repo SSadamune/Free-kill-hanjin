@@ -35,11 +35,8 @@ Fk:loadTranslationTable {
   ["help: hanjin_wild_count"] = "随机保留至多此数量的野心家专属武将；未保留的原版按本局允许势力替换为效忠版。"
     .. "默认4；设为0时原版全部排除，其效忠版仍可入池。",
   ["#HanjinFactionBan"] = "本局禁选势力：%arg；允许势力：%arg2",
-  ["hanjin_guest_redraw"] = "客将重抽",
-  ["#HanjinGuestRedraw"] = "选择要放弃并重抽的客将候选；每次重抽从剩余将池补发，补发后仍可继续重抽新的客将。",
   ["#HanjinChooseGenerals"] = "选择主将与副将",
   ["#HanjinChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
-  ["#HanjinChooseGeneralsGuest"] = "选择主将与副将　本局禁用势力：%arg　客将候选（本局势力）：%arg2",
   ["#HanjinChooseKingdom"] = "选择你的初始势力",
   ["#HanjinGuestRedrawn"] = "%from 重抽客将：%arg → %arg2",
 }

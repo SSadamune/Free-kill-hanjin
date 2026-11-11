@@ -155,22 +155,9 @@ local function kingdomList(kingdoms)
   return table.concat(table.map(kingdoms, Ban.kingdomLabel), "/")
 end
 
----Prompt text that marks guest candidates and their this-game kingdoms.
----@param room Room
----@param offers string[]
----@return string
-function M.prompt(room, offers)
-  local marks = {}
-  for _, name in ipairs(offers) do
-    local entry = Guest.factionsOf(room, name)
-    if entry and entry.source == "guest" then
-      table.insert(marks, Fk:translate(name) .. "（" .. kingdomList(entry.kingdoms) .. "）")
-    end
-  end
+function M.prompt(room)
   local banned = room:getBanner("hanjin_banned_kingdoms") or {}
-  local bans = #banned > 0 and kingdomList(banned) or "无"
-  if #marks == 0 then return "#HanjinChooseGeneralsBans:::" .. bans end
-  return "#HanjinChooseGeneralsGuest:::" .. bans .. ":" .. table.concat(marks, "、")
+  return "#HanjinChooseGeneralsBans:::" .. (#banned > 0 and kingdomList(banned) or "无")
 end
 
 ---Dialog data for the final pair selection.
@@ -179,10 +166,11 @@ end
 ---@return table
 function M.askData(room, offers, guests)
   guests = guests or Guest.guestCandidates(room, offers)
-  local _, pairing = M.pairing(room, offers)
-  local wild = {}
-  for _, name in ipairs(offers) do
+  local names, pairing = M.pairing(room, offers)
+  local wild, guestFactions = {}, {}
+  for _, name in ipairs(names) do
     local entry = Guest.factionsOf(room, name)
+    if entry and entry.source == "guest" then guestFactions[name] = entry.kingdoms end
     if entry and entry.wild then wild[name] = true end
   end
   local data = {
@@ -197,15 +185,15 @@ function M.askData(room, offers, guests)
           hegemony = true,
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
-          extraData = { pairing = pairing, wild = wild },
+          extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
+            offers = table.simpleClone(offers) },
         },
       },
     },
   }
-  if #guests > 0 then
+  if next(guestFactions) then
     data.component.name, data.component.uri = nil, nil
     data.component.url = M.redraw_url
-    data.component.model.prop.extraData.guests = guests
   end
   return data
 end
@@ -216,40 +204,24 @@ end
 ---@param offers table<ServerPlayer, string[]>
 ---@return table<ServerPlayer, string[]>
 function M.ask(room, players, offers)
-  local answers, asked = {}, {}
-  local pending = players
-  while #pending > 0 do
-    local req = Request:new(pending, "CustomDialog")
-    req.focus_text = "AskForGeneral"
-    req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
-    local eligible = {}
-    for _, player in ipairs(pending) do
-      asked[player] = asked[player] or {}
-      eligible[player] = table.filter(Guest.guestCandidates(room, offers[player]), function(name)
-        return not asked[player][name]
-      end)
-      local default = assert(M.firstLegalPair(room, offers[player]))
-      req:setData(player, M.askData(room, offers[player], eligible[player]))
-      req:setDefaultReply(player, { default.main, default.deputy })
+  local answers = {}
+  local req = Request:new(players, "CustomDialog")
+  req.focus_text = "AskForGeneral"
+  req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
+  for _, player in ipairs(players) do
+    local data = M.askData(room, offers[player])
+    req:setData(player, data)
+    local default = assert(M.firstLegalPair(room, offers[player]))
+    req:setDefaultReply(player, { default.main, default.deputy })
+    if data.component.url then
+      player.mini_game_data = { type = "hanjin_guest_selection",
+        offers = offers, req = req, failed = {} }
     end
-    local retry = {}
-    for _, player in ipairs(pending) do
-      local reply = req:getResult(player)
-      local names = {}
-      if type(reply) == "table" and type(reply.indices) == "table" then
-        names = table.filter(M.decodeRedraw(reply, offers[player]), function(name)
-          return table.contains(eligible[player], name)
-        end)
-      end
-      if #names > 0 then
-        for _, name in ipairs(eligible[player]) do asked[player][name] = true end
-        M.applyRedraw(room, player, offers, names)
-        table.insert(retry, player)
-      else
-        answers[player] = M.decode(reply)
-      end
-    end
-    pending = retry
+  end
+  req:ask()
+  for _, player in ipairs(players) do
+    player.mini_game_data = nil
+    answers[player] = M.decode(req:getResult(player))
   end
   return answers
 end
@@ -310,33 +282,6 @@ function M.choose(room, players, offers)
     kingdoms[player] = kingdom
   end
   return pairs, kingdoms, fallbacks
-end
-
----Decode a redraw reply into offers names. Unknown/foreign indices are ignored.
----@param reply any
----@param offers string[]
----@return string[]
-function M.decodeRedraw(reply, offers)
-  if type(reply) ~= "table" then return {} end
-  local indices = reply.indices
-  if type(indices) ~= "table" then
-    indices = type(reply[1]) == "table" and reply[1].indices or reply
-    if type(indices) ~= "table" then indices = {} end
-  end
-  local selected, seen = {}, {}
-  for _, value in ipairs(indices) do
-    local name
-    if type(value) == "number" then
-      name = offers[value]
-    elseif type(value) == "string" then
-      name = table.contains(offers, value) and value or nil
-    end
-    if name and not seen[name] then
-      seen[name] = true
-      table.insert(selected, name)
-    end
-  end
-  return selected
 end
 
 ---Find a replacement set that keeps a legal pair and does not take the old
@@ -422,10 +367,9 @@ function M.applyRedraw(room, player, offers, names)
     return false, nil, reason
   end
 
-  offers[player] = table.filter(offers[player], function(name)
-    return not table.contains(names, name)
-  end)
-  table.insertTable(offers[player], replacements)
+  for i, name in ipairs(names) do
+    offers[player][table.indexOf(offers[player], name)] = replacements[i]
+  end
   Discard.add(room, names)
   for _, name in ipairs(replacements) do table.removeOne(room.general_pile, name) end
   Guest.ensure(room, replacements)
@@ -436,5 +380,31 @@ function M.applyRedraw(room, player, offers, names)
   room:setTag("hanjin_guest_redraws_v1", log)
   return true, replacements
 end
+
+-- Intermediate messages update the active dialog. Only the final pair answers
+-- the Request, so other players and the original deadline are unaffected.
+Fk:addMiniGame {
+  name = "hanjin_guest_selection",
+  update_func = function(player, message)
+    local state = player.mini_game_data
+    if not state or state.type ~= "hanjin_guest_selection" or state.req.result[player.id] ~= nil then return end
+    local slot, original = tonumber(message[2]), message[3]
+    local offers = state.offers[player]
+    if message[1] ~= "redraw" or not slot or offers[slot] ~= original or not original
+      or state.failed[original] or not Guest.isGuest(player.room, original) then return end
+    local ok = M.applyRedraw(player.room, player, state.offers, { original })
+    if not ok then state.failed[original] = true end
+    local guests = table.filter(Guest.guestCandidates(player.room, offers), function(name)
+      return not state.failed[name]
+    end)
+    local data = M.askData(player.room, offers, guests)
+    -- Keep the live component for reconnect even after the last guest was replaced.
+    data.component.name, data.component.uri, data.component.url = nil, nil, M.redraw_url
+    state.req:setData(player, data)
+    local pair = assert(M.firstLegalPair(player.room, offers))
+    state.req:setDefaultReply(player, { pair.main, pair.deputy })
+    player:doNotify("UpdateMiniGame", { slot, original, offers[slot], data.component.model.prop.extraData })
+  end,
+}
 
 return M
