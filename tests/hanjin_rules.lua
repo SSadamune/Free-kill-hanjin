@@ -72,12 +72,19 @@ function Testhanjin_rules:testJinMountReplacesJueyingAndRestoresItWhenBanned()
   lu.assertEquals(excluded, { mount.id })
 end
 
-function Testhanjin_rules:testFactionTrickRemovedOnlyWhenItsFactionBanned()
+function Testhanjin_rules:testFactionTricksStayOutsideTheDefaultDeckEvenWhenAllowed()
   local trick = testCard("faction_trick")
-  local banned = Cards.apply(FkTest.room, { trick.id }, {}, { "wei" })
+  local removed = Cards.apply(FkTest.room, { trick.id }, {}, { "wei" })
+  lu.assertEquals(removed, {})
+  local stillRemoved = Cards.apply(FkTest.room, { trick.id }, {}, { "shu" })
+  lu.assertEquals(stillRemoved, {})
+  -- Only a special effect explicitly adding the trick may put it back.
+  local included = Cards.apply(FkTest.room, { trick.id }, {}, { "shu" },
+    { include_tricks = { trick.name } })
+  lu.assertEquals(included, { trick.id })
+  local banned = Cards.apply(FkTest.room, { trick.id }, {}, { "wei" },
+    { include_tricks = { trick.name } })
   lu.assertEquals(banned, {})
-  local active = Cards.apply(FkTest.room, { trick.id }, {}, { "shu" })
-  lu.assertEquals(active, { trick.id })
 end
 
 function Testhanjin_rules:testMissingOrdinaryCopyIsPrintedWithTheOriginalSuitAndRank()
@@ -148,12 +155,18 @@ function Testhanjin_rules:testOnlyIndependentContentEntersGame()
   end
   local ids = table.simpleClone(room.draw_pile)
   for _, p in ipairs(room.players) do table.insertTable(ids, p:getCardIds("h")) end
+  local allowed = room:getBanner("all_kingdoms")
   for _, id in ipairs(ids) do
     local card = Fk:getCardById(id)
     lu.assertEquals(card.package.extensionName, "hanjin")
     local spec = Cards.equipment[card.name]
-    local kingdom = spec and spec.kingdom or Cards.tricks[card.name]
-    if kingdom then lu.assertTrue(table.contains(room:getBanner("all_kingdoms"), kingdom)) end
+    if spec then
+      lu.assertTrue(table.find(spec.kingdoms, function(kingdom)
+        return table.contains(allowed, kingdom)
+      end) ~= nil)
+    end
+    local kingdom = Cards.tricks[card.name]
+    if kingdom then lu.assertTrue(kingdom == "wild" or table.contains(allowed, kingdom)) end
   end
 end
 

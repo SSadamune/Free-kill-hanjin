@@ -24,12 +24,18 @@ end
 
 function Testhanjin_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUpstream()
   lu.assertEquals(#Fk.packages.hanjin_generals.generals, 0)
-  -- Formal HanJin content currently has exactly the two independent Thunder Slash cards.
-  lu.assertEquals(#Fk.packages.hanjin_cards.cards, 2)
+  -- The formal pack grows with the base table, but it must never borrow upstream
+  -- identities. The two independent Thunder Slash cards remain exactly ♠9/♠10.
+  local thunder = table.filter(Fk.packages.hanjin_cards.cards, function(card)
+    return card.name == "hanjin__thunder__slash"
+  end)
+  lu.assertEquals(#thunder, 2)
   for _, card in ipairs(Fk.packages.hanjin_cards.cards) do
-    lu.assertEquals(card.package, Fk.packages.hanjin_cards)
+    lu.assertIsTrue(card.package == Fk.packages.hanjin_cards)
     lu.assertEquals(card.package.extensionName, "hanjin")
-    lu.assertEquals(card.name, "hanjin__thunder__slash")
+  end
+  for _, card in ipairs(thunder) do
+    lu.assertTrue(card.suit == Card.Spade and (card.number == 9 or card.number == 10))
   end
   lu.assertFalse(table.contains(Fk.game_modes.hanjin_heg_mode.whitelist, "hegemony_standard"))
   lu.assertFalse(table.contains(Fk.game_modes.hanjin_heg_mode.whitelist, "hegemony_cards"))

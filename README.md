@@ -90,7 +90,7 @@ Cursor 的“终端 → 运行任务 → 紫乔汉晋：运行自动化测试”
 一令牌忽略一项条件，以及只由一个合法协助者支付的同时助战请求。
 多条目条件时点暂按逐项重检；`pkg/hanjin_mode/rules/config.lua` 保留统一快照策略，供规则最终确认后切换。
 规范和未来卡牌/武将接入 API 见 [应变规则](rules/adaptation.md)。
-`execute_both` 是供独立卡牌实现读取的语义标记，尚未创建【逐近弃远】或相关武将、装备。
+`execute_both` 是供独立卡牌实现读取的语义标记，【逐近弃远】助战成功后按先拆后顺结算。
 
 原版应变在官方 `gamemode` 扩展中，源码仅下载到 `.dev/reference/gamemode` 作核对，
 不加入汉晋内容或运行依赖。需重建参考源码时运行：
@@ -99,7 +99,7 @@ Cursor 的“终端 → 运行任务 → 紫乔汉晋：运行自动化测试”
 python scripts/setup_dependencies.py --references
 ```
 
-正式武将包目前为空，卡牌包仅有独立雷杀♠9/♠10（孤军→无视次数）。统领与翼从公共规则已实装：
+正式武将包目前为空，卡牌包已登记全牌表，已有牌复用新月杀实装，势备篇雷杀♠9/♠10带孤军→无视次数。统领与翼从公共规则已实装：
 统领来源登记、无士兵条件、兵种存续与明置/暗置跨势力迁移、白板士兵逐位转换、手动视为技及
 交换完成监听接口均纳入默认测试。正式统领、翼从和专属技能仍待设计，测试只使用
 `tests/support/hanjin_content.lua` 的独立无效果对齐内容，不进入正式将池。
@@ -123,7 +123,7 @@ python scripts/setup_dependencies.py --check
 - `init.lua`：扩展入口，加载子包。
 - `pkg/hanjin_generals/init.lua`：武将子包；目前无武将，等待设计。
 - `pkg/hanjin_generals/skills/`：每个技能独立一个 Lua 文件。
-- `pkg/hanjin_cards/`：独立卡牌包，目前含雷杀♠9/♠10；`skills/` 为卡牌技能。
+- `pkg/hanjin_cards/`：独立卡牌包，含 162 个基础牌位、12 张替换牌和 7 张势力锦囊；`skills/` 为卡牌技能。
 - `pkg/hanjin_mode/`：汉晋模式和公共规则模块。
 - `pkg/hanjin_mode/rules/commander_retinue.lua`：统领/翼从来源、转换、代价和交换接口。
 - `pkg/hanjin_mode/rules/general_exchange.lua`：交换武将公共规则（由交换模块会话维护）。

@@ -178,10 +178,13 @@ function Testhanjin_scenarios:testCandidateExcludedFactionCardsLeaveTheDeck()
   for _, id in ipairs(ids) do
     local card = Fk:getCardById(id)
     local spec = Cards.equipment[card.name]
-    local kingdom = spec and spec.kingdom or Cards.tricks[card.name]
-    if kingdom then
-      lu.assertTrue(table.contains({ "wei", "shu" }, kingdom))
+    if spec then
+      lu.assertTrue(table.find(spec.kingdoms, function(kingdom)
+        return table.contains({ "wei", "shu" }, kingdom)
+      end) ~= nil)
     end
+    local kingdom = Cards.tricks[card.name]
+    if kingdom then lu.assertTrue(kingdom == "wild" or table.contains({ "wei", "shu" }, kingdom)) end
   end
 end
 

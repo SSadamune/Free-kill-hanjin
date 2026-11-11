@@ -37,13 +37,17 @@ add("hanjin_test__nullification", Card.TypeTrick, Card.SubtypeNone, Card.Heart, 
 local Cards = require "packages.hanjin.pkg.hanjin_mode.rules.cards"
 local definitions = table.clone(Cards.equipment)
 for name, spec in pairs(definitions) do
-  local subtype = ({ wei = Card.SubtypeDefensiveRide, jin = Card.SubtypeDefensiveRide,
-    qun = Card.SubtypeArmor, wu = Card.SubtypeTreasure })[spec.kingdom] or Card.SubtypeWeapon
-  local testName = name:gsub("^hanjin__", "hanjin_test__")
-  local replacement = spec.replacement and spec.replacement:gsub("^hanjin__", "hanjin_test__")
-  add(testName, Card.TypeEquip, subtype, Card.Spade, 2)
-  if replacement then add(replacement, Card.TypeEquip, subtype, Card.Spade, 2) end
-  Cards.registerEquipment(testName, spec.kingdom, replacement)
+  -- Only clone formal HanJin identities; test-only registrations already have
+  -- their own cards and may deliberately carry a different identity.
+  if name:startsWith("hanjin__") then
+    local subtype = ({ wei = Card.SubtypeDefensiveRide, jin = Card.SubtypeDefensiveRide,
+      qun = Card.SubtypeArmor, wu = Card.SubtypeTreasure })[spec.kingdom] or Card.SubtypeWeapon
+    local testName = name:gsub("^hanjin__", "hanjin_test__")
+    local replacement = spec.replacement and spec.replacement:gsub("^hanjin__", "hanjin_test__")
+    add(testName, Card.TypeEquip, subtype, Card.Spade, 2)
+    if replacement then add(replacement, Card.TypeEquip, subtype, Card.Spade, 2) end
+    Cards.registerEquipment(testName, spec.kingdoms or spec.kingdom, replacement)
+  end
 end
 add("hanjin_test__faction_trick", Card.TypeTrick, Card.SubtypeNone, Card.Heart, 3)
 Cards.registerTrick("hanjin_test__faction_trick", "wei")

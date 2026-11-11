@@ -42,12 +42,12 @@ local function use(room, player, target, card)
   return data
 end
 
-function Testhanjin_ignore_times:testFormalPackHasExactlySpadeNineAndTenWithThunderSlashData()
+function Testhanjin_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSlashData()
   local cards = table.filter(Fk.cards, function(card) return card.name == CARD_NAME end)
   lu.assertEquals(#cards, 2)
   local nine, ten = physical(Card.Spade, 9), physical(Card.Spade, 10)
-  lu.assertEquals(nine.package, Fk.packages.hanjin_cards)
-  lu.assertEquals(ten.package, Fk.packages.hanjin_cards)
+  lu.assertIsTrue(nine.package == Fk.packages.hanjin_cards)
+  lu.assertIsTrue(ten.package == Fk.packages.hanjin_cards)
   lu.assertEquals(nine.extensionName or nine.package.extensionName, "hanjin")
   lu.assertNotEquals(nine.id, ten.id)
   for _, card in ipairs({ nine, ten }) do
@@ -63,7 +63,9 @@ function Testhanjin_ignore_times:testFormalPackHasExactlySpadeNineAndTenWithThun
     lu.assertEquals(entries[1].condition, "gujun")
     lu.assertEquals(entries[1].effect, "ignore_times")
   end
-  local specs = Fk.packages.hanjin_cards.card_specs
+  local specs = table.filter(Fk.packages.hanjin_cards.card_specs, function(spec)
+    return spec[1] == CARD_NAME
+  end)
   lu.assertEquals(#specs, 2)
   for _, spec in ipairs(specs) do
     lu.assertEquals(spec[1], CARD_NAME)
