@@ -50,21 +50,16 @@ python scripts/setup_dependencies.py
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 ```
 
-脚本会核验依赖，将本项目的游戏内容复制到 `packages/hanjin/`，然后启动新月杀。创建房间时选择“紫乔汉晋国战”。武将专属技能尚待实现，目前主要用于开发和规则验证。
-
-VS Code 和 Cursor 也可通过“终端 → 运行任务 → 紫乔汉晋：启动开发版”启动。
+脚本会核验依赖，将本项目的游戏内容复制到 `packages/hanjin/`，然后启动新月杀。创建房间时选择“紫乔汉晋国战”。
 
 ### 仅开发环境生效的本体适配
 
-运行 `scripts/dev.ps1`（同步或启动）以及自动化测试时，会修改 `.dev/runtime/FreeKill-release/` 内的本地游戏文件，启用以下适配：
+运行开发同步、启动或测试脚本时，会修改 `.dev/runtime/FreeKill-release/` 内的本地游戏文件，启用以下适配：
 
-| 功能 | 生效范围 |
-| --- | --- |
-| 单人启动服务器后，现有操作时间默认设为“无限”，仍可手动设为有限秒数 | 经过适配的本地开发版游戏 |
-| 单人启动服务器免除操作超时踢出惩罚 | 经过适配的本地开发版游戏，依据服务器启动方式判定 |
-| 补齐 Windows 客户端 Lua 模块加载路径 | 本地开发版游戏 |
+- 单人启动服务器时，操作时间默认“无限”，可手动改为有限秒数，并免除操作超时踢出惩罚。
+- 补齐 Windows 客户端 Lua 模块加载路径。
 
-前两项由 `scripts/prepare_runtime.py` 修改本体的请求处理、设置与倒计时界面。这些改动会影响该开发版中的其他游戏模式。关闭游戏后仍保留在本地文件中，重新解压官方本体可恢复。
+计时适配由 `scripts/prepare_runtime.py` 安装，会影响该开发版中的其他游戏模式。改动在关闭游戏后仍保留，重新解压官方本体可恢复。
 
 **上述适配仅供本地开发使用，用户安装紫乔汉晋扩展后仍使用其新月杀本体原有的操作时间和超时惩罚机制。**
 
@@ -76,7 +71,7 @@ python scripts/build_release.py
 
 生成 `.dev/dist/hanjin.zip`，解压到用户游戏的 `packages/` 后得到 `packages/hanjin/`。
 
-构建脚本仅从项目源码中的 `init.lua`、`pkg/`、`image/`、`audio/` 打包。开发脚本、测试、原素材与 `.dev/` 环境均排除在安装包之外。构建过程直接读取项目文件，独立于经过适配的开发版游戏；安装包入口仅加载扩展内容。
+构建脚本从项目中的 `init.lua`、`pkg/`、`image/`、`audio/` 打包，排除开发脚本、测试、原素材和 `.dev/` 环境，确保本体适配与用户安装包隔离。
 
 ## 日常开发与测试
 
@@ -95,9 +90,9 @@ python scripts/test.py
 python scripts/test.py --file tests/adaptation.lua
 ```
 
-以上操作也可在 VS Code 或 Cursor 的“终端 → 运行任务”中选择。界面、联网和断线重连表现仍需在游戏客户端人工验证。
+VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同步、语法检查和自动化测试。界面、联网和断线重连表现仍需在游戏客户端人工验证。
 
-开发前请阅读 [项目约定](AGENTS.md) 与 [规则索引](rules/README.md)。涉及主副将、明暗置、势力及敌友关系的技能，应在国战测试房间中验证。
+开发前请阅读 [项目约定](AGENTS.md) 与 [规则索引](rules/README.md)。
 
 ## 文件结构
 
@@ -124,6 +119,5 @@ Free-kill-hanjin/
 ## 开发参考
 
 - [新月杀拓展之书](https://fkbook-all-in-one.readthedocs.io/zh-cn/latest/for-creators/anhe/index.html)
-- [紫乔汉晋规则索引](rules/README.md)
 
 教程部分章节可能过时，API 用法请结合当前游戏自带代码核对。
