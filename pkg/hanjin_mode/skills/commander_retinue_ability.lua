@@ -4,11 +4,21 @@ local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 -- 代价为移除自己的一张无士兵武将牌。只在“使用”窗口开放，不在“打出”窗口开放。
 local skill = fk.CreateSkill {
   name = C.ABILITY_SKILL,
+  dynamic_desc = function(self, player, lang)
+    if player then return C.description(player, nil, lang) end
+  end,
 }
 
 skill:addEffect("viewas", {
   pattern = ".",
-  prompt = "#hanjin_commander_ability",
+  prompt = function(self, player)
+    local key = self.interaction and self.interaction.data
+    if type(key) ~= "string" or C.commanders[key] == nil then
+      local entries = C.availableSourceEntries(player)
+      key = entries[1] and entries[1].key
+    end
+    return C.description(player, key, nil, true)
+  end,
   card_filter = Util.FalseFunc,
   interaction = function(self, player)
     local entries = C.availableSourceEntries(player)
@@ -65,8 +75,20 @@ skill:addEffect("viewas", {
   end,
 })
 
+skill:addEffect("targetmod", {
+  bypass_distances = function(self, player, cardSkill, card, to)
+    if card == nil or card.trueName ~= "slash" then return false end
+    if not table.contains(card.skillNames, C.ABILITY_SKILL) then return false end
+    local source = C.commanders[card:getMark(C.CARD_SOURCE_MARK)]
+    return source ~= nil and source.card == card.name and source.bypass_distances == true
+  end,
+})
+
 Fk:loadTranslationTable {
   [C.ABILITY_SKILL] = "统领",
+  [":" .. C.ABILITY_SKILL] = "当你需要使用牌时，若你的主副将均无士兵，你可以选择一项同势力已明置统领提供的能力，"
+    .. "移除自己的一张武将牌（不能是本次提供能力的统领），视为使用其标注的牌。"
+    .. "仅可选择当前时机能合法使用的牌。限一统领能力每局所有角色合计限一次。",
   ["#hanjin_commander_ability"] = "统领：选择一名明置统领，移除自己的一张无士兵武将牌，视为使用其标注的牌",
   ["#hanjin_commander_choose_cost"] = "选择移除以支付统领代价的武将牌",
   ["#hanjin_commander_choose_retinue"] = "选择要转换成的翼从",

@@ -86,6 +86,9 @@ Fk:addPostLoadFunc(function()
   for _, source in ipairs(Data.commanders) do
     Commander.registerCommander(source.general, {
       card = source.card,
+      suit = source.suit,
+      bypass_distances = source.bypass_distances,
+      adaptation = source.adaptation,
       card_text = source.cardText,
       source_text = source.sourceText,
       retinues = { source.retinue },

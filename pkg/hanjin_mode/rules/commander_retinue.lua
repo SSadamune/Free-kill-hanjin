@@ -1,6 +1,7 @@
 -- 统领与翼从公共规则。武将牌只登记牌面数据；翼从的卡面与技能由
 -- 汉晋内容包独立创建。上游 hegemony 仅用于移将、明置和势力流程。
 local H = require "packages.hegemony.util"
+local Adaptation = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
 local M = {}
 
 M.RULE_SKILL = "#hanjin_commander_rule"
@@ -59,6 +60,9 @@ function M.registerCommander(general, spec)
   local data = {
     general = general,
     card = spec.card,
+    suit = spec.suit,
+    bypass_distances = spec.bypass_distances == true,
+    adaptation = table.clone(spec.adaptation or {}),
     card_text = card_text,
     source_text = spec.source_text or (translate(general) .. "｜" .. card_text),
     retinues = retinues,
@@ -326,7 +330,66 @@ function M.refreshAvailability(room)
     local list = {}
     for _, source in ipairs(M.abilitySources(player)) do table.insert(list, source.general) end
     room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    local descriptions = {}
+    local faction = M.factionOf(player)
+    local used = M.usedLimitedRetinues(room)
+    for key, source in pairs(M.getSources(room)) do
+      if M.sourceAuthorizedFor(room, source, player) or source.factions[faction] then
+        local retinues = table.filter(source.retinues, function(name)
+          return not M.isLimitedRetinue(name) or not used[name]
+        end)
+        table.insert(descriptions, { key = key, retinues = retinues,
+          active = M.sourceAuthorizedFor(room, source, player) })
+      end
+    end
+    table.sort(descriptions, function(a, b) return a.key < b.key end)
+    room:setPlayerMark(player, "hanjin_commander_descriptions", #descriptions > 0 and descriptions or 0)
   end
+end
+
+-- Public, room-specific source data is synchronized by refreshAvailability.
+-- Client descriptions never inspect server-only source tags.
+function M.describeSource(key, retinues, active, lang, abilityOnly)
+  local spec = M.commanders[key]
+  if spec == nil then return "" end
+  local name = Fk:translate(key, lang)
+  local card = spec.card_text or Fk:translate(spec.card, lang)
+  if abilityOnly then
+    return "移除一张不为" .. name .. "的武将牌，视为使用【" .. card .. "】。"
+  end
+  local text = name .. "："
+  if active ~= false then
+    text = text .. "若你没有士兵，你可以移除一张不为" .. name .. "的武将牌，视为使用【" .. card .. "】。"
+    if spec.limited then text = text .. "此统领能力每局所有角色合计限一次。" end
+  else
+    text = text .. "当前不能借助" .. name .. "的统领能力使用【" .. card .. "】。"
+  end
+  local names = table.map(retinues or {}, function(id) return "「" .. Fk:translate(id, lang) .. "」" end)
+  if #names == 1 then
+    text = text .. "你所属势力可获得的翼从兵种包括" .. names[1] .. "。"
+  elseif #names > 1 then
+    text = text .. "你所属势力可获得的翼从兵种包括" .. table.concat(names, "、") .. "。"
+  else
+    text = text .. "当前没有可由" .. name .. "获得的翼从。"
+  end
+  for _, id in ipairs(retinues or {}) do
+    if M.isLimitedRetinue(id) then
+      text = text .. "「" .. Fk:translate(id, lang) .. "」为偏将，每局全场只能取得一次。"
+    end
+  end
+  return text
+end
+
+function M.description(player, key, lang, abilityOnly)
+  local entries = player and player:getMark("hanjin_commander_descriptions") or 0
+  local lines = {}
+  for _, entry in ipairs(type(entries) == "table" and entries or {}) do
+    if key == nil or key == entry.key then
+      table.insert(lines, M.describeSource(entry.key, entry.retinues, entry.active, lang, abilityOnly))
+    end
+  end
+  if #lines > 0 then return table.concat(lines, "<br/>") end
+  return abilityOnly and "当前没有可用的统领能力。" or "当前没有可用的统领来源或翼从。"
 end
 
 function M.hasAvailableMark(player)
@@ -337,20 +400,7 @@ end
 --- 当前窗口的可用来源。只用客户端可读取的隐藏来源列表，不读服务端
 --- room tag；mark 由服务端在来源/代价/限一状态变化后刷新。为避免把
 --- “有来源”当成“这张牌现在能使用”，这里复用新月杀当前请求的 canUse/
---- response 判定，并检查至少一个合法目标。
-local function sourceHasLegalTarget(player, card)
-  local skill = card:getSkill(player)
-  if skill == nil then return false end
-  local minTarget = skill.getMinTargetNum and skill:getMinTargetNum(player) or 0
-  if minTarget <= 0 then return true end
-  local room = player.room
-  local players = (room and (room.alive_players or room.players)) or {}
-  for _, to in ipairs(players) do
-    if to ~= nil and not to.dead and not (to.isRemoved and to:isRemoved())
-      and player:canUseTo(card, to) then return true end
-  end
-  return false
-end
+--- response 判定。合法目标由进入用牌界面后的目标选择与确认流程检查。
 
 local function canUseInCurrent(player, card)
   -- ClientInstance without an active request handler is a headless call; the
@@ -371,9 +421,7 @@ local function sourceCardUsable(player, card, mode)
   if mode == "nullification" then
     return card.trueName == "nullification" and card.is_passive
   end
-  -- 无懈的目标是牌/效果而不是角色，不能套用角色目标检查。
-  if card.trueName == "nullification" then return true end
-  return sourceHasLegalTarget(player, card)
+  return true
 end
 
 local function sourceHasCostForUI(player, key)
@@ -386,7 +434,7 @@ end
 function M.abilityLabel(key)
   local spec = M.commanders[key]
   if spec == nil then return key end
-  local label = Fk:translate(key) .. "·" .. Fk:translate(spec.card)
+  local label = Fk:translate(key) .. "·" .. (spec.card_text or Fk:translate(spec.card))
   if M.isLimitedSource({ general = key }) then label = label .. "（限一）" end
   return label
 end
@@ -428,7 +476,8 @@ end
 function M.viewAsCardForClient(player, sourceKey)
   local spec = M.commanders[sourceKey]
   if spec == nil or Fk.all_card_types[spec.card] == nil then return nil end
-  local card = Fk:cloneCard(spec.card)
+  local card = Fk:cloneCard(spec.card, spec.suit)
+  if #spec.adaptation > 0 then Adaptation.setCardEntries(card, spec.adaptation) end
   card.skillName = M.ABILITY_SKILL
   card:setMark(M.CARD_SOURCE_MARK, sourceKey)
   return card
@@ -463,7 +512,7 @@ function M.chooseCostPosition(player, source)
   local answer = player.room:askToChoice(player, {
     choices = { "mainGeneral", "deputyGeneral" },
     skill_name = M.ABILITY_SKILL,
-    prompt = "#hanjin_commander_choose_cost",
+    prompt = M.description(player, source.general, nil, true) .. "<br/>请选择要移除的武将牌。",
   })
   return answer == "deputyGeneral"
 end

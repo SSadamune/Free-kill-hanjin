@@ -1395,6 +1395,7 @@ M.generals = {
       retinueName = [==[象兵]==],
       card = [==[hanjin__slash]==],
       cardText = [==[杀(无距离限制)]==],
+      bypass_distances = true,
       sourceText = [==[象兵 | 杀(无距离限制)]==],
     },
   },
@@ -2466,6 +2467,8 @@ M.generals = {
       retinueName = [==[腹心死士]==],
       card = [==[hanjin__unexpectation]==],
       cardText = [==[♥出其不意〈助战→目标+1〉]==],
+      suit = Card.Heart,
+      adaptation = { { condition = "zhuzhan", effect = "add_target" } },
       sourceText = [==[腹心死士｜♥出其不意〈助战→目标+1〉]==],
     },
   },
@@ -3195,6 +3198,7 @@ M.commanders = {
     retinueName = [==[象兵]==],
     card = [==[hanjin__slash]==],
     cardText = [==[杀(无距离限制)]==],
+      bypass_distances = true,
     sourceText = [==[象兵 | 杀(无距离限制)]==],
   },
   {
@@ -3235,6 +3239,8 @@ M.commanders = {
     retinueName = [==[腹心死士]==],
     card = [==[hanjin__unexpectation]==],
     cardText = [==[♥出其不意〈助战→目标+1〉]==],
+      suit = Card.Heart,
+      adaptation = { { condition = "zhuzhan", effect = "add_target" } },
     sourceText = [==[腹心死士｜♥出其不意〈助战→目标+1〉]==],
   },
   {
