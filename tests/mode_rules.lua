@@ -2,6 +2,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
 local H = require "packages.hegemony.util"
 local A = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
+local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
 
 Testmode_rules = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
 
@@ -158,6 +159,39 @@ function Testmode_rules:testNativeLordConversionDoesNotPreemptHanjinAscension()
   lu.assertFalse(table.contains(prompts, "#HegPrepareConvertLord"))
   lu.assertEquals(p.general, "anjiang")
   lu.assertFalse(A.has_lord(current, "wei"))
+end
+
+function Testmode_rules:testWolvesAreDisabledByDefault()
+  local current = room()
+  lu.assertFalse(Variants.enabled(current))
+  lu.assertTrue(current:getSettings("old_battle_royal"))
+  lu.assertFalse(table.find(current.logic.skill_table[fk.Damaged] or {}, function(skill)
+    return skill:getSkeleton().name == "heg_rule"
+  end) ~= nil)
+  FkTest.runInRoom(function() H.enterBattleRoyalMode(current) end)
+  lu.assertEquals(current:getBanner("@[:]BattleRoyalDummy"), "BattleRoyalMode")
+  lu.assertFalse(current:hasSkill("#new_battle_royal_event&"))
+  lu.assertNil(current:getBanner("@[:]new_battle_royal_event"))
+end
+
+function Testmode_rules:testWolvesCanBeEnabledExplicitly()
+  support.clearRoom()
+  local current = support.createRoom { mode = "hanjin_heg_mode", settings = { hanjin_wolves = true } }
+  lu.assertTrue(Variants.enabled(current))
+  lu.assertFalse(current:getSettings("old_battle_royal"))
+  lu.assertNotNil(table.find(current.logic.skill_table[fk.Damaged] or {}, function(skill)
+    return skill:getSkeleton().name == "heg_rule"
+  end))
+  FkTest.runInRoom(function() H.enterBattleRoyalMode(current) end)
+  lu.assertEquals(current:getBanner("@[:]BattleRoyalDummy"), "NewBattleRoyalMode")
+  lu.assertTrue(current:hasSkill("#new_battle_royal_event&"))
+end
+
+function Testmode_rules:testDefaultOverridesLegacyNewBattleSetting()
+  local current = room()
+  current.settings._mode.old_battle_royal = false
+  Variants.apply(current)
+  lu.assertTrue(current:getSettings("old_battle_royal"))
 end
 
 return { name = "mode_rules" }

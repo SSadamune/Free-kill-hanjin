@@ -8,6 +8,7 @@ local Pool = require "packages.hanjin.pkg.hanjin_mode.rules.general_pool"
 local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
 local Ascension = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
 local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
+local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
 local W = require "ui_emu.preferences"
 local M = {}
 
@@ -57,6 +58,7 @@ function M.create(base)
     local logic = parent:subclass("HanjinHegLogic")
     function logic:chooseGenerals()
       local room = self.room
+      Variants.apply(room)
       local pick = function(list, n) return room:tableRandomPick(list, n) end
       Discard.install()
       Discard.reset(room)
@@ -126,10 +128,13 @@ function M.create(base)
     return logic
   end
 
-  -- Preserve upstream options except the switch which would disable the mandatory bans.
+  -- Faction bans are mandatory. The single HanJin variant switch also replaces
+  -- the upstream old/new battle-royal selector.
   local settings = table.clone(base.ui_settings)
   for _, group in ipairs(settings) do
-    group._children = table.filter(group._children, function(item) return item._settingsKey ~= "notBanToFourKingdoms" end)
+    group._children = table.filter(group._children, function(item)
+      return item._settingsKey ~= "notBanToFourKingdoms" and item._settingsKey ~= "old_battle_royal"
+    end)
   end
 
   local function modeOf(uiSettings)
@@ -177,6 +182,10 @@ function M.create(base)
 
   table.insert(settings, W.PreferenceGroup {
     title = "hanjin_rule_settings",
+    W.SwitchRow {
+      _settingsKey = Variants.key, title = "hanjin_wolves",
+      value = function(settings) return modeOf(settings)[Variants.key] == true end,
+    },
     W.SpinRow {
       _settingsKey = "hanjin_offer_count", title = "hanjin_offer_count",
       from = function(settings) return uiKingdomLimit(settings) + 1 end,

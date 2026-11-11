@@ -12,6 +12,8 @@ Fk:addPostLoadFunc(function()
 end)
 
 Fk:loadTranslationTable {
+  ["hanjin_wolves"] = "群狼环鼎",
+  ["help: hanjin_wolves"] = "默认关闭。开启后启用新鏖战、历史事件（含赋礼、不进则退等）及奇珍规则；关闭时使用普通鏖战。",
   ["hanjin_mode"] = "紫乔汉晋·规则",
   ["han"] = "汉",
   ["hanjin_heg_mode"] = "紫乔汉晋国战",
