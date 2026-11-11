@@ -142,6 +142,7 @@ Fk:loadTranslationTable {
 -- * heg_rule 恢复国战回合开始亮将、鏖战等公共流程；
 -- * #hanjin_exchange_history 记录交换武将所需的逐牌技能使用；
 -- * #hanjin_ascension_rule 提供汉晋君主升变/胜负规则；
+-- * #hanjin_adaptation_display 提供应变牌手牌提示（仅在汉晋房间加入）。
 -- 汉晋君主版不使用 lord 命名，也不登记 HegUtil.lordGenerals，因此 heg_rule
 -- 的 lord_convert 分支不会为汉晋普通将提供原生君主转换；升变仍由汉晋升变规则负责。
 -- 房间添加技能时会按名字去重，因此这些技能即使另有全局入口也不会重复注册。
@@ -152,6 +153,7 @@ Fk:addPostLoadFunc(function()
     "heg_rule",
     "#hanjin_exchange_history",
     "#hanjin_ascension_rule",
+    "#hanjin_adaptation_display",
   }) do
     local dependency = Fk.skills[name]
     if dependency ~= nil then table.insertIfNeed(base.related_skills, dependency) end

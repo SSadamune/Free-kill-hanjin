@@ -44,6 +44,193 @@ function A.isAdaptationCard(card, use)
   end) ~= nil
 end
 
+-- Display helpers -----------------------------------------------------------
+-- Marks and card tips are derived only from explicit metadata on this concrete
+-- card (never from another position with the same name or from a material
+-- subcard). They describe what the card may do; they do not evaluate whether
+-- the condition currently holds.
+A.MARK_PREFIX = "@hanjin_adaptation_"
+
+local function translate(key)
+  local text = Fk:translate(key)
+  return text ~= key and text or key
+end
+
+function A.markKey(index)
+  return A.MARK_PREFIX .. tostring(index)
+end
+
+--- Translation keys consumed by the card-mark renderer. The first string is
+--- the condition and the last the effect, so every entry stays self-describing.
+function A.markValue(entry)
+  return {
+    "hanjin_condition_" .. entry.condition,
+    "·",
+    "hanjin_adaptation_" .. entry.effect,
+  }
+end
+
+function A.entryTip(entry)
+  return translate("hanjin_condition_" .. entry.condition) .. "·"
+    .. translate("hanjin_adaptation_" .. entry.effect)
+end
+
+--- Entries explicitly attached to a concrete card. Use-only entries are not
+--- included because the hand/selection display cannot see the server use data.
+function A.displayEntries(card)
+  if card == nil then return {} end
+  return table.filter(A.getEntries(card), function(entry)
+    return table.contains(conditions, entry.condition)
+      and type(entry.effect) == "string" and entry.effect ~= ""
+  end)
+end
+
+--- Replace the adaptation marks of one physical card with its current entries.
+--- Distinct entry indices avoid one entry silently overwriting another; marks
+--- are stored per card id, so same-name cards at other positions are untouched.
+--- `audience` limits the SetCardMark notification to the clients that can see
+--- the card; nil keeps the legacy broadcast-to-all behavior.
+local function writeCardMark(room, card, mark, value, audience)
+  card:setMark(mark, value)
+  if card:isVirtual() then return end
+  if audience == nil then
+    room:setCardMark(card, mark, value)
+  else
+    room:doBroadcastNotify("SetCardMark", { card.id, mark, value }, audience)
+  end
+end
+
+function A.stampCard(room, card, audience)
+  if room == nil or card == nil or card:isVirtual() then return false end
+  for _, mark in ipairs(card:getMarkNames()) do
+    if mark:startsWith(A.MARK_PREFIX) then writeCardMark(room, card, mark, 0, audience) end
+  end
+  local entries = A.displayEntries(card)
+  for index, entry in ipairs(entries) do
+    writeCardMark(room, card, A.markKey(index), A.markValue(entry), audience)
+  end
+  return #entries > 0
+end
+
+function A.cardStamped(card)
+  if card == nil or card:isVirtual() then return true end
+  local expected = {}
+  local entries = A.displayEntries(card)
+  for index, entry in ipairs(entries) do
+    expected[A.markKey(index)] = A.markValue(entry)
+  end
+
+  local actual = {}
+  for _, mark in ipairs(card:getMarkNames()) do
+    if mark:startsWith(A.MARK_PREFIX) then actual[mark] = card:getMark(mark) end
+  end
+
+  local expectedCount = 0
+  for mark, value in pairs(expected) do
+    expectedCount = expectedCount + 1
+    local current = actual[mark]
+    if type(current) ~= "table" or #current ~= #value then return false end
+    for part = 1, #value do
+      if current[part] ~= value[part] then return false end
+    end
+  end
+  local actualCount = 0
+  for mark in pairs(actual) do
+    actualCount = actualCount + 1
+    if expected[mark] == nil then return false end
+  end
+  return actualCount == expectedCount
+end
+
+function A.hasDisplayMarks(card)
+  if card == nil or card:isVirtual() then return false end
+  for _, mark in ipairs(card:getMarkNames()) do
+    if mark:startsWith(A.MARK_PREFIX) then return true end
+  end
+  return false
+end
+
+--- Stamp one card only when its current display state differs. Used by the
+--- manual full-sync helper; move/initial hooks re-stamp to update the audience.
+function A.syncCard(room, card, audience)
+  if card == nil or card:isVirtual() then return false end
+  if (A.isAdaptationCard(card) or A.hasDisplayMarks(card)) and not A.cardStamped(card) then
+    A.stampCard(room, card, audience)
+    return true
+  end
+  return false
+end
+
+--- Manual full sync helper. It is not called at GamePrepared: that would mark
+--- every face-down draw-pile card. By default it updates only server-side mark
+--- state (empty audience); callers must pass the intended audience to notify
+--- clients, so this helper cannot accidentally leak hidden-card marks.
+function A.stampAll(room, audience)
+  if room == nil then return end
+  audience = audience or {}
+  for _, card in ipairs(Fk.cards) do
+    if room:getCardArea(card.id) ~= Card.Unknown then
+      A.syncCard(room, card, audience)
+    end
+  end
+end
+
+--- Stamp the initial hand of one player. DrawInitial uses notifyMoveCards
+--- rather than fk.AfterCardsMove, so this hook is what covers the first hand.
+function A.stampCards(room, cards, audience)
+  for _, id in ipairs(cards or {}) do
+    local card = Fk:getCardById(id, true)
+    if card ~= nil and not card:isVirtual()
+      and (A.isAdaptationCard(card) or A.hasDisplayMarks(card)) then
+      A.stampCard(room, card, audience)
+    end
+  end
+end
+
+--- Cards are public when they reach Processing/equip/judge. A hand card only
+--- reports its marks to its owner. Draw pile/discard/void get no notification.
+local function audienceForMove(move)
+  local area = move.toArea
+  if area == Player.Hand then
+    return move.to and { move.to } or {}
+  elseif area == Player.Equip or area == Player.Judge or area == Card.Processing then
+    return nil
+  end
+  return false
+end
+
+--- Stamp cards that were created or moved after the initial hand. Cards that
+--- are not yet visible (draw pile/discard/void) are skipped, so ordinary moves
+--- and face-down cards do not broadcast mark data. A hand card only notifies
+--- its owner; public areas notify all players.
+function A.stampMoved(room, moves)
+  for _, move in ipairs(moves or {}) do
+    local audience = audienceForMove(move)
+    if audience ~= false then
+      for _, info in ipairs(move.moveInfo or {}) do
+        local card = Fk:getCardById(info.cardId, true)
+        if card ~= nil and not card:isVirtual()
+          and (A.isAdaptationCard(card) or A.hasDisplayMarks(card)) then
+          -- Re-stamp even when the server mark state is current: the audience
+          -- may have changed with the move (e.g. hand -> new owner/public area).
+          A.stampCard(room, card, audience)
+        end
+      end
+    end
+  end
+end
+
+--- Client-facing card-selection tips. Only explicit card metadata produces a
+--- tip; no condition evaluation is performed here.
+function A.cardTips(card)
+  if card == nil then return nil end
+  local tips = {}
+  for _, entry in ipairs(A.displayEntries(card)) do
+    table.insert(tips, { content = A.entryTip(entry), type = "normal" })
+  end
+  return #tips > 0 and tips or nil
+end
+
 -- Each grant is one token and can bypass only one entry, even if conditions repeat.
 function A.grantIgnore(use, source, entryId)
   assert(not states[use], "Grant ignores before condition detection")
@@ -281,8 +468,11 @@ function A.resolve(room, use)
         state.result.triggered = true
         state.result.triggered_count = state.result.triggered_count + 1
         state.result.effects[entry.effect] = (state.result.effects[entry.effect] or 0) + 1
-        room:sendLog { type = "#HanjinAdaptationTriggered", from = use.from.id,
-          arg = "hanjin_condition_" .. entry.condition, arg2 = "hanjin_adaptation_" .. entry.effect }
+        -- Name the concrete condition in the center popup. This is the only
+        -- success notice; the triggering skill effects are muted so preparing
+        -- a use or a failed condition cannot show the generic "汉晋应变" text.
+        room:sendLog { type = "#InvokeSkillHanjinAdaptation", from = use.from.id,
+          arg = "hanjin_condition_" .. entry.condition }
         room.logic:trigger(A.Triggered, use.from, { use = use, entry = table.clone(record) })
       end
     end

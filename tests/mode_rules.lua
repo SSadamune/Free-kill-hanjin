@@ -27,12 +27,14 @@ function Testmode_rules:testModeRuleLoadsNationalWarRuleAndExchangeHistory()
   lu.assertTrue(current:hasSkill("heg_rule"))
   lu.assertTrue(current:hasSkill("#hanjin_exchange_history"))
   lu.assertTrue(current:hasSkill("#hanjin_ascension_rule"))
+  lu.assertTrue(current:hasSkill("#hanjin_adaptation_display"))
 
   local counts = {}
   for _, name in ipairs(current.logic.skills) do counts[name] = (counts[name] or 0) + 1 end
   lu.assertEquals(counts["heg_rule"], 1)
   lu.assertEquals(counts["#hanjin_exchange_history"], 1)
   lu.assertEquals(counts["#hanjin_ascension_rule"], 1)
+  lu.assertEquals(counts["#hanjin_adaptation_display"], 1)
 
   -- Dependencies are attached to the real mode-rule Skill object, not left in
   -- the skeleton's display-only related_skills name list.
@@ -43,8 +45,26 @@ function Testmode_rules:testModeRuleLoadsNationalWarRuleAndExchangeHistory()
   lu.assertTrue(related["heg_rule"])
   lu.assertTrue(related["#hanjin_exchange_history"])
   lu.assertTrue(related["#hanjin_ascension_rule"])
+  lu.assertTrue(related["#hanjin_adaptation_display"])
 
-
+  -- The display effects and status skill are room-scoped, not global.
+  for _, skill in ipairs(Fk.global_trigger) do
+    lu.assertFalse(skill.name:startsWith("#hanjin_adaptation_display"))
+  end
+  for _, list in pairs(Fk.global_status_skill) do
+    for _, skill in ipairs(list) do
+      lu.assertFalse(skill.skeleton and skill.skeleton.name == "#hanjin_adaptation_display")
+    end
+  end
+  local statusCount = 0
+  for _, list in pairs(current.status_skills) do
+    for _, skill in ipairs(list) do
+      if skill.skeleton and skill.skeleton.name == "#hanjin_adaptation_display" then
+        statusCount = statusCount + 1
+      end
+    end
+  end
+  lu.assertEquals(statusCount, 1)
 end
 
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealMain()
