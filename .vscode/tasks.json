@@ -2,6 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "紫乔汉晋：安装国战依赖",
+      "type": "process",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/setup_dependencies.py"],
+      "problemMatcher": []
+    },
+    {
       "label": "紫乔汉晋：同步扩展",
       "type": "process",
       "command": "powershell.exe",

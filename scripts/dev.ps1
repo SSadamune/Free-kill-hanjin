@@ -9,6 +9,10 @@ if (-not (Test-Path -LiteralPath $executable)) {
 if (Get-Process FreeKill -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $executable }) {
   throw 'Close the development FreeKill before syncing, then retry.'
 }
+if ($Action -eq 'play') {
+  & python (Join-Path $PSScriptRoot 'setup_dependencies.py') --check
+  if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed. Run python scripts/setup_dependencies.py first.' }
+}
 $packageRoot = Join-Path $runtimeRoot 'packages/hanjin'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 # Only copy release assets; never copy the workspace or .dev into itself.

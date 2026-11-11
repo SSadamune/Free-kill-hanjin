@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from setup_dependencies import verify
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNTIME = ROOT / '.dev/runtime/FreeKill-release'
@@ -12,7 +13,7 @@ RUNTIME = ROOT / '.dev/runtime/FreeKill-release'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skills', help='Comma-separated skill names (native addTest cases)')
-    parser.add_argument('--file', type=Path, help='External LuaUnit suite; defaults to tests/smoke.lua')
+    parser.add_argument('--file', type=Path, help='External LuaUnit suite; defaults to tests/all.lua')
     parser.add_argument('--timeout', type=int, default=60)
     args = parser.parse_args()
     if args.skills is not None and args.file is not None:
@@ -20,6 +21,10 @@ def main():
     exe = RUNTIME / 'FreeKill.exe'
     if not exe.is_file():
         parser.error(f'Missing runtime: {exe}')
+    try:
+        verify()
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        parser.exit(1, f'FAIL: {error}\n')
     sync = subprocess.run([
         'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass',
         '-File', str(ROOT / 'scripts/dev.ps1'), '-Action', 'sync',
@@ -29,7 +34,7 @@ def main():
     if args.skills is not None:
         command = [str(exe), '--testskills', args.skills]
     else:
-        suite = (args.file or ROOT / 'tests/smoke.lua').resolve()
+        suite = (args.file or ROOT / 'tests/all.lua').resolve()
         if not suite.is_file():
             parser.error(f'Missing suite: {suite}')
         command = [str(exe), '--testfile', suite.as_posix()]
@@ -45,6 +50,9 @@ def main():
             print(line)
     if result.returncode:
         print(f'FAIL: FreeKill exited with code {result.returncode}', file=sys.stderr)
+        return 1
+    if re.search(r'Main\[(?:C|F)\]', output) or 'stack traceback:' in output:
+        print('FAIL: runtime reported a critical Lua/load error', file=sys.stderr)
         return 1
     if not re.search(r'Ran [1-9]\d* tests? .*\b0 failures\b', output):
         print('FAIL: no successful non-empty LuaUnit summary found', file=sys.stderr)

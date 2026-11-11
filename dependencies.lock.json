@@ -1,0 +1,22 @@
+{
+  "runtime": "0.5.25",
+  "packages": [
+    {
+      "name": "utility",
+      "url": "https://gitee.com/qsgs-fans/utility.git",
+      "commit": "b14e45d9adf67b06bf150f71022e8f1dc0e26116"
+    },
+    {
+      "name": "hegemony",
+      "url": "https://gitee.com/qsgs-fans/hegemony.git",
+      "commit": "e8d93acd34a357f96b0105aef7d661708c211626"
+    }
+  ],
+  "references": [
+    {
+      "name": "gamemode",
+      "url": "https://gitee.com/qsgs-fans/gamemode.git",
+      "commit": "fd19e8863c9507f710e937db9fabccbdffed840d"
+    }
+  ]
+}
