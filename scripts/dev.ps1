@@ -13,6 +13,18 @@ if ($Action -eq 'play') {
   & python (Join-Path $PSScriptRoot 'setup_dependencies.py') --check
   if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed. Run python scripts/setup_dependencies.py first.' }
 }
+# The v0.5.25 Windows client requests the packaged name even when its
+# installation ships the module at ltk/client/util.lua. Use the existing
+# Lua fallback search path without creating a second loadable extension.
+$clientUtil = 'ltk/client/util.lua'
+$modulePath = "packages/freekill-core/$clientUtil"
+$fallback = Join-Path $runtimeRoot "lua/lib/$modulePath"
+if ((Test-Path -LiteralPath (Join-Path $runtimeRoot $clientUtil)) -and
+    -not (Test-Path -LiteralPath (Join-Path $runtimeRoot $modulePath)) -and
+    -not (Test-Path -LiteralPath $fallback)) {
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $fallback) | Out-Null
+  Set-Content -LiteralPath $fallback -Encoding Ascii -Value 'return require "ltk.client.util"'
+}
 $packageRoot = Join-Path $runtimeRoot 'packages/hanjin'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 # Only copy release assets; never copy the workspace or .dev into itself.
