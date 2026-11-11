@@ -677,6 +677,22 @@ Fk:addPostLoadFunc(function()
   for _, prototype in pairs(Fk.all_card_types) do
     if prototype.package == pack then patch(prototype) end
   end
+
+  -- Passive equipment skills are always-on rules, not clickable buttons. Keep
+  -- their trigger/status wiring, but hide them from the ordinary skill area like
+  -- native attached-equipment skills. Active/ViewAs equipment skills (e.g. 丈八
+  -- 蛇矛、木牛、制衡) remain visible and usable. The shared inert skill is a
+  -- card/equipment shell and must not appear as a skill either.
+  for _, cardType in ipairs(CardData.types) do
+    local equipSkill = cardType.equip_skill and Fk.skills[cardType.equip_skill]
+    if equipSkill ~= nil then
+      local active = equipSkill:isInstanceOf(ActiveSkill)
+        or equipSkill:isInstanceOf(ViewAsSkill)
+      equipSkill.visible = active
+    end
+  end
+  local inertEquip = Fk.skills["hanjin__inert_equip"]
+  if inertEquip ~= nil then inertEquip.visible = false end
 end)
 
 -- Register the 合纵 positions with the upstream alliance marker. The runtime
