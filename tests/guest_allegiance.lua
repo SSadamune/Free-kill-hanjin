@@ -209,7 +209,8 @@ function Testhanjin_guest_allegiance:testChainedGuestRedrawGoesToDiscardAndNever
     offers = {
       [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
     }
-    changes = Selection.redraw(room, { player }, offers)
+    Selection.ask(room, { player }, offers)
+    changes = room:getTag("hanjin_guest_redraws_v1")
     discarded = Discard.list(room)
   end)
   lu.assertEquals(#changes, 2, "The replacement guest candidate must be offered again")
@@ -273,7 +274,7 @@ function Testhanjin_guest_allegiance:testFailedReplacementKeepsOriginalCandidate
     offers = {
       [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" },
     }
-    Selection.redraw(room, { player }, offers)
+    Selection.ask(room, { player }, offers)
     failures = room:getTag("hanjin_guest_redraw_failures_v1")
   end)
   lu.assertEquals(offers[player], { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
@@ -296,7 +297,8 @@ function Testhanjin_guest_allegiance:testTwoPlayersRedrawInOneRound()
       [first] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
       [second] = { "hanjin_test__guest_dual_3", "hanjin_test__guest_dual_4", "hanjin_test__han_2" },
     }
-    changes = Selection.redraw(room, { first, second }, offers)
+    Selection.ask(room, { first, second }, offers)
+    changes = room:getTag("hanjin_guest_redraws_v1")
   end)
   lu.assertEquals(#changes, 2)
   lu.assertEquals(#Discard.list(room), 2)
@@ -369,10 +371,9 @@ end
 function Testhanjin_guest_allegiance:testClientDialogContract()
   local room = create {}
   local offers = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" }
-  local data, redraw, allowed, blocked
+  local data, allowed, blocked
   FkTest.runInRoom(function()
     data = Selection.askData(room, offers)
-    redraw = Selection.redrawData(room, offers, { "hanjin_test__guest_dual_1" })
     local rule = Fk.choose_general_rule.hanjin_heg_pair
     local extra = data.component.model.prop.extraData
     allowed = rule.card_filter("hanjin_test__guest_dual_2",
@@ -380,15 +381,13 @@ function Testhanjin_guest_allegiance:testClientDialogContract()
     blocked = rule.card_filter("hanjin_test__wu_1",
       { "hanjin_test__guest_dual_1" }, offers, extra)
   end)
-  lu.assertEquals(data.component.name, "ChooseGeneralBox")
+  lu.assertEquals(data.component.url, "packages/hanjin/pkg/hanjin_mode/qml/GuestRedrawBox.qml")
   lu.assertEquals(data.component.model.name, "ChooseGeneralModel")
   local prop = data.component.model.prop
   lu.assertEquals(prop.ruleType, "hanjin_heg_pair")
   lu.assertTrue(prop.extraData.pairing["hanjin_test__guest_dual_1"] ~= nil)
   lu.assertTrue(table.contains(prop.extraData.pairing["hanjin_test__guest_dual_1"], "hanjin_test__guest_dual_2"))
-  lu.assertEquals(redraw.component.url, "packages/hanjin/qml/GuestRedrawBox.qml")
-  lu.assertEquals(redraw.component.prop.guests, { "hanjin_test__guest_dual_1" })
-  lu.assertEquals(redraw.component.prop.factions["hanjin_test__guest_dual_1"].kingdoms, { "han" })
+  lu.assertEquals(prop.extraData.guests, { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
   lu.assertTrue(allowed)
   lu.assertFalse(blocked)
 end

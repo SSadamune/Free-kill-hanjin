@@ -4,15 +4,13 @@
 -- choose-general rule (registered by the mode package). The rule receives the
 -- per-room pairing map as extra data, so a guest candidate is filtered by its
 -- actual this-game factions instead of the engine's global general definition.
--- Guest redraw is a separate custom dialog before the final selection; a
--- successful redraw can produce another guest candidate, which is offered again
--- (chained redraw).
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
 local M = {}
 
+M.defaultTimeout = 90
 M.rule = "hanjin_heg_pair"
-M.redraw_url = "packages/hanjin/qml/GuestRedrawBox.qml"
+M.redraw_url = "packages/hanjin/pkg/hanjin_mode/qml/GuestRedrawBox.qml"
 
 local function strings(list)
   local result = {}
@@ -176,14 +174,15 @@ end
 ---@param room Room
 ---@param offers string[]
 ---@return table
-function M.askData(room, offers)
+function M.askData(room, offers, guests)
+  guests = guests or Guest.guestCandidates(room, offers)
   local _, pairing = M.pairing(room, offers)
   local wild = {}
   for _, name in ipairs(offers) do
     local entry = Guest.factionsOf(room, name)
     if entry and entry.wild then wild[name] = true end
   end
-  return {
+  local data = {
     component = {
       name = "ChooseGeneralBox", uri = "LunarLtk.Pages.Popups",
       model = {
@@ -200,6 +199,12 @@ function M.askData(room, offers)
       },
     },
   }
+  if #guests > 0 then
+    data.component.name, data.component.uri = nil, nil
+    data.component.url = M.redraw_url
+    data.component.model.prop.extraData.guests = guests
+  end
+  return data
 end
 
 ---Ask every player for a final pair.
@@ -208,18 +213,40 @@ end
 ---@param offers table<ServerPlayer, string[]>
 ---@return table<ServerPlayer, string[]>
 function M.ask(room, players, offers)
-  local req = Request:new(players, "CustomDialog")
-  req.focus_text = "AskForGeneral"
-  req.timeout = room:getSettings("generalTimeout") or room.timeout
-  for _, player in ipairs(players) do
-    local default = M.firstLegalPair(room, offers[player])
-    assert(default, "Each player must receive a legal pair")
-    req:setData(player, M.askData(room, offers[player]))
-    req:setDefaultReply(player, { default.main, default.deputy })
-  end
-  local answers = {}
-  for _, player in ipairs(players) do
-    answers[player] = M.decode(req:getResult(player))
+  local answers, asked = {}, {}
+  local pending = players
+  while #pending > 0 do
+    local req = Request:new(pending, "CustomDialog")
+    req.focus_text = "AskForGeneral"
+    req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
+    local eligible = {}
+    for _, player in ipairs(pending) do
+      asked[player] = asked[player] or {}
+      eligible[player] = table.filter(Guest.guestCandidates(room, offers[player]), function(name)
+        return not asked[player][name]
+      end)
+      local default = assert(M.firstLegalPair(room, offers[player]))
+      req:setData(player, M.askData(room, offers[player], eligible[player]))
+      req:setDefaultReply(player, { default.main, default.deputy })
+    end
+    local retry = {}
+    for _, player in ipairs(pending) do
+      local reply = req:getResult(player)
+      local names = {}
+      if type(reply) == "table" and type(reply.indices) == "table" then
+        names = table.filter(M.decodeRedraw(reply, offers[player]), function(name)
+          return table.contains(eligible[player], name)
+        end)
+      end
+      if #names > 0 then
+        for _, name in ipairs(eligible[player]) do asked[player][name] = true end
+        M.applyRedraw(room, player, offers, names)
+        table.insert(retry, player)
+      else
+        answers[player] = M.decode(reply)
+      end
+    end
+    pending = retry
   end
   return answers
 end
@@ -256,7 +283,7 @@ function M.askKingdom(room, player, legal)
   if #legal == 1 then return legal[1] end
   local req = Request:new(player, "AskForChoices")
   req.focus_text = "hanjin_heg_mode"
-  req.timeout = room:getSettings("generalTimeout") or room.timeout
+  req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
   req:setData(player, { legal, legal, { 1, 1 }, false, "hanjin_heg_mode",
     "#HanjinChooseKingdom", false, true })
   req:setDefaultReply(player, { legal[1] })
@@ -280,33 +307,6 @@ function M.choose(room, players, offers)
     kingdoms[player] = kingdom
   end
   return pairs, kingdoms, fallbacks
-end
-
----Dialog data for the voluntary guest redraw step.
----@param room Room
----@param offers string[]
----@param unasked string[]
----@return table
-function M.redrawData(room, offers, unasked)
-  local factions = {}
-  for _, name in ipairs(offers) do
-    local entry = Guest.factionsOf(room, name)
-    if entry then
-      factions[name] = { kingdoms = entry.kingdoms, source = entry.source }
-    end
-  end
-  return {
-    component = {
-      url = M.redraw_url,
-      prop = {
-        generals = table.simpleClone(offers),
-        factions = factions,
-        guests = table.simpleClone(unasked),
-        prompt = "#HanjinGuestRedraw",
-        maxSelect = #unasked,
-      },
-    },
-  }
 end
 
 ---Decode a redraw reply into offers names. Unknown/foreign indices are ignored.
@@ -334,48 +334,6 @@ function M.decodeRedraw(reply, offers)
     end
   end
   return selected
-end
-
----One simultaneous redraw round. Returns only newly redrawn names per player.
----All eligible candidates are marked as asked before the request, so a declined
----or failed candidate is not offered again; only a newly dealt guest candidate
----triggers another round (chained redraw).
----@param room Room
----@param players ServerPlayer[]
----@param offers table<ServerPlayer, string[]>
----@param asked table<ServerPlayer, table<string, boolean>>
----@return table<ServerPlayer, string[]>
-function M.askRedraw(room, players, offers, asked)
-  local targets, data = {}, {}
-  for _, player in ipairs(players) do
-    local unasked = table.filter(Guest.guestCandidates(room, offers[player]), function(name)
-      return not (asked[player] and asked[player][name])
-    end)
-    if #unasked > 0 then
-      table.insert(targets, player)
-      data[player] = unasked
-      asked[player] = asked[player] or {}
-      for _, name in ipairs(unasked) do asked[player][name] = true end
-    end
-  end
-  if #targets == 0 then return {} end
-
-  local req = Request:new(targets, "CustomDialog")
-  req.focus_text = "hanjin_guest_redraw"
-  req.timeout = room:getSettings("generalTimeout") or room.timeout
-  for _, player in ipairs(targets) do
-    req:setData(player, M.redrawData(room, offers[player], data[player]))
-    req:setDefaultReply(player, { indices = {} })
-  end
-  local choices = {}
-  for _, player in ipairs(targets) do
-    local names = M.decodeRedraw(req:getResult(player), offers[player])
-    names = table.filter(names, function(name)
-      return table.contains(data[player], name)
-    end)
-    if #names > 0 then choices[player] = names end
-  end
-  return choices
 end
 
 ---Find a replacement set that keeps a legal pair and does not take the old
@@ -474,35 +432,6 @@ function M.applyRedraw(room, player, offers, names)
   end
   room:setTag("hanjin_guest_redraws_v1", log)
   return true, replacements
-end
-
----Run guest redraw until no newly dealt guest candidate remains.
----@param room Room
----@param players ServerPlayer[]
----@param offers table<ServerPlayer, string[]>
----@return table[]
-function M.redraw(room, players, offers)
-  local asked = {}
-  for _, player in ipairs(players) do asked[player] = {} end
-  local rounds = 0
-  while true do
-    rounds = rounds + 1
-    if rounds > 256 then
-      room:setTag("hanjin_guest_redraw_error_v1", "redraw round limit")
-      break
-    end
-    local choices = M.askRedraw(room, players, offers, asked)
-    local changed = false
-    for _, player in ipairs(players) do
-      local names = choices[player]
-      if names and #names > 0 then
-        local ok = M.applyRedraw(room, player, offers, names)
-        if ok then changed = true end
-      end
-    end
-    if not changed then break end
-  end
-  return room:getTag("hanjin_guest_redraws_v1") or {}
 end
 
 return M

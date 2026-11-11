@@ -223,9 +223,6 @@ function Teststandard_generals:testGuestFactionsAndRealGuestResolution()
   -- The selection prompt marks the guest card with its this-game factions.
   lu.assertEquals(Selection.prompt(room, { "hanjin__wei001" }),
     "#HanjinChooseGeneralsGuest:::曹操（汉/群）")
-  local redraw = Selection.redrawData(room, { "hanjin__wei001" }, { "hanjin__wei001" })
-  lu.assertEquals(redraw.component.prop.factions["hanjin__wei001"].source, "guest")
-  lu.assertEquals(redraw.component.prop.factions["hanjin__wei001"].kingdoms, { "han", "qun" })
 end
 
 function Teststandard_generals:testFormalRoomStartsWithBanSelectionAndHalfHp()

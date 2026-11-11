@@ -88,9 +88,6 @@ function M.create(base)
       -- Per-game audit of voluntary re-draws and failed replacements.
       room:setTag("hanjin_guest_redraws_v1", {})
       room:setTag("hanjin_guest_redraw_failures_v1", {})
-      -- Voluntary re-draw of guest candidates, including chained replacements,
-      -- before the final main/deputy commitment.
-      Selection.redraw(room, room.players, offers)
       local answers, kingdoms, fallbacks = Selection.choose(room, room.players, offers)
       local unused = {}
       for _, player in ipairs(room.players) do table.insertTable(unused, offers[player]) end
@@ -160,6 +157,13 @@ function M.create(base)
 
   table.insert(settings, W.PreferenceGroup {
     title = "hanjin_rule_settings",
+    W.SpinRow {
+      _settingsKey = "generalTimeout", title = "Choose General timeout",
+      from = 10, to = Selection.defaultTimeout,
+      value = function(settings)
+        return modeOf(settings).generalTimeout or Selection.defaultTimeout
+      end,
+    },
     W.SpinRow {
       _settingsKey = "hanjin_wild_count", title = "hanjin_wild_count", from = 0,
       to = function()
