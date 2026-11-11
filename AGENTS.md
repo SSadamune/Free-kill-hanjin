@@ -16,3 +16,14 @@
 - 应变条件时点已确认逐项执行前重检（sequential）；单张杀“无视次数”的提前锁定时点遵循 rules/adaptation.md 第 8 节。统一快照（snapshot）配置与测试仅保留为开发对照分支，正式模式必须使用 sequential；配置位于 pkg/hanjin_mode/rules/config.lua。
 - 应变参考源码位于 .dev/reference/gamemode，版本写入 dependencies.lock.json 的 references，不能直接启用上游原牌堆及全局规则。添加技能必须使用汉晋应变 API，并区分 isAdaptationCard 与 Triggered 事件。
 - 需要 UI 素材时，先向用户说明所需素材并索取原材料，再按用户指示加工。使用生图功能从零生成图片或自行从零绘制素材，均须事先得到用户明确批准。
+
+## 提交格式
+
+- 使用规范式提交，格式为 `类型: 中文标题`，标题简洁说明改动。功能使用 `feature`，修复使用 `fix`，文档使用 `docs`；其他改动可使用 `refactor`、`test`、`chore` 等对应类型。
+- 示例：`feature: 完善客将逐张重抽并更新汉晋势力素材`。
+- 根据实际参与开发的模型，在提交消息末尾附上对应的合作编辑者署名，与正文之间留一个空行：
+
+  ```text
+  Co-authored-by: Codex <codex@openai.com>
+  Co-authored-by: DeepSeek <noreply@deepseek.com>
+  ```
