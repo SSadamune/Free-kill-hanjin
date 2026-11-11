@@ -13,5 +13,6 @@
 - `rules/` 规则文档由 Codex 维护。DSH 默认只读；若需要修改，必须先说明具体文件、理由和拟议改动，待 Codex 审阅并明确允许后才能修改。
 - --skills 使用官方默认测试房间，不保证国战条件；仅作工具或上游测试验证。国战技能测试应加入默认国战套件。
 - 应变规则以 rules/adaptation.md 为准：应变牌含明确赋予条件/效果的转化牌；条件满足强制执行，增减目标取消不计触发；一项无视效果只作用于一个条目。
-- 应变条件时点尚未定案：用户暂定逐项执行前重检（sequential），保留统一快照（snapshot）配置与测试；配置位于 pkg/hanjin_mode/rules/config.lua。不能再默认所有条目统一使用时快照。
+- 应变条件时点已确认逐项执行前重检（sequential）；单张杀“无视次数”的提前锁定时点遵循 rules/adaptation.md 第 8 节。统一快照（snapshot）配置与测试仅保留为开发对照分支，正式模式必须使用 sequential；配置位于 pkg/hanjin_mode/rules/config.lua。
 - 应变参考源码位于 .dev/reference/gamemode，版本写入 dependencies.lock.json 的 references，不能直接启用上游原牌堆及全局规则。添加技能必须使用汉晋应变 API，并区分 isAdaptationCard 与 Triggered 事件。
+- 需要 UI 素材时，先向用户说明所需素材并索取原材料，再按用户指示加工。使用生图功能从零生成图片或自行从零绘制素材，均须事先得到用户明确批准。
