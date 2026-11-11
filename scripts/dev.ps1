@@ -13,6 +13,8 @@ if ($Action -eq 'play') {
   & python (Join-Path $PSScriptRoot 'setup_dependencies.py') --check
   if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed. Run python scripts/setup_dependencies.py first.' }
 }
+& python (Join-Path $PSScriptRoot 'prepare_runtime.py')
+if ($LASTEXITCODE -ne 0) { throw 'Runtime compatibility setup failed.' }
 # The v0.5.25 Windows client requests the packaged name even when its
 # installation ships the module at ltk/client/util.lua. Use the existing
 # Lua fallback search path without creating a second loadable extension.

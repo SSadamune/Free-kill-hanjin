@@ -16,6 +16,7 @@
 - 应变条件时点已确认逐项执行前重检（sequential）；单张杀“无视次数”的提前锁定时点遵循 rules/adaptation.md 第 8 节。统一快照（snapshot）配置与测试仅保留为开发对照分支，正式模式必须使用 sequential；配置位于 pkg/hanjin_mode/rules/config.lua。
 - 应变参考源码位于 .dev/reference/gamemode，版本写入 dependencies.lock.json 的 references，不能直接启用上游原牌堆及全局规则。添加技能必须使用汉晋应变 API，并区分 isAdaptationCard 与 Triggered 事件。
 - 需要 UI 素材时，先向用户说明所需素材并索取原材料，再按用户指示加工。使用生图功能从零生成图片或自行从零绘制素材，均须事先得到用户明确批准。
+- 面向用户的扩展使用 `python scripts/build_release.py` 构建，仅打包项目中的 `init.lua`、`pkg/`、`image/`、`audio/`。本体适配仅由开发脚本应用于 `.dev/runtime/FreeKill-release/`，不得从扩展加载入口执行，也不得将适配后的本体文件打入用户安装包。仅开发环境生效的功能须在 README 中明确标注。
 
 ## 提交格式
 
