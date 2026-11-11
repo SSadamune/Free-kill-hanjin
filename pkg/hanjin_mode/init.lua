@@ -17,7 +17,7 @@ Fk:loadTranslationTable {
   ["hanjin_heg_mode"] = "紫乔汉晋国战",
   [":hanjin_heg_mode"] = "继承国战规则；房主预先选择本局候选势力及允许上限，候选外不可选，"
     .. "并遵守同房间上一局胜负及禁选记录。可设置野心家专属武将数量；客将候选可在最终选将前自愿重抽。",
-  ["hanjin_candidate_kingdoms"] = "候选势力",
+  ["hanjin_candidate_kingdoms"] = "备选势力",
   ["help: hanjin_candidate_kingdoms"] = "房主预先选择本局可出现的常规势力；默认魏蜀吴群汉晋六势力。"
     .. "候选外的主势力、客将势力及效忠版势力均不可选。",
   ["hanjin_candidate_wei"] = "魏",
@@ -29,6 +29,7 @@ Fk:loadTranslationTable {
   ["hanjin_kingdom_limit"] = "本局允许势力上限",
   ["help: hanjin_kingdom_limit"] = "正整数，且不超过已选候选数；默认4，候选少于4项时取候选数。"
     .. "候选多于上限时，按上一局必禁/必留规则随机禁到上限。",
+  ["hanjin_offer_count"] = "每人备选武将数",
   ["hanjin_rule_settings"] = "紫乔汉晋规则",
   ["hanjin_wild_count"] = "野心家专属武将数量",
   ["help: hanjin_wild_count"] = "随机保留至多此数量的野心家专属武将；未保留的原版按本局允许势力替换为效忠版。"
@@ -37,7 +38,8 @@ Fk:loadTranslationTable {
   ["hanjin_guest_redraw"] = "客将重抽",
   ["#HanjinGuestRedraw"] = "选择要放弃并重抽的客将候选；每次重抽从剩余将池补发，补发后仍可继续重抽新的客将。",
   ["#HanjinChooseGenerals"] = "选择主将与副将",
-  ["#HanjinChooseGeneralsGuest"] = "选择主将与副将。客将候选（本局势力）：%arg",
+  ["#HanjinChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
+  ["#HanjinChooseGeneralsGuest"] = "选择主将与副将　本局禁用势力：%arg　客将候选（本局势力）：%arg2",
   ["#HanjinChooseKingdom"] = "选择你的初始势力",
   ["#HanjinGuestRedrawn"] = "%from 重抽客将：%arg → %arg2",
 }

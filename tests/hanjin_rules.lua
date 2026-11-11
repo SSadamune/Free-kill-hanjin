@@ -140,17 +140,25 @@ function Testhanjin_rules:testCandidateUIHasKingdomSwitchesAndDynamicLimit()
     return result
   end
   local default = rows({})
-  local switches = 0
-  for key in pairs(default) do
-    if key:startsWith(Ban.candidatePrefix) then switches = switches + 1 end
-  end
-  lu.assertEquals(switches, #Ban.kingdoms)
-  lu.assertEquals(default["hanjin_candidate_wei"].value, true)
+  local offers = default.hanjin_offer_count
+  lu.assertEquals({ offers.from, offers.to, offers.value }, { 5, 10, 7 })
+  local raised = rows { hanjin_kingdom_limit = 6, hanjin_offer_count = 5 }
+  lu.assertEquals(raised.hanjin_offer_count.value, 7)
+  local lowered = rows { hanjin_kingdom_limit = 2, hanjin_offer_count = 3 }
+  lu.assertEquals(lowered.hanjin_offer_count.from, 3)
+  lu.assertEquals(lowered.hanjin_offer_count.value, 3)
+  lu.assertEquals(rows({ hanjin_offer_count = 11 }).hanjin_offer_count.value, 10)
+  local group = default.hanjin_candidate_summary
+  lu.assertEquals(#group._children, #Ban.kingdoms)
+  lu.assertEquals(group.value, "魏、蜀、吴、群、汉、晋")
+  lu.assertEquals(default.generalTimeout.to, 300)
+  lu.assertEquals(default.generalTimeout.value, 90)
+  lu.assertEquals(default.hanjin_wild_count.to, 12)
   lu.assertEquals(default[Ban.limitKey].value, 4)
   lu.assertEquals(default[Ban.limitKey].from, 1)
   lu.assertEquals(default[Ban.limitKey].to, #Ban.kingdoms)
   local custom = rows { hanjin_candidate_wei = false, hanjin_kingdom_limit = 3 }
-  lu.assertEquals(custom["hanjin_candidate_wei"].value, false)
+  lu.assertEquals(custom.hanjin_candidate_summary.value, "蜀、吴、群、汉、晋")
   lu.assertEquals(custom[Ban.limitKey].value, 3)
   lu.assertEquals(custom[Ban.limitKey].to, #Ban.kingdoms - 1)
 end

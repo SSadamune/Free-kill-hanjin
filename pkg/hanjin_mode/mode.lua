@@ -17,6 +17,12 @@ local function canPair(room, main, deputy)
   return Selection.canPair(room, main, deputy)
 end
 
+local MAX_OFFERS = 10
+
+local function offerCount(value, kingdomLimit)
+  return math.max(kingdomLimit + 1, math.min(value or 7, MAX_OFFERS))
+end
+
 -- Reserve a legal pair for every seat, then fill the remaining offers without duplicates.
 local function deal(room, players, count)
   local pool = table.simpleClone(room.general_pile)
@@ -58,7 +64,7 @@ function M.create(base)
       Commander.excludeRetinuesFromPile(room)
       local previous = Session.consume(room)
       local cap = room:getSettings("hanjin_wild_count")
-      if cap == nil then cap = 4 end
+      cap = math.min(cap or 4, 12)
       -- BAN-001 input is the host's candidate selection, never the pile.
       local config = Ban.resolveSettings(function(key) return room:getSettings(key) end)
       room:setBanner("hanjin_candidate_kingdoms", config.candidates)
@@ -84,7 +90,7 @@ function M.create(base)
       local lord = room:getLord()
       room:setCurrent(lord)
       lord.role = "hidden"
-      local offers = deal(room, room.players, math.max(room:getSettings("generalNum") or 5, 5))
+      local offers = deal(room, room.players, offerCount(room:getSettings("hanjin_offer_count"), #plan.allowed))
       -- Per-game audit of voluntary re-draws and failed replacements.
       room:setTag("hanjin_guest_redraws_v1", {})
       room:setTag("hanjin_guest_redraw_failures_v1", {})
@@ -129,6 +135,10 @@ function M.create(base)
   local function modeOf(uiSettings)
     return (uiSettings and uiSettings._mode) or {}
   end
+  local function uiKingdomLimit(settings)
+    local mode = modeOf(settings)
+    return math.max(1, math.min(mode[Ban.limitKey] or 4, Ban.candidateCount(mode)))
+  end
   -- One switch per known regular kingdom. Future kingdoms registered through
   -- Ban.registerKingdom before mode creation are appended here automatically.
   local candidateSpec = { title = "hanjin_candidate_kingdoms" }
@@ -141,38 +151,50 @@ function M.create(base)
       end,
     })
   end
-  table.insert(candidateSpec, W.SpinRow {
+  -- RoomInfoContainer lists direct children only. The group carries the
+  -- display value, while its nested switches keep their original settings.
+  local candidateGroup = W.PreferenceGroup(candidateSpec)
+  candidateGroup._qml = { url = "packages/hanjin/pkg/hanjin_mode/qml/CandidateGroup.qml" }
+  candidateGroup._settingsKey = "hanjin_candidate_summary"
+  candidateGroup.value = function(uiSettings)
+    local names = {}
+    for _, kingdom in ipairs(Ban.kingdoms) do
+      if Ban.candidateValue(modeOf(uiSettings), kingdom) then
+        table.insert(names, Ban.kingdomLabel(kingdom))
+      end
+    end
+    return table.concat(names, "、")
+  end
+  local candidateSettings = { candidateGroup }
+  table.insert(candidateSettings, W.SpinRow {
     _settingsKey = Ban.limitKey, title = "hanjin_kingdom_limit", from = 1,
     to = function(uiSettings)
       return math.max(Ban.candidateCount(modeOf(uiSettings)), 1)
     end,
-    value = function(uiSettings)
-      local mode = modeOf(uiSettings)
-      local value = mode[Ban.limitKey]
-      if value == nil then return math.min(4, Ban.candidateCount(mode)) end
-      return value
-    end,
+    value = uiKingdomLimit,
   })
-  table.insert(settings, W.PreferenceGroup(candidateSpec))
+  table.insert(settings, W.PreferenceGroup(candidateSettings))
 
   table.insert(settings, W.PreferenceGroup {
     title = "hanjin_rule_settings",
     W.SpinRow {
+      _settingsKey = "hanjin_offer_count", title = "hanjin_offer_count",
+      from = function(settings) return uiKingdomLimit(settings) + 1 end,
+      to = MAX_OFFERS,
+      value = function(settings)
+        return offerCount(modeOf(settings).hanjin_offer_count, uiKingdomLimit(settings))
+      end,
+    },
+    W.SpinRow {
       _settingsKey = "generalTimeout", title = "Choose General timeout",
-      from = 10, to = Selection.defaultTimeout,
+      from = 10, to = 300,
       value = function(settings)
         return modeOf(settings).generalTimeout or Selection.defaultTimeout
       end,
     },
     W.SpinRow {
       _settingsKey = "hanjin_wild_count", title = "hanjin_wild_count", from = 0,
-      to = function()
-        local count = 0
-        for _, g in pairs(Fk.generals) do
-          if g.kingdom == "wild" and g.package.extensionName == "hanjin" then count = count + 1 end
-        end
-        return math.max(count, 4)
-      end,
+      to = 12,
       value = function(settings)
         local value = (settings._mode or {}).hanjin_wild_count
         return value == nil and 4 or value

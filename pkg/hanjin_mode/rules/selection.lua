@@ -5,6 +5,7 @@
 -- per-room pairing map as extra data, so a guest candidate is filtered by its
 -- actual this-game factions instead of the engine's global general definition.
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
+local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
 local M = {}
 
@@ -151,7 +152,7 @@ function M.pairing(room, offers)
 end
 
 local function kingdomList(kingdoms)
-  return table.concat(table.map(kingdoms, function(k) return Fk:translate(k) end), "/")
+  return table.concat(table.map(kingdoms, Ban.kingdomLabel), "/")
 end
 
 ---Prompt text that marks guest candidates and their this-game kingdoms.
@@ -166,8 +167,10 @@ function M.prompt(room, offers)
       table.insert(marks, Fk:translate(name) .. "（" .. kingdomList(entry.kingdoms) .. "）")
     end
   end
-  if #marks == 0 then return "#HanjinChooseGenerals" end
-  return "#HanjinChooseGeneralsGuest:::" .. table.concat(marks, "、")
+  local banned = room:getBanner("hanjin_banned_kingdoms") or {}
+  local bans = #banned > 0 and kingdomList(banned) or "无"
+  if #marks == 0 then return "#HanjinChooseGeneralsBans:::" .. bans end
+  return "#HanjinChooseGeneralsGuest:::" .. bans .. ":" .. table.concat(marks, "、")
 end
 
 ---Dialog data for the final pair selection.

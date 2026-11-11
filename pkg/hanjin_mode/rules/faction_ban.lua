@@ -14,6 +14,12 @@ M.candidateKey = "hanjin_candidate_kingdoms"
 M.limitKey = "hanjin_kingdom_limit"
 M.candidatePrefix = "hanjin_candidate_"
 
+function M.kingdomLabel(kingdom)
+  local key = M.candidatePrefix .. kingdom
+  local label = Fk:translate(key)
+  return label ~= key and label or Fk:translate(kingdom)
+end
+
 ---Add a future regular kingdom. It is selectable by the host but is not part of
 ---the default candidate set unless registered with `{ default = true }`.
 ---@param kingdom string

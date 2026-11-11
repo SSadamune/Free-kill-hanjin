@@ -8,11 +8,10 @@ local skill = fk.CreateSkill {
 }
 
 skill:addEffect(fk.GameStart, {
-  priority = 100,
-  can_trigger = function(self, event, target, player)
+  can_refresh = function(self, event, target, player)
     return player.seat == 1
   end,
-  on_trigger = function(self, event, target, player)
+  on_refresh = function(self, event, target, player)
     local room = player.room
     C.reset(room)
     for _, p in ipairs(room.players) do C.grantAbility(p) end

@@ -222,7 +222,7 @@ function Teststandard_generals:testGuestFactionsAndRealGuestResolution()
 
   -- The selection prompt marks the guest card with its this-game factions.
   lu.assertEquals(Selection.prompt(room, { "hanjin__wei001" }),
-    "#HanjinChooseGeneralsGuest:::曹操（汉/群）")
+    "#HanjinChooseGeneralsGuest:::无:曹操（汉/群）")
 end
 
 function Teststandard_generals:testFormalRoomStartsWithBanSelectionAndHalfHp()
