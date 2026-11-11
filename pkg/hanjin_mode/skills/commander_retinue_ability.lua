@@ -6,28 +6,35 @@ local skill = fk.CreateSkill {
   name = C.ABILITY_SKILL,
 }
 
-local function sourceChoices(player)
-  return C.markSources(player)
-end
-
 skill:addEffect("viewas", {
   pattern = ".",
   prompt = "#hanjin_commander_ability",
   card_filter = Util.FalseFunc,
   interaction = function(self, player)
-    local choices = sourceChoices(player)
-    if #choices == 0 then return nil end
-    return UI.ComboBox {
-      choices = choices,
-      all_choices = choices,
-      default = choices[1],
+    local entries = C.availableSourceEntries(player)
+    if #entries == 0 then return nil end
+    -- custom interaction keeps the source buttons in the use-card panel. The
+    -- stable `key` is the authoritative server value; `label` is display-only.
+    return {
+      type = "custom",
+      default = entries[1].key,
+      qml = {
+        url = "packages/hanjin/pkg/hanjin_mode/qml/CommanderSourceButtons.qml",
+        prop = {
+          sources = entries,
+          currentKey = entries[1].key,
+        },
+      },
     }
   end,
   view_as = function(self, player, cards)
     local key = self.interaction and self.interaction.data
-    if type(key) ~= "string" or key == "" then
-      local choices = sourceChoices(player)
-      if #choices == 1 then key = choices[1] end
+    if type(key) ~= "string" or key == "" or C.commanders[key] == nil then
+      -- The first entry is the default even when several sources exist; the
+      -- client may not have synchronized interaction.data yet on first paint.
+      if player == nil or type(player.getMark) ~= "function" then return nil end
+      local entries = C.availableSourceEntries(player)
+      key = entries[1] and entries[1].key or nil
     end
     if type(key) ~= "string" or key == "" then return nil end
     -- 客户端 view_as 不能读取服务端来源 tag；构造牌后由服务端 before_use 复核。
@@ -47,14 +54,14 @@ skill:addEffect("viewas", {
     if not C.payCost(player, source, isDeputy) then return skill.name end
   end,
   enabled_at_play = function(self, player)
-    return C.hasAvailableMark(player)
+    return C.hasUsableSource(player, "play")
   end,
   enabled_at_response = function(self, player, response)
-    return not response and C.hasAvailableMark(player)
+    return not response and C.hasUsableSource(player, "response")
   end,
   enabled_at_nullification = function(self, player, data)
     -- 无懈可击属于“使用”而不是纯“打出”；只有来源牌确实能形成合法无懈时才开放。
-    return C.hasNullificationSource(player)
+    return C.hasUsableSource(player, "nullification")
   end,
 })
 

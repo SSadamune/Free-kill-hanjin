@@ -77,12 +77,19 @@ Fk:addPostLoadFunc(function()
       limited = retinue.limited,
     })
   end
+  local limitedCommanders = {}
+  for _, data in ipairs(Data.generals) do
+    if data.commander then
+      limitedCommanders[data.id] = data.commander.limited == true
+    end
+  end
   for _, source in ipairs(Data.commanders) do
     Commander.registerCommander(source.general, {
       card = source.card,
       card_text = source.cardText,
       source_text = source.sourceText,
       retinues = { source.retinue },
+      limited = limitedCommanders[source.general] == true,
     })
   end
 
@@ -114,8 +121,8 @@ Fk:addPostLoadFunc(function()
         "Wrong commander source text for " .. data.id)
       assert(table.contains(source.retinues, data.commander.retinue),
         "Wrong commander retinue for " .. data.id)
-      -- Providing a 偏将 makes the source's view-as ability once per game.
-      assert(source.limited == Commander.retinues[data.commander.retinue].limited,
+      -- 来源能力自身的限一与偏将/翼从限一是独立登记。
+      assert(source.limited == (data.commander.limited == true),
         "Wrong limited ability flag for " .. data.id)
     end
     for _, skill in ipairs(data.skills) do

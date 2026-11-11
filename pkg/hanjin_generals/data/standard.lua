@@ -262,6 +262,7 @@ M.generals = {
       card = [==[hanjin__jink]==],
       cardText = [==[闪]==],
       sourceText = [==[穆顺(限一) | 闪]==],
+      limited = true,
     },
   },
   {
@@ -824,6 +825,7 @@ M.generals = {
       card = [==[hanjin__guozhan__nullification]==],
       cardText = [==[国无懈可击]==],
       sourceText = [==[牛金(限一) | 国无懈可击]==],
+      limited = true,
     },
   },
   {
@@ -1002,6 +1004,7 @@ M.generals = {
       card = [==[hanjin__analeptic]==],
       cardText = [==[酒]==],
       sourceText = [==[周仓(限一) | 酒]==],
+      limited = true,
     },
   },
   {
@@ -1777,6 +1780,7 @@ M.generals = {
       card = [==[hanjin__slash]==],
       cardText = [==[杀]==],
       sourceText = [==[曲阿小将(限一) | 杀]==],
+      limited = true,
     },
   },
   {
@@ -2829,6 +2833,7 @@ M.generals = {
       card = [==[hanjin__ice__slash]==],
       cardText = [==[冰杀]==],
       sourceText = [==[文虎(限一)｜冰杀]==],
+      limited = true,
     },
   },
   {

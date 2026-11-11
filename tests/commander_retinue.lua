@@ -1,8 +1,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 local H = require "packages.hegemony.util"
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local function setup()
+  -- Some command flows leave the process-global response pattern behind after
+  -- their use/response window. Reset it so one test cannot make the next test's
+  -- "play phase" look like a response window.
+  Fk.currentResponsePattern = nil
   local room = support.initHanjinRoom()
   local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
   -- The exchange suite clears global listeners in its tearDown; re-install ours
@@ -1302,6 +1307,242 @@ function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndU
   lu.assertTrue(C.isSoldier(user.deputyGeneral))
   lu.assertEquals(user.deputyGeneral, "hanjin__retinue_xiliang_jingqi")
   lu.assertEquals(target.hp, hp - 1)
+end
+
+function Testhanjin_commander_retinue:testClientPlayRequestListsDefaultAndSwitchesSources()
+  local firstHolder, secondHolder = room().players[1], room().players[2]
+  local user, target = room().players[3], room().players[4]
+  setHidden(firstHolder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(secondHolder, "hanjin_test__commander_delta", nil, "wei")
+  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  reveal(firstHolder, false)
+  reveal(secondHolder, false)
+  reveal(user, false)
+  reveal(user, true)
+
+  local entries = C.availableSourceEntries(user, "play")
+  lu.assertEquals(#entries, 2)
+  lu.assertEquals(entries[1].key, "hanjin_test__commander_alpha")
+  lu.assertEquals(entries[2].key, "hanjin_test__commander_delta")
+  lu.assertStrContains(entries[1].label, "测试统领")
+  lu.assertNotEquals(entries[1].label, entries[1].key)
+
+  -- The client may initially have no interaction data; the first of several
+  -- entries must still construct the first source, not nil.
+  local skill = Fk.skills[C.ABILITY_SKILL]
+  skill.interaction.data = nil
+  local defaultCard = skill:viewAs(user, {})
+  lu.assertNotNil(defaultCard)
+  lu.assertEquals(defaultCard:getMark(C.CARD_SOURCE_MARK), entries[1].key)
+
+  local handler = ReqPlayCard:new(user)
+  handler.skill_name = C.ABILITY_SKILL
+  handler.original_prompt = "#UseSkill:::" .. C.ABILITY_SKILL
+  handler:setup()
+  lu.assertEquals(handler:skillButtonValidity(C.ABILITY_SKILL), true)
+  lu.assertEquals(skill.interaction.spec.type, "custom")
+  lu.assertEquals(skill.interaction.spec.qml.url,
+    "packages/hanjin/pkg/hanjin_mode/qml/CommanderSourceButtons.qml")
+  lu.assertEquals(#skill.interaction.spec.qml.prop.sources, 2)
+  lu.assertEquals(skill.interaction.spec.qml.prop.currentKey, entries[1].key)
+  lu.assertEquals(skill.interaction.data, entries[1].key)
+  lu.assertEquals(handler:getUsingCard():getMark(C.CARD_SOURCE_MARK), entries[1].key)
+
+  handler:selectTarget(target.id, { selected = true })
+  lu.assertEquals(handler.selected_targets, { target.id })
+  handler:update("Interaction", "1", "update", entries[2].key)
+  lu.assertEquals(skill.interaction.data, entries[2].key)
+  lu.assertEquals(handler.selected_targets, {})
+  lu.assertEquals(handler:getUsingCard():getMark(C.CARD_SOURCE_MARK), entries[2].key)
+  handler:_finish()
+end
+
+function Testhanjin_commander_retinue:testClientPlayRequestDisablesOnlyNullificationSource()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_gamma", nil, "wu")
+  setHidden(user, "hanjin_test__wu_1", "hanjin_test__wu_2", "wu")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+  local handler = ReqPlayCard:new(user)
+  handler.skill_name = C.ABILITY_SKILL
+  handler:setup()
+  lu.assertFalse(handler:skillButtonValidity(C.ABILITY_SKILL))
+  handler:_finish()
+end
+
+function Testhanjin_commander_retinue:testClientPlayRequestTargetlessLimitedSource()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_guanyu", nil, "shu")
+  setHidden(user, "hanjin_test__shu_1", "hanjin_test__shu_2", "shu")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+
+  local entries = C.availableSourceEntries(user, "play")
+  lu.assertEquals(#entries, 1)
+  lu.assertEquals(entries[1].key, "hanjin_test__commander_guanyu")
+  lu.assertTrue(entries[1].limited)
+  lu.assertStrContains(entries[1].label, "（限一）")
+
+  local handler = ReqPlayCard:new(user)
+  handler.skill_name = C.ABILITY_SKILL
+  handler:setup()
+  lu.assertTrue(handler:skillButtonValidity(C.ABILITY_SKILL))
+  lu.assertEquals(handler:getUsingCard().trueName, "analeptic")
+  lu.assertTrue(handler:feasible())
+  handler:_finish()
+end
+
+function Testhanjin_commander_retinue:testResponseNullificationSourceOpensInClientInteraction()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_gamma", nil, "wu")
+  setHidden(user, "hanjin_test__wu_1", "hanjin_test__wu_2", "wu")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+
+  local oldPattern = Fk.currentResponsePattern
+  Fk.currentResponsePattern = "nullification"
+  local entries = C.availableSourceEntries(user)
+  lu.assertEquals(#entries, 1)
+  lu.assertEquals(entries[1].key, "hanjin_test__commander_gamma")
+  lu.assertTrue(Fk.skills[C.ABILITY_SKILL]:enabledAtNullification(user))
+  lu.assertFalse(Fk.skills[C.ABILITY_SKILL]:enabledAtResponse(user, true))
+  Fk.currentResponsePattern = oldPattern
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRespectUseTimes()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
+
+  FkTest.runInRoom(function()
+    user.phase = Player.Play
+    user:addCardUseHistory("slash", 1)
+    user:addCardUseHistory("thunder__slash", 1)
+  end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRemoveSoldierSource()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
+
+  setBlankDirect(user, true)
+  FkTest.runInRoom(function() C.refreshAvailability(room()) end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRequireCostAndFaction()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "shu")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+  settleKingdom(holder, "wei")
+  settleKingdom(user, "shu")
+  FkTest.runInRoom(function() C.refreshAvailability(room()) end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+end
+
+function Testhanjin_commander_retinue:testAbilityLabelsUseCardNames()
+  lu.assertEquals(C.abilityLabel("hanjin__wei004"), "张辽·杀")
+  lu.assertEquals(C.abilityLabel("hanjin__shu005"), "赵云·无懈可击")
+  lu.assertEquals(C.abilityLabel("hanjin__shu002"), "关羽·酒（限一）")
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRequireLegalTarget()
+  local user = room().players[1]
+  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  reveal(user, false)
+  reveal(user, true)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
+
+  -- With no living target there is no legal way to use the source's Slash, even
+  -- though the source and its removable deputy are still present.
+  FkTest.runInRoom(function()
+    for i = 2, #room().players do room().players[i].dead = true end
+  end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRespectProhibitTargets()
+  local user = room().players[1]
+  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  reveal(user, false)
+  reveal(user, true)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
+
+  local name = "#hanjin_test_prohibit_all_targets"
+  if Fk.skills[name] == nil then
+    local skeleton = fk.CreateSkill { name = name }
+    skeleton:addEffect("prohibit", {
+      is_prohibited = function() return true end,
+    })
+    Fk:addSkill(skeleton:createSkill())
+  end
+  FkTest.runInRoom(function() room():addSkill(Fk.skills[name]) end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+end
+
+function Testhanjin_commander_retinue:testAbilityLimitIsIndependentFromRetinueLimit()
+  local limitedOnly = C.commanders["hanjin_test__commander_limited_only"]
+  local unlimited = C.commanders["hanjin_test__commander_unlimited_with_limited_retinue"]
+  lu.assertTrue(limitedOnly.limited)
+  lu.assertFalse(unlimited.limited)
+  lu.assertStrContains(C.abilityLabel("hanjin_test__commander_limited_only"), "（限一）")
+  lu.assertNotStrContains(C.abilityLabel("hanjin_test__commander_unlimited_with_limited_retinue"), "（限一）")
+end
+
+function Testhanjin_commander_retinue:testFormalZhaoYunPlayPhaseIsDisabled()
+  local holder, user = room().players[1], room().players[2]
+  setHidden(holder, "hanjin__shu005", nil, "shu")
+  setHidden(user, "hanjin_test__shu_1", "hanjin_test__shu_2", "shu")
+  reveal(holder, false)
+  reveal(user, false)
+  reveal(user, true)
+  settleKingdom(holder, "shu")
+  settleKingdom(user, "shu")
+  FkTest.runInRoom(function() C.refreshAvailability(room()) end)
+
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
+  local handler = ReqPlayCard:new(user)
+  handler.skill_name = C.ABILITY_SKILL
+  handler:setup()
+  lu.assertFalse(handler:skillButtonValidity(C.ABILITY_SKILL))
+  handler:_finish()
+end
+
+function Testhanjin_commander_retinue:testClientSourceEntriesRespectDistance()
+  local user = room().players[1]
+  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  reveal(user, false)
+  reveal(user, true)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
+
+  local name = "#hanjin_test_far_distance"
+  if Fk.skills[name] == nil then
+    local skeleton = fk.CreateSkill { name = name }
+    skeleton:addEffect("distance", {
+      fixed_func = function() return 99 end,
+    })
+    Fk:addSkill(skeleton:createSkill())
+  end
+  FkTest.runInRoom(function() room():addSkill(Fk.skills[name]) end)
+  lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
 end
 
 return { name = "hanjin_commander_retinue" }
