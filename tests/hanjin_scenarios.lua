@@ -1,6 +1,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local Session = require "packages.hanjin.pkg.hanjin_mode.rules.session"
 local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
+local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 Testhanjin_scenarios = {
   tearDown = function()
     Ban.resetKingdoms()
@@ -87,9 +88,18 @@ function Testhanjin_scenarios:testOtherModeClearsPreviousHanjinGame()
 end
 
 function Testhanjin_scenarios:testIllegalClientReplyFallsBackToOfferedLegalPair()
-  local room = create { configure = function(room)
-    room.room:getOwner()._fake_router._reply_list = { cbor.encode({ "caocao,caocao", "kingdom,not_a_kingdom" }) }
-  end }
+  -- All six factions are allowed here, so no guest candidate triggers a redraw
+  -- dialog that would consume the deliberately invalid final-selection reply.
+  local room = create {
+    settings = {
+      hanjin_wild_count = 0,
+      hanjin_candidate_kingdoms = { "wei", "shu", "wu", "qun", "han", "jin" },
+      hanjin_kingdom_limit = 6,
+    },
+    configure = function(room)
+      room.room:getOwner()._fake_router._reply_list = { cbor.encode({ "caocao,caocao", "kingdom,not_a_kingdom" }) }
+    end,
+  }
   lu.assertTrue(table.contains(room:getTag("hanjin_selection_fallbacks"), room.room:getOwner():getId()))
   for _, p in ipairs(room.players) do
     local a, b = p:getMark("__heg_general"), p:getMark("__heg_deputy")
@@ -120,9 +130,9 @@ function Testhanjin_scenarios:testCustomCandidateSetBelowLimitHasNoBan()
   for _, player in ipairs(room.players) do
     for _, key in ipairs({ "__heg_general", "__heg_deputy" }) do
       local name = player:getMark(key)
-      local general = Fk.generals[name]
-      local affiliations = Ban.affiliations(general)
-      lu.assertTrue(table.find(affiliations, function(k)
+      local entry = Guest.factionsOf(room, name)
+      lu.assertNotNil(entry)
+      lu.assertTrue(entry.wild or table.find(entry.kingdoms, function(k)
         return table.contains({ "wei", "shu", "wu" }, k)
       end) ~= nil)
     end

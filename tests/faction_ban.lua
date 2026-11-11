@@ -23,9 +23,14 @@ function Testhanjin_faction_ban:testFourKingdomsDoNotBan()
 end
 
 function Testhanjin_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUpstream()
-  lu.assertEquals(#Fk.packages.hanjin_generals.generals, 0)
-  -- The formal pack grows with the base table, but it must never borrow upstream
-  -- identities. The two independent Thunder Slash cards remain exactly ♠9/♠10.
+  -- The formal pack now owns 90 independent general cards. None of them may be
+  -- an upstream identity; the two independent Thunder Slash cards remain ♠9/♠10.
+  lu.assertEquals(#Fk.packages.hanjin_generals.generals, 104) -- 90 generals + 14 retinues
+  for _, general in ipairs(Fk.packages.hanjin_generals.generals) do
+    lu.assertTrue(general.name:startsWith("hanjin__"))
+    lu.assertEquals(general.package, Fk.packages.hanjin_generals)
+    lu.assertEquals(general.package.extensionName, "hanjin")
+  end
   local thunder = table.filter(Fk.packages.hanjin_cards.cards, function(card)
     return card.name == "hanjin__thunder__slash"
   end)

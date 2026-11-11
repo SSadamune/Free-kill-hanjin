@@ -9,6 +9,14 @@ M.SOURCE_MARK = "@hanjin_commander_sources"
 M.SOURCE_TAG = "hanjin_commander_sources"
 M.PENDING_TAG = "hanjin_commander_pending"
 M.CARD_SOURCE_MARK = "hanjin_commander_source"
+-- 两项每局记录彼此独立：偏将的取得是全场唯一的牌面身份，限一统领能力是
+-- 某一来源的视为用牌机会。两者只在本局开始时清空，跨势力、移除、离场和
+-- 重新明置均不重置。
+M.USED_RETINUE_TAG = "hanjin_limited_retinues"
+M.USED_ABILITY_TAG = "hanjin_limited_abilities"
+-- 支付后、使用宣告前的临时占用。它只在回调期间阻挡同一来源的重入，
+-- 使用中止时释放，实际使用后转为永久记录。
+M.RESERVE_TAG = "hanjin_limited_reserved"
 
 -- 全局登记表只在进程内描述牌面数据；对局状态一律保存在房间中。
 M.commanders = {}
@@ -43,18 +51,25 @@ function M.registerCommander(general, spec)
   assert(type(spec.retinues) == "table" and #spec.retinues > 0,
     "Commander must provide at least one retinue")
   local retinues = {}
+  local limited = false
   for _, name in ipairs(spec.retinues) do
     assert(M.retinues[name], "Unknown retinue general: " .. tostring(name))
     table.insertIfNeed(retinues, name)
+    -- 提供偏将（限一翼从）的统领来源，其视为用牌机会也每局限一次。
+    if M.retinues[name].limited then limited = true end
   end
+  local card_text = spec.card_text or translate(spec.card)
   local data = {
     general = general,
     card = spec.card,
+    card_text = card_text,
+    source_text = spec.source_text or (translate(general) .. "｜" .. card_text),
     retinues = retinues,
+    limited = limited,
   }
   M.commanders[general] = data
   Fk:loadTranslationTable {
-    ["hanjin_commander_source:" .. general] = translate(general) .. "｜" .. translate(spec.card),
+    ["hanjin_commander_source:" .. general] = data.source_text,
   }
   return data
 end
@@ -66,6 +81,8 @@ function M.registerRetinue(general, spec)
   M.retinues[general] = {
     general = general,
     name = spec.name or general,
+    -- 「限一」是偏将的牌面身份：每局全场只能实际取得一次。
+    limited = spec.limited == true,
   }
   -- 翼从只由规则授予，不进入初始发将、普通换将候选或普通将池。
   Fk.generals[general].hidden = true
@@ -90,6 +107,97 @@ end
 
 function M.isCommander(name)
   return type(name) == "string" and M.commanders[name] ~= nil
+end
+
+--- 偏将（限一翼从）的全场唯一取得记录。返回 偏将名 -> 取得者信息。
+function M.usedLimitedRetinues(room)
+  return room:getTag(M.USED_RETINUE_TAG) or {}
+end
+
+--- 限一统领来源的视为用牌机会记录。返回 统领武将名 -> 使用者信息。
+function M.usedLimitedAbilities(room)
+  return room:getTag(M.USED_ABILITY_TAG) or {}
+end
+
+--- 支付完成但尚未宣告使用时，按来源临时占用。返回 统领武将名 -> 支付者信息。
+function M.reservedAbilities(room)
+  return room:getTag(M.RESERVE_TAG) or {}
+end
+
+function M.abilityReserved(room, general)
+  return M.reservedAbilities(room)[general] ~= nil
+end
+
+--- 支付成功后占用该来源，阻止移将回调期间或同一时机的重入；不写永久记录。
+function M.reserveAbility(room, source, player)
+  if source == nil then return false end
+  if M.isLimitedSource(source) and M.limitedAbilityUsed(room, source.general) then return false end
+  local reserved = M.reservedAbilities(room)
+  if reserved[source.general] ~= nil then return false end
+  reserved[source.general] = { player = player and player.id or 0, seat = player and player.seat or 0 }
+  room:setTag(M.RESERVE_TAG, reserved)
+  M.refreshAvailability(room)
+  return true
+end
+
+--- 使用中止（如 PreCardUse 被中断）时释放临时占用；不消耗本局机会。
+function M.releaseAbilityReservation(room, general)
+  local reserved = M.reservedAbilities(room)
+  if reserved[general] == nil then return false end
+  reserved[general] = nil
+  room:setTag(M.RESERVE_TAG, reserved)
+  M.refreshAvailability(room)
+  return true
+end
+
+--- 兜底清理：正常使用流程是同步的，临时占用不应跨回合。若某个
+--- 询问返回的使用数据最终没有被 room:useCard 消费，回合开始时释放它。
+function M.clearReservations(room)
+  local reserved = M.reservedAbilities(room)
+  if next(reserved) == nil then return false end
+  room:setTag(M.RESERVE_TAG, nil)
+  M.refreshAvailability(room)
+  return true
+end
+
+--- 使用已宣告时把临时占用转为永久记录。非限一来源只释放占用。
+--- 已正式使用后被无懈可击等抵消不调用此函数，因此不会返还次数。
+function M.commitAbilityUse(room, general, player)
+  local reserved = M.reservedAbilities(room)
+  if reserved[general] == nil then return false end
+  reserved[general] = nil
+  room:setTag(M.RESERVE_TAG, reserved)
+  local spec = M.commanders[general]
+  if spec ~= nil and spec.limited then
+    local used = M.usedLimitedAbilities(room)
+    if used[general] == nil then
+      used[general] = { player = player and player.id or 0, seat = player and player.seat or 0 }
+      room:setTag(M.USED_ABILITY_TAG, used)
+    end
+  end
+  M.refreshAvailability(room)
+  return true
+end
+
+function M.isLimitedRetinue(name)
+  local retinue = type(name) == "string" and M.retinues[name] or nil
+  return retinue ~= nil and retinue.limited == true
+end
+
+--- 来源是否提供偏将。提供偏将的统领来源，其视为用牌机会每局限一次。
+function M.isLimitedSource(source)
+  if source == nil then return false end
+  if source.limited ~= nil then return source.limited == true end
+  local spec = M.commanders[source.general]
+  return spec ~= nil and spec.limited == true
+end
+
+function M.limitedRetinueTaken(room, retinue)
+  return M.isLimitedRetinue(retinue) and M.usedLimitedRetinues(room)[retinue] ~= nil
+end
+
+function M.limitedAbilityUsed(room, general)
+  return M.usedLimitedAbilities(room)[general] ~= nil
 end
 
 function M.hasSoldier(player)
@@ -117,6 +225,7 @@ function M.ensureSource(room, general)
       general = general,
       card = spec.card,
       retinues = table.simpleClone(spec.retinues),
+      limited = spec.limited == true,
       factions = {},
       revealed = false,
       removed = false,
@@ -139,10 +248,19 @@ function M.sourceAbilityActive(room, source)
   return holder ~= nil and not holder.dead and M.sourcePresent(source, holder)
 end
 
+--- 统领能力是否仍可使用。除来源已明置且仍在场外，还要检查本局的
+--- 限一视为用牌机会；临时占用期间同样不可再次发动。
+function M.abilityAvailable(room, source)
+  if not M.sourceAbilityActive(room, source) then return false end
+  if M.abilityReserved(room, source.general) then return false end
+  if M.isLimitedSource(source) and M.limitedAbilityUsed(room, source.general) then return false end
+  return true
+end
+
 --- 来源的统领能力只对其当前持有者所在势力开放。source.factions 只用于
 --- 翼从兵种的持续获得；暗置迁势力后旧势力仍可取得兵种，但不能发动能力。
 function M.sourceAuthorizedFor(room, source, player)
-  if not M.sourceAbilityActive(room, source) then return false end
+  if not M.abilityAvailable(room, source) then return false end
   local holder = room:getPlayerById(source.holder_id or 0)
   if holder == nil or player == nil or player.dead then return false end
   if isUnknown(M.factionOf(player)) then return false end
@@ -165,16 +283,22 @@ function M.removeSourceFaction(source, faction)
 end
 
 --- 取得某势力可由所有已提供兵种的统领来源获得的兵种（去重、保持登记顺序）。
+--- 已被本局取得的偏将从所有势力的候选中排除；普通翼从不受此限制。
 function M.availableRetinues(room, faction)
   if isUnknown(faction) then return {} end
+  local sources = M.getSources(room)
+  local used = M.usedLimitedRetinues(room)
   local result = {}
   local names = {}
-  for general in pairs(M.getSources(room)) do table.insert(names, general) end
+  for general in pairs(sources) do table.insert(names, general) end
   table.sort(names)
   for _, general in ipairs(names) do
-    local source = M.getSources(room)[general]
+    local source = sources[general]
     if source.factions[faction] then
-      for _, retinue in ipairs(source.retinues) do table.insertIfNeed(result, retinue) end
+      for _, retinue in ipairs(source.retinues) do
+        local taken = M.isLimitedRetinue(retinue) and used[retinue] ~= nil
+        if not taken then table.insertIfNeed(result, retinue) end
+      end
     end
   end
   return result
@@ -268,7 +392,9 @@ function M.chooseCostPosition(player, source)
   return answer == "deputyGeneral"
 end
 
-local function requestConversion(room, faction, player, isDeputy)
+--- 记录待转换的势力或位置，不立即结算。批量入口先把同一事件中的全部
+--- 白板士兵登记完，再统一按行动顺序转换，避免用数组或 pairs 顺序结算。
+local function queueConversion(room, faction, player, isDeputy)
   local pending = room:getTag(M.PENDING_TAG) or { factions = {}, positions = {} }
   pending.factions = pending.factions or {}
   pending.positions = pending.positions or {}
@@ -278,6 +404,12 @@ local function requestConversion(room, faction, player, isDeputy)
     pending.positions[key] = { id = player.id, isDeputy = isDeputy }
   end
   room:setTag(M.PENDING_TAG, pending)
+end
+
+M.queueConversion = queueConversion
+
+local function requestConversion(room, faction, player, isDeputy)
+  queueConversion(room, faction, player, isDeputy)
   M.flushConversions(room)
 end
 
@@ -288,8 +420,16 @@ function M.assignRetinue(player, isDeputy, retinue)
   local room = player.room
   local old = positionName(player, isDeputy)
   if not M.isBlankSoldier(old) then return false end
+  -- 偏将全场唯一：询问期间或重入时若已被取得，本次取得失败并保留白板。
+  if M.limitedRetinueTaken(room, retinue) then return false end
   room:changeHero(player, retinue, false, isDeputy, false, false, false)
+  if positionName(player, isDeputy) ~= retinue then return false end
   room:setPlayerMark(player, isDeputy and "__heg_deputy" or "__heg_general", retinue)
+  if M.isLimitedRetinue(retinue) then
+    local used = M.usedLimitedRetinues(room)
+    used[retinue] = { player = player.id, seat = player.seat }
+    room:setTag(M.USED_RETINUE_TAG, used)
+  end
   room:sendLog {
     type = "#HanjinRetinueGained",
     from = player.id,
@@ -306,6 +446,7 @@ function M.convertPosition(player, isDeputy)
   local faction = M.factionOf(player)
   if isUnknown(faction) then return false end
   local room = player.room
+  -- 每一位都重新计算当前可得兵种：前一位取得偏将后，后续位置立即排除。
   local choices = M.availableRetinues(room, faction)
   if #choices == 0 then return false end
   local choice = choices[1]
@@ -320,6 +461,15 @@ function M.convertPosition(player, isDeputy)
     if table.contains(choices, answer) then choice = answer end
   end
   return M.assignRetinue(player, isDeputy, choice)
+end
+
+--- 按引擎行动顺序（当前回合角色起、下家方向即逆时针）返回存活角色。
+--- 不直接使用 room.alive_players 的数组顺序。当前回合角色未确定时
+--- sortByAction 退化为座位顺序，仍作为确定性的开始位置。
+function M.orderedAlivePlayers(room)
+  local players = table.simpleClone(room.alive_players)
+  room:sortByAction(players)
+  return players
 end
 
 function M.flushConversions(room)
@@ -345,7 +495,18 @@ function M.flushConversions(room)
   for _, entry in pairs(pending.positions or {}) do
     add(room:getPlayerById(entry.id), entry.isDeputy)
   end
-  for _, entry in ipairs(positions) do M.convertPosition(entry.player, entry.isDeputy) end
+  if #positions > 0 then
+    -- 逐人、逐位置：从当前回合角色起按逆时针座次处理，同一人先主将后副将。
+    local order = {}
+    for index, player in ipairs(M.orderedAlivePlayers(room)) do order[player.id] = index end
+    local function rank(entry) return order[entry.player.id] or math.huge end
+    table.sort(positions, function(a, b)
+      local ra, rb = rank(a), rank(b)
+      if ra ~= rb then return ra < rb end
+      return (a.isDeputy and 1 or 0) < (b.isDeputy and 1 or 0)
+    end)
+    for _, entry in ipairs(positions) do M.convertPosition(entry.player, entry.isDeputy) end
+  end
   M.refreshAvailability(room)
 end
 
@@ -357,17 +518,22 @@ function M.buildViewAsCard(player, sourceKey)
 end
 
 --- 支付统领能力的移将代价。支付前核验无士兵条件及来源是否仍可发动；
---- 移除被阻止或没有改变该位置时返回 false，调用者不得继续用牌。
+--- 支付成功先临时占用来源（阻挡回调期间的重入），使用宣告后再转为永久记录。
+--- 移将被阻止或没有改变该位置时释放占用并返回 false，调用者不得继续用牌。
 function M.payCost(player, source, isDeputy)
   local room = player.room
   if source == nil or not M.sourceAuthorizedFor(room, source, player) then return false end
   if M.hasSoldier(player) then return false end
   if not table.contains(M.costCandidates(player, source), isDeputy) then return false end
+  if not M.reserveAbility(room, source, player) then return false end
   local old = positionName(player, isDeputy)
   H.removeGeneral(player, isDeputy)
   local new = positionName(player, isDeputy)
   -- 移将可能立即生成白板士兵并按规则转换成翼从；两者都表示移除成功。
-  if new == old or not M.isSoldier(new) then return false end
+  if new == old or not M.isSoldier(new) then
+    M.releaseAbilityReservation(room, source.general)
+    return false
+  end
   return true
 end
 
@@ -389,15 +555,17 @@ function M.onGeneralShown(room, player, data)
         source.last_faction = faction
       end
       -- 暗置期间改势力未迁移时，明置后新旧势力均保有该来源。
-      for registered in pairs(source.factions) do requestConversion(room, registered) end
+      for registered in pairs(source.factions) do queueConversion(room, registered) end
     end
   end
   -- 普通武将明置也会使角色取得确定势力；带白板士兵加入势力时立即转换。
   local faction = M.factionOf(player)
   if not isUnknown(faction) then
-    requestConversion(room, nil, player, false)
-    requestConversion(room, nil, player, true)
+    queueConversion(room, nil, player, false)
+    queueConversion(room, nil, player, true)
   end
+  -- 同一明置事件中的全部位置统一按行动顺序结算。
+  M.flushConversions(room)
   M.refreshAvailability(room)
 end
 
@@ -420,7 +588,8 @@ function M.onGeneralRemoved(room, player, data)
   if M.isRetinue(orig) then
     table.removeOne(room.general_pile, orig)
   end
-  requestConversion(room, M.factionOf(player), player, isDeputy)
+  queueConversion(room, M.factionOf(player), player, isDeputy)
+  M.flushConversions(room)
   M.refreshAvailability(room)
 end
 
@@ -450,25 +619,26 @@ function M.onAfterPropertyChange(room, player, data)
           end
           source.factions[newFaction] = true
           source.last_faction = newFaction
-          requestConversion(room, newFaction)
+          queueConversion(room, newFaction)
         end
       end
     end
     if not isUnknown(newFaction) then
       -- 带白板士兵加入新势力；统领转入时上方已请求整个新势力。
-      requestConversion(room, nil, player, false)
-      requestConversion(room, nil, player, true)
+      queueConversion(room, nil, player, false)
+      queueConversion(room, nil, player, true)
     end
   end
 
   local generalChange = results.generalChange
   if generalChange and M.isBlankSoldier(generalChange[2]) then
-    requestConversion(room, M.factionOf(player), player, false)
+    queueConversion(room, M.factionOf(player), player, false)
   end
   local deputyChange = results.deputyChange
   if deputyChange and M.isBlankSoldier(deputyChange[2]) then
-    requestConversion(room, M.factionOf(player), player, true)
+    queueConversion(room, M.factionOf(player), player, true)
   end
+  M.flushConversions(room)
   M.refreshAvailability(room)
 end
 
@@ -514,17 +684,21 @@ function M.onExchangeCompleted(room, context)
 
   for _, entry in ipairs(context and context.obtained_soldiers or {}) do
     if M.isBlankSoldier(entry.general) then
-      requestConversion(room, nil, entry.player, entry.isDeputy)
+      queueConversion(room, nil, entry.player, entry.isDeputy)
     end
   end
-  for faction in pairs(affected) do requestConversion(room, faction) end
-  M.refreshAvailability(room)
+  for faction in pairs(affected) do queueConversion(room, faction) end
+  -- 来源全部就绪后，按同一行动顺序统一转换。
   M.flushConversions(room)
+  M.refreshAvailability(room)
 end
 
 function M.reset(room)
   room:setTag(M.SOURCE_TAG, nil)
   room:setTag(M.PENDING_TAG, nil)
+  room:setTag(M.USED_RETINUE_TAG, nil)
+  room:setTag(M.USED_ABILITY_TAG, nil)
+  room:setTag(M.RESERVE_TAG, nil)
   for _, player in ipairs(room.players) do
     room:setPlayerMark(player, M.SOURCE_MARK, 0)
   end

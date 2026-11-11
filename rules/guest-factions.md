@@ -1,6 +1,6 @@
 # 客将
 
-适用于 `hanjin_heg_mode`，已实现并通过自动化测试。正式客将武将尚未创建；测试只使用独立测试内容。
+适用于 `hanjin_heg_mode`，已实现并通过自动化测试。标准包已有 51 张武将登记客将势力，正式将池的客将解析由 `tests/standard_generals.lua` 覆盖。
 
 ## 本局主势力
 
@@ -26,7 +26,7 @@
 | 选将请求、重抽、服务端复核 | `pkg/hanjin_mode/rules/selection.lua` |
 | 武将弃牌堆与引擎入口拦截 | `pkg/hanjin_mode/rules/general_discard.lua` |
 | 重抽客户端 | `pkg/hanjin_mode/qml/GuestRedrawBox.qml`、`hanjin_heg_pair` 客户端选将规则 |
-| 正式/测试内容 | `tests/support/guest_allegiance_content.lua`（仅测试）；正式客将仍待设计 |
+| 正式/测试内容 | `tests/support/guest_allegiance_content.lua`（仅测试）；正式登记见 `pkg/hanjin_generals/data/standard.lua` |
 
 ### 房间状态与配将
 

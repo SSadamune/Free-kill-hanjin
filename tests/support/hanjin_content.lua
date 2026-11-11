@@ -92,6 +92,10 @@ local retinueSkillBName = registerTestSkill(retinueSkillB)
 local retinues = {
   { "hanjin_test__retinue_alpha", "wei", retinueSkillAName },
   { "hanjin_test__retinue_beta", "wei", retinueSkillBName },
+  -- 偏将（限一翼从）的独立测试对应物，分别对应正式包的偏将语义。
+  { "hanjin_test__retinue_zhoucang", "shu", retinueSkillAName, limited = true },
+  { "hanjin_test__retinue_niujin", "wei", retinueSkillBName, limited = true },
+  { "hanjin_test__retinue_quaxiaojiang", "wu", retinueSkillAName, limited = true },
 }
 for _, spec in ipairs(retinues) do
   local general = General:new(pack, spec[1], spec[2], 4)
@@ -103,10 +107,17 @@ end
 Fk:loadTranslationTable {
   ["hanjin_test__retinue_alpha"] = "测试翼从·甲",
   ["hanjin_test__retinue_beta"] = "测试翼从·乙",
+  ["hanjin_test__retinue_zhoucang"] = "测试偏将·周仓",
+  ["hanjin_test__retinue_niujin"] = "测试偏将·牛金",
+  ["hanjin_test__retinue_quaxiaojiang"] = "测试偏将·曲阿小将",
   ["hanjin_test__commander_alpha"] = "测试统领·甲",
   ["hanjin_test__commander_beta"] = "测试统领·乙",
   ["hanjin_test__commander_gamma"] = "测试统领·丙",
   ["hanjin_test__commander_delta"] = "测试统领·丁",
+  ["hanjin_test__commander_guanyu"] = "测试统领·关羽",
+  ["hanjin_test__commander_caoren"] = "测试统领·曹仁",
+  ["hanjin_test__commander_taishici"] = "测试统领·太史慈",
+  ["hanjin_test__commander_duel"] = "测试统领·决斗",
   ["hanjin_test__retinue_skill_a"] = "测试翼从技·甲",
   ["hanjin_test__retinue_skill_b"] = "测试翼从技·乙",
   ["hanjin_test__slash"] = "测试杀",
@@ -117,6 +128,9 @@ Fk:loadTranslationTable {
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 C.registerRetinue("hanjin_test__retinue_alpha", { name = "hanjin_test__retinue_alpha" })
 C.registerRetinue("hanjin_test__retinue_beta", { name = "hanjin_test__retinue_beta" })
+C.registerRetinue("hanjin_test__retinue_zhoucang", { name = "hanjin_test__retinue_zhoucang", limited = true })
+C.registerRetinue("hanjin_test__retinue_niujin", { name = "hanjin_test__retinue_niujin", limited = true })
+C.registerRetinue("hanjin_test__retinue_quaxiaojiang", { name = "hanjin_test__retinue_quaxiaojiang", limited = true })
 
 local commanders = {
   { "hanjin_test__commander_alpha", "wei", "hanjin__thunder__slash",
@@ -127,6 +141,17 @@ local commanders = {
     { "hanjin_test__retinue_alpha" } },
   { "hanjin_test__commander_delta", "jin", "hanjin__thunder__slash",
     { "hanjin_test__retinue_alpha" } },
+  -- 与正式关羽/曹仁同牌名（酒）的两个限一来源：同名牌不同来源彼此独立。
+  { "hanjin_test__commander_guanyu", "shu", "hanjin__analeptic",
+    { "hanjin_test__retinue_zhoucang" } },
+  { "hanjin_test__commander_caoren", "wei", "hanjin__analeptic",
+    { "hanjin_test__retinue_niujin" } },
+  -- 限一来源的无懈可击：覆盖“使用”窗口与响应用牌路径。
+  { "hanjin_test__commander_taishici", "shu", "hanjin_test__nullification",
+    { "hanjin_test__retinue_quaxiaojiang" } },
+  -- 限一来源的普通锦囊：用于覆盖“已宣告使用后被抵消”的时序。
+  { "hanjin_test__commander_duel", "shu", "duel",
+    { "hanjin_test__retinue_niujin" } },
 }
 for _, spec in ipairs(commanders) do
   local general = General:new(pack, spec[1], spec[2], 4)

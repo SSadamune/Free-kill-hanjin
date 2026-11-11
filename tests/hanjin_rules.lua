@@ -1,6 +1,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Cards = require "packages.hanjin.pkg.hanjin_mode.rules.cards"
+local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Session = require "packages.hanjin.pkg.hanjin_mode.rules.session"
 Testhanjin_rules = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
 
@@ -12,7 +13,7 @@ function Testhanjin_rules:testModeAndRealSelection()
   lu.assertEquals(#room:getBanner("hanjin_banned_kingdoms"), 2) -- Six independent test factions.
   for _, p in ipairs(room.players) do
     local a, b = p:getMark("__heg_general"), p:getMark("__heg_deputy")
-    lu.assertTrue(#Ban.pairKingdoms(Fk.generals[a], Fk.generals[b], room:getBanner("all_kingdoms")) > 0)
+    lu.assertTrue(#Guest.pairKingdoms(room, a, b) > 0)
     lu.assertEquals(#p:getCardIds("h"), 4)
     lu.assertFalse(table.contains(room.general_pile, a))
     lu.assertFalse(table.contains(room.general_pile, b))
@@ -24,8 +25,17 @@ function Testhanjin_rules:testBannedGeneralsCannotReenterViaSameNameConversion()
   local wild = 0
   FkTest.runInRoom(function()
     for _, name in ipairs(room.general_pile) do
-      lu.assertTrue(Ban.generalAllowed(Fk.generals[name], room:getBanner("all_kingdoms")))
-      if Fk.generals[name].kingdom == "wild" then wild = wild + 1 end
+      -- A pile entry may be a guest resolved to this game's allowed set even
+      -- though its printed affiliation is banned.
+      local entry = Guest.factionsOf(room, name)
+      lu.assertNotNil(entry)
+      if entry.wild then
+        wild = wild + 1
+      else
+        lu.assertTrue(table.find(entry.kingdoms, function(k)
+          return table.contains(room:getBanner("all_kingdoms"), k)
+        end) ~= nil)
+      end
     end
     for _, name in ipairs(room:getTag("hanjin_excluded_generals")) do lu.assertFalse(Fk:canUseGeneral(name)) end
   end)
