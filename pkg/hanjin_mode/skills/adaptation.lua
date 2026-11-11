@@ -55,9 +55,15 @@ local translations = {
   -- SkillInvoked popup. HTML entities keep the literal angle brackets visible.
   ["#InvokeSkillHanjinAdaptation"] = "触发&lt;%arg&gt;",
 }
--- Mark names are only row labels; the condition/effect are the mark value.
+-- The mark label is the condition itself; the mark value carries "· 效果".
+-- This intentionally has no generic "应变" prefix or empty label/colon.
+local conditionLabels = {
+  fujia = "富甲", canqu = "残躯", zhuzhan = "助战", kongchao = "空巢", gujun = "孤军",
+}
 for index = 1, 32 do
-  translations["@hanjin_adaptation_" .. index] = "应变"
+  for condition, label in pairs(conditionLabels) do
+    translations["@hanjin_adaptation_" .. index .. "_" .. condition] = label
+  end
 end
 Fk:loadTranslationTable(translations)
 

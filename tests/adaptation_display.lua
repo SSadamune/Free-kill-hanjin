@@ -68,30 +68,44 @@ function Testadaptation_display:testPhysicalCardsExposeTheirOwnSlotMarks()
   lu.assertEquals(gujun.name, "hanjin__slash")
   -- Move both same-name cards into a hand; the hand move is what publishes the
   -- marks to their owner (draw-pile cards are intentionally not stamped).
-  local canquMark, gujunMark, secondMark
+  local canquMark, gujunMark, secondMark, canquKey, canquSeen, gujunCanqu, gujunSeen
   FkTest.runInRoom(function()
     current:obtainCard(current.players[1], canqu.id, true, fk.ReasonJustMove, current.players[1], "test")
     current:obtainCard(current.players[1], gujun.id, true, fk.ReasonJustMove, current.players[1], "test")
-    canquMark = canqu:getMark("@hanjin_adaptation_1")
-    gujunMark = gujun:getMark("@hanjin_adaptation_1")
-    secondMark = canqu:getMark("@hanjin_adaptation_2")
+    canquKey = A.markKey(1, "canqu")
+    canquMark = canqu:getMark(canquKey)
+    gujunMark = gujun:getMark(A.markKey(1, "gujun"))
+    secondMark = canqu:getMark(A.markKey(2, "canqu"))
+    canquSeen = canqu:getMark(canquKey) ~= 0
+    gujunCanqu = gujun:getMark(A.markKey(1, "canqu"))
+    gujunSeen = gujun:getMark(A.markKey(1, "gujun")) ~= 0
   end)
 
-  lu.assertEquals(canquMark, { "hanjin_condition_canqu", "·", "hanjin_adaptation_add_target" })
-  lu.assertEquals(gujunMark, { "hanjin_condition_gujun", "·", "hanjin_adaptation_add_target" })
-  -- Same card name at different physical positions must not share entries.
-  lu.assertNotEquals(canquMark[1], gujunMark[1])
+  lu.assertEquals(canquMark, { "·", "hanjin_adaptation_add_target" })
+  lu.assertEquals(gujunMark, { "·", "hanjin_adaptation_add_target" })
+  -- Same card name at different physical positions must not share entries:
+  -- the condition lives in the mark key, not in the value.
+  lu.assertTrue(canquSeen)
+  lu.assertEquals(gujunCanqu, 0)
+  lu.assertTrue(gujunSeen)
   lu.assertEquals(secondMark, 0)
 
   -- These are the raw values the client receives and translates into a row.
-  lu.assertEquals(Fk:translate("@hanjin_adaptation_1"), "应变")
-  lu.assertEquals(Fk:translate(canquMark[1]), "残躯")
-  lu.assertEquals(Fk:translate(canquMark[2]), "·")
-  lu.assertEquals(Fk:translate(canquMark[3]), "目标+1")
-  -- Mirrors LtkLuaUtil.setMark's Array branch: translate each part, join with spaces.
-  lu.assertEquals(table.concat({
-    Fk:translate(canquMark[1]), Fk:translate(canquMark[2]), Fk:translate(canquMark[3]),
-  }, " "), "残躯 · 目标+1")
+  lu.assertEquals(Fk:translate(canquKey), "残躯")
+  lu.assertEquals(Fk:translate(canquMark[1]), "·")
+  lu.assertEquals(Fk:translate(canquMark[2]), "目标+1")
+  -- Mirrors LtkLuaUtil.setMark's Array branch and CardItem's `${name} ${value}`.
+  local row = table.concat({
+    Fk:translate(canquKey), Fk:translate(canquMark[1]), Fk:translate(canquMark[2]),
+  }, " ")
+  lu.assertEquals(row, "残躯 · 目标+1")
+  lu.assertNil(row:find("应变", 1, true))
+  lu.assertNil(row:find(":", 1, true))
+  for condition, label in pairs({
+    fujia = "富甲", canqu = "残躯", zhuzhan = "助战", kongchao = "空巢", gujun = "孤军",
+  }) do
+    lu.assertEquals(Fk:translate(A.markKey(1, condition)), label)
+  end
   local roundtrip = cbor.decode(cbor.encode(canquMark))
   lu.assertEquals(roundtrip, canquMark)
 end
@@ -107,10 +121,10 @@ function Testadaptation_display:testMultipleEntriesAndVirtualCardsUseExplicitMet
     })
     A.stampCard(current, card)
   end)
-  lu.assertEquals(card:getMark("@hanjin_adaptation_1"),
-    { "hanjin_condition_gujun", "·", "hanjin_adaptation_ignore_times" })
-  lu.assertEquals(card:getMark("@hanjin_adaptation_2"),
-    { "hanjin_condition_kongchao", "·", "hanjin_adaptation_draw" })
+  lu.assertEquals(card:getMark(A.markKey(1, "gujun")),
+    { "·", "hanjin_adaptation_ignore_times" })
+  lu.assertEquals(card:getMark(A.markKey(2, "kongchao")),
+    { "·", "hanjin_adaptation_draw" })
 
   local tips = assert(A.cardTips(card))
   lu.assertEquals(#tips, 2)
@@ -139,7 +153,7 @@ function Testadaptation_display:testStampSyncClearsReducedAndLostMarks()
     })
     A.stampCard(current, card)
     initialStamped = A.cardStamped(card)
-    initialSecond = card:getMark("@hanjin_adaptation_2")
+    initialSecond = card:getMark(A.markKey(2, "kongchao"))
   end)
   lu.assertTrue(initialStamped)
   lu.assertNotEquals(initialSecond, 0)
@@ -155,12 +169,12 @@ function Testadaptation_display:testStampSyncClearsReducedAndLostMarks()
   FkTest.runInRoom(function()
     A.stampMoved(current, { { toArea = Player.Hand, to = current.players[1],
       moveInfo = { { cardId = card.id } } } })
-    afterFirst = card:getMark("@hanjin_adaptation_1")
-    afterSecond = card:getMark("@hanjin_adaptation_2")
+    afterFirst = card:getMark(A.markKey(1, "gujun"))
+    afterSecond = card:getMark(A.markKey(2, "kongchao"))
     afterStamped = A.cardStamped(card)
   end)
   lu.assertEquals(afterSecond, 0)
-  lu.assertEquals(afterFirst, { "hanjin_condition_gujun", "·", "hanjin_adaptation_ignore_times" })
+  lu.assertEquals(afterFirst, { "·", "hanjin_adaptation_ignore_times" })
   lu.assertTrue(afterStamped)
 
   -- Entries removed entirely: old marks must be cleared rather than skipped.
@@ -292,14 +306,16 @@ function Testadaptation_display:testMountedCardTipUsesTheCurrentViewAsResult()
 
   local virtual = Fk:cloneCard("hanjin_test__blank_basic")
   A.setCardEntries(virtual, { { condition = "gujun", effect = "damage" } })
-  local resultTips = display:getCardTip(current.players[1], material.id, {}, {}, virtual, true, {})
+  local resultTips = display:getCardTip(current.players[1], material.id,
+    { material.id }, {}, virtual, true, {})
   lu.assertEquals(#resultTips, 1)
   lu.assertEquals(resultTips[1].content, "孤军·伤害+1")
 
   -- The result card is authoritative even when it has no adaptation entry:
   -- the material's entries must not leak onto it.
   local bare = Fk:cloneCard("hanjin_test__blank_basic")
-  lu.assertNil(display:getCardTip(current.players[1], material.id, {}, {}, bare, true, {}))
+  lu.assertNil(display:getCardTip(current.players[1], material.id,
+    { material.id }, {}, bare, true, {}))
 
   -- With no result card, an ordinary physical card keeps its own tips.
   local ownTips = display:getCardTip(current.players[1], material.id, {}, {}, nil, true, {})
@@ -317,9 +333,9 @@ function Testadaptation_display:testRealClientCardTipPathUsesTheResultCard()
   local handlerClass = ClientInstance.request_handlers["AskForUseActiveSkill"]
   local oldHandler = ClientInstance.current_request_handler
 
-  local function request(selectedCard)
+  local function request(selectedCard, selected)
     local handler = {
-      pendings = {}, selected_targets = {}, selected_card = selectedCard,
+      pendings = selected or {}, selected_targets = {}, selected_card = selectedCard,
       skill_name = nil, extra_data = {},
       scene = { items = { CardItem = { [material.id] = { enabled = true } } } },
     }
@@ -331,14 +347,50 @@ function Testadaptation_display:testRealClientCardTipPathUsesTheResultCard()
     return tips
   end
 
-  local virtualTips = request(virtual)
+  local virtualTips = request(virtual, { material.id })
   lu.assertEquals(#table.filter(virtualTips, function(tip) return tip.content == "孤军·伤害+1" end), 1)
 
-  local bareTips = request(bare)
+  local bareTips = request(bare, { material.id })
   lu.assertEquals(#table.filter(bareTips, function(tip) return tip.content == "残躯·目标+1" end), 0)
 
-  local physicalTips = request(material)
+  local physicalTips = request(material, { material.id })
   lu.assertEquals(#table.filter(physicalTips, function(tip) return tip.content == "残躯·目标+1" end), 1)
+end
+
+function Testadaptation_display:testRealClientCardTipOnlyShowsForSelectedCard()
+  local current = room()
+  local selectedCard = assert(bySlot(current, "standard1/S/10"))
+  local otherCard = assert(bySlot(current, "shibei/S/4"))
+  local thirdCard = assert(table.find(current.players[1]:getCardIds("h"), function(id)
+    return id ~= selectedCard.id and id ~= otherCard.id
+  end))
+  local ClientUtil = require "ltk.client.util"
+  local handlerClass = ClientInstance.request_handlers["AskForUseActiveSkill"]
+  local oldHandler = ClientInstance.current_request_handler
+  local handler = {
+    pendings = { selectedCard.id }, selected_targets = {}, selected_card = selectedCard,
+    skill_name = nil, extra_data = {},
+    scene = { items = { CardItem = {
+      [selectedCard.id] = { enabled = true },
+      [otherCard.id] = { enabled = true },
+      [thirdCard] = { enabled = true },
+    } } },
+  }
+  function handler:isInstanceOf(class) return class == handlerClass end
+  ClientInstance.current_request_handler = handler
+  local selectedTips = ClientUtil:getCardTip(selectedCard.id)
+  local otherTips = ClientUtil:getCardTip(otherCard.id)
+  local thirdTips = ClientUtil:getCardTip(thirdCard)
+  handler.selected_card = nil
+  handler.pendings = {}
+  local clearedTips = ClientUtil:getCardTip(selectedCard.id)
+  ClientInstance.current_request_handler = oldHandler
+
+  local expected = "残躯·目标+1"
+  lu.assertEquals(#table.filter(selectedTips, function(tip) return tip.content == expected end), 1)
+  lu.assertEquals(#table.filter(otherTips, function(tip) return tip.content == expected end), 0)
+  lu.assertEquals(#table.filter(thirdTips, function(tip) return tip.content == expected end), 0)
+  lu.assertEquals(#table.filter(clearedTips, function(tip) return tip.content == expected end), 0)
 end
 
 function Testadaptation_display:testEveryConditionNamesItsOwnTrigger()

@@ -24,17 +24,26 @@ skill:addEffect(fk.AfterCardsMove, {
   on_refresh = function(self, event, target, player, data) A.stampMoved(player.room, data) end,
 })
 
--- The card-tip callback runs on the client, so it must stay a pure function of
--- the concrete card's explicit metadata: no room tags, no condition checks and
--- no writes. The engine passes the current virtual/view-as result as `card`;
--- that result is authoritative even when it has no adaptation entry. Only when
--- there is no result card do we fall back to the physical candidate being
--- hovered, which keeps ordinary physical-card tips working.
+-- The card-tip callback runs on the client. `card` is the current view-as
+-- result (or the selected physical card); it is authoritative even when it has
+-- no adaptation entry. A tip may only appear for the card that produced it:
+-- a physical result must be the hovered card, and a virtual result is shown on
+-- the selected material cards, never on every other hand card.
 skill:addEffect("targetmod", {
   card_tip_func = function(self, player, to_select, selected, selected_targets, card)
     local current = card
     if current == nil or type(current) ~= "table" or current.name == nil then
       current = to_select ~= nil and Fk:getCardById(to_select) or nil
+    end
+    if current == nil then return nil end
+    if current:isVirtual() then
+      local belongs = false
+      for _, id in ipairs(selected or {}) do
+        if id == to_select then belongs = true break end
+      end
+      if not belongs then return nil end
+    elseif current.id ~= to_select then
+      return nil
     end
     return A.cardTips(current)
   end,

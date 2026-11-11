@@ -56,15 +56,15 @@ local function translate(key)
   return text ~= key and text or key
 end
 
-function A.markKey(index)
-  return A.MARK_PREFIX .. tostring(index)
+function A.markKey(index, condition)
+  return A.MARK_PREFIX .. tostring(index) .. "_" .. tostring(condition)
 end
 
---- Translation keys consumed by the card-mark renderer. The first string is
---- the condition and the last the effect, so every entry stays self-describing.
+--- The condition is the mark label; the value only adds the effect. The
+--- visible label therefore reads e.g. "残躯 · 目标+1", without a generic
+--- "应变" prefix or an empty leading label.
 function A.markValue(entry)
   return {
-    "hanjin_condition_" .. entry.condition,
     "·",
     "hanjin_adaptation_" .. entry.effect,
   }
@@ -107,7 +107,7 @@ function A.stampCard(room, card, audience)
   end
   local entries = A.displayEntries(card)
   for index, entry in ipairs(entries) do
-    writeCardMark(room, card, A.markKey(index), A.markValue(entry), audience)
+    writeCardMark(room, card, A.markKey(index, entry.condition), A.markValue(entry), audience)
   end
   return #entries > 0
 end
@@ -117,7 +117,7 @@ function A.cardStamped(card)
   local expected = {}
   local entries = A.displayEntries(card)
   for index, entry in ipairs(entries) do
-    expected[A.markKey(index)] = A.markValue(entry)
+    expected[A.markKey(index, entry.condition)] = A.markValue(entry)
   end
 
   local actual = {}
