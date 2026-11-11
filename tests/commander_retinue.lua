@@ -1246,4 +1246,62 @@ function Testhanjin_commander_retinue:testOrdinaryRetinuesStayUnlimited()
   lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "hanjin_test__retinue_alpha"))
 end
 
+function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndUsesSlash()
+  local user, target = room().players[1], room().players[2]
+  setHidden(user, "hanjin__qun013", "hanjin__wei007", "qun")
+  reveal(user, false)
+  reveal(user, true)
+
+  local skill = Fk.skills[C.ABILITY_SKILL]
+  lu.assertTrue(skill.visible, "统领共享视为技必须是可见技能入口")
+  lu.assertEquals(skill.name, C.ABILITY_SKILL)
+  lu.assertEquals(Fk:translate(C.ABILITY_SKILL), "统领")
+  lu.assertEquals(Fk:translate("mainGeneral"), "主将")
+  lu.assertEquals(Fk:translate("deputyGeneral"), "副将")
+  lu.assertTrue(user:hasSkill(C.ABILITY_SKILL))
+  lu.assertTrue(skill:enabledAtPlay(user))
+  lu.assertEquals(C.markSources(user), { "hanjin__qun013" })
+  lu.assertEquals(Fk:translate("hanjin__qun013"), "马腾")
+  lu.assertEquals(C.SOURCE_MARK:sub(1, 2), "@[")
+  local sourceSpec = Fk.qml_marks["hanjin_commander_sources"]
+  lu.assertNotNil(sourceSpec)
+  local beforeHide = C.markSources(user)
+  lu.assertEquals(sourceSpec.how_to_show(C.SOURCE_MARK, beforeHide, user), "#hidden")
+  lu.assertEquals(C.markSources(user), beforeHide)
+  local clientPlayer = ClientInstance:getPlayerById(user.id)
+  if clientPlayer then
+    ClientInstance:handleSetPlayerMark({ user.id, C.SOURCE_MARK, beforeHide })
+    lu.assertEquals(clientPlayer:getMark(C.SOURCE_MARK), beforeHide)
+  end
+
+  local source = C.source(room(), "hanjin__qun013")
+  lu.assertEquals(C.costCandidates(user, source), { true })
+  -- 提供来源的马腾本人不能作为代价；主将位置必须保持不变。
+  lu.assertFalse(C.payCost(user, source, false))
+  lu.assertEquals(user.general, "hanjin__qun013")
+
+  local card
+  skill.interaction.data = "hanjin__qun013"
+  FkTest.runInRoom(function() card = skill:viewAs(user, {}) end)
+  lu.assertNotNil(card)
+  lu.assertEquals(card.trueName, "slash")
+  lu.assertEquals(card.skillName, C.ABILITY_SKILL)
+  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "hanjin__qun013")
+
+  local hp = target.hp
+  FkTest.setNextReplies(user, { { "hanjin__retinue_xiliang_jingqi" } })
+  FkTest.setNextReplies(target, { "" })
+  local accepted
+  FkTest.runInRoom(function()
+    accepted = skill:beforeUse(user, { from = user, tos = { target }, card = card })
+    lu.assertNil(accepted)
+    room():useCard { from = user, tos = { target }, card = card }
+  end)
+  skill.interaction.data = nil
+  lu.assertEquals(user.general, "hanjin__qun013")
+  lu.assertTrue(C.isSoldier(user.deputyGeneral))
+  lu.assertEquals(user.deputyGeneral, "hanjin__retinue_xiliang_jingqi")
+  lu.assertEquals(target.hp, hp - 1)
+end
+
 return { name = "hanjin_commander_retinue" }

@@ -4,8 +4,8 @@ local H = require "packages.hegemony.util"
 local M = {}
 
 M.RULE_SKILL = "#hanjin_commander_rule"
-M.ABILITY_SKILL = "#hanjin_commander_ability"
-M.SOURCE_MARK = "@hanjin_commander_sources"
+M.ABILITY_SKILL = "hanjin_commander_ability"
+M.SOURCE_MARK = "@[hanjin_commander_sources]"
 M.SOURCE_TAG = "hanjin_commander_sources"
 M.PENDING_TAG = "hanjin_commander_pending"
 M.CARD_SOURCE_MARK = "hanjin_commander_source"
@@ -336,8 +336,9 @@ function M.hasAvailableMark(player)
   return type(mark) == "table" and #mark > 0
 end
 
---- 客户端 view_as 只能依赖客户端已有的可见标记和全局牌面登记，
---- 不能读取服务端房间 tag。服务端会在 before_use 中重新核验。
+--- 客户端 view_as 只能依赖客户端已有、可读取的标记数据和全局牌面登记；
+--- 来源标记在 UI 中隐藏，但 Player:getMark 仍保留列表。不能读取服务端房间
+--- tag。服务端会在 before_use 中重新核验。
 function M.viewAsCardForClient(player, sourceKey)
   local spec = M.commanders[sourceKey]
   if spec == nil or Fk.all_card_types[spec.card] == nil then return nil end

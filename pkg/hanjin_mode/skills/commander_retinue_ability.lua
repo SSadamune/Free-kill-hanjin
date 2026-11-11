@@ -63,7 +63,18 @@ Fk:loadTranslationTable {
   ["#hanjin_commander_ability"] = "统领：选择一名明置统领，移除自己的一张无士兵武将牌，视为使用其标注的牌",
   ["#hanjin_commander_choose_cost"] = "选择移除以支付统领代价的武将牌",
   ["#hanjin_commander_choose_retinue"] = "选择要转换成的翼从",
+  ["mainGeneral"] = "主将",
+  ["deputyGeneral"] = "副将",
   ["#HanjinRetinueGained"] = "%from 的 %arg 转换为翼从 %arg2",
+}
+
+-- Keep the source list client-side for the view-as construction, but do not
+-- render the internal source keys as a long player mark. `ClientBase` asks this
+-- spec before notifying QML; "#hidden" stores/removes only the UI copy, while
+-- `Player:getMark` still carries the list for viewAsCardForClient/reconnect.
+Fk:addQmlMark {
+  name = "hanjin_commander_sources",
+  how_to_show = function() return "#hidden" end,
 }
 
 return skill
