@@ -1,18 +1,16 @@
 local A = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
-local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 
--- 模式级升变规则。通过 related_skills 挂到统领规则上，避免和其他会话
--- 同时修改 mode.lua 的 rule 字段；房间建立时已有的模式技会一并加载。
+-- 模式级升变规则。由统领规则在所有包加载完成后挂到实际 Skill 对象上，
+-- 避免和其他会话同时修改 mode.lua 的 rule 字段；房间建立时已有的模式技会一并加载。
 local skill = fk.CreateSkill {
   name = A.RULE_SKILL,
 }
 
 skill:addEffect(fk.GameStart, {
-  priority = 100,
-  can_trigger = function(self, event, target, player)
+  can_refresh = function(self, event, target, player)
     return player.seat == 1
   end,
-  on_trigger = function(self, event, target, player)
+  on_refresh = function(self, event, target, player)
     A.reset(player.room)
   end,
 })
@@ -89,15 +87,5 @@ Fk:loadTranslationTable {
   ["#HanjinAscension"] = "%from 将主将 %arg 升变为 %arg2，势力改为 %arg3",
   ["#HanjinLordDeathWild"] = "%from 因君主死亡改为野心家（原势力 %arg）",
 }
-
--- 把升变规则挂到已有的统领规则上。此步在所有包安装完成后执行，避免依赖
--- 技能文件的加载顺序，也不需要在共享的 mode.lua 中改 rule 字段。
-Fk:addPostLoadFunc(function()
-  local base = Fk.skills[C.RULE_SKILL]
-  local ours = Fk.skills[A.RULE_SKILL]
-  if base ~= nil and ours ~= nil then
-    table.insertIfNeed(base.related_skills, ours)
-  end
-end)
 
 return skill

@@ -1,11 +1,12 @@
 -- 统领与翼从公共规则。武将牌只登记牌面数据；翼从的卡面与技能由
 -- 汉晋内容包独立创建。上游 hegemony 仅用于移将、明置和势力流程。
 local H = require "packages.hegemony.util"
+local Adaptation = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
 local M = {}
 
 M.RULE_SKILL = "#hanjin_commander_rule"
-M.ABILITY_SKILL = "#hanjin_commander_ability"
-M.SOURCE_MARK = "@hanjin_commander_sources"
+M.ABILITY_SKILL = "hanjin_commander_ability"
+M.SOURCE_MARK = "@[hanjin_commander_sources]"
 M.SOURCE_TAG = "hanjin_commander_sources"
 M.PENDING_TAG = "hanjin_commander_pending"
 M.CARD_SOURCE_MARK = "hanjin_commander_source"
@@ -51,21 +52,22 @@ function M.registerCommander(general, spec)
   assert(type(spec.retinues) == "table" and #spec.retinues > 0,
     "Commander must provide at least one retinue")
   local retinues = {}
-  local limited = false
   for _, name in ipairs(spec.retinues) do
     assert(M.retinues[name], "Unknown retinue general: " .. tostring(name))
     table.insertIfNeed(retinues, name)
-    -- 提供偏将（限一翼从）的统领来源，其视为用牌机会也每局限一次。
-    if M.retinues[name].limited then limited = true end
   end
   local card_text = spec.card_text or translate(spec.card)
   local data = {
     general = general,
     card = spec.card,
+    suit = spec.suit,
+    bypass_distances = spec.bypass_distances == true,
+    adaptation = table.clone(spec.adaptation or {}),
     card_text = card_text,
     source_text = spec.source_text or (translate(general) .. "｜" .. card_text),
     retinues = retinues,
-    limited = limited,
+    -- 来源能力自身的“限一”与偏将/翼从的限一身份是两件事。
+    limited = spec.limited == true,
   }
   M.commanders[general] = data
   Fk:loadTranslationTable {
@@ -328,7 +330,66 @@ function M.refreshAvailability(room)
     local list = {}
     for _, source in ipairs(M.abilitySources(player)) do table.insert(list, source.general) end
     room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    local descriptions = {}
+    local faction = M.factionOf(player)
+    local used = M.usedLimitedRetinues(room)
+    for key, source in pairs(M.getSources(room)) do
+      if M.sourceAuthorizedFor(room, source, player) or source.factions[faction] then
+        local retinues = table.filter(source.retinues, function(name)
+          return not M.isLimitedRetinue(name) or not used[name]
+        end)
+        table.insert(descriptions, { key = key, retinues = retinues,
+          active = M.sourceAuthorizedFor(room, source, player) })
+      end
+    end
+    table.sort(descriptions, function(a, b) return a.key < b.key end)
+    room:setPlayerMark(player, "hanjin_commander_descriptions", #descriptions > 0 and descriptions or 0)
   end
+end
+
+-- Public, room-specific source data is synchronized by refreshAvailability.
+-- Client descriptions never inspect server-only source tags.
+function M.describeSource(key, retinues, active, lang, abilityOnly)
+  local spec = M.commanders[key]
+  if spec == nil then return "" end
+  local name = Fk:translate(key, lang)
+  local card = spec.card_text or Fk:translate(spec.card, lang)
+  if abilityOnly then
+    return "移除一张不为" .. name .. "的武将牌，视为使用【" .. card .. "】。"
+  end
+  local text = name .. "："
+  if active ~= false then
+    text = text .. "若你没有士兵，你可以移除一张不为" .. name .. "的武将牌，视为使用【" .. card .. "】。"
+    if spec.limited then text = text .. "此统领能力每局所有角色合计限一次。" end
+  else
+    text = text .. "当前不能借助" .. name .. "的统领能力使用【" .. card .. "】。"
+  end
+  local names = table.map(retinues or {}, function(id) return "「" .. Fk:translate(id, lang) .. "」" end)
+  if #names == 1 then
+    text = text .. "你所属势力可获得的翼从兵种包括" .. names[1] .. "。"
+  elseif #names > 1 then
+    text = text .. "你所属势力可获得的翼从兵种包括" .. table.concat(names, "、") .. "。"
+  else
+    text = text .. "当前没有可由" .. name .. "获得的翼从。"
+  end
+  for _, id in ipairs(retinues or {}) do
+    if M.isLimitedRetinue(id) then
+      text = text .. "「" .. Fk:translate(id, lang) .. "」为偏将，每局全场只能取得一次。"
+    end
+  end
+  return text
+end
+
+function M.description(player, key, lang, abilityOnly)
+  local entries = player and player:getMark("hanjin_commander_descriptions") or 0
+  local lines = {}
+  for _, entry in ipairs(type(entries) == "table" and entries or {}) do
+    if key == nil or key == entry.key then
+      table.insert(lines, M.describeSource(entry.key, entry.retinues, entry.active, lang, abilityOnly))
+    end
+  end
+  if #lines > 0 then return table.concat(lines, "<br/>") end
+  return abilityOnly and "当前没有可用的统领能力。" or "当前没有可用的统领来源或翼从。"
 end
 
 function M.hasAvailableMark(player)
@@ -336,30 +397,94 @@ function M.hasAvailableMark(player)
   return type(mark) == "table" and #mark > 0
 end
 
---- 客户端 view_as 只能依赖客户端已有的可见标记和全局牌面登记，
---- 不能读取服务端房间 tag。服务端会在 before_use 中重新核验。
+--- 当前窗口的可用来源。只用客户端可读取的隐藏来源列表，不读服务端
+--- room tag；mark 由服务端在来源/代价/限一状态变化后刷新。为避免把
+--- “有来源”当成“这张牌现在能使用”，这里复用新月杀当前请求的 canUse/
+--- response 判定。合法目标由进入用牌界面后的目标选择与确认流程检查。
+
+local function canUseInCurrent(player, card)
+  -- ClientInstance without an active request handler is a headless call; the
+  -- engine's canUseOrResponseInCurrent assumes handler.extra_data exists there.
+  if Fk.currentResponsePattern ~= nil and ClientInstance ~= nil
+    and ClientInstance.current_request_handler == nil then
+    return card:matchVSPattern(Fk.currentResponsePattern) and not player:prohibitUse(card)
+  end
+  return player:canUseOrResponseInCurrent(card)
+end
+
+local function sourceCardUsable(player, card, mode)
+  if card == nil then return false end
+  -- 无懈/闪等被动牌只能在实际响应窗口使用，不能在出牌阶段主动使用。
+  if mode == "play" and card.is_passive then return false end
+  card:setVSPattern(M.ABILITY_SKILL, player)
+  if not canUseInCurrent(player, card) then return false end
+  if mode == "nullification" then
+    return card.trueName == "nullification" and card.is_passive
+  end
+  return true
+end
+
+local function sourceHasCostForUI(player, key)
+  -- The hidden source mark is refreshed by the server only for sources with a
+  -- removable main/deputy general. Never read the server room tag on a client;
+  -- the server rechecks the real cost in before_use.
+  return M.commanders[key] ~= nil
+end
+
+function M.abilityLabel(key)
+  local spec = M.commanders[key]
+  if spec == nil then return key end
+  local label = Fk:translate(key) .. "·" .. (spec.card_text or Fk:translate(spec.card))
+  if M.isLimitedSource({ general = key }) then label = label .. "（限一）" end
+  return label
+end
+
+--- 返回客户端可直接渲染的来源按钮数据。key 是权威 sourceKey，label 只供显示。
+--- @param player Player
+--- @param mode? "play"|"response"|"nullification"
+--- @return table[]
+function M.availableSourceEntries(player, mode)
+  if player == nil or player.dead then return {} end
+  mode = mode or (Fk.currentResponsePattern ~= nil and "response" or "play")
+  local entries = {}
+  for _, key in ipairs(M.markSources(player)) do
+    local spec = M.commanders[key]
+    if spec ~= nil and Fk.all_card_types[spec.card] ~= nil
+      and sourceHasCostForUI(player, key) then
+      local card = M.viewAsCardForClient(player, key)
+      if sourceCardUsable(player, card, mode) then
+        table.insert(entries, {
+          key = key,
+          label = M.abilityLabel(key),
+          limited = M.isLimitedSource({ general = key }),
+        })
+      end
+    end
+  end
+  -- 来源键来自服务端排序后的 mark；再次排序保证客户端顺序稳定。
+  table.sort(entries, function(a, b) return a.key < b.key end)
+  return entries
+end
+
+function M.hasUsableSource(player, mode)
+  return #M.availableSourceEntries(player, mode) > 0
+end
+
+--- 客户端 view_as 只能依赖客户端已有、可读取的标记数据和全局牌面登记；
+--- 来源标记在 UI 中隐藏，但 Player:getMark 仍保留列表。不能读取服务端房间
+--- tag。服务端会在 before_use 中重新核验。
 function M.viewAsCardForClient(player, sourceKey)
   local spec = M.commanders[sourceKey]
   if spec == nil or Fk.all_card_types[spec.card] == nil then return nil end
-  local card = Fk:cloneCard(spec.card)
+  local card = Fk:cloneCard(spec.card, spec.suit)
+  if #spec.adaptation > 0 then Adaptation.setCardEntries(card, spec.adaptation) end
   card.skillName = M.ABILITY_SKILL
   card:setMark(M.CARD_SOURCE_MARK, sourceKey)
   return card
 end
 
 function M.hasNullificationSource(player)
-  for _, sourceKey in ipairs(M.markSources(player)) do
-    local spec = M.commanders[sourceKey]
-    if spec ~= nil and Fk.all_card_types[spec.card] ~= nil then
-      local card = Fk:cloneCard(spec.card)
-      local pattern = Fk.currentResponsePattern
-      if card.trueName == "nullification" and card.is_passive
-        and (pattern == nil or card:matchVSPattern(pattern)) then
-        return true
-      end
-    end
-  end
-  return false
+  return M.hasUsableSource(player, "nullification")
 end
 
 local function positionName(player, isDeputy)
@@ -387,7 +512,7 @@ function M.chooseCostPosition(player, source)
   local answer = player.room:askToChoice(player, {
     choices = { "mainGeneral", "deputyGeneral" },
     skill_name = M.ABILITY_SKILL,
-    prompt = "#hanjin_commander_choose_cost",
+    prompt = M.description(player, source.general, nil, true) .. "<br/>请选择要移除的武将牌。",
   })
   return answer == "deputyGeneral"
 end

@@ -143,21 +143,28 @@ local commanders = {
     { "hanjin_test__retinue_alpha" } },
   -- 与正式关羽/曹仁同牌名（酒）的两个限一来源：同名牌不同来源彼此独立。
   { "hanjin_test__commander_guanyu", "shu", "hanjin__analeptic",
-    { "hanjin_test__retinue_zhoucang" } },
+    { "hanjin_test__retinue_zhoucang" }, limited = true },
   { "hanjin_test__commander_caoren", "wei", "hanjin__analeptic",
-    { "hanjin_test__retinue_niujin" } },
+    { "hanjin_test__retinue_niujin" }, limited = true },
   -- 限一来源的无懈可击：覆盖“使用”窗口与响应用牌路径。
   { "hanjin_test__commander_taishici", "shu", "hanjin_test__nullification",
-    { "hanjin_test__retinue_quaxiaojiang" } },
+    { "hanjin_test__retinue_quaxiaojiang" }, limited = true },
   -- 限一来源的普通锦囊：用于覆盖“已宣告使用后被抵消”的时序。
   { "hanjin_test__commander_duel", "shu", "duel",
-    { "hanjin_test__retinue_niujin" } },
+    { "hanjin_test__retinue_niujin" }, limited = true },
+  -- 来源能力限一与偏将限一必须能独立配置。
+  { "hanjin_test__commander_limited_only", "wei", "hanjin_test__slash",
+    { "hanjin_test__retinue_alpha" }, limited = true },
+  { "hanjin_test__commander_unlimited_with_limited_retinue", "wei", "hanjin_test__slash",
+    { "hanjin_test__retinue_zhoucang" }, limited = false },
 }
 for _, spec in ipairs(commanders) do
   local general = General:new(pack, spec[1], spec[2], 4)
   general.hidden = true
   Fk.generals[spec[1]] = general
-  C.registerCommander(spec[1], { card = spec[3], retinues = spec[4] })
+  C.registerCommander(spec[1], {
+    card = spec[3], retinues = spec[4], limited = spec.limited == true,
+  })
 end
 
 table.insert(Fk.game_modes.hanjin_heg_mode.whitelist, pack.name)

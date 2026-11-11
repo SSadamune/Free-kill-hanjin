@@ -1,5 +1,6 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
+local CardData = require "packages.hanjin.pkg.hanjin_cards.data.cards"
 Testhanjin_card_reuse = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
 
 local function card(name, suit, number)
@@ -216,6 +217,48 @@ function Testhanjin_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
     lu.assertTrue(attached, "Missing equip skill " .. case[2])
     lu.assertTrue(detached, "Equip skill did not detach " .. case[2])
   end
+end
+
+function Testhanjin_card_reuse:testPassiveEquipmentSkillsAreHiddenButStayAttached()
+  local passive, active = 0, 0
+  for _, cardType in ipairs(CardData.types) do
+    if cardType.type == "equip" and cardType.equip_skill then
+      local skill = Fk.skills[cardType.equip_skill]
+      lu.assertNotNil(skill, "Missing equip skill " .. tostring(cardType.equip_skill))
+      local skeleton = skill:getSkeleton()
+      if skeleton.attached_equip ~= nil then
+        lu.assertEquals(skeleton.attached_equip, cardType.id)
+        lu.assertTrue(skill:isEquipmentSkill(), cardType.id)
+        local clickable = skill:isInstanceOf(ActiveSkill) or skill:isInstanceOf(ViewAsSkill)
+        lu.assertEquals(skill.visible, clickable, cardType.id)
+        if clickable then active = active + 1 else passive = passive + 1 end
+      else
+        lu.assertEquals(cardType.equip_skill, "hanjin__inert_equip")
+        lu.assertFalse(skill.visible)
+      end
+    end
+  end
+  lu.assertTrue(passive > 0)
+  lu.assertTrue(active > 0)
+  lu.assertFalse(Fk.skills["hanjin__five_elements_fan_skill"].visible)
+  lu.assertTrue(Fk.skills["hanjin__spear_skill"].visible)
+  lu.assertTrue(Fk.skills["hanjin__luminous_pearl_skill"].visible)
+  lu.assertTrue(Fk.skills["hanjin__wooden_ox_skill"].visible)
+  lu.assertEquals(Fk:translate("hanjin__five_elements_fan"), "五行鹤翎扇")
+end
+
+function Testhanjin_card_reuse:testFiveElementsFanStaysHiddenAfterEquip()
+  local room = FkTest.room
+  local p = room.players[1]
+  local c = card("hanjin__five_elements_fan")
+  FkTest.runInRoom(function()
+    give(room, p, c)
+    use(room, p, { p }, c)
+    lu.assertTrue(p:hasSkill("hanjin__five_elements_fan_skill"))
+    lu.assertFalse(Fk.skills["hanjin__five_elements_fan_skill"].visible)
+    lu.assertFalse(table.contains(p:getSkillNameList(), "hanjin__five_elements_fan_skill"))
+    lu.assertEquals(Fk:translate("hanjin__five_elements_fan"), "五行鹤翎扇")
+  end)
 end
 
 function Testhanjin_card_reuse:testBreastplateBPreventsNonLethalTwoDamage()

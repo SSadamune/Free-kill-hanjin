@@ -1,18 +1,18 @@
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 local H = require "packages.hegemony.util"
 
--- 模式级公共规则。related_skills 保证上游国战规则仍然加载。
+-- 模式级公共规则。相关规则必须在所有包加载完成后挂到本技能的实际
+-- Skill 对象上；SkillSkeleton 的 related_skills 只是展示用的技能名表，
+-- createSkill 不会把它复制给主技能，房间因此不会加载上游国战规则。
 local skill = fk.CreateSkill {
   name = C.RULE_SKILL,
-  related_skills = { "heg_rule", "#hanjin_exchange_history" },
 }
 
 skill:addEffect(fk.GameStart, {
-  priority = 100,
-  can_trigger = function(self, event, target, player)
+  can_refresh = function(self, event, target, player)
     return player.seat == 1
   end,
-  on_trigger = function(self, event, target, player)
+  on_refresh = function(self, event, target, player)
     local room = player.room
     C.reset(room)
     for _, p in ipairs(room.players) do C.grantAbility(p) end
@@ -137,5 +137,27 @@ skill:addEffect(fk.Death, {
 Fk:loadTranslationTable {
   [C.RULE_SKILL] = "汉晋统领规则",
 }
+
+-- 模式规则的实际依赖。只挂既有国战公共规则和汉晋自己的模式技：
+-- * heg_rule 恢复国战回合开始亮将、鏖战等公共流程；
+-- * #hanjin_exchange_history 记录交换武将所需的逐牌技能使用；
+-- * #hanjin_ascension_rule 提供汉晋君主升变/胜负规则；
+-- * #hanjin_adaptation_display 提供应变牌手牌提示（仅在汉晋房间加入）。
+-- 汉晋君主版不使用 lord 命名，也不登记 HegUtil.lordGenerals，因此 heg_rule
+-- 的 lord_convert 分支不会为汉晋普通将提供原生君主转换；升变仍由汉晋升变规则负责。
+-- 房间添加技能时会按名字去重，因此这些技能即使另有全局入口也不会重复注册。
+Fk:addPostLoadFunc(function()
+  local base = Fk.skills[C.RULE_SKILL]
+  if base == nil then return end
+  for _, name in ipairs({
+    "heg_rule",
+    "#hanjin_exchange_history",
+    "#hanjin_ascension_rule",
+    "#hanjin_adaptation_display",
+  }) do
+    local dependency = Fk.skills[name]
+    if dependency ~= nil then table.insertIfNeed(base.related_skills, dependency) end
+  end
+end)
 
 return skill
