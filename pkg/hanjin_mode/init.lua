@@ -13,7 +13,8 @@ end)
 
 Fk:loadTranslationTable {
   ["hanjin_wolves"] = "群狼环鼎",
-  ["help: hanjin_wolves"] = "默认关闭。开启后启用新鏖战、历史事件（含赋礼、不进则退等）及奇珍规则；关闭时使用普通鏖战。",
+  ["help: hanjin_wolves"] = "默认关闭。无论开关，鏖战均为【桃】只能当【杀】或【闪】使用或打出；"
+    .. "开启后仅额外启用历史事件（含赋礼、不进则退等）及奇珍规则。",
   ["hanjin_mode"] = "紫乔汉晋·规则",
   ["han"] = "汉",
   ["hanjin_heg_mode"] = "紫乔汉晋国战",

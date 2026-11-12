@@ -183,7 +183,7 @@ function Testmode_rules:testWolvesCanBeEnabledExplicitly()
     return skill:getSkeleton().name == "heg_rule"
   end))
   FkTest.runInRoom(function() H.enterBattleRoyalMode(current) end)
-  lu.assertEquals(current:getBanner("@[:]BattleRoyalDummy"), "NewBattleRoyalMode")
+  lu.assertEquals(current:getBanner("@[:]BattleRoyalDummy"), "BattleRoyalMode")
   lu.assertTrue(current:hasSkill("#new_battle_royal_event&"))
 end
 
