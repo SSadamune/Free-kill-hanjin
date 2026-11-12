@@ -419,17 +419,21 @@ function M.on_turn_end(room, player)
   room:setPlayerMark(player, M.TURNS_MARK, (player:getMark(M.TURNS_MARK) or 0) + 1)
 end
 
+--- 判定存活角色与锚点是否属于同一预期势力。野心家（明置或暗置）始终独立；
+--- 暗将只在已登记的预期势力与锚点一致时归并，unknown 不得互相算作同势力。
 local function same_expected_faction(player, anchor, anchorKingdom)
   if player == anchor then return true end
   if player.kingdom == "wild" then return false end
-  if player.kingdom == "unknown" then
+  if isUnknown(player.kingdom) then
     local expected = player:getMark("__heg_kingdom")
-    return type(expected) == "string" and expected ~= "wild" and expected == anchorKingdom
+    return type(expected) == "string" and not isUnknown(expected)
+      and expected ~= "wild" and expected == anchorKingdom
   end
   return player.kingdom == anchorKingdom
 end
 
---- 汉晋胜负判定。君主只按显式登记识别；超员野心家不因君主存在并回势力。
+--- 汉晋胜负判定。只取决于场上是否只剩唯一势力；君主与势力人数均不参与。
+--- 各野心家始终为独立势力；暗置角色按预期势力归并，unknown 本身不是势力。
 function M.get_winner(self, victim)
   local room = victim.room
   local alive = table.filter(room.alive_players, function(player) return not player.surrendered end)
@@ -437,19 +441,14 @@ function M.get_winner(self, victim)
   if #alive == 1 then return alive end
   local anchor
   for _, player in ipairs(alive) do
-    if player.kingdom ~= "unknown" then anchor = player; break end
+    if not isUnknown(player.kingdom) then anchor = player; break end
   end
+  -- 全部暗置时不能把 unknown 当成一个共同势力。
   if anchor == nil or anchor.kingdom == "wild" then return "" end
   local anchorKingdom = anchor.kingdom
   for _, player in ipairs(alive) do
     if not same_expected_faction(player, anchor, anchorKingdom) then return "" end
   end
-
-  local count = 0
-  for _, player in ipairs(room.players) do
-    if same_expected_faction(player, anchor, anchorKingdom) then count = count + 1 end
-  end
-  if count > #room.players // 2 and not M.has_lord(room, anchorKingdom) then return "" end
 
   for _, player in ipairs(room.players) do
     if player.general == "anjiang" then

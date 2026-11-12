@@ -397,7 +397,7 @@ function Testsecond_lord:testUnifiedVersionRegistryQueries()
   end)
 end
 
-function Testsecond_lord:testWinnerCountsLord()
+function Testsecond_lord:testWinnerWithLordEndsForUniqueFactionAboveHalf()
   local mode = Fk.game_modes.hanjin_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local winner
@@ -408,12 +408,69 @@ function Testsecond_lord:testWinnerCountsLord()
     for index = 6, 8 do markDead(player(index), "shu") end
     winner = mode:getWinner(dead)
   end)
+  -- Five of eight players are Wei, but the remaining faction is unique. A lord
+  -- must not be required for this board to end.
   lu.assertEquals(#winner, 2)
   lu.assertTrue(winner[1] == p1)
   lu.assertTrue(winner[2] == p2)
 end
 
-function Testsecond_lord:testWinnerExcludesOverpopulationWild()
+function Testsecond_lord:testWinnerWithoutLordEndsForUniqueFactionAboveHalf()
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local p1, p2, dead = player(1), player(2), player(6)
+  local winner
+  FkTest.runInRoom(function()
+    revealed(p1, G.wei_normal.name, G.wei_deputy.name, "wei")
+    revealed(p2, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    for index = 3, 5 do markDead(player(index), "wei") end
+    for index = 6, 8 do markDead(player(index), "shu") end
+    winner = mode:getWinner(dead)
+  end)
+  -- Same five-of-eight board as above, without a lord: the result is unchanged.
+  lu.assertEquals(#winner, 2)
+  lu.assertTrue(winner[1] == p1)
+  lu.assertTrue(winner[2] == p2)
+end
+
+function Testsecond_lord:testWinnerWithAndWithoutLordSameUniqueFaction()
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local p1, p2, dead = player(1), player(2), player(6)
+  local withoutLord, withLord
+  FkTest.runInRoom(function()
+    revealed(p1, G.wei_normal.name, G.wei_deputy.name, "wei")
+    revealed(p2, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    for index = 3, 5 do markDead(player(index), "wei") end
+    for index = 6, 8 do markDead(player(index), "shu") end
+    withoutLord = mode:getWinner(dead)
+
+    revealed(p1, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    withLord = mode:getWinner(dead)
+  end)
+  lu.assertEquals(#withoutLord, 2)
+  lu.assertEquals(#withLord, 2)
+  lu.assertEquals(withoutLord[1].id, withLord[1].id)
+  lu.assertEquals(withoutLord[2].id, withLord[2].id)
+end
+
+function Testsecond_lord:testWinnerMultipleFactionsDoNotEndDespiteLordAndMajority()
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local winner
+  FkTest.runInRoom(function()
+    revealed(player(1), G.wei_monarch.name, G.wei_deputy.name, "wei")
+    revealed(player(2), G.wei_normal.name, G.wei_deputy.name, "wei")
+    revealed(player(3), G.wei_normal2.name, G.wei_deputy.name, "wei")
+    revealed(player(4), G.wei_normal3.name, G.wei_deputy.name, "wei")
+    revealed(player(5), "hanjin_test__wei_4", "hanjin_test__qun_1", "wei")
+    revealed(player(6), G.shu_plain.name, "hanjin_test__shu_2", "shu")
+    markDead(player(7), "shu")
+    markDead(player(8), "shu")
+    winner = mode:getWinner(player(8))
+  end)
+  -- Five Wei (with a lord) still coexist with a living Shu character.
+  lu.assertEquals(winner, "")
+end
+
+function Testsecond_lord:testWinnerRejectsRegularAndOverpopulationWild()
   local mode = Fk.game_modes.hanjin_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local winner
@@ -425,20 +482,145 @@ function Testsecond_lord:testWinnerExcludesOverpopulationWild()
     winner = mode:getWinner(dead)
   end)
   lu.assertEquals(winner, "")
+  -- A wild character is still independent and must not be merged back into Wei.
+  lu.assertEquals(p2.kingdom, "wild")
+  lu.assertEquals(p2:getMark("__heg_kingdom"), "wei")
 end
 
-function Testsecond_lord:testWinnerWithoutLordDoesNotUseMajorityShortcut()
+function Testsecond_lord:testWinnerTreatsEachWildAsSeparateFaction()
   local mode = Fk.game_modes.hanjin_heg_mode
-  local p1, p2, dead = player(1), player(2), player(6)
   local winner
   FkTest.runInRoom(function()
-    revealed(p1, G.wei_normal.name, G.wei_deputy.name, "wei")
-    revealed(p2, G.wei_normal2.name, G.wei_deputy.name, "wei")
-    for index = 3, 5 do markDead(player(index), "wei") end
-    for index = 6, 8 do markDead(player(index), "shu") end
-    winner = mode:getWinner(dead)
+    revealed(player(1), "hanjin_test__wild_1", "hanjin_test__qun_1", "wild")
+    revealed(player(2), "hanjin_test__wild_2", "hanjin_test__qun_2", "wild")
+    for index = 3, 8 do markDead(player(index), "shu") end
+    winner = mode:getWinner(player(6))
   end)
+  -- Two living wild characters are two factions, even when both are wild.
   lu.assertEquals(winner, "")
+end
+
+function Testsecond_lord:testWinnerSingleWildWins()
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local p1 = player(1)
+  local winner
+  FkTest.runInRoom(function()
+    revealed(p1, "hanjin_test__wild_1", "hanjin_test__qun_1", "wild")
+    for index = 2, 8 do markDead(player(index), "shu") end
+    winner = mode:getWinner(player(6))
+  end)
+  lu.assertEquals(#winner, 1)
+  lu.assertTrue(winner[1] == p1)
+end
+
+function Testsecond_lord:testWinnerHiddenGeneralsFollowExpectedFactionSemantics()
+  local mode = Fk.game_modes.hanjin_heg_mode
+  local p1, p2 = player(1), player(2)
+  local allHidden, matchingHidden, differentHidden
+  FkTest.runInRoom(function()
+    hidden(p1, G.wei_normal.name, G.wei_deputy.name, "wei")
+    hidden(p2, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    for index = 3, 8 do markDead(player(index), "shu") end
+    allHidden = mode:getWinner(player(6))
+
+    revealed(p1, G.wei_normal.name, G.wei_deputy.name, "wei")
+    hidden(p2, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    matchingHidden = mode:getWinner(player(6))
+
+    hidden(p2, G.wei_normal2.name, G.wei_deputy.name, "shu")
+    differentHidden = mode:getWinner(player(6))
+  end)
+  -- unknown is not a shared faction: two hidden characters cannot win together.
+  lu.assertEquals(allHidden, "")
+  -- An expected Wei hidden character joins the known Wei anchor, as in national war.
+  lu.assertEquals(#matchingHidden, 2)
+  -- A hidden character expected to be Shu does not join the Wei anchor.
+  lu.assertEquals(differentHidden, "")
+end
+
+function Testsecond_lord:testRealDeathEndsGameForUniqueRegularFactionAboveHalf()
+  FkTest.runInRoom(function()
+    for index = 1, 5 do
+      revealed(player(index), "hanjin_test__wei_" .. index, "hanjin_test__qun_" .. index, "wei")
+    end
+    for index = 6, 8 do
+      revealed(player(index), "hanjin_test__shu_" .. index, "hanjin_test__qun_" .. index, "shu")
+    end
+  end)
+  for index = 8, 6, -1 do
+    FkTest.runInRoom(function() room():killPlayer { who = player(index) } end)
+  end
+  -- The last Shu death happens through the real death + GameOverJudge flow.
+  lu.assertTrue(room().game_finished)
+  local summary = room():getBanner("GameSummary")
+  for index = 1, 5 do
+    lu.assertEquals(summary[player(index).seat].win, "Game Win")
+  end
+  lu.assertEquals(summary[player(6).seat].win, "Game Lose")
+  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  lu.assertEquals(saved.winners, { "wei" })
+end
+
+function Testsecond_lord:testRealDeathSuccessionThenGameOver()
+  local lord, successor, ally = player(1), player(2), player(3)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(successor, G.wei_normal.name, G.wei_deputy.name, "wei")
+    revealed(ally, "hanjin_test__wei_3", "hanjin_test__qun_3", "wei")
+    for index = 4, 8 do markDead(player(index), "shu") end
+    room():setCurrent(successor)
+  end)
+  FkTest.setNextReplies(successor, { { A.ASCEND_ACCEPT } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+  -- Succession runs in BeforeGameOverJudge, then the real GameOverJudge sees the
+  -- unique Wei faction and ends the game with the successor as a winner.
+  lu.assertEquals(successor.general, G.wei_monarch.name)
+  lu.assertTrue(room().game_finished)
+  local summary = room():getBanner("GameSummary")
+  lu.assertEquals(summary[successor.seat].win, "Game Win")
+  lu.assertEquals(summary[ally.seat].win, "Game Win")
+  lu.assertEquals(summary[lord.seat].win, "Game Lose")
+  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  lu.assertEquals(saved.winners, { "wei" })
+end
+
+function Testsecond_lord:testRealNoSuccessorConvertsLastAllyToWildAndWins()
+  local lord, ally = player(1), player(2)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    revealed(ally, G.wei_normal.name, G.wei_deputy.name, "wei")
+    for index = 3, 8 do markDead(player(index), "shu") end
+    room():setCurrent(ally)
+  end)
+  FkTest.setNextReplies(ally, { { "Cancel" } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+  -- No successor: the last ally becomes a wild character and is the sole survivor.
+  lu.assertEquals(ally.kingdom, "wild")
+  lu.assertTrue(room().game_finished)
+  local summary = room():getBanner("GameSummary")
+  lu.assertEquals(summary[ally.seat].win, "Game Win")
+  -- A wild victory must not be recorded as a regular kingdom win.
+  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  lu.assertEquals(saved.winners, {})
+end
+
+function Testsecond_lord:testRealNoSuccessorMultipleWildsKeepGameRunning()
+  local lord, first, second = player(1), player(2), player(3)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    revealed(first, G.wei_normal.name, G.wei_deputy.name, "wei")
+    revealed(second, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    for index = 4, 8 do markDead(player(index), "shu") end
+    room():setCurrent(first)
+  end)
+  FkTest.setNextReplies(first, { { "Cancel" } })
+  FkTest.setNextReplies(second, { { "Cancel" } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+  -- Both surviving Wei characters become independent wild factions; no unique
+  -- faction remains, so the real game-over flow must not finish the game.
+  lu.assertEquals(first.kingdom, "wild")
+  lu.assertEquals(second.kingdom, "wild")
+  lu.assertFalse(room().game_finished)
 end
 
 return { name = "second_lord" }
