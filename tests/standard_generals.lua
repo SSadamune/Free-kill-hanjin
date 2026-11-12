@@ -12,6 +12,10 @@ local Selection = require "packages.hanjin.pkg.hanjin_mode.rules.selection"
 local Data = require "packages.hanjin.pkg.hanjin_generals.data.standard"
 
 local SIX = { "han", "wei", "shu", "wu", "qun", "jin" }
+local IMPLEMENTED = {
+  ["hanjin__skill_han001_1"] = true,
+  ["hanjin__skill_han001_2"] = true,
+}
 
 local function formalOnlyDisabledPacks()
   local result = {}
@@ -102,10 +106,15 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
       lu.assertEquals(Fk:translate(skill.id), skill.name)
       lu.assertEquals(Fk:translate(":" .. skill.id), skill.text)
       local skel = assert(Fk.skill_skels[skill.id], "Missing skeleton " .. skill.id)
-      lu.assertEquals(#skel.effects, 0, "Skill must have no effect: " .. skill.id)
-      lu.assertEquals(#skel.effect_spec_list, 0, "Skill must have no effect spec: " .. skill.id)
-      lu.assertEquals(#skel.tests, 0, "Display skill must not carry tests: " .. skill.id)
-      lu.assertEquals(#Fk.skills[skill.id].related_skills, 0, "Display skill must not chain effects")
+      if IMPLEMENTED[skill.id] then
+        lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. skill.id)
+        lu.assertTrue(#skel.tests > 0, "Implemented skill needs its room-guarded addTest: " .. skill.id)
+      else
+        lu.assertEquals(#skel.effects, 0, "Skill must have no effect: " .. skill.id)
+        lu.assertEquals(#skel.effect_spec_list, 0, "Skill must have no effect spec: " .. skill.id)
+        lu.assertEquals(#skel.tests, 0, "Display skill must not carry tests: " .. skill.id)
+        lu.assertEquals(#Fk.skills[skill.id].related_skills, 0, "Display skill must not chain effects")
+      end
       for _, tag in ipairs(skill.tags) do
         lu.assertTrue(Fk.skills[skill.id]:hasTag(tag), "Missing tag " .. tag)
       end

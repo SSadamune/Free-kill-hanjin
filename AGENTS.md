@@ -10,6 +10,7 @@
 - 势力禁选、跨局记录、野心家数量及装备/锦囊策略遵循 `rules/faction-ban.md` 的 MUST 约束；实体规则可转换为等价程序流程。
 - 应变实现遵循 `rules/adaptation.md`，使用汉晋应变 API，并区分 `isAdaptationCard` 与 `Triggered` 事件。上游应变参考源码位于 `.dev/reference/gamemode`，版本登记在 `dependencies.lock.json`，仅供核对。
 - 默认运行 `python scripts/test.py`（`tests/all.lua`）。国战技能测试加入默认国战套件，汉晋技能 `addTest` 回调仅在汉晋测试房间运行；`--skills` 使用官方默认房间，仅用于工具或上游测试验证。
+- 测试按 `rules/testing.md` 分为核心行为、公共机制回归、风险边界三层。规则场景清单不等于逐项新增测试义务；优先定向验证，稳定后再跑默认全量验收，不以测试数量或完整映射表作为默认交付门槛。
 - `tests/support/hanjin_content.lua` 为测试专用内容，不得发布。实装进度集中记录在 `rules/README.md` 及对应规范中，对外说明须与当前实现一致。
 - `rules/` 由 Codex 维护。DSH 默认只读；需要修改时，须先说明具体文件、理由和拟议改动，经 Codex 审阅并明确允许后再修改。
 - 需要 UI 素材时，先向用户说明需求并索取原材料，再按指示加工。从零生图或绘制素材须事先得到用户明确批准。

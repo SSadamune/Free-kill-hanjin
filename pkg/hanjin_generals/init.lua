@@ -97,6 +97,12 @@ Fk:addPostLoadFunc(function()
   end
 
   -- Fail loudly if the generated data and the installed content drift apart.
+  -- Skills that have been formally implemented are the only display entries
+  -- allowed to carry effects; all remaining entries stay display-only shells.
+  local implemented = {
+    ["hanjin__skill_han001_1"] = true,
+    ["hanjin__skill_han001_2"] = true,
+  }
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do
     local general = assert(Fk.generals[data.id], "Missing formal general: " .. data.id)
@@ -130,7 +136,11 @@ Fk:addPostLoadFunc(function()
     end
     for _, skill in ipairs(data.skills) do
       local skel = assert(Fk.skill_skels[skill.id], "Missing skill skeleton: " .. skill.id)
-      assert(#skel.effects == 0, "Formal display skill must have no effect: " .. skill.id)
+      if implemented[skill.id] then
+        assert(#skel.effects > 0, "Implemented skill must have an effect: " .. skill.id)
+      else
+        assert(#skel.effects == 0, "Formal display skill must have no effect: " .. skill.id)
+      end
       skills = skills + 1
     end
     formal = formal + 1
