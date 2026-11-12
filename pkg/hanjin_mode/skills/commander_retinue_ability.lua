@@ -1,4 +1,5 @@
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+local T = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
 
 -- 手动的共享视为技：选择一名已明置统领的来源，视为使用其标注的牌；
 -- 代价为移除自己的一张无士兵武将牌。只在“使用”窗口开放，不在“打出”窗口开放。
@@ -61,7 +62,12 @@ skill:addEffect("viewas", {
     end
     local isDeputy = C.chooseCostPosition(player, source)
     if isDeputy == nil then return skill.name end
-    if not C.payCost(player, source, isDeputy) then return skill.name end
+    local policy = source.bypass_distances and T.bypassDistance() or T.default()
+    T.attachUse(player.room, use, policy)
+    if not C.payCost(player, source, isDeputy) then
+      T.releaseToken(player.room, use)
+      return skill.name
+    end
   end,
   enabled_at_play = function(self, player)
     return C.hasUsableSource(player, "play")

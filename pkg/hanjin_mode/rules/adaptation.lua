@@ -2,6 +2,7 @@
 -- never inferred from a view-as card's physical subcards or shared across uses.
 local A = {}
 local Config = require "packages.hanjin.pkg.hanjin_mode.rules.config"
+local ExtraTargets = require "packages.hanjin.pkg.hanjin_mode.rules.extra_targets"
 local states = setmetatable({}, { __mode = "k" })
 local conditions = { "fujia", "canqu", "zhuzhan", "kongchao", "gujun" }
 local effects = {}
@@ -505,16 +506,12 @@ A.registerEffect("obtain_response_card", { apply = function(room, use)
     room:obtainCard(use.from, use.toCard, true, fk.ReasonJustMove, use.from, "#hanjin_adaptation_rule")
   end
 end })
-A.registerEffect("add_target", { target_change = true, apply = function(room, use)
-  if use.from.dead then return false end
-  local targets = use:getExtraTargets()
-  if #targets == 0 then return false end
-  local selected = room:askToChoosePlayers(use.from, { min_num = 1, max_num = 1, targets = targets,
-    skill_name = "#hanjin_adaptation_rule", prompt = "#hanjin_adaptation_add_target", cancelable = true })
-  local target = selected[1]
-  if not target or not table.contains(use:getExtraTargets(), target) then return false end
-  use:addTarget(target)
-  return true
+-- Target +1 is resolved by the public adapter.  It composes the card's current
+-- target condition (or a skill-provided replacement condition) with independent
+-- rules, keeps the current target list/use context, and handles cards whose
+-- main targets own an independent sub target.
+A.registerEffect("add_target", { target_change = true, apply = function(room, use, entry)
+  return ExtraTargets.addTarget(room, use, entry)
 end })
 A.registerEffect("remove_target", { target_change = true, apply = function(room, use)
   if use.from.dead or #use.tos == 0 then return false end

@@ -1,6 +1,6 @@
 # 交换武将
 
-适用于 `hanjin_heg_mode`。本文规定技能或效果要求「交换武将」时的结算方式。公共交换规则已实现为独立模块 `pkg/hanjin_mode/rules/general_exchange.lua`；专测为 `tests/general_exchange.lua`，已由集成会话纳入 `tests/all.lua`。
+适用于 `hanjin_heg_mode`。本文规定技能或效果要求「交换武将」时的结算方式。公共交换规则已实现为独立模块 `pkg/hanjin_mode/rules/general_exchange.lua`；专测为 `tests/general_exchange.lua`，已纳入默认 `tests/all.lua`。
 
 ## 合法位置
 

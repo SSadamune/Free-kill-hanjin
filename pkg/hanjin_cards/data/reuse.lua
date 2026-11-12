@@ -12,7 +12,9 @@
 -- 17 missing types (10 base lord-equipment positions + 7 faction tricks).
 -- Missing types stay inert shells; no missing effect is invented.
 --
--- kind = "skill"       copy the upstream card skill at post-load
+-- kind = "skill"       install the named card skill at post-load; usually the
+--                      upstream skill, but HanJin wrappers may add structured
+--                      extra-target rules while delegating the effect
 --        "equip"       copy the upstream equip card, equip skills and hooks
 --        "hanjin_skill" a HanJin skill in this package implements the effect
 --        "hanjin_equip" a HanJin equip skill in this package implements it
@@ -55,11 +57,11 @@ M.cards = {
   ["hanjin__befriend_attacking"] = { status = "reused", kind = "skill", upstream = "befriend_attacking", skill = "befriend_attacking_skill" },
   ["hanjin__lure_tiger"] = { status = "reused", kind = "skill", upstream = "lure_tiger", skill = "lure_tiger_skill" },
   ["hanjin__burning_camps"] = { status = "reused", kind = "skill", upstream = "burning_camps", skill = "burning_camps_skill" },
-  ["hanjin__alliance_feast"] = { status = "reused", kind = "skill", upstream = "alliance_feast", skill = "alliance_feast_skill" },
+  ["hanjin__alliance_feast"] = { status = "reused", kind = "skill", upstream = "alliance_feast", skill = "hanjin__alliance_feast_skill" },
   ["hanjin__threaten_emperor"] = { status = "reused", kind = "skill", upstream = "threaten_emperor", skill = "threaten_emperor_skill" },
   ["hanjin__imperial_order"] = { status = "reused", kind = "hanjin_skill", upstream = "imperial_order", skill = "hanjin__imperial_order_skill" },
-  ["hanjin__fight_together"] = { status = "reused", kind = "skill", upstream = "fight_together", skill = "fight_together_skill" },
-  ["hanjin__collateral"] = { status = "reused", kind = "skill", upstream = "collateral", skill = "collateral_skill" },
+  ["hanjin__fight_together"] = { status = "reused", kind = "skill", upstream = "fight_together", skill = "hanjin__fight_together_skill" },
+  ["hanjin__collateral"] = { status = "reused", kind = "skill", upstream = "collateral", skill = "hanjin__collateral_skill" },
   ["hanjin__fire_attack"] = { status = "reused", kind = "skill", upstream = "fire_attack", skill = "fire_attack_skill" },
   ["hanjin__lightning"] = { status = "reused", kind = "skill", upstream = "lightning", skill = "lightning_skill" },
 
