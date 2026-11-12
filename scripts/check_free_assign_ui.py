@@ -7,8 +7,8 @@ singleton used by RoomBase.qml: ``Ltk.roomScene``.
 The real runtime FreeAssign.qml is copied into a temporary fixture and opened
 through Scene.showInfoPopup. The test clicks the package list and a general
 card, then checks the original ChooseGeneralModel and the popup's finish
-signal. Both the visible 自由 button and the card's right-click signal must
-create a fresh popup instance.
+signal. Both right-click and long press on a candidate card must create a
+fresh popup instance.
 """
 import os
 import shutil
@@ -18,10 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 QML_QA = ROOT / ".dev" / "qml-qa"
-RUNTIME_FREE_ASSIGN = (
-    ROOT / ".dev" / "runtime" / "FreeKill-release"
-    / "LunarLtk" / "Pages" / "InfoPopups" / "FreeAssign.qml"
-)
+RUNTIME_ROOT = ROOT / ".dev" / "runtime" / "FreeKill-release"
+RUNTIME_FREE_ASSIGN = RUNTIME_ROOT / "LunarLtk" / "Pages" / "InfoPopups" / "FreeAssign.qml"
+RUNTIME_TAP_HANDLER = RUNTIME_ROOT / "Fk" / "Widgets" / "TapHandler.qml"
 sys.path.insert(0, str(QML_QA))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
@@ -45,6 +44,7 @@ QtObject {
 import QtQuick
 QtObject { property string libianName: "Arial" }
 """,
+    "Fk/Widgets/qmldir": "TapHandler 1.0 TapHandler.qml\n",
     "Fk/Components/Common/qmldir": "MetroButton 1.0 MetroButton.qml\n",
     "Fk/Components/Common/MetroButton.qml": """import QtQuick
 Rectangle {
@@ -86,6 +86,7 @@ QtObject {
 """,
     "LunarLtk/Components/qmldir": "GeneralCardItem 1.0 GeneralCardItem.qml\n",
     "LunarLtk/Components/GeneralCardItem.qml": """import QtQuick
+import Fk.Widgets as W
 Rectangle {
   id: root
   width: 93
@@ -103,13 +104,13 @@ Rectangle {
   signal released()
   function goBack(animated) { x = origX; y = origY; opacity = origOpacity }
   function destroyOnStop() {}
-  MouseArea {
-    anchors.fill: parent
-    acceptedButtons: Qt.LeftButton | Qt.RightButton
-    onClicked: (mouse) => {
-      if (mouse.button === Qt.RightButton) root.rightClicked()
+  // Reuse the runtime gesture component, including its long-press behavior.
+  W.TapHandler {
+    onTapped: (point, button) => {
+      if (button === Qt.RightButton) root.rightClicked()
       else root.clicked()
     }
+    onLongPressed: root.rightClicked()
   }
 }
 """,
@@ -178,7 +179,6 @@ Window {
   property int finishCount: 0
   property var cardCenter0: null
   property var cardCenter1: null
-  property var buttonCenter0: null
 
   function showInfoPopup(component, params) {
     popupParams = params
@@ -203,14 +203,6 @@ Window {
                            box.y + first.y + first.height / 2)
     cardCenter1 = Qt.point(box.x + second.x + second.width / 2,
                            box.y + second.y + second.height / 2)
-    for (let i = 0; i < box.children.length; i++) {
-      let child = box.children[i]
-      if (child.text === "自由" && child.visible) {
-        buttonCenter0 = Qt.point(box.x + child.x + child.width / 2,
-                                 box.y + child.y + child.height / 2)
-        break
-      }
-    }
   }
 
   Item {
@@ -255,6 +247,10 @@ def write_fixture(root):
     if not RUNTIME_FREE_ASSIGN.is_file():
         raise FileNotFoundError("Missing runtime FreeAssign.qml: %s" % RUNTIME_FREE_ASSIGN)
     shutil.copyfile(RUNTIME_FREE_ASSIGN, target)
+    tap_handler = imports / "Fk" / "Widgets" / "TapHandler.qml"
+    if not RUNTIME_TAP_HANDLER.is_file():
+        raise FileNotFoundError("Missing runtime TapHandler.qml: %s" % RUNTIME_TAP_HANDLER)
+    shutil.copyfile(RUNTIME_TAP_HANDLER, tap_handler)
     return target
 
 
@@ -276,9 +272,11 @@ def click_item(scene, item):
                      QPoint(int(center.x()), int(center.y())))
 
 
-def click_point(scene, point):
-    QTest.mouseClick(scene, Qt.LeftButton, Qt.NoModifier,
-                     QPoint(int(point.x()), int(point.y())))
+def long_press_point(scene, point):
+    pos = QPoint(int(point.x()), int(point.y()))
+    QTest.mousePress(scene, Qt.LeftButton, Qt.NoModifier, pos)
+    QTest.qWait(1200)
+    QTest.mouseRelease(scene, Qt.LeftButton, Qt.NoModifier, pos)
 
 
 def main():
@@ -298,11 +296,11 @@ def main():
         scene = engine.rootObjects()[0]
         QTest.qWait(200)
         QMetaObject.invokeMethod(scene, "inspect")
+        card0 = scene.property("cardCenter0")
         card1 = scene.property("cardCenter1")
-        button0 = scene.property("buttonCenter0")
         model = scene.property("model")
-        if not (card1 and button0):
-            raise AssertionError("Missing card or free-button geometry")
+        if not (card0 and card1):
+            raise AssertionError("Missing card geometry")
 
         def fail(message):
             diagnostics = [w for w in warnings if "font" not in w.lower()]
@@ -334,43 +332,43 @@ def main():
             QTest.qWait(120)
             return popup
 
-        # Visible 自由 button: real runtime popup, package -> general click.
-        click_point(scene, button0)
+        # Right-click path: real runtime popup, then package -> general click.
+        QTest.mouseClick(scene, Qt.RightButton, Qt.NoModifier,
+                         QPoint(int(card0.x()), int(card0.y())))
         QTest.qWait(100)
-        first_popup = choose_from_popup("free button")
+        first_popup = choose_from_popup("right-click")
         params = scene.property("popupParams")
         if hasattr(params, "toVariant"):
             params = params.toVariant()
         if params["index"] != 0:
-            fail("Free button popup index: %r" % (params["index"],))
+            fail("Right-click popup index: %r" % (params["index"],))
         if model.property("generals").toVariant()[0] != "hanjin_test__wei_1":
-            fail("Free button selection did not write back to the model")
+            fail("Right-click selection did not write back to the model")
         if scene.property("finishCount") != 1:
-            fail("Free button popup did not emit finish")
+            fail("Right-click popup did not emit finish")
         QMetaObject.invokeMethod(scene, "closePopup")
         QTest.qWait(50)
 
-        # Right-click path: a new runtime popup instance and writeback on card 1.
-        QTest.mouseClick(scene, Qt.RightButton, Qt.NoModifier,
-                         QPoint(int(card1.x()), int(card1.y())))
+        # Long press uses the runtime TapHandler's onLongPressed -> rightClicked.
+        long_press_point(scene, card1)
         QTest.qWait(100)
-        second_popup = choose_from_popup("right-click")
+        second_popup = choose_from_popup("long press")
         if second_popup is first_popup:
-            fail("Right-click reused the previous popup instance")
+            fail("Long press reused the previous popup instance")
         params = scene.property("popupParams")
         if hasattr(params, "toVariant"):
             params = params.toVariant()
         if params["index"] != 1:
-            fail("Right-click popup index: %r" % (params["index"],))
+            fail("Long-press popup index: %r" % (params["index"],))
         if model.property("generals").toVariant()[1] != "hanjin_test__wei_1":
-            fail("Right-click selection did not write back to the model")
+            fail("Long-press selection did not write back to the model")
         if scene.property("finishCount") != 2:
-            fail("Right-click popup did not emit finish")
+            fail("Long-press popup did not emit finish")
 
         diagnostics = [w for w in warnings if "font" not in w.lower()]
         if any("roomScene is not defined" in warning for warning in diagnostics):
             fail("GuestRedrawBox still uses bare roomScene")
-        print("PASS: runtime FreeAssign opened through Ltk.roomScene from the free button and right-click")
+        print("PASS: runtime FreeAssign opened through Ltk.roomScene from right-click and long press")
         print("PASS: clicked package -> general card; fresh popup, dataModel/index, finish and model writeback verified")
         if diagnostics:
             print("NOTE: QML diagnostics:", diagnostics[-5:])
