@@ -252,6 +252,22 @@ GraphicsBox {
         }
       }
 
+      MetroButton {
+        // Visible entry for free assignment. It opens the same popup as the
+        // right-click path, so the feature does not depend on right-click alone.
+        parent: root
+        x: card.x + (card.width - width) / 2
+        y: card.y + 2
+        width: 52
+        height: 22
+        z: 6
+        visible: root.dataModel.extraData?.freeAssign === true && !card.dragging
+        enabled: !root.waitingForRedraw
+        text: "自由"
+        onClicked: roomScene.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "FreeAssign"),
+          { dataModel: root.dataModel, index: card.index });
+      }
+
       onClicked: {
         if (!selectable) return;
         root.dataModel.selectGeneralCard(index);
@@ -259,7 +275,10 @@ GraphicsBox {
       }
 
       onRightClicked: {
-        if (Lua.client.getSettings("enableFreeAssign")) {
+        // The server puts the authoritative flag into the request data. Keep the
+        // room-setting lookup as a fallback for clients where it is available,
+        // but never depend on it to open the entry.
+        if (root.dataModel.extraData?.freeAssign || Lua.client.getSettings("enableFreeAssign")) {
           roomScene.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "FreeAssign"),
             { dataModel: root.dataModel, index: index });
         }

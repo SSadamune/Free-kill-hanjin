@@ -409,6 +409,113 @@ function Testhanjin_guest_allegiance:testClientDialogContract()
   lu.assertFalse(blocked)
 end
 
+function Testhanjin_guest_allegiance:testFreeAssignDialogAndServerAcceptOutsideBannedPair()
+  local room = create { settings = { enableFreeAssign = true, hanjin_wild_count = 0 } }
+  local player = room.players[1]
+  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  local data, allowed, feasible, pairs, kingdoms, fallbacks
+  FkTest.runInRoom(function()
+    data = Selection.askData(room, offers[player])
+    local extra = data.component.model.prop.extraData
+    local rule = Fk.choose_general_rule.hanjin_heg_pair
+    allowed = rule.card_filter("hanjin_test__wei_1", { "hanjin_test__shu_1" }, offers[player], extra)
+    feasible = rule.feasible({ "hanjin_test__wei_1", "hanjin_test__shu_1" }, offers[player], extra)
+  end)
+  -- The server must select the HanJin box even when this deal has no guest.
+  lu.assertEquals(data.component.url, Selection.redraw_url)
+  lu.assertTrue(data.component.model.prop.extraData.freeAssign)
+  lu.assertTrue(allowed)
+  lu.assertTrue(feasible)
+  FkTest.setNextReplies(player, {
+    { "hanjin_test__wei_1", "hanjin_test__shu_1" },
+    { "wei" },
+  })
+  FkTest.runInRoom(function()
+    pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
+  end)
+  lu.assertEquals(pairs[player], { "hanjin_test__wei_1", "hanjin_test__shu_1" })
+  lu.assertEquals(kingdoms[player], "wei") -- printed faction, outside this game's bans
+  lu.assertEquals(#fallbacks, 0)
+end
+
+function Testhanjin_guest_allegiance:testFreeAssignWildDeputyStartsAndKeepsMainFaction()
+  local room = create { settings = { enableFreeAssign = true } }
+  local player = room.players[1]
+  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  FkTest.setNextReplies(player, { { "hanjin_test__han_1", "hanjin_test__wild_1" } })
+  local pairs, kingdoms, fallbacks
+  FkTest.runInRoom(function()
+    pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
+    -- Mirror the mode's startup sequence: persist the selected affiliations,
+    -- install the pair, hide it, then reveal both cards.
+    Guest.ensureFree(room, pairs[player])
+    room:setPlayerGeneral(player, pairs[player][1], true)
+    room:setDeputyGeneral(player, pairs[player][2])
+    room:setPlayerMark(player, "__heg_general", pairs[player][1])
+    room:setPlayerMark(player, "__heg_deputy", pairs[player][2])
+    room:setPlayerGeneral(player, "anjiang", true)
+    room:setDeputyGeneral(player, "anjiang")
+    room:setPlayerMark(player, "__heg_kingdom", kingdoms[player])
+    player:revealGeneral(false)
+    player:revealGeneral(true)
+  end)
+  lu.assertEquals(#fallbacks, 0)
+  lu.assertEquals(pairs[player], { "hanjin_test__han_1", "hanjin_test__wild_1" })
+  lu.assertEquals(kingdoms[player], "han")
+  lu.assertEquals(player.general, "hanjin_test__han_1")
+  lu.assertEquals(player.deputyGeneral, "hanjin_test__wild_1")
+  lu.assertTrue(Guest.factionsOf(room, "hanjin_test__wild_1").wild)
+  lu.assertEquals(Guest.factionsOf(room, "hanjin_test__han_1").kingdoms, { "han" })
+end
+
+function Testhanjin_guest_allegiance:testFreeAssignPrefersNormalGuestResolution()
+  local room = create { settings = { enableFreeAssign = true, hanjin_wild_count = 0 } }
+  local player = room.players[1]
+  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  FkTest.setNextReplies(player, {
+    { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" },
+  })
+  local pairs, kingdoms, fallbacks
+  FkTest.runInRoom(function()
+    pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
+  end)
+  lu.assertEquals(#fallbacks, 0)
+  lu.assertEquals(pairs[player], { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
+  -- Both guests share their registered Han faction, so no banned printed
+  -- faction is needed and the normal guest resolution must stay authoritative.
+  lu.assertEquals(kingdoms[player], "han")
+  local first, second = Guest.factionsOf(room, pairs[player][1]), Guest.factionsOf(room, pairs[player][2])
+  lu.assertEquals(first.source, "guest")
+  lu.assertEquals(first.kingdoms, { "han" })
+  lu.assertEquals(second.source, "guest")
+  lu.assertEquals(second.kingdoms, { "han" })
+end
+
+function Testhanjin_guest_allegiance:testFreeAssignPruneUnusedRemovesSelectedExactNames()
+  local unused = { "hanjin_test__han_1", "hanjin_test__han_2", "hanjin_test__wei_1", "hanjin_test__shu_1" }
+  local pruned = Selection.pruneUnused(unused, {
+    ["hanjin_test__wei_1"] = true,
+    ["hanjin_test__shu_1"] = true,
+  })
+  -- The two cards chosen from another player's offers must not return to the pile.
+  lu.assertEquals(pruned, { "hanjin_test__han_1", "hanjin_test__han_2" })
+  lu.assertEquals(#unused, 4) -- pure helper, caller decides when to replace the list
+end
+
+function Testhanjin_guest_allegiance:testFreeAssignOffFallsBackToOfferedPair()
+  local room = create { settings = { enableFreeAssign = false } }
+  local player = room.players[1]
+  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  FkTest.setNextReplies(player, { { "hanjin_test__wei_1", "hanjin_test__shu_1" } })
+  local pairs, _, fallbacks
+  FkTest.runInRoom(function()
+    pairs, _, fallbacks = Selection.choose(room, { player }, offers)
+  end)
+  lu.assertEquals(#fallbacks, 1)
+  lu.assertNotEquals(pairs[player][1], "hanjin_test__wei_1")
+  lu.assertNotEquals(pairs[player][2], "hanjin_test__shu_1")
+end
+
 function Testhanjin_guest_allegiance:testDecodeAcceptsLegacyAndArrayShapes()
   lu.assertEquals(Selection.decode(123), {})
   lu.assertEquals(Selection.decode({}), {})

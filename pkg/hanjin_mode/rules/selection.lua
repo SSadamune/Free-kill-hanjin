@@ -155,6 +155,23 @@ local function kingdomList(kingdoms)
   return table.concat(table.map(kingdoms, Ban.kingdomLabel), "/")
 end
 
+---Free assignment is only a test/room option. When enabled it ignores this
+---extension's pairing rule and the room's faction bans, but a reply must still
+---name two distinct, real general cards.
+---@param room Room
+---@return boolean
+function M.freeAssign(room)
+  return room:getSettings("enableFreeAssign") == true
+end
+
+---@param name any
+---@return boolean
+local function validFreeGeneral(name)
+  if type(name) ~= "string" then return false end
+  local general = Fk.generals[name]
+  return general ~= nil and not general.total_hidden and name ~= "anjiang"
+end
+
 function M.prompt(room)
   local banned = room:getBanner("hanjin_banned_kingdoms") or {}
   return "#HanjinChooseGeneralsBans:::" .. (#banned > 0 and kingdomList(banned) or "无")
@@ -167,6 +184,7 @@ end
 function M.askData(room, offers, guests)
   guests = guests or Guest.guestCandidates(room, offers)
   local names, pairing = M.pairing(room, offers)
+  local freeAssign = M.freeAssign(room)
   local wild, guestFactions = {}, {}
   for _, name in ipairs(names) do
     local entry = Guest.factionsOf(room, name)
@@ -186,12 +204,14 @@ function M.askData(room, offers, guests)
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
           extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
-            offers = table.simpleClone(offers) },
+            freeAssign = freeAssign, offers = table.simpleClone(offers) },
         },
       },
     },
   }
-  if next(guestFactions) then
+  -- The HanJin box owns the right-click free-assign entry. Use it whenever free
+  -- assignment is on, even if this particular deal has no guest candidates.
+  if freeAssign or next(guestFactions) then
     data.component.name, data.component.uri = nil, nil
     data.component.url = M.redraw_url
   end
@@ -234,7 +254,23 @@ end
 ---@return table? @ { main, deputy, kingdoms, fallback }
 function M.validate(room, offers, answer)
   local main, deputy = answer and answer[1], answer and answer[2]
-  if main and deputy and main ~= deputy
+  if M.freeAssign(room) then
+    if validFreeGeneral(main) and validFreeGeneral(deputy) and main ~= deputy then
+      -- A normally legal pair keeps its resolved (including guest) kingdoms.
+      -- Only when the normal rule has no result does free assignment fall back
+      -- to printed affiliations without the room's ban filter.
+      local kingdoms = Guest.pairKingdoms(room, main, deputy)
+      if #kingdoms == 0 then
+        kingdoms = Guest.freePairKingdoms(room, main, deputy)
+        if #kingdoms == 0 then kingdoms = { Guest.fallbackKingdom(room) } end
+      end
+      return {
+        main = main, deputy = deputy,
+        kingdoms = kingdoms,
+        fallback = false,
+      }
+    end
+  elseif main and deputy and main ~= deputy
     and M.offered(room, offers, main) and M.offered(room, offers, deputy)
     and M.canPair(room, main, deputy) then
     return {
@@ -246,6 +282,16 @@ function M.validate(room, offers, answer)
   local pair = M.firstLegalPair(room, offers)
   if not pair then return nil end
   return { main = pair.main, deputy = pair.deputy, kingdoms = pair.kingdoms, fallback = true }
+end
+
+---Remove every selected exact card name from the cards that may return to the
+---pile. This matters under free assignment because a player may pick a card that
+---belongs to another player's offers; that card must not come back as drawable.
+---@param unused string[]
+---@param selected table<string, boolean>
+---@return string[]
+function M.pruneUnused(unused, selected)
+  return table.filter(unused, function(name) return not selected[name] end)
 end
 
 ---Ask for the initial kingdom after a legal pair is known.
