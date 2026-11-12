@@ -80,7 +80,7 @@ skill:addEffect("active", {
       and #selected < #ownedCards(player)
   end,
   target_filter = function(self, player, to_select, selected, selected_cards, card, extra_data)
-    return to_select ~= player and to_select:isAlive() and not to_select:isRemoved()
+    return #selected == 0 and to_select ~= player and to_select:isAlive() and not to_select:isRemoved()
       and not table.contains(selected, to_select)
   end,
   can_use = function(self, player)
@@ -158,7 +158,7 @@ Fk:loadTranslationTable {
   ["hanjin__skill_han001_2"] = "密诏",
   [":hanjin__skill_han001_2"] = "出牌阶段限一次，你可以将至少X张牌交给一名其他角色（X为与你不同的势力数），然后令其与另一名由你选择的其他角色拼点：赢的角色视为对没赢的角色使用一张【杀】。",
   ["#hanjin__skill_han001_2-prompt"] = "密诏：交给一名其他角色至少 %arg 张牌，然后令其与另一名角色拼点",
-  ["#hanjin__skill_han001_2-pindian"] = "密诏：选择与收牌角色拼点的第三人",
+  ["#hanjin__skill_han001_2-pindian"] = "密诏：选择参与拼点的另一名角色",
 }
 
 return skill

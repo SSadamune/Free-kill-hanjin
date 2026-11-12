@@ -121,8 +121,8 @@ end)
 Fk:loadTranslationTable {
   ["hanjin__skill_han001_1"] = "天命",
   [":hanjin__skill_han001_1"] = "当你成为【杀】的目标后，你可以弃置两张手牌（不足则全弃，无牌则不弃），摸两张牌。",
-  ["#hanjin__skill_han001_1-invoke"] = "天命：你可以弃置至多两张可弃手牌，然后摸两张牌",
-  ["#hanjin__skill_han001_1-discard"] = "天命：请弃置 %arg 张可弃手牌",
+  ["#hanjin__skill_han001_1-invoke"] = "天命：你可以弃置两张手牌（不足则全弃，无牌则不弃），然后摸两张牌",
+  ["#hanjin__skill_han001_1-discard"] = "天命：请弃置 %arg 张手牌",
 }
 
 return skill

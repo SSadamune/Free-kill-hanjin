@@ -6,6 +6,13 @@ extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_mode/skills")
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Hanjin requires the hegemony extension")
   local mode = require("packages.hanjin.pkg.hanjin_mode.mode").create(base)
+  local board = Fk:getBoardGame(base.name)
+  Fk:addBoardGame {
+    name = "hanjin", engine = board.engine, room_klass = board.room_klass,
+    client_klass = require "packages.hanjin.pkg.hanjin_mode.client",
+    page = board.page, ui_settings = board.ui_settings,
+  }
+  mode.game_name = "hanjin"
   extension:addGameMode(mode)
   Fk:addGameMode(mode)
   Fk:loadDisabled()

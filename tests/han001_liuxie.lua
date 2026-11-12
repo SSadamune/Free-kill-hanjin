@@ -1660,4 +1660,48 @@ function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
   end)
 end
 
+function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection()
+  local room = FkTest.room
+  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  asClient(room, function(clients)
+    local me, first, second = clients[1], clients[2], clients[3]
+    local skill = Fk.skills[MZ]
+    -- 技能严格只允许一名收牌者；汉晋客户端将新点击解释为替换。
+    lu.assertTrue(skill:targetFilter(me, first, {}, ids))
+    lu.assertFalse(skill:targetFilter(me, second, { first }, ids))
+    local base = Fk:getBoardGame("new_heg_mode")
+    local board = Fk:getBoardGame("hanjin_heg_mode")
+    lu.assertNotEquals(board.client_klass, base.client_klass)
+    lu.assertEquals(board.room_klass, base.room_klass)
+    lu.assertEquals(board.page, base.page)
+    local client = board.client_klass:new(ClientInstance.client)
+    for _, handlerClass in ipairs({ client.request_handlers.PlayCard,
+      client.request_handlers.AskForUseActiveSkill }) do
+      local handler = handlerClass:new(me, { MZ, "", true, {} })
+      handler.skill_name = MZ
+      handler:setup()
+      for _, id in ipairs(ids) do
+        handler:update("CardItem", id, "click", { selected = true })
+      end
+      handler:update("Photo", first.id, "click", { selected = true })
+      lu.assertEquals(handler.selected_targets, { first.id })
+      lu.assertTrue(handler:feasible())
+      lu.assertTrue(handler:targetValidity(second.id))
+      handler:update("Photo", second.id, "click", { selected = true })
+      lu.assertEquals(handler.selected_targets, { second.id })
+      lu.assertEquals(handler.pendings, ids)
+      lu.assertFalse(handler.scene:getAllItems("Photo")[first.id].selected)
+      lu.assertTrue(handler.scene:getAllItems("Photo")[second.id].selected)
+      lu.assertTrue(handler:feasible())
+      -- 非法目标不应取消当前合法选择；再次点击已选角色仍可取消。
+      handler:update("Photo", me.id, "click", { selected = true })
+      lu.assertEquals(handler.selected_targets, { second.id })
+      handler:update("Photo", second.id, "click", { selected = false })
+      lu.assertEquals(handler.selected_targets, {})
+      lu.assertFalse(handler:feasible())
+      handler:_finish()
+    end
+  end)
+end
+
 return { name = "hanjin_han001" }
