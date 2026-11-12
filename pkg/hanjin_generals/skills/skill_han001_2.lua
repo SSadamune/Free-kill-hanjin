@@ -11,13 +11,22 @@ local skill = fk.CreateSkill {
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
 local Ascension = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
 
+--- 取技能计算所需的房间。服务端 ServerPlayer 有 room 字段；客户端
+--- ClientPlayer 没有，改由引擎当前房间（Client 实例）提供 players/
+--- alive_players 等同一套只读接口。客户端因此能按公开信息完成预测。
+---@param player ServerPlayer | ClientPlayer
+---@return Room | Client
+local function currentRoom(player)
+  return player.room or Fk:currentRoom()
+end
+
 --- 当前实际势力的预测值。暗将尚未明置时，用本局势力标记和明置后的
 --- 转野条件预测，保证选牌下限与明置后实际计算的 X 一致。
----@param player ServerPlayer
+---@param player ServerPlayer | ClientPlayer
 ---@return string
 local function currentKingdom(player)
   if player.kingdom ~= "unknown" then return player.kingdom end
-  local room = player.room
+  local room = currentRoom(player)
   local kingdom = player:getMark("__heg_kingdom")
   if player:getMark("__heg_wild") == 1 then return "wild" end
   if kingdom == nil or kingdom == "" or kingdom == "unknown" then return "unknown" end
@@ -32,12 +41,13 @@ end
 
 --- X：与当前角色不同、且已确定的实际势力数。每个野心家独立计数，
 --- 全暗置的 unknown 不计。
----@param player ServerPlayer
+---@param player ServerPlayer | ClientPlayer
 ---@return integer
 local function differentFactionCount(player)
   local own = currentKingdom(player)
   local seen, count = {}, 0
-  for _, p in ipairs(player.room.alive_players) do
+  local alive = currentRoom(player).alive_players
+  for _, p in ipairs(alive) do
     if p ~= player then
       local kingdom = p.kingdom
       if kingdom == "wild" then

@@ -119,7 +119,7 @@ M.cards = {
   -- Multiple local versions: wait for the user's choice. -------------------
   ["hanjin__drowning"] = { status = "reused", kind = "hanjin_skill", upstream = "sa__drowning", skill = "hanjin__drowning_skill", chosen = "A" },
   ["hanjin__dragon_phoenix"] = { status = "reused", kind = "equip", upstream = "dragon_phoenix", chosen = "A" },
-  ["hanjin__halberd"] = { status = "reused", kind = "equip", upstream = "sa__halberd", chosen = "A" },
+  ["hanjin__halberd"] = { status = "reused", kind = "hanjin_equip", upstream = "sa__halberd", skill = "hanjin__halberd_skill", chosen = "A" },
   ["hanjin__blade"] = { status = "reused", kind = "equip", upstream = "sa__blade", chosen = "A" },
   ["hanjin__breastplate"] = { status = "reused", kind = "hanjin_equip", upstream = "breastplate", skill = "hanjin__breastplate_skill", chosen = "B" },
   ["hanjin__liulongcanjia"] = { status = "reused", kind = "equip", upstream = "liulongcanjia", chosen = "A" },

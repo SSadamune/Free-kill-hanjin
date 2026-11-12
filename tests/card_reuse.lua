@@ -608,7 +608,7 @@ function Testhanjin_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
     { "hanjin__peace_spell", "hanjin__peace_spell_skill" },
     { "hanjin__luminous_pearl", "hanjin__luminous_pearl_skill" },
     { "hanjin__dragon_phoenix", "#dragon_phoenix_skill" },
-    { "hanjin__halberd", "#sa__halberd_skill" },
+    { "hanjin__halberd", "hanjin__halberd_skill" },
     { "hanjin__blade", "#sa__blade_skill" },
     { "hanjin__liulongcanjia", "#liulongcanjia_skill" },
     { "hanjin__taigong_tactics", "hanjin__taigong_tactics_skill" },
@@ -794,15 +794,111 @@ function Testhanjin_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
   lu.assertFalse(table.contains(t:getCardIds("he"), victimCard.id))
 end
 
-function Testhanjin_card_reuse:testHalberdAUsesStrategicSkill()
+function Testhanjin_card_reuse:testHalberdUsesHanjinEquipSkill()
   local room = FkTest.room
   local p = room.players[1]
   local c = card("hanjin__halberd")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("#sa__halberd_skill"))
-    lu.assertFalse(p:hasSkill("#halberd_skill"))
+    lu.assertTrue(p:hasSkill("hanjin__halberd_skill"))
+    lu.assertFalse(p:hasSkill("#sa__halberd_skill"))
+  end)
+end
+
+function Testhanjin_card_reuse:testHalberdExpansionFilterReusesFactionRule()
+  local room = FkTest.room
+  local p1, p2, p3, p4, p5, p6, p7 =
+    room.players[1], room.players[2], room.players[3], room.players[4],
+    room.players[5], room.players[6], room.players[7]
+  local slash = card("hanjin__slash")
+  FkTest.runInRoom(function()
+    local skill = Fk.skills["#hanjin__halberd_active"]
+    lu.assertNotNil(skill)
+    p2.kingdom, p3.kingdom, p4.kingdom = "wei", "shu", "wei"
+    p5.kingdom, p6.kingdom = "unknown", "shu"
+    local extra = {
+      orig_tos = { p2.id },
+      targets = { p2.id, p3.id, p4.id, p5.id, p6.id },
+    }
+    local function allowed(to, selected)
+      return skill:targetFilter(p1, to, selected or {}, {}, slash, extra)
+    end
+    lu.assertTrue(allowed(p3))               -- 与原有目标势力不同
+    lu.assertFalse(allowed(p4))              -- 与原有目标同为魏
+    lu.assertTrue(allowed(p5))               -- 没有势力
+    lu.assertFalse(allowed(p6, { p3 }))      -- 与已选额外目标同为蜀
+    lu.assertFalse(allowed(p7))              -- 不在候选列表
+  end)
+end
+
+function Testhanjin_card_reuse:testHalberdExpandedSlashNullifiesRemainingTargetsAfterJink()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
+  local p2Jink = card("hanjin__jink", Card.Heart, 2)
+  local p3Jink = card("hanjin__jink", Card.Diamond, 3)
+  local used
+  FkTest.runInRoom(function()
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    give(room, p1, halberd)
+    use(room, p1, { p1 }, halberd)
+    give(room, p1, slash)
+    give(room, p2, p2Jink)
+    give(room, p3, p3Jink)
+    local hp2, hp3 = p2.hp, p3.hp
+    FkTest.setNextReplies(p1, {
+      FkTest.ReplyUseSkill("#hanjin__halberd_active", { p3 }),
+    })
+    FkTest.setNextReplies(p2, { { card = p2Jink.id } })
+    FkTest.setNextReplies(p3, { { card = p3Jink.id } })
+    used = use(room, p1, { p2 }, slash)
+    lu.assertEquals(p2.hp, hp2)
+    lu.assertEquals(p3.hp, hp3)
+    lu.assertTrue(table.contains(p3:getCardIds("h"), p3Jink.id))
+    lu.assertFalse(table.contains(p2:getCardIds("h"), p2Jink.id))
+  end)
+  lu.assertTrue(table.contains(used.tos, p3))
+end
+
+function Testhanjin_card_reuse:testHalberdExpandedSlashWithoutJinkDamagesAllTargets()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
+  FkTest.runInRoom(function()
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    give(room, p1, halberd)
+    use(room, p1, { p1 }, halberd)
+    give(room, p1, slash)
+    local hp2, hp3 = p2.hp, p3.hp
+    FkTest.setNextReplies(p1, {
+      FkTest.ReplyUseSkill("#hanjin__halberd_active", { p3 }),
+    })
+    FkTest.setNextReplies(p2, { "" })
+    FkTest.setNextReplies(p3, { "" })
+    use(room, p1, { p2 }, slash)
+    lu.assertEquals(p2.hp, hp2 - 1)
+    lu.assertEquals(p3.hp, hp3 - 1)
+  end)
+end
+
+function Testhanjin_card_reuse:testHalberdWithoutExpansionKeepsOtherTargets()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
+  local jink = card("hanjin__jink", Card.Heart, 2)
+  FkTest.runInRoom(function()
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    give(room, p1, halberd)
+    use(room, p1, { p1 }, halberd)
+    give(room, p1, slash)
+    give(room, p2, jink)
+    local hp3 = p3.hp
+    FkTest.setNextReplies(p1, { "" }) -- 不发动扩目标
+    FkTest.setNextReplies(p2, { { card = jink.id } })
+    FkTest.setNextReplies(p3, { "" })
+    use(room, p1, { p2, p3 }, slash)
+    lu.assertEquals(p3.hp, hp3 - 1)
   end)
 end
 

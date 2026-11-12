@@ -240,12 +240,39 @@ local function secretMinimum(player)
   return Fk.skills[MZ]:getMinCardNum(player)
 end
 
-local function prepare()
-  support.initHanjinRoom()
-  local room = FkTest.room
+--- 构造真实的 ClientPlayer 形态（没有 room 字段），并临时让 Fk:currentRoom()
+--- 返回客户端房间，用于覆盖客户端可用性、下限与提示计算。服务端房间对象
+--- 通过元表提供客户端未单独同步的公共字段，players/alive_players 使用客户端副本。
+local function asClient(room, fn)
+  local ClientPlayer = require "ltk.client.clientplayer"
+  local clients = {}
+  for _, original in ipairs(room.players) do
+    local copy = ClientPlayer:new(original._splayer)
+    for key, value in pairs(original) do
+      if key ~= "room" and key ~= "class" and key ~= "serverplayer" then copy[key] = value end
+    end
+    table.insert(clients, copy)
+  end
+  for index, player in ipairs(clients) do player.next = clients[index % #clients + 1] end
+  local clientRoom = setmetatable(
+    { players = clients, alive_players = clients, current = clients[1] },
+    { __index = room })
+  local originalRoom = Fk.currentRoom
+  Fk.currentRoom = function() return clientRoom end
+  local ok, err = pcall(fn, clients, clientRoom)
+  Fk.currentRoom = originalRoom
+  if not ok then error(err) end
+end
+
+local function initializeGenerals(room)
   inRoom(function()
     for i, p in ipairs(room.players) do
       local kingdom = DEFAULT_KINGDOMS[i]
+      -- changeHero 只按当前可见将面移除技能；直接替换 anjiang 会留下
+      -- 原暗将的 fake skill，使明将天命被当成暗将技能再次询问发动。
+      -- 先通过引擎明置接口清理原来源，再安装本用例的已知双将。
+      p:revealGeneral(false, true)
+      p:revealGeneral(true, true)
       room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
       room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
@@ -253,12 +280,18 @@ local function prepare()
       room:setPlayerMark(p, "__heg_general", p.general)
       room:setPlayerMark(p, "__heg_deputy", p.deputyGeneral)
       room:setPlayerMark(p, "__heg_kingdom", kingdom)
+      room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
+      room:setPlayerMark(p, "__heg_wild", 0)
     end
     room:changeHero(room.players[1], "hanjin__han001", true, false, false, false, false)
     room:setPlayerMark(room.players[1], "__heg_general", "hanjin__han001")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
+end
+
+local function prepare()
+  return initializeGenerals(support.initHanjinRoom())
 end
 
 Testhanjin_han001.setup = function()
@@ -274,6 +307,26 @@ local function p5() return FkTest.room.players[5] end
 local function p6() return FkTest.room.players[6] end
 local function p7() return FkTest.room.players[7] end
 local function p8() return FkTest.room.players[8] end
+
+function Testhanjin_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGenerals()
+  local room = FkTest.room
+  inRoom(function()
+    p1():hideGeneral(false)
+    p1():prelightSkill(Fk.skills[TM], true)
+    room:setPlayerMark(p1(), "__heg_wild", 1)
+  end)
+  lu.assertTrue(p1():isFakeSkill(TM))
+  initializeGenerals(room)
+  lu.assertFalse(p1():isFakeSkill(TM))
+  lu.assertEquals(p1():getMark("__heg_wild"), 0)
+  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p3(), { { "hanjin__slash" } })
+  FkTest.setNextReplies(p1(), { "1", "" })
+  useSlash(room, p3(), p1())
+  lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
+  for _, id in ipairs(ids) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
+  lu.assertEquals(#p1():getCardIds("h"), 2)
+end
 
 function Testhanjin_han001:testTM01DiscardTwoThenDrawTwo()
   local room = FkTest.room
@@ -1548,6 +1601,63 @@ function Testhanjin_han001:testHG05DefaultSuiteAndRoomIsolation()
   lu.assertEquals(FkTest.room:getSettings("gameMode"), "hanjin_heg_mode")
   lu.assertNotNil(Fk.skills[TM])
   lu.assertNotNil(Fk.skills[MZ])
+end
+
+function Testhanjin_han001:testMZ31RealClientPlayerWithoutRoomComputesKnownFaction()
+  local room = FkTest.room
+  setKingdom(room, p2(), "han")
+  setKingdom(room, p3(), "wei")
+  setKingdom(room, p4(), "wei")
+  setKingdom(room, p5(), "shu")
+  setKingdom(room, p6(), "shu")
+  setKingdom(room, p7(), "wei")
+  setKingdom(room, p8(), "han")
+  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  lu.assertEquals(secretMinimum(p1()), 2)
+  asClient(room, function(clients)
+    local me = clients[1]
+    lu.assertNil(me.room)
+    lu.assertEquals(me.class.name, "ClientPlayer")
+    lu.assertEquals(me.kingdom, "han")
+    local skill = Fk.skills[MZ]
+    lu.assertEquals(skill:getMinCardNum(me), 2)
+    lu.assertTrue(skill:canUse(me))
+    lu.assertEquals(skill:prompt(me), "#hanjin__skill_han001_2-prompt:::2")
+  end)
+end
+
+function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
+  local room = FkTest.room
+  setKingdom(room, p2(), "wei")
+  setKingdom(room, p3(), "han")
+  setKingdom(room, p4(), "shu")
+  setKingdom(room, p5(), "qun")
+  setKingdom(room, p6(), "han")
+  setKingdom(room, p7(), "han")
+  setKingdom(room, p8(), "han")
+  inRoom(function()
+    room:setPlayerMark(p1(), "__heg_general", "hanjin__han001")
+    room:setPlayerMark(p1(), "__heg_kingdom", "wei")
+    room:setPlayerMark(p1(), "__heg_wild", 0)
+    p1().kingdom = "unknown"
+    room:setPlayerProperty(p1(), "kingdom", "unknown")
+    p1():hideGeneral(false)
+    p1():prelightSkill(Fk.skills[MZ], true)
+  end)
+  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" } })
+  for i = 2, 8 do setHand(room, FkTest.room.players[i], {}) end
+  -- 自身暗置时应按公开标记预测为魏；魏不计入 X，故是汉、蜀、群三个势力。
+  lu.assertEquals(secretMinimum(p1()), 3)
+  asClient(room, function(clients)
+    local me = clients[1]
+    lu.assertNil(me.room)
+    lu.assertEquals(me.kingdom, "unknown")
+    lu.assertEquals(me:getMark("__heg_kingdom"), "wei")
+    local skill = Fk.skills[MZ]
+    lu.assertEquals(skill:getMinCardNum(me), 3)
+    lu.assertTrue(skill:canUse(me))
+    lu.assertEquals(skill:prompt(me), "#hanjin__skill_han001_2-prompt:::3")
+  end)
 end
 
 return { name = "hanjin_han001" }

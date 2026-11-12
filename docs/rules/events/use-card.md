@@ -300,14 +300,14 @@ b、此虚拟牌没有点数。
 ## 引用区
 
 ① API 实现：
+
 - [UseCardEvent](../../project-api/event/UseCardEvent.md)
 - [EventTypes](../../project-api/types/EventTypes.md)
 
 ② 扩展信息：
-  （暂无）
+（暂无）
 
 ③ 编写指南：
-  （暂无）
-
+（暂无）
 
 <!-- kb:refs:end -->

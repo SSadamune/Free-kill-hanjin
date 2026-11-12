@@ -93,7 +93,7 @@ M.types = {
     equip_skill = "hanjin__inert_equip", inert = true },
   { id = "hanjin__halberd", display = "方天画戟", type = "equip",
     subtype = Card.SubtypeWeapon, range = 4, skill = "default_equip_skill",
-    equip_skill = "hanjin__inert_equip", inert = false },
+    equip_skill = "hanjin__halberd_skill", inert = false },
   { id = "hanjin__kylin_bow", display = "麒麟弓", type = "equip",
     subtype = Card.SubtypeWeapon, range = 5, skill = "hanjin__inert_equip",
     equip_skill = "hanjin__inert_equip", inert = true },
