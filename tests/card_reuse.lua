@@ -23,6 +23,36 @@ local function use(room, from, tos, c, extra)
   return data
 end
 
+local function clearAllAreas(room)
+  for _, player in ipairs(room.players) do
+    local ids = player:getCardIds("he")
+    if #ids > 0 then room:throwCard(ids, "test", player, player) end
+  end
+end
+
+local function setSingleKingdom(room, player)
+  for _, other in ipairs(room.players) do
+    other.kingdom = other == player and "han" or "wei"
+    other.role = other.kingdom
+  end
+end
+
+local function observeAdaptationUse(room, cardName, skillName)
+  local seen = {}
+  local skel = fk.CreateSkill { name = skillName }
+  skel:addEffect(A.Triggered, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == player and data.use.card.name == cardName
+    end,
+    on_refresh = function(self, event, target, player, data)
+      table.insert(seen, data)
+    end,
+  })
+  room:addSkill(skel:createSkill())
+  return seen
+end
+
 function Testhanjin_card_reuse:testSlashDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
@@ -119,14 +149,16 @@ end
 function Testhanjin_card_reuse:testChasingNearExecuteBoth()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__chasing_near")
+  local physical = card("hanjin__chasing_near")
+  local c = Fk:cloneCard("hanjin__chasing_near")
+  c:addSubcard(physical.id)
   local first = card("hanjin__slash", Card.Club, 2)
   local second = card("hanjin__slash", Card.Club, 3)
   A.setCardEntries(c, { { id = "probe_both", condition = "kongchao", effect = "execute_both" } })
   local data
   FkTest.runInRoom(function()
     for _, id in ipairs(p:getCardIds("h")) do room:throwCard(id, "test", p, p) end
-    give(room, p, c)
+    give(room, p, physical)
     give(room, t, first)
     give(room, t, second)
     local answers = { first.id, second.id }
@@ -144,11 +176,390 @@ function Testhanjin_card_reuse:testChasingNearExecuteBoth()
   lu.assertTrue(A.hasEffect(data, "execute_both"))
 end
 
+function Testhanjin_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCards()
+  local room = FkTest.room
+  local player = room.players[1]
+  local c = card("hanjin__foresight")
+  local top1, top2, top3
+  local order = {}
+  local handAfter, bottom
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, player, c)
+    top1, top2, top3 = room.draw_pile[1], room.draw_pile[2], room.draw_pile[3]
+    lu.assertNotNil(top1)
+    lu.assertNotNil(top2)
+    lu.assertNotNil(top3)
+    local originalGuanxing, originalDraw = room.askToGuanxing, room.drawCards
+    room.askToGuanxing = function(self, who, params)
+      table.insert(order, "guanxing")
+      lu.assertEquals(who.id, player.id)
+      lu.assertEquals(params.cards, { top1, top2 })
+      local result = originalGuanxing(self, who, params)
+      table.insert(order, "arranged")
+      return result
+    end
+    room.drawCards = function(self, who, num, ...)
+      table.insert(order, "draw")
+      lu.assertEquals(who.id, player.id)
+      lu.assertEquals(num, 2)
+      return originalDraw(self, who, num, ...)
+    end
+    -- One real guanxing request: put the first card back on top and the second
+    -- on the bottom, then let the card's own draw take the next two cards.
+    FkTest.setNextReplies(player, { { { top1 }, { top2 } } })
+    room:useCard(UseCardData:new { from = player, tos = { player }, card = c, extra_data = {} })
+    room.askToGuanxing = originalGuanxing
+    room.drawCards = originalDraw
+    handAfter = player:getCardIds("h")
+    bottom = room.draw_pile[#room.draw_pile]
+  end)
+  lu.assertEquals(order, { "guanxing", "arranged", "draw" })
+  lu.assertEquals(#handAfter, 2)
+  lu.assertTrue(table.contains(handAfter, top1))
+  lu.assertTrue(table.contains(handAfter, top3))
+  lu.assertFalse(table.contains(handAfter, top2))
+  lu.assertEquals(bottom, top2)
+  lu.assertFalse(A.isAdaptationCard(c))
+end
+
+function Testhanjin_card_reuse:testChasingNearRealSupportAtDistanceOneDiscardsThenHasNothingToObtain()
+  local room = FkTest.room
+  local p, t, helper = room.players[1], room.players[2], room.players[3]
+  local c = card("hanjin__chasing_near")
+  local targetCard = card("hanjin__peach", Card.Heart, 4)
+  local supportCard = card("hanjin__dismantlement")
+  lu.assertEquals(A.getEntries(c)[1].condition, "zhuzhan")
+  local data, chooseCalls
+  local targetThrows, targetObtains = {}, {}
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, p, c)
+    give(room, helper, supportCard)
+    give(room, t, targetCard)
+    lu.assertEquals(#t:getCardIds("hej"), 1)
+    lu.assertEquals(p:distanceTo(t), 1)
+    FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({ supportCard.id }) })
+    local originalChoose = room.askToChooseCard
+    chooseCalls = 0
+    room.askToChooseCard = function(self, player, params)
+      chooseCalls = chooseCalls + 1
+      lu.assertIsTrue(player == p)
+      lu.assertIsTrue(params.target == t)
+      return targetCard.id
+    end
+    local originalThrow, originalObtain = room.throwCard, room.obtainCard
+    room.throwCard = function(self, ids, ...)
+      local list = type(ids) == "table" and ids or { ids }
+      if table.contains(list, targetCard.id) then table.insert(targetThrows, table.clone(list)) end
+      return originalThrow(self, ids, ...)
+    end
+    room.obtainCard = function(self, receiver, ids, ...)
+      local list = type(ids) == "table" and ids or { ids }
+      if table.contains(list, targetCard.id) then table.insert(targetObtains, table.clone(list)) end
+      return originalObtain(self, receiver, ids, ...)
+    end
+    data = UseCardData:new { from = p, tos = { t }, card = c, extra_data = {} }
+    room:useCard(data)
+    room.askToChooseCard = originalChoose
+    room.throwCard = originalThrow
+    room.obtainCard = originalObtain
+  end)
+  lu.assertEquals(chooseCalls, 1)
+  lu.assertEquals(#targetThrows, 1)
+  lu.assertEquals(#targetObtains, 0)
+  lu.assertEquals(#t:getCardIds("hej"), 0)
+  lu.assertFalse(table.contains(p:getCardIds("h"), targetCard.id))
+  lu.assertEquals(room:getCardArea(targetCard.id), Card.DiscardPile)
+  lu.assertTrue(A.getResult(data).triggered)
+  lu.assertEquals(A.getResult(data).effects.execute_both, 1)
+  local record = A.getResult(data).entries[1]
+  lu.assertEquals(record.condition, "zhuzhan")
+  lu.assertTrue(record.satisfied)
+  lu.assertNotNil(record.support)
+  lu.assertEquals(record.support.player, helper.id)
+  lu.assertEquals(record.support.card, supportCard.id)
+end
+
+function Testhanjin_card_reuse:testChasingNearRealSupportWithOnlyOneEquipmentDiscardsItToo()
+  local room = FkTest.room
+  local p, t, helper = room.players[1], room.players[2], room.players[3]
+  local c = card("hanjin__chasing_near")
+  local targetCard = card("hanjin__axe")
+  local supportCard = card("hanjin__dismantlement")
+  local data, chooseCalls
+  local targetThrows, targetObtains = {}, {}
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, p, c)
+    give(room, helper, supportCard)
+    give(room, t, targetCard)
+    room:moveCardTo({ targetCard.id }, Card.PlayerEquip, t, fk.ReasonPut, "test", nil, true, t)
+    lu.assertEquals(#t:getCardIds("hej"), 1)
+    lu.assertEquals(p:distanceTo(t), 1)
+    FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({ supportCard.id }) })
+    local originalChoose = room.askToChooseCard
+    chooseCalls = 0
+    room.askToChooseCard = function(self, player, params)
+      chooseCalls = chooseCalls + 1
+      lu.assertIsTrue(player == p)
+      lu.assertIsTrue(params.target == t)
+      return targetCard.id
+    end
+    local originalThrow, originalObtain = room.throwCard, room.obtainCard
+    room.throwCard = function(self, ids, ...)
+      local list = type(ids) == "table" and ids or { ids }
+      if table.contains(list, targetCard.id) then table.insert(targetThrows, table.clone(list)) end
+      return originalThrow(self, ids, ...)
+    end
+    room.obtainCard = function(self, receiver, ids, ...)
+      local list = type(ids) == "table" and ids or { ids }
+      if table.contains(list, targetCard.id) then table.insert(targetObtains, table.clone(list)) end
+      return originalObtain(self, receiver, ids, ...)
+    end
+    data = UseCardData:new { from = p, tos = { t }, card = c, extra_data = {} }
+    room:useCard(data)
+    room.askToChooseCard = originalChoose
+    room.throwCard = originalThrow
+    room.obtainCard = originalObtain
+  end)
+  lu.assertEquals(chooseCalls, 1)
+  lu.assertEquals(#targetThrows, 1)
+  lu.assertEquals(#targetObtains, 0)
+  lu.assertEquals(#t:getCardIds("hej"), 0)
+  lu.assertEquals(room:getCardArea(targetCard.id), Card.DiscardPile)
+  lu.assertTrue(A.getResult(data).triggered)
+  lu.assertEquals(A.getResult(data).effects.execute_both, 1)
+  lu.assertEquals(A.getResult(data).entries[1].support.player, helper.id)
+end
+
+function Testhanjin_card_reuse:testJinkActualUseObtainsTheRespondedCardNotItself()
+  local room = FkTest.room
+  local attacker, target, jink, slash, seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    attacker, target = room.players[1], room.players[2]
+    setSingleKingdom(room, target)
+    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
+    slash = give(room, attacker, card("hanjin__slash"))
+    lu.assertTrue(A.isAdaptationCard(jink))
+    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_actual_use")
+    FkTest.setNextReplies(target, { { card = jink.id } })
+    for _, q in ipairs(room.players) do
+      if q ~= target then FkTest.setNextReplies(q, { "" }) end
+    end
+    room:useCard(UseCardData:new { from = attacker, tos = { target }, card = slash, extra_data = {} })
+  end)
+  lu.assertEquals(#seen, 1)
+  local use = seen[1].use
+  lu.assertEquals(seen[1].entry.condition, "gujun")
+  lu.assertEquals(seen[1].entry.effect, "obtain_response_card")
+  lu.assertNotNil(use.responseToEvent)
+  lu.assertIsTrue(use.toCard == slash)
+  lu.assertTrue(table.contains(target:getCardIds("h"), slash.id))
+  lu.assertFalse(table.contains(target:getCardIds("h"), jink.id))
+  lu.assertEquals(room:getCardOwner(slash.id).id, target.id)
+  lu.assertEquals(room:getCardArea(slash.id), Card.PlayerHand)
+  lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+  lu.assertEquals(target.hp, target.maxHp)
+  local result = A.getResult(use)
+  lu.assertEquals(result.triggered_count, 1)
+  lu.assertEquals(result.effects.obtain_response_card, 1)
+  lu.assertTrue(A.isAdaptationCard(jink))
+end
+
+function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation()
+  local room = FkTest.room
+  local target, jink, seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    local attacker = room.players[1]
+    target = room.players[2]
+    setSingleKingdom(room, target)
+    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
+    local archery = give(room, attacker, card("hanjin__archery_attack"))
+    lu.assertTrue(A.isAdaptationCard(jink))
+    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_pure_response")
+    FkTest.setNextReplies(target, { { card = jink.id } })
+    for index = 3, #room.players do FkTest.setNextReplies(room.players[index], { "" }) end
+    local tos = table.slice(room.players, 2)
+    room:useCard(UseCardData:new { from = attacker, tos = tos, card = archery, extra_data = {} })
+  end)
+  lu.assertEquals(#seen, 0)
+  lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+  lu.assertEquals(#target:getCardIds("h"), 0)
+  lu.assertEquals(target.hp, target.maxHp)
+  lu.assertTrue(A.isAdaptationCard(jink))
+end
+
+function Testhanjin_card_reuse:testJinkObtainsAllMaterialsOfAVirtualRespondedCard()
+  local room = FkTest.room
+  local target, jink, first, second, seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    local attacker = room.players[1]
+    target = room.players[2]
+    setSingleKingdom(room, target)
+    first = give(room, attacker, card("hanjin__slash"))
+    second = give(room, attacker, card("hanjin__peach"))
+    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
+    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_virtual_materials")
+    FkTest.setNextReplies(target, { { card = jink.id } })
+    for _, q in ipairs(room.players) do
+      if q ~= target then FkTest.setNextReplies(q, { "" }) end
+    end
+    room:useVirtualCard("hanjin__slash", { first.id, second.id }, attacker, target)
+  end)
+  lu.assertEquals(#seen, 1)
+  local use = seen[1].use
+  local responded = Card:getIdList(use.toCard)
+  lu.assertTrue(table.contains(responded, first.id))
+  lu.assertTrue(table.contains(responded, second.id))
+  for _, id in ipairs({ first.id, second.id }) do
+    lu.assertTrue(table.contains(target:getCardIds("h"), id))
+    lu.assertEquals(room:getCardOwner(id).id, target.id)
+  end
+  lu.assertFalse(table.contains(target:getCardIds("h"), jink.id))
+  lu.assertEquals(A.getResult(use).effects.obtain_response_card, 1)
+end
+
+function Testhanjin_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProcessingArea()
+  local room = FkTest.room
+  local target, jink, slash, seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    local attacker = room.players[1]
+    target = room.players[2]
+    setSingleKingdom(room, target)
+    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
+    slash = give(room, attacker, card("hanjin__slash"))
+    local skel = fk.CreateSkill { name = "#hanjin_test_move_responded_card" }
+    skel:addEffect(fk.AfterCardUseDeclared, {
+      global = true, priority = 200,
+      can_refresh = function(self, event, target, player, data)
+        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+          and data.toCard ~= nil
+      end,
+      on_refresh = function(self, event, target, player, data)
+        if room:getCardArea(data.toCard) == Card.Processing then
+          room:moveCardTo(data.toCard, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+            "test", nil, true)
+        end
+      end,
+    })
+    room:addSkill(skel:createSkill())
+    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_left_processing")
+    FkTest.setNextReplies(target, { { card = jink.id } })
+    for _, q in ipairs(room.players) do
+      if q ~= target then FkTest.setNextReplies(q, { "" }) end
+    end
+    room:useCard(UseCardData:new { from = attacker, tos = { target }, card = slash, extra_data = {} })
+  end)
+  lu.assertEquals(#seen, 1)
+  lu.assertEquals(room:getCardArea(slash.id), Card.DiscardPile)
+  lu.assertFalse(table.contains(target:getCardIds("h"), slash.id))
+  lu.assertEquals(#target:getCardIds("h"), 0)
+  lu.assertEquals(A.getResult(seen[1].use).triggered_count, 1)
+end
+
+function Testhanjin_card_reuse:testJinkDoesNotFabricateACardForAnEmptyVirtualResponseCard()
+  local room = FkTest.room
+  local target, jink, seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    local attacker = room.players[1]
+    target = room.players[2]
+    setSingleKingdom(room, target)
+    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
+    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_no_material")
+    FkTest.setNextReplies(target, { { card = jink.id } })
+    for _, q in ipairs(room.players) do
+      if q ~= target then FkTest.setNextReplies(q, { "" }) end
+    end
+    room:useVirtualCard("hanjin__slash", nil, attacker, target)
+  end)
+  lu.assertEquals(#seen, 1)
+  lu.assertEquals(card("hanjin__jink", Card.Heart, 7).id, jink.id)
+  lu.assertEquals(#target:getCardIds("h"), 0)
+  lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(seen[1].use.toCard), Card.Unknown)
+  lu.assertEquals(A.getResult(seen[1].use).effects.obtain_response_card, 1)
+  lu.assertTrue(seen[1].entry.triggered)
+end
+
+function Testhanjin_card_reuse:testCollateralFujiaDisresponsiveBlocksBothRealResponseWindows()
+  local room = FkTest.room
+  local user, main, sub, nullifier
+  local collateral, weapon, slash, nullification
+  local data, nullCalls, slashCalls
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    user, main, sub, nullifier = room.players[1], room.players[2], room.players[3], room.players[4]
+    collateral = card("hanjin__collateral")
+    weapon = card("hanjin__axe")
+    slash = card("hanjin__slash")
+    nullification = card("hanjin__nullification")
+    give(room, user, collateral)
+    give(room, user, card("hanjin__peach", Card.Heart, 4))
+    give(room, main, slash)
+    room:moveCardTo({ weapon.id }, Card.PlayerEquip, main, fk.ReasonPut, "test", nil, true, main)
+    give(room, nullifier, nullification)
+    lu.assertTrue(A.isAdaptationCard(collateral))
+    lu.assertEquals(A.getEntries(collateral)[1].condition, "fujia")
+    local originalNull = room.askToNullification
+    nullCalls = {}
+    room.askToNullification = function(self, players, params)
+      local count = #players
+      local result = originalNull(self, players, params)
+      table.insert(nullCalls, { count = count, result = result })
+      return result
+    end
+    local originalAsk = room.askToUseCard
+    slashCalls = {}
+    room.askToUseCard = function(self, player, params)
+      local result = originalAsk(self, player, params)
+      if params.pattern == "slash" then
+        table.insert(slashCalls, {
+          player = player.id,
+          result = result,
+          disresponsive = params.event_data ~= nil and params.event_data:isDisresponsive(player),
+        })
+      end
+      return result
+    end
+    FkTest.setNextReplies(nullifier, { { card = nullification.id } })
+    FkTest.setNextReplies(main, { FkTest.ReplyCard(slash, { sub }) })
+    data = UseCardData:new { from = user, tos = { main, sub }, card = collateral, extra_data = {} }
+    room:useCard(data)
+    room.askToNullification = originalNull
+    room.askToUseCard = originalAsk
+  end)
+  lu.assertEquals(#nullCalls, 1)
+  lu.assertEquals(nullCalls[1].count, 0)
+  lu.assertNil(nullCalls[1].result)
+  lu.assertEquals(#slashCalls, 1)
+  lu.assertEquals(slashCalls[1].player, main.id)
+  lu.assertNil(slashCalls[1].result)
+  lu.assertTrue(slashCalls[1].disresponsive)
+  lu.assertTrue(table.contains(main:getCardIds("h"), slash.id))
+  lu.assertTrue(table.contains(nullifier:getCardIds("h"), nullification.id))
+  lu.assertTrue(table.contains(user:getCardIds("h"), weapon.id))
+  lu.assertFalse(table.contains(user:getCardIds("h"), collateral.id))
+  local result = A.getResult(data)
+  lu.assertTrue(result.triggered)
+  lu.assertEquals(result.triggered_count, 1)
+  lu.assertEquals(result.effects.disresponsive, 1)
+  lu.assertEquals(result.entries[1].condition, "fujia")
+  lu.assertTrue(result.entries[1].triggered)
+end
+
 function Testhanjin_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
   local bronze = card("hanjin__bronze_sparrow")
-  local slash = card("hanjin__slash", Card.Club, 4)
+  local physical = card("hanjin__slash", Card.Club, 4)
+  local slash = Fk:cloneCard("hanjin__slash")
+  slash:addSubcard(physical.id)
   local extra = card("hanjin__peach", Card.Heart, 4)
   A.setCardEntries(slash, { { id = "probe_draw", condition = "kongchao", effect = "draw" } })
   local data
@@ -156,7 +567,7 @@ function Testhanjin_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
     give(room, p, bronze)
     use(room, p, { p }, bronze)
     lu.assertTrue(p:hasSkill("hanjin__bronze_sparrow_skill"))
-    give(room, p, slash)
+    give(room, p, physical)
     give(room, p, extra) -- ensure 空巢 is false
     FkTest.setNextReplies(t, { "" })
     data = UseCardData:new { from = p, tos = { t }, card = slash, extra_data = {} }

@@ -64,6 +64,14 @@ skill:addEffect("viewas", {
     if isDeputy == nil then return skill.name end
     local policy = source.bypass_distances and T.bypassDistance() or T.default()
     T.attachUse(player.room, use, policy)
+    -- 支付前先按真实 CardSkill 复核本次目标的选牌合法性；失败时连令牌一起
+    -- 释放，不产生武将移除代价。空目标表示该入口尚未得到目标（由真正请求
+    -- 的 target 选择/PreCardUse 复核），不能据此把固定目标牌误判为非法。
+    if #(use.tos or {}) > 0 and not T.validateUse(player.room, player, use, policy, nil,
+      { require_trusted = true, stage = "selection" }) then
+      T.releaseToken(player.room, use)
+      return skill.name
+    end
     if not C.payCost(player, source, isDeputy) then
       T.releaseToken(player.room, use)
       return skill.name

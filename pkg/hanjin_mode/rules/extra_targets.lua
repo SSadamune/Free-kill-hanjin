@@ -208,6 +208,84 @@ function E.subCandidates(room, use, main, opts)
   return subCandidates(room, use, main, rule, ruleContext(rule, room, use))
 end
 
+local function withBypass(extra_data)
+  local ret = extra_data and table.simpleClone(extra_data) or {}
+  ret.bypass_distances = true
+  return ret
+end
+
+--- Legality of one main target that was added after the initial selection
+--- (group expansion or "target +1"), or rechecked at PreCardUse.  Unlike
+--- E.isCandidate this does not require the target to be absent from use.tos.
+--- The concrete card's own extra-target interface is used; an explicit
+--- strategy condition replaces it exactly as it replaces the printed condition.
+function E.targetLegal(room, use, target, opts)
+  if use == nil or use.from == nil or use.card == nil then return false end
+  if not E.isRoleTargetUse(use) then return false end
+  if target == nil or not target:isAlive() or target:isRemoved() then return false end
+  if use.from:isProhibited(target, use.card) then return false end
+  opts = opts or {}
+
+  local explicit = false
+  for _, entry in ipairs(opts.entries or {}) do
+    if entry.effect == "add_target" and entry.target_condition ~= nil
+      and E.matchesCondition(room, use, target, entry.target_condition) then
+      explicit = true
+      break
+    end
+  end
+
+  local legal
+  if explicit then
+    legal = true
+  elseif opts.condition ~= nil then
+    -- Scripted strategy ("视为对 X 名其他角色使用……"): the structured
+    -- condition replaces the card's printed target condition, not adds to it.
+    legal = E.matchesTarget(room, use.from, use.card, target, opts.condition)
+  else
+    local rule = E.ruleFor(use.card)
+    local context = ruleContext(rule, room, use)
+    if rule ~= nil and rule.filter ~= nil then
+      legal = rule.filter(room, use, target, context) == true
+    else
+      local selected = use.tos
+      if rule ~= nil and rule.selected ~= nil then
+        selected = rule.selected(room, use, context) or {}
+      end
+      local extra_data = opts.extra_data or use.extra_data
+      if opts.bypass_distance then extra_data = withBypass(extra_data) end
+      legal = use.card.skill:modTargetFilter(use.from, target, selected, use.card, extra_data) == true
+    end
+  end
+  if not legal then return false end
+
+  local rule = E.ruleFor(use.card)
+  local context = ruleContext(rule, room, use)
+  if rule ~= nil and rule.sub_candidates ~= nil then
+    return #subCandidates(room, use, target, rule, context) > 0
+  end
+  return true
+end
+
+--- Legality of one attached sub target for a concrete main target.  The card's
+--- own structural rule decides; there is no generic "same as the first target's
+--- sub target" inheritance.
+function E.subTargetLegal(room, use, main, sub, opts)
+  if use == nil or use.from == nil or use.card == nil or main == nil or sub == nil then
+    return false
+  end
+  if sub == main or not sub:isAlive() or sub:isRemoved() then return false end
+  if use.from:isProhibited(sub, use.card) then return false end
+  local rule = E.ruleFor(use.card)
+  if rule ~= nil and rule.sub_candidates ~= nil then
+    return table.contains(E.subCandidates(room, use, main, opts), sub)
+  end
+  local skill = use.card.skill
+  if type(skill.modTargetFilter) ~= "function" then return false end
+  return skill:modTargetFilter(use.from, sub, { main }, use.card,
+    opts and opts.extra_data or use.extra_data) == true
+end
+
 --- Add one extra target, with an independent attached target when the card
 --- declares one.  The request is cancelable and the whole operation is atomic:
 --- nothing is written to the use data until both selections have been rechecked

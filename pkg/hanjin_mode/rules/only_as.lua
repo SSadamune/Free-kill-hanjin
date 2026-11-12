@@ -854,53 +854,64 @@ function M.validateUse(room, player, use, opts)
   end
   if mode == "use" then
     if player:prohibitUse(card) then return false, "prohibit-use" end
+    local stage = opts.stage or "selection"
     if policyRecord ~= nil then
       local lib = cardUseTargets()
       local ok, reason = lib.validateUse(room, player, use, policyRecord, nil,
-        { require_trusted = not trustedActive, trusted_active = trustedActive })
+        { require_trusted = not trustedActive, trusted_active = trustedActive,
+          stage = stage, extra_data = extra_data })
       if not ok then return false, reason or "illegal-target" end
     else
       local card_skill = card:getSkill(player)
       if not card_skill:canUse(player, card, extra_data) then return false, "cannot-use" end
-      local tos = use.tos or {}
-      local fixed = card:getFixedTargets(player, extra_data)
-      if fixed ~= nil then
-        -- 固定目标牌：允许空目标（引擎自动补全），若显式提交则必须与固定
-        -- 目标集合完全一致，不能借机附加其他目标。
-        if #tos > 0 then
-          local fixedIds, seen = {}, {}
-          for _, p in ipairs(fixed) do fixedIds[p.id] = true end
-          if #tos ~= #fixed then return false, "fixed-target-count" end
+      local lib = cardUseTargets()
+      if lib ~= nil then
+        -- Shared real-CardSkill validation: selection count/feasibility before
+        -- use, and expanded main/sub target structure after card.skill:onUse.
+        local ok, reason = lib.validateTargets(room, player, use, nil, stage,
+          { extra_data = extra_data })
+        if not ok then return false, reason or "illegal-target" end
+      else
+        local tos = use.tos or {}
+        local fixed = card:getFixedTargets(player, extra_data)
+        if fixed ~= nil then
+          -- 固定目标牌：允许空目标（引擎自动补全），若显式提交则必须与固定
+          -- 目标集合完全一致，不能借机附加其他目标。
+          if #tos > 0 then
+            local fixedIds, seen = {}, {}
+            for _, p in ipairs(fixed) do fixedIds[p.id] = true end
+            if #tos ~= #fixed then return false, "fixed-target-count" end
+            for _, to in ipairs(tos) do
+              local p = type(to) == "table" and to or room:getPlayerById(to)
+              if p == nil then return false, "missing-target-player" end
+              if seen[p.id] then return false, "duplicate-target" end
+              seen[p.id] = true
+              if not fixedIds[p.id] then return false, "fixed-target" end
+              if player:isProhibited(p, card) then return false, "prohibited-target" end
+            end
+          end
+        else
+          local min_num = card_skill:getMinTargetNum(player)
+          local max_num = card_skill:getMaxTargetNum(player, card)
+          if #tos < min_num then return false, "missing-target" end
+          if #tos > max_num then return false, "too-many-targets" end
+          -- 按实际 CardSkill 的目标接口逐名复核，维护 selected 组合语义，
+          -- 复用引擎的 modTargetFilter/距离/禁止目标与 extra_data 限制。
+          local selected, seen = {}, {}
           for _, to in ipairs(tos) do
             local p = type(to) == "table" and to or room:getPlayerById(to)
             if p == nil then return false, "missing-target-player" end
             if seen[p.id] then return false, "duplicate-target" end
             seen[p.id] = true
-            if not fixedIds[p.id] then return false, "fixed-target" end
-            if player:isProhibited(p, card) then return false, "prohibited-target" end
+            if not Util.CardTargetFilter(card_skill, player, p, selected, subcards,
+              card, extra_data) then
+              return false, "illegal-target-combination"
+            end
+            table.insert(selected, p)
           end
-        end
-      else
-        local min_num = card_skill:getMinTargetNum(player)
-        local max_num = card_skill:getMaxTargetNum(player, card)
-        if #tos < min_num then return false, "missing-target" end
-        if #tos > max_num then return false, "too-many-targets" end
-        -- 按实际 CardSkill 的目标接口逐名复核，维护 selected 组合语义，
-        -- 复用引擎的 modTargetFilter/距离/禁止目标与 extra_data 限制。
-        local selected, seen = {}, {}
-        for _, to in ipairs(tos) do
-          local p = type(to) == "table" and to or room:getPlayerById(to)
-          if p == nil then return false, "missing-target-player" end
-          if seen[p.id] then return false, "duplicate-target" end
-          seen[p.id] = true
-          if not Util.CardTargetFilter(card_skill, player, p, selected, subcards,
-            card, extra_data) then
-            return false, "illegal-target-combination"
+          if not card_skill:feasible(player, selected, subcards, card) then
+            return false, "infeasible-targets"
           end
-          table.insert(selected, p)
-        end
-        if not card_skill:feasible(player, selected, subcards, card) then
-          return false, "infeasible-targets"
         end
       end
     end
@@ -960,6 +971,7 @@ function M.validateCardUse(room, player, use, mode, opts)
     extra_data = verified.extra_data,
     definition = verified.definition,
     consume_auth = true,
+    stage = "declared",
   }
   return M.validateUse(room, player, use, check)
 end
@@ -1081,7 +1093,9 @@ function M.askRestricted(room, player, params)
   local lib = cardUseTargets()
   local use
   if lib ~= nil and params.policy ~= nil then
-    use = lib.askToUseVirtualCard(room, player, {
+    -- Selection-only half: the outer ViewAsSkill/engine performs the single
+    -- actual use.  The policy token is already attached and validated here.
+    use = lib.selectVirtualCard(room, player, {
       name = action.target,
       subcards = { action.card },
       skill_name = params.skill_name or M.RULE_SKILL,
@@ -1105,12 +1119,14 @@ function M.askRestricted(room, player, params)
     })
   end
   if use == nil or use.card == nil then
+    if use ~= nil and lib ~= nil then lib.releaseToken(room, use) end
     M.clearAuthorization(room, player)
     return nil
   end
   use.card:setMark(M.CARD_MARK, true)
   use.card:setMark(M.CARD_TARGET_MARK, action.target)
   if use.card.name ~= action.target or not restrictedContains(use.card) then
+    if lib ~= nil then lib.releaseToken(room, use) end
     M.clearAuthorization(room, player)
     return nil
   end
@@ -1118,6 +1134,7 @@ function M.askRestricted(room, player, params)
     mode = "use", pattern = pattern,
     extra_data = use.extra_data or extra_data,
   }) then
+    if lib ~= nil then lib.releaseToken(room, use) end
     M.clearAuthorization(room, player)
     return nil
   end

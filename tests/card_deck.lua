@@ -440,6 +440,77 @@ function Testhanjin_card_deck:testAdaptationMetadataUsesTheExactPrintedSlots()
   lu.assertEquals(count, 35)
 end
 
+function Testhanjin_card_deck:testEveryAdaptationCardExposesTheConfirmedConditionTextAndEffect()
+  local room = create()
+  local groups = {}
+  for _, group in ipairs(Cards.adaptationGroups) do
+    groups[group.display .. "/" .. group.condition .. "/" .. group.effect] = group
+  end
+  local seen, cards = {}, 0
+  for _, card in ipairs(roomCards(room)) do
+    local entries = A.getEntries(card)
+    if #entries > 0 then
+      lu.assertEquals(#entries, 1)
+      local entry = entries[1]
+      cards = cards + 1
+      local key = display(card) .. "/" .. entry.condition .. "/" .. entry.effect
+      local group = assert(groups[key], "Unexpected adaptation entry " .. key)
+      local conditionText = Fk:translate("hanjin_condition_" .. entry.condition)
+      local effectText = Fk:translate("hanjin_adaptation_" .. entry.effect)
+      lu.assertNotEquals(conditionText, "hanjin_condition_" .. entry.condition)
+      lu.assertEquals(effectText, group.text)
+      lu.assertEquals(display(card), group.display)
+      lu.assertTrue(A.isAdaptationCard(card))
+      lu.assertEquals(A.entryTip(entry), conditionText .. "·" .. effectText)
+      local tips = assert(A.cardTips(card))
+      lu.assertEquals(#tips, 1)
+      lu.assertEquals(tips[1].content, conditionText .. "·" .. effectText)
+      local mark = A.markValue(entry)
+      lu.assertEquals(mark, { "·", "hanjin_adaptation_" .. entry.effect })
+      lu.assertEquals(Fk:translate(mark[1]), "·")
+      lu.assertEquals(Fk:translate(mark[2]), group.text)
+      local description = card:getDynamicDescription(room.players[1], "zh_CN")
+      if card.dynamicDesc then
+        lu.assertTrue(description:find("<b>应变·" .. conditionText .. "</b>：" .. effectText, 1, true) ~= nil,
+          "Missing dynamic face text for " .. key)
+      else
+        -- Cards with a fixed printed description (the two 雷杀) spell the
+        -- confirmed condition/effect out in their own verified text.
+        lu.assertTrue(description:find(conditionText, 1, true) ~= nil,
+          "Missing printed condition for " .. key)
+        lu.assertTrue(description:find(effectText, 1, true) ~= nil,
+          "Missing printed effect for " .. key)
+      end
+      seen[key] = (seen[key] or 0) + 1
+    end
+  end
+  lu.assertEquals(cards, 35)
+  local count = 0
+  for key, group in pairs(groups) do
+    count = count + 1
+    lu.assertEquals(seen[key], #group.slots, "Wrong physical count for " .. key)
+  end
+  lu.assertEquals(count, 16)
+end
+
+function Testhanjin_card_deck:testEveryAdaptationEffectHasARegisteredHandler()
+  local room = create()
+  local seen = 0
+  for _, group in ipairs(Cards.adaptationGroups) do
+    local card = Fk:cloneCard("hanjin__slash")
+    A.setCardEntries(card, {
+      { id = "probe_" .. seen, condition = group.condition, effect = group.effect },
+    })
+    local use = UseCardData:new { from = room.players[1], tos = {}, card = card, extra_data = {} }
+    FkTest.runInRoom(function() A.prepare(room, use) end)
+    local result = A.getResult(use)
+    lu.assertIsTrue(result.is_adaptation_card)
+    lu.assertEquals(result.condition_timing, "sequential")
+    seen = seen + 1
+  end
+  lu.assertEquals(seen, 16)
+end
+
 function Testhanjin_card_deck:testHejiMarkersBelongToTheirOwnPrintedPositions()
   local room = create()
   local expected = {}

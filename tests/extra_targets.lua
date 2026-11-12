@@ -1,6 +1,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
 local E = require "packages.hanjin.pkg.hanjin_mode.rules.extra_targets"
+local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
 local H = require "packages.hegemony.util"
 
 Testhanjin_extra_targets = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
@@ -640,6 +641,38 @@ function Testhanjin_extra_targets:testDuelAddsAndResolvesEachTarget()
   lu.assertEquals(p[2].hp, hp2 - 1)
   lu.assertEquals(p[3].hp, hp3 - 1)
   lu.assertEquals(A.getResult(use).triggered_count, 1)
+end
+
+function Testhanjin_extra_targets:testAllianceFeastKeepsCapturedKingdomAfterRepresentativeChanges()
+  setKingdoms(groupKingdoms)
+  local p = room().players
+  local use = useData(p[1], { p[3] }, "hanjin__alliance_feast")
+  FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end) -- p1 + shu p3,p4; chosen shu
+  use:removeAllTargets()
+  -- The original representative changes kingdom later.  The chosen scope stays
+  -- shu; it must not silently become wei (the representative's new kingdom).
+  FkTest.runInRoom(function() room():setPlayerProperty(p[3], "kingdom", "wei") end)
+  local all = candidates(use)
+  lu.assertTrue(contains(all, p[4])) -- still shu, still in the chosen scope
+  lu.assertFalse(contains(all, p[3])) -- changed to wei, no longer a member
+  lu.assertFalse(contains(all, p[5])) -- wu, another kingdom
+end
+
+function Testhanjin_extra_targets:testCollateralMainsMayShareOneSubTarget()
+  setKingdoms(groupKingdoms)
+  local p = room().players
+  equip(p[2], "hanjin__qinggang_sword") -- range 2, reaches p4
+  equip(p[6], "hanjin__qinggang_sword") -- range 2, also reaches p4
+  local use = useData(p[1], { p[2], p[4] }, "hanjin__collateral")
+  FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end)
+  -- Each new main target chooses its own legal sub target; the same victim is
+  -- legal for both independent 杀 instructions.
+  use:addTarget(p[6], { p[4] })
+  local ok, reason
+  FkTest.runInRoom(function()
+    ok, reason = C.validateTargets(room(), p[1], use, nil, "declared")
+  end)
+  lu.assertTrue(ok, reason)
 end
 
 return { name = "hanjin_extra_targets" }

@@ -68,16 +68,24 @@ Fk:addPostLoadFunc(function()
       return context and context.initial_targets or {}
     end,
     -- The user is always a target of this card.  Other new targets must belong
-    -- to the same other kingdom that was chosen for this use; the comparison
-    -- follows the card's own Hegemony kingdom relation.
+    -- to the other kingdom chosen for this use.  The choice is captured in the
+    -- context and stays fixed for the whole use even if the original target is
+    -- removed or later changes kingdom; candidates themselves are recomputed
+    -- from the current alive players.
     filter = function(room, use, target)
       local context = contextOf(use)
-      if context == nil or context.representative == nil then return false end
-      if context.kingdom == "unknown" or H.compareKingdomWith(context.representative, use.from) then
+      if context == nil or context.kingdom == nil or context.kingdom == "unknown" then
         return false
       end
       if target == use.from then return use.from.kingdom ~= "unknown" end
-      return H.compareKingdomWith(target, context.representative)
+      if H.getKingdom(target) ~= context.kingdom then return false end
+      -- Keep 构逆 (relation-based enmity) when the representative still belongs
+      -- to the captured kingdom; otherwise the fixed kingdom alone decides.
+      if context.representative ~= nil
+        and H.getKingdom(context.representative) == context.kingdom then
+        return H.compareKingdomWith(target, context.representative)
+      end
+      return true
     end,
   })
 end)

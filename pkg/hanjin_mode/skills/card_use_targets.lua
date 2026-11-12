@@ -52,7 +52,11 @@ skill:addEffect(fk.PreCardUse, {
       C.releaseToken(room, data)
       return true
     end
-    if not C.validateUse(room, player, data, rec, nil, { require_trusted = true }) then
+    -- Declared stage: card.skill:onUse already ran, so group/AOE expansion and
+    -- 借刀 main/sub transformation must be accepted while the original
+    -- selection and every added/sub target are still rechecked.
+    if not C.validateUse(room, player, data, rec, nil,
+      { require_trusted = true, stage = "declared" }) then
       C.releaseToken(room, data)
       return true
     end
@@ -78,11 +82,21 @@ skill:addEffect(fk.GameStart, {
     return player.seat == 1 and inHanjin(player)
   end,
   on_refresh = function(self, event, target, player)
-    local room = player.room
-    room:setTag(C.POLICY_TAG, nil)
-    for _, p in ipairs(room.players) do
-      room:setPlayerMark(p, C.POLICY_MARK, 0)
-    end
+    C.clearTokens(player.room)
+  end,
+})
+
+skill:addEffect(fk.TurnStart, {
+  global = true,
+  mute = true,
+  priority = -100,
+  can_refresh = function(self, event, target, player)
+    return target == player and inHanjin(player)
+  end,
+  on_refresh = function(self, event, target, player)
+    -- A use aborted by another PreCardUse skill may skip both this rule's
+    -- cleanup and CardUseFinished; a new turn cannot carry an old one-use token.
+    C.clearTokens(player.room)
   end,
 })
 
