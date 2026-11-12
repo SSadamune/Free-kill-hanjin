@@ -1,5 +1,6 @@
 -- HAN001 刘协：天命、密诏。默认国战套件用例。
--- 规则依据：rules/generals/han001-liuxie.md 第 2、3、5 节。
+-- 规则依据：rules/generals/han001-liuxie.md 第 2、3 节。
+-- 验收依据：docs/development/implementation/generals/han001-liuxie.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
 local TM = "hanjin__skill_han001_1"
