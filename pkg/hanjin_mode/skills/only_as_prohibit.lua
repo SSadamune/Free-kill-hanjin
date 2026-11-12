@@ -17,7 +17,7 @@ skill:addEffect("prohibit", {
 })
 
 Fk:loadTranslationTable {
-  [O.PROHIBIT_SKILL] = "只能当",
+  [O.PROHIBIT_SKILL] = "牌用途限制",
 }
 
 return skill

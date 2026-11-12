@@ -12,15 +12,12 @@ local function refresh(room)
   O.refresh(room)
 end
 
-local function grantAll(room)
+local function initialize(room)
   -- GamePrepared/GameStart 可能先后触发；只在首次初始化时清理，避免把其它
   -- 初始化技能已登记的来源抹掉。
   if not room:getTag(O.INIT_TAG) then
     O.reset(room)
     room:setTag(O.INIT_TAG, true)
-  end
-  for _, p in ipairs(room.players) do
-    room:handleAddLoseSkills(p, O.SKILL, nil, false, true)
   end
   O.refresh(room)
 end
@@ -32,7 +29,7 @@ local function inHanjin(player)
     and player.room:getSettings("gameMode") == "hanjin_heg_mode"
 end
 
--- GamePrepared 让测试房间与真实房间都能拿到共享转化入口；GameStart 再次
+-- GamePrepared 初始化测试房间与真实房间的内部来源记录；GameStart 再次
 -- 执行同一幂等操作，避免不同引擎版本只触发其中一个时机。
 skill:addEffect(fk.GamePrepared, {
   global = true,
@@ -41,7 +38,7 @@ skill:addEffect(fk.GamePrepared, {
     return player.seat == 1 and inHanjin(player)
   end,
   on_refresh = function(self, event, target, player)
-    grantAll(player.room)
+    initialize(player.room)
   end,
 })
 skill:addEffect(fk.GameStart, {
@@ -51,7 +48,7 @@ skill:addEffect(fk.GameStart, {
     return player.seat == 1 and inHanjin(player)
   end,
   on_refresh = function(self, event, target, player)
-    grantAll(player.room)
+    initialize(player.room)
   end,
 })
 
@@ -258,13 +255,9 @@ skill:addEffect(fk.TurnEnd, {
 })
 
 Fk:loadTranslationTable {
-  [O.RULE_SKILL] = "汉晋只能当",
-  [O.SKILL] = "只能当",
-  [":" .. O.SKILL] = "你可以将受到“只能当”效果限制的实体牌，按该效果提供的用途使用或打出；"
-    .. "多个效果提供的用途可以并存。实体牌牌名不变。",
-  ["#hanjin_only_as"] = "只能当：选择要转化成的牌名",
+  [O.RULE_SKILL] = "牌用途规则",
   ["#hanjin_only_as_choose"] = "选择用途",
-  [O.PROHIBIT_SKILL] = "只能当",
+  [O.PROHIBIT_SKILL] = "牌用途限制",
 }
 
 return skill

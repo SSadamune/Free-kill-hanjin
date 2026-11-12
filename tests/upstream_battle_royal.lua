@@ -1,3 +1,4 @@
+local BattleRoyal = require "packages.hanjin.pkg.hanjin_mode.rules.battle_royal"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
 local H = require "packages.hegemony.util"
@@ -29,7 +30,7 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamOldBattle
   -- 普通国战房间仍保留上游普通鏖战技能。
   lu.assertTrue(player:hasSkill("battle_royal&", true, true))
   lu.assertFalse(player:hasSkill("new_battle_royal&", true, true))
-  lu.assertFalse(player:hasSkill(O.SKILL, true, true))
+  lu.assertFalse(player:hasSkill(BattleRoyal.SKILL, true, true))
   lu.assertEquals(player:getMark(O.SOURCE_MARK), 0)
 
   local handPeach = room():printCard("hanjin__peach", Card.Heart, 4)
@@ -52,7 +53,7 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamNewBattle
     H.enterBattleRoyalMode(room())
   end)
   lu.assertTrue(player:hasSkill("new_battle_royal&", true, true))
-  lu.assertFalse(player:hasSkill(O.SKILL, true, true))
+  lu.assertFalse(player:hasSkill(BattleRoyal.SKILL, true, true))
   lu.assertEquals(player:getMark(O.SOURCE_MARK), 0)
   local peach = room():printCard("hanjin__peach", Card.Heart, 4)
   run(function() room():obtainCard(player, peach, true) end)

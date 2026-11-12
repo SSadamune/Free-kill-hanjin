@@ -79,6 +79,12 @@ O.define("hanjin_test_heart_dismantlement", {
   view_zones = { "hand", "handly" },
 })
 
+-- 独立来源提供自己的转换入口，不借用鏖战或名为“只能当”的公共按钮。
+local heart = fk.CreateSkill { name = "hanjin_test__heart_conversion" }
+O.addViewAsEffect(heart, "hanjin_test_heart_dismantlement")
+register(heart)
+Fk:loadTranslationTable { [heart.name] = "测试红桃效果" }
+
 -- 只有一个展示技的测试武将，用于验证来源随主将明暗/失去技能而失效。
 local sourceSkill = fk.CreateSkill {
   name = "hanjin_test__only_as_source_skill",
@@ -98,4 +104,4 @@ Fk:loadTranslationTable {
   ["hanjin_test__only_as_source_holder"] = "测试来源武将",
 }
 
-return { jijiu = jijiu.name, longdan = longdan.name }
+return { jijiu = jijiu.name, longdan = longdan.name, heart = heart.name }

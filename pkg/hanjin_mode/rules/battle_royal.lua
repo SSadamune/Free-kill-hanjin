@@ -10,6 +10,7 @@ local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
 local M = {}
 
 M.TAG = "BattleRoyalMode"
+M.SKILL = "hanjin_battle_royal&"
 M.EVENT_SKILL = "#new_battle_royal_event&"
 M.UPSTREAM_SKILLS = { "battle_royal&", "new_battle_royal&" }
 M.SOURCE_DEF = "battle_royal"
@@ -72,6 +73,7 @@ end
 
 local function ensureSources(room)
   for _, player in ipairs(room.alive_players) do
+    room:handleAddLoseSkills(player, M.SKILL, nil, false, true)
     O.addSource(room, {
       id = M.SOURCE_PREFIX .. player.id,
       def = M.SOURCE_DEF,

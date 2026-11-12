@@ -18,12 +18,11 @@ local function cardUseTargets()
   return C
 end
 
-M.SKILL = "hanjin_only_as"
 M.PROHIBIT_SKILL = "#hanjin_only_as_prohibit"
 M.RULE_SKILL = "#hanjin_only_as_rule"
 
 M.SOURCE_TAG = "hanjin_only_as_sources"
-M.SOURCE_MARK = "@[hanjin_only_as_sources]"
+M.SOURCE_MARK = "hanjin_only_as_sources"
 M.REQUEST_TAG = "hanjin_only_as_requests"
 M.AUTH_TAG = "hanjin_only_as_auth"
 M.TURN_TAG = "hanjin_only_as_turn"
@@ -615,7 +614,7 @@ function M.actionsForCard(room, player, cardId, mode, opts)
   local authorized = opts.authorized == true or M.isAuthorized(room, player, cardId)
   local ret, seen = {}, {}
   for _, source in ipairs(M.activeSources(player)) do
-    if M.matches(source, card) then
+    if (opts.definition == nil or source.def == opts.definition) and M.matches(source, card) then
       if authorized or M.cardInZones(player, cardId, source.view_zones) then
         for _, conv in ipairs(conversionsOf(source)) do
           if modeAllowed(conv, mode) and not conv.server_only then
@@ -633,7 +632,8 @@ function M.actionsForCard(room, player, cardId, mode, opts)
                 source = source,
               }
               if opts.check_legal then
-                valid = M.canUseInCurrent(player, conv.name, cardId, mode, opts.extra_data)
+                valid = M.canUseInCurrent(player, conv.name, cardId, mode, opts.extra_data,
+                  defOf(source.def).entry_skill or source.skill)
               end
               if valid then sortedInsertTarget(ret, seen, entry) end
             end
@@ -669,16 +669,24 @@ end
 --- 构造转化牌。实体牌只作为子卡，牌名保持不变。
 function M.buildCard(player, cardId, target, skillName)
   if Fk.all_card_types[target] == nil then return nil end
+  if skillName == nil then
+    for _, action in ipairs(M.actionsForCard(player.room, player, cardId, M.currentMode(player))) do
+      if action.target == target then
+        skillName = defOf(action.def).entry_skill or action.source.skill
+        if skillName ~= nil then break end
+      end
+    end
+  end
   local card = Fk:cloneCard(target)
-  card.skillName = skillName or M.SKILL
+  card.skillName = skillName or M.RULE_SKILL
   card:addSubcard(cardId)
   card:setMark(M.CARD_MARK, true)
   card:setMark(M.CARD_TARGET_MARK, target)
   return card
 end
 
-function M.canUseInCurrent(player, target, cardId, mode, extra_data)
-  local card = M.buildCard(player, cardId, target)
+function M.canUseInCurrent(player, target, cardId, mode, extra_data, skillName)
+  local card = M.buildCard(player, cardId, target, skillName)
   if card == nil then return false end
   if mode == "response" then
     if Fk.currentResponsePattern ~= nil then
@@ -708,12 +716,12 @@ function M.targetAllowedInRequest(player, target, cardId, mode, pattern, extra_d
 end
 
 --- 当前请求下是否有至少一张可选实体牌能提供转换用途。
-function M.hasAvailable(player, mode)
+function M.hasAvailable(player, mode, definition)
   mode = mode or M.currentMode(player)
   local extra_data = M.clientExtraData()
   for _, cardId in ipairs(player:getHandlyIds(true)) do
     if #M.actionsForCard(player.room, player, cardId, mode,
-      { check_legal = true, extra_data = extra_data }) > 0 then
+      { check_legal = true, extra_data = extra_data, definition = definition }) > 0 then
       return true
     end
   end
@@ -721,13 +729,13 @@ function M.hasAvailable(player, mode)
 end
 
 --- 当前交互选项：所有可选实体牌提供的目标牌名并集。
-function M.interactionChoices(player)
+function M.interactionChoices(player, definition)
   local mode = M.currentMode(player)
   local extra_data = M.clientExtraData()
   local choices, seen = {}, {}
   for _, cardId in ipairs(player:getHandlyIds(true)) do
     for _, action in ipairs(M.actionsForCard(player.room, player, cardId, mode,
-      { check_legal = true, extra_data = extra_data })) do
+      { check_legal = true, extra_data = extra_data, definition = definition })) do
       if not seen[action.target] then
         seen[action.target] = true
         table.insert(choices, action.target)
@@ -737,12 +745,12 @@ function M.interactionChoices(player)
   return choices
 end
 
-function M.cardSelectable(player, cardId, target)
+function M.cardSelectable(player, cardId, target, definition)
   if not table.contains(player:getHandlyIds(true), cardId) then return false end
   local mode = M.currentMode(player)
   local extra_data = M.clientExtraData()
   for _, action in ipairs(M.actionsForCard(player.room, player, cardId, mode,
-    { check_legal = true, extra_data = extra_data })) do
+    { check_legal = true, extra_data = extra_data, definition = definition })) do
     if action.target == target then return true end
   end
   return false
@@ -782,7 +790,7 @@ end
 local function findAction(room, player, card, target, mode, opts)
   local authorized = opts.authorized == true or M.isAuthorized(room, player, card.id)
   for _, source in ipairs(M.activeSources(player)) do
-    if M.matches(source, card) then
+    if (opts.definition == nil or source.def == opts.definition) and M.matches(source, card) then
       if authorized or M.cardInZones(player, card.id, source.view_zones) then
         for _, conv in ipairs(conversionsOf(source)) do
           if conv.name == target and modeAllowed(conv, mode) then
@@ -905,6 +913,7 @@ function M.validateUse(room, player, use, opts)
     mode = mode,
     pattern = pattern,
     extra_data = extra_data,
+    definition = opts.definition,
     restricted_token = M.isAuthorized(room, player, entity.id)
       and M.authorizationEntry(room, player).token or nil,
   })
@@ -932,7 +941,6 @@ function M.validateCardUse(room, player, use, mode, opts)
     return not M.isForbidden(player, card)
   end
   local marked = card:getMark(M.CARD_MARK) ~= 0
-    or table.contains(card.skillNames, M.SKILL)
   if not marked then return true end
   -- 只有本次服务端在真实请求中验证过的转化牌才能在宣告时生效。客户端
   -- 伪造的牌面/标记不会带有服务端写入的 verified 记录。
@@ -950,6 +958,7 @@ function M.validateCardUse(room, player, use, mode, opts)
     mode = verified.mode,
     pattern = verified.pattern,
     extra_data = verified.extra_data,
+    definition = verified.definition,
     consume_auth = true,
   }
   return M.validateUse(room, player, use, check)
@@ -1015,7 +1024,7 @@ function M.askRestricted(room, player, params)
   if #labels == 0 then return nil end
   local choice = room:askToChoice(player, {
     choices = labels,
-    skill_name = params.skill_name or M.SKILL,
+    skill_name = params.skill_name or M.RULE_SKILL,
     prompt = params.prompt or "#hanjin_only_as_choose",
     cancelable = params.cancelable ~= false,
   })
@@ -1040,7 +1049,7 @@ function M.askRestricted(room, player, params)
     end
     local use = room:askToUseRealCard(player, {
       pattern = tostring(Exppattern{ id = { action.card } }),
-      skill_name = params.skill_name or M.SKILL,
+      skill_name = params.skill_name or M.RULE_SKILL,
       prompt = params.prompt or "#hanjin_only_as_choose",
       expand_pile = { action.card },
       extra_data = extra_data,
@@ -1059,7 +1068,7 @@ function M.askRestricted(room, player, params)
   })
   if mode == "response" then
     local card = M.buildCard(player, action.card, action.target,
-      params.skill_name or M.SKILL)
+      params.skill_name or M.RULE_SKILL)
     local use = { from = player, tos = {}, card = card }
     if not M.validateUse(room, player, use, {
       mode = "response", pattern = pattern, extra_data = extra_data,
@@ -1075,7 +1084,7 @@ function M.askRestricted(room, player, params)
     use = lib.askToUseVirtualCard(room, player, {
       name = action.target,
       subcards = { action.card },
-      skill_name = params.skill_name or M.SKILL,
+      skill_name = params.skill_name or M.RULE_SKILL,
       prompt = params.prompt or "#hanjin_only_as_choose",
       extra_data = extra_data,
       policy = params.policy or lib.default(),
@@ -1088,7 +1097,7 @@ function M.askRestricted(room, player, params)
     use = room:askToUseVirtualCard(player, {
       name = action.target,
       subcards = { action.card },
-      skill_name = params.skill_name or M.SKILL,
+      skill_name = params.skill_name or M.RULE_SKILL,
       prompt = params.prompt or "#hanjin_only_as_choose",
       extra_data = extra_data,
       skip = true,
@@ -1113,6 +1122,42 @@ function M.askRestricted(room, player, params)
     return nil
   end
   return use
+end
+
+--- 把转换效果附加到真实来源技能，不创建“只能当”技能或全局转换按钮。
+--- definition 仅选择该来源的用途；其他来源须通过自己的技能或效果入口使用。
+function M.addViewAsEffect(skill, definition, prompt)
+  defOf(definition).entry_skill = skill.name
+  skill:addEffect("viewas", {
+    pattern = ".",
+    prompt = prompt,
+    handly_pile = true,
+    interaction = function(self, player)
+      local choices = M.interactionChoices(player, definition)
+      if #choices > 0 then return UI.ComboBox { choices = choices } end
+    end,
+    card_filter = function(self, player, id, selected)
+      local target = self.interaction and self.interaction.data
+      return #selected == 0 and type(target) == "string"
+        and M.cardSelectable(player, id, target, definition)
+    end,
+    view_as = function(self, player, cards)
+      local target = self.interaction and self.interaction.data
+      if #cards ~= 1 or type(target) ~= "string" then return nil end
+      return M.buildCard(player, cards[1], target, skill.name)
+    end,
+    before_use = function(self, player, use)
+      if not M.validateUse(player.room, player, use, { definition = definition }) then
+        return skill.name
+      end
+    end,
+    enabled_at_play = function(self, player)
+      return M.hasAvailable(player, "use", definition)
+    end,
+    enabled_at_response = function(self, player, response)
+      return M.hasAvailable(player, response and "response" or "use", definition)
+    end,
+  })
 end
 
 -- 来源定义 -----------------------------------------------------------------

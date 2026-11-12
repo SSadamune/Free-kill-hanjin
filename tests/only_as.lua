@@ -148,7 +148,7 @@ function Testhanjin_only_as:testRealUseRequestRejectsDirectPeachAndAllowsConvers
   -- 真实 AskForUseCard → handleUseCardReply → before_use → PreCardUse。
   local use
   FkTest.setNextReplies(player, { {
-    card = { skill = O.SKILL, subcards = { peach.id } },
+    card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
     targets = { target.id },
     interaction_data = "hanjin__slash",
   } })
@@ -159,6 +159,8 @@ function Testhanjin_only_as:testRealUseRequestRejectsDirectPeachAndAllowsConvers
   end)
   lu.assertNotNil(use)
   lu.assertEquals(use.card.trueName, "slash")
+  lu.assertTrue(table.contains(use.card.skillNames, BattleRoyal.SKILL))
+  lu.assertFalse(table.contains(use.card.skillNames, "hanjin_only_as"))
   lu.assertEquals(use.card.subcards, { peach.id })
   -- 实体牌本身牌名不变。
   lu.assertEquals(Fk:getCardById(peach.id).trueName, "peach")
@@ -187,7 +189,7 @@ function Testhanjin_only_as:testRealResponseRequestAndDirectResponseRejection()
   -- 真实响应请求，选择鏖战提供的桃当闪。
   local respond
   FkTest.setNextReplies(player, { {
-    card = { skill = O.SKILL, subcards = { peach.id } },
+    card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
     targets = {},
     interaction_data = "hanjin__jink",
   } })
@@ -218,7 +220,7 @@ function Testhanjin_only_as:testWoodenOxPileIsHandlyAndConverted()
 
   local use
   FkTest.setNextReplies(player, { {
-    card = { skill = O.SKILL, subcards = { peach.id } },
+    card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
     targets = {},
     interaction_data = "hanjin__jink",
   } })
@@ -270,6 +272,7 @@ function Testhanjin_only_as:testUseOnlyDismantlementThroughRealUseRequest()
   enterBattleRoyal()
   local peach = give(player, "hanjin__peach", Card.Heart, 4)
   run(function()
+    room():handleAddLoseSkills(player, content.heart, nil, false, true)
     O.addSource(room(), {
       def = "hanjin_test_heart_dismantlement", holder = player, duration = "game",
     })
@@ -288,7 +291,7 @@ function Testhanjin_only_as:testUseOnlyDismantlementThroughRealUseRequest()
   lu.assertTrue(hasSlash)
   local use
   FkTest.setNextReplies(player, { {
-    card = { skill = O.SKILL, subcards = { peach.id } },
+    card = { skill = content.heart, subcards = { peach.id } },
     targets = { target.id },
     interaction_data = "hanjin__dismantlement",
   } })
@@ -299,6 +302,8 @@ function Testhanjin_only_as:testUseOnlyDismantlementThroughRealUseRequest()
   end)
   lu.assertNotNil(use)
   lu.assertEquals(use.card.trueName, "dismantlement")
+  lu.assertTrue(table.contains(use.card.skillNames, content.heart))
+  lu.assertFalse(table.contains(use.card.skillNames, BattleRoyal.SKILL))
   run(function() room():useCard(use) end)
   lu.assertEquals(#target:getCardIds("h"), handCount - 1)
 
@@ -312,6 +317,37 @@ function Testhanjin_only_as:testUseOnlyDismantlementThroughRealUseRequest()
   end)
   lu.assertTrue(O.hasAvailable(player, "use"))
   lu.assertFalse(O.hasAvailable(player, "response"))
+end
+
+function Testhanjin_only_as:testSyntaxDoesNotGrantSkillAndEntriesStayWithSource()
+  local player = room().players[1]
+  lu.assertNil(Fk.skills["hanjin_only_as"])
+  lu.assertFalse(player:hasSkill(BattleRoyal.SKILL, true, true))
+  enterBattleRoyal()
+  lu.assertTrue(player:hasSkill(BattleRoyal.SKILL, true, true))
+  lu.assertEquals(Fk:translate(BattleRoyal.SKILL), "鏖战")
+  local peach = give(player, "hanjin__peach", Card.Heart, 4)
+  run(function()
+    room():handleAddLoseSkills(player, content.heart, nil, false, true)
+    O.addSource(room(), {
+      def = "hanjin_test_heart_dismantlement", holder = player, duration = "game",
+    })
+  end)
+  -- 用途并存，但各自的转换入口仅能执行自己的效果。
+  lu.assertTrue(O.cardSelectable(player, peach.id, "hanjin__slash", "battle_royal"))
+  lu.assertFalse(O.cardSelectable(player, peach.id, "hanjin__dismantlement", "battle_royal"))
+  lu.assertTrue(O.cardSelectable(player, peach.id, "hanjin__dismantlement",
+    "hanjin_test_heart_dismantlement"))
+  local use
+  FkTest.setNextReplies(player, { {
+    card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
+    targets = { room().players[2].id }, interaction_data = "hanjin__dismantlement",
+  }, "" })
+  run(function()
+    use = room():askToUseCard(player, { pattern = "dismantlement", cancelable = true })
+  end)
+  lu.assertNil(use)
+  lu.assertTrue(table.contains(player:getCardIds("h"), peach.id))
 end
 
 function Testhanjin_only_as:testJijiuAndLongdanConversionsAreNotBlocked()
@@ -370,7 +406,7 @@ function Testhanjin_only_as:testClientViewAsBuildsConvertedCardWithoutServerTag(
   local peach = give(player, "hanjin__peach", Card.Heart, 4)
   local clientCard
   FkTest.runInClient(function()
-    local skill = Fk.skills[O.SKILL]
+    local skill = Fk.skills[BattleRoyal.SKILL]
     skill.interaction.data = "hanjin__slash"
     clientCard = skill:viewAs(Self, { peach.id })
     skill.interaction.data = nil
@@ -411,13 +447,13 @@ function Testhanjin_only_as:testForgedTargetsPatternsAndExpiredSourcesAreRejecte
   local player = room().players[1]
   enterBattleRoyal()
   local peach = give(player, "hanjin__peach", Card.Heart, 4)
-  local skill = Fk.skills[O.SKILL]
+  local skill = Fk.skills[BattleRoyal.SKILL]
 
   -- 合法目标会在服务端复核后写入 verified。
   local ok = false
   run(function()
     ok = O.validateUse(room(), player, {
-      from = player, tos = {}, card = O.buildCard(player, peach.id, "hanjin__jink", O.SKILL),
+      from = player, tos = {}, card = O.buildCard(player, peach.id, "hanjin__jink", BattleRoyal.SKILL),
     }, { mode = "response", pattern = "jink" })
   end)
   lu.assertTrue(ok)
@@ -425,7 +461,7 @@ function Testhanjin_only_as:testForgedTargetsPatternsAndExpiredSourcesAreRejecte
   -- 伪造目标：鏖战不提供桃当桃。
   local badTarget = false
   run(function()
-    local card = O.buildCard(player, peach.id, "hanjin__peach", O.SKILL)
+    local card = O.buildCard(player, peach.id, "hanjin__peach", BattleRoyal.SKILL)
     badTarget = O.validateUse(room(), player, { from = player, tos = {}, card = card },
       { mode = "use", pattern = "peach" })
   end)
@@ -440,7 +476,7 @@ function Testhanjin_only_as:testForgedTargetsPatternsAndExpiredSourcesAreRejecte
   end)
   local badMode = false
   run(function()
-    local card = O.buildCard(player, peach.id, "hanjin__dismantlement", O.SKILL)
+    local card = O.buildCard(player, peach.id, "hanjin__dismantlement", BattleRoyal.SKILL)
     badMode = O.validateUse(room(), player, { from = player, tos = {}, card = card },
       { mode = "response", pattern = "dismantlement" })
   end)
@@ -451,7 +487,7 @@ function Testhanjin_only_as:testForgedTargetsPatternsAndExpiredSourcesAreRejecte
   local blank = give(player, "hanjin__jink", Card.Spade, 9)
   local forgedSubcard = false
   run(function()
-    local card = O.buildCard(player, blank.id, "hanjin__slash", O.SKILL)
+    local card = O.buildCard(player, blank.id, "hanjin__slash", BattleRoyal.SKILL)
     card:setMark(O.VERIFIED_MARK, { mode = "use", pattern = "slash" })
     forgedSubcard = O.validateUse(room(), player,
       { from = player, tos = {}, card = card }, { mode = "use", pattern = "slash" })
@@ -469,7 +505,7 @@ function Testhanjin_only_as:testForgedTargetsPatternsAndExpiredSourcesAreRejecte
   run(function() O.advanceTurn(room()) end)
   local expired = false
   run(function()
-    local card = O.buildCard(player, peach.id, "hanjin__slash", O.SKILL)
+    local card = O.buildCard(player, peach.id, "hanjin__slash", BattleRoyal.SKILL)
     expired = O.validateUse(room(), player, { from = player, tos = {}, card = card },
       { mode = "use", pattern = "slash" })
   end)
@@ -576,7 +612,7 @@ function Testhanjin_only_as:testForgedConvertedCardAndIllegalTargetAreRejected()
   local hp = target.hp
 
   -- 未经过服务端请求验证的伪造转化牌不能进入 PreCardUse 之后。
-  local forged = O.buildCard(player, peach.id, "hanjin__slash", O.SKILL)
+  local forged = O.buildCard(player, peach.id, "hanjin__slash", BattleRoyal.SKILL)
   run(function()
     room():useCard { from = player, tos = { target.id }, card = forged }
   end)
@@ -589,7 +625,7 @@ function Testhanjin_only_as:testForgedConvertedCardAndIllegalTargetAreRejected()
   run(function()
     O.clearSources(room(), player)
     O.addSource(room(), { def = "battle_royal", holder = player, duration = "game" })
-    local card = O.buildCard(player, peach.id, "hanjin__slash", O.SKILL)
+    local card = O.buildCard(player, peach.id, "hanjin__slash", BattleRoyal.SKILL)
     outOfRange = O.validateUse(room(), player, { from = player, tos = { far.id }, card = card },
       { mode = "use", pattern = "slash" })
   end)
@@ -598,7 +634,7 @@ function Testhanjin_only_as:testForgedConvertedCardAndIllegalTargetAreRejected()
   -- 多目标组合复核：单目标【杀】不能借提交多个各自合法的目标来生效多次。
   local multi = false
   run(function()
-    local card = O.buildCard(player, peach.id, "hanjin__slash", O.SKILL)
+    local card = O.buildCard(player, peach.id, "hanjin__slash", BattleRoyal.SKILL)
     multi = O.validateUse(room(), player, {
       from = player, tos = { room().players[2].id, room().players[3].id }, card = card,
     }, { mode = "use", pattern = "slash" })
