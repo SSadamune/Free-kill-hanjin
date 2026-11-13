@@ -175,6 +175,77 @@ function M.canPair(room, main, deputy)
   return #M.pairKingdoms(room, main, deputy) > 0
 end
 
+---Legal initial kingdoms for a free-assigned pair.
+---
+---Free assignment ignores the room's faction bans and the normal pairing rule,
+---but the initial kingdom still comes from the two generals' printed
+---affiliations: their intersection when they share one, otherwise the union of
+---both, so the player can pick either general's actual original faction. A wild
+---general contributes no regular kingdom and may also be the deputy.
+---@param room Room
+---@param main string
+---@param deputy string
+---@return string[]
+function M.freePairKingdoms(room, main, deputy)
+  if main == deputy then return {} end
+  local a, b = Fk.generals[main], Fk.generals[deputy]
+  if not (a and b) then return {} end
+  local first = a.kingdom == "wild" and {} or Ban.affiliations(a)
+  local second = b.kingdom == "wild" and {} or Ban.affiliations(b)
+  local common = table.filter(first, function(kingdom)
+    return table.contains(second, kingdom)
+  end)
+  if #common > 0 then return common end
+  -- No shared faction: keep both generals' actual original affiliations so the
+  -- existing kingdom dialog can ask the player to pick one.
+  local result = table.simpleClone(first)
+  for _, kingdom in ipairs(second) do table.insertIfNeed(result, kingdom) end
+  return result
+end
+
+---Deterministic kingdom when a free-assigned pair has no printed affiliation at
+---all (for example two wild generals). Prefer this game's first allowed kingdom,
+---then the first built-in regular kingdom.
+---@param room Room
+---@return string
+function M.fallbackKingdom(room)
+  local allowed = room:getBanner("all_kingdoms") or {}
+  return allowed[1] or Ban.kingdoms[1]
+end
+
+---Fill in faction data for a free-assigned pair. Existing resolutions are
+---authoritative and keep their source, so a normal guest faction is never
+---replaced. When the normal rule had no result, also add the general's printed
+---affiliations to the existing entry so the chosen fallback kingdom is visible
+---to later lookups. A name outside the permitted factions has no resolution, so
+---it gets a printed-affiliation entry directly.
+---@param room Room
+---@param names string[]
+function M.ensureFree(room, names)
+  local map = room:getTag(M.key) or {}
+  local allowed = room:getBanner("all_kingdoms") or {}
+  for _, name in ipairs(names) do
+    local general = Fk.generals[name]
+    if general then
+      local entry = map[name] or M.resolve(name, allowed)
+      if not entry then
+        if general.kingdom == "wild" then
+          entry = { name = name, source = "wild", kingdoms = {}, wild = true }
+        else
+          entry = { name = name, source = "original", kingdoms = {} }
+        end
+      end
+      if general.kingdom ~= "wild" then
+        for _, kingdom in ipairs(Ban.affiliations(general)) do
+          table.insertIfNeed(entry.kingdoms, kingdom)
+        end
+      end
+      map[name] = entry
+    end
+  end
+  room:setTag(M.key, map)
+end
+
 ---@param room Room
 ---@param names string[]
 ---@return table[] @ { main, deputy, kingdoms }

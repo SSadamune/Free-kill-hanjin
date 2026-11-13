@@ -16,6 +16,10 @@ GraphicsBox {
 
   required property ChooseGeneralModel dataModel
 
+  // Dynamic CustomDialog instances do not inherit the room page's bare
+  // `roomScene` context. Use the public singleton route set by RoomBase.qml.
+  readonly property var scene: Ltk.roomScene
+
   property alias generalCardList: generalCardList
 
   property var draggingCard: null
@@ -158,7 +162,7 @@ GraphicsBox {
           enabled: root.dataModel.canConvert
           text: Lua.tr("Same General Convert")
           onClicked: {
-            roomScene.showInfoPopup(
+            root.scene.showInfoPopup(
               Qt.createComponent("LunarLtk.Pages.InfoPopups", "SameConvert"),
               { dataModel: root.dataModel }
             );
@@ -179,7 +183,7 @@ GraphicsBox {
           id: detailBtn
           enabled: root.dataModel.result?.length > 0
           text: Lua.tr("Show General Detail")
-          onClicked: roomScene.showInfoPopup(
+          onClicked: root.scene.showInfoPopup(
             Qt.createComponent("LunarLtk.Pages.InfoPopups", "GeneralDetail"),
             { generals: root.dataModel.result }
           );
@@ -259,8 +263,11 @@ GraphicsBox {
       }
 
       onRightClicked: {
-        if (Lua.client.getSettings("enableFreeAssign")) {
-          roomScene.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "FreeAssign"),
+        // The server puts the authoritative flag into the request data. Keep the
+        // room-setting lookup as a fallback for clients where it is available,
+        // but never depend on it to open the entry.
+        if (root.dataModel.extraData?.freeAssign || Lua.client.getSettings("enableFreeAssign")) {
+          root.scene.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "FreeAssign"),
             { dataModel: root.dataModel, index: index });
         }
       }

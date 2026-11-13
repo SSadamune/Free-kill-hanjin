@@ -97,20 +97,46 @@ function M.create(base)
       room:setTag("hanjin_guest_redraws_v1", {})
       room:setTag("hanjin_guest_redraw_failures_v1", {})
       local answers, kingdoms, fallbacks = Selection.choose(room, room.players, offers)
-      local unused = {}
+      local freeAssign = Selection.freeAssign(room)
+      local unused, selected = {}, {}
       for _, player in ipairs(room.players) do table.insertTable(unused, offers[player]) end
+      -- Resolve all normal results before any ensureFree call can change a
+      -- shared name's stored affiliations.
+      local normalPairs = {}
+      for _, player in ipairs(room.players) do
+        local answer = answers[player]
+        normalPairs[player] = Guest.pairKingdoms(room, answer[1], answer[2])
+      end
       for _, player in ipairs(room.players) do
         local answer = answers[player]
         local main, deputy = answer[1], answer[2]
         local kingdom = kingdoms[player]
-        local legal = Guest.pairKingdoms(room, main, deputy)
+        local freeAssigned = freeAssign and not table.contains(fallbacks, player.id)
+        local normal = normalPairs[player]
+        local freeFallback = freeAssigned and #normal == 0
+        local legal = normal
+        if freeFallback then
+          legal = Guest.freePairKingdoms(room, main, deputy)
+          if #legal == 0 then legal = { Guest.fallbackKingdom(room) } end
+        end
         if not table.contains(legal, kingdom) then kingdom = legal[1] end
+        -- Keep a normally resolved guest faction intact; only fill missing data
+        -- when free assignment had to fall back outside the normal rule.
+        if freeFallback then Guest.ensureFree(room, { main, deputy }) end
+        selected[main], selected[deputy] = true, true
         for _, name in ipairs({ main, deputy }) do
           local original = table.find(unused, function(n)
+            if freeAssigned then return n == name end
             return n == name or not room:getSettings("disableSameConvert") and getGeneral(n).trueName == getGeneral(name).trueName
           end)
-          assert(original, "Selected generals must consume different offered cards")
-          table.removeOne(unused, original)
+          if original then
+            table.removeOne(unused, original)
+          elseif not freeAssigned then
+            assert(false, "Selected generals must consume different offered cards")
+          else
+            -- An outside free-assigned card must not stay drawable from the pile.
+            table.removeOne(room.general_pile, name)
+          end
         end
         room:setPlayerGeneral(player, main, true)
         room:setDeputyGeneral(player, deputy)
@@ -123,6 +149,9 @@ function M.create(base)
         room:setPlayerMark(player, "__heg_init_kingdom", kingdom)
       end
       room:setTag("hanjin_selection_fallbacks", fallbacks)
+      -- Under free assignment a selected exact card may have come from another
+      -- player's offers; never put any selected card back into the general pile.
+      if freeAssign then unused = Selection.pruneUnused(unused, selected) end
       room:returnToGeneralPile(unused, "random")
     end
     return logic

@@ -1,16 +1,8 @@
 # 紫乔汉晋国战：应变规范
 
-状态：规则框架与自动化测试已实现；正式牌包已独立实装雷杀♠9/♠10（孤军→无视次数）。铜雀已接入单条目无视条件，逐近弃远已接入先拆后顺。牵弘、刘渊、贾充尚未实装。
+本规范记录已确认的汉晋应变语义、牌位与效果约束；程序接口及验收资料另见文末开发资料。
 
 `MUST` 为必须满足的约束。本规范覆盖汉晋模式 `hanjin_heg_mode`，不改变原版国战或身份局。
-
-## 1. 源码检查和依赖结论
-
-- 本地 FreeKill v0.5.25 的 `lua`、`ltk` 及已安装内容未发现应变条件/效果结算器；核心仅提供 `Card.extra_data` 等通用扩展接口。
-- 应变篇在官方 `Qsgs-Fans/gamemode` 扩展中：`pkg/gamemodes/rule_skills/variation.lua`、`pkg/variation_cards/` 和 `pkg/gamemodes/variation.lua`。
-- 已下载到 `.dev/reference/gamemode`，提交固定在 `dependencies.lock.json` 的 `references` 字段。重建可运行 `python scripts/setup_dependencies.py --references`；普通运行不依赖参考目录。
-- 上游规则按单个 `{条件, 效果}` 登记，原铜雀会一次放开所有条件，不满足汉晋“一次仅忽略一项”的规则；上游接口还须按当前引擎版本核对，不能直接复制后假定兼容。
-- 上游仅供核对，不安装到运行环境 `packages`，不加载其原版应变牌、武将、身份模式或全局应变技能。汉晋实现独立元数据、规则模块和事件。
 
 ## 2. ADAPT-001：应变牌的定义
 
@@ -51,11 +43,12 @@
 1. 一张牌可有多个独立“条件 → 效果”条目，各条目有唯一 ID，MUST 分别检查、分别执行，不得按效果名称去重。
 2. 条目条件满足后，非增减目标的应变效果 MUST 强制触发并执行；不得再询问“是否发动应变”。本扩展所有正式应变牌均适用，不是某张牌的专属例外。
 3. 增加/减少目标是例外：使用者可以选择是否增加或减少一个合法目标，MUST 提供可取消的合法目标选择。取消、没有合法目标或没有实际改变目标列表时，本条目 MUST 不计作触发应变，不发出成功事件。
+   增加目标的候选范围 MUST 遵循[指定额外目标](extra-targets.md)：`目标+1` 只约束数量，不改写牌面目标条件；逐牌例外及当前公共筛选差异见该规范。
 4. 取消某个增减目标条目，不得取消同一张牌上其他已满足条件的强制效果。
 5. 在 `fk.AfterCardTargetDeclared` 的低优先级强制规则中按条目声明顺序结算。即使前一个效果移除最后目标，当前应变处理仍继续执行剩余独立条目。
 6. 每个真正触发的条目记录一次结果，并发出 `Adaptation.Triggered` 自定义触发事件；仅“条件满足”不能假装已经产生效果。
 7. 对同一使用数据重复进入应变处理 MUST 不重复弃牌、加伤害、摸牌或发送成功事件。使用结束清理内部执行状态，结果保留在本次使用数据中供结算/测试检查。
-8. 本轮只接入“使用牌”；不因 `CardResponding` 的单纯打出而自动触发。响应事件中实际调用“使用牌”的情况仍按用牌流程判断。
+8. 应变区分“使用牌”与“打出牌”；不因 `CardResponding` 的单纯打出而自动触发。响应事件中实际调用“使用牌”的情况仍按用牌流程判断。
 
 ## 5. ADAPT-004：无视条件
 
@@ -81,45 +74,6 @@
 8. 全部取消、超时或没有合法候选时，条件不成立；若没有无视令牌，对应效果不执行。
 9. 两个独立助战条目分别询问、分别支付，不能以一张弃牌让两个独立条件同时成立。
 
-## 7. 元数据与扩展 API
-
-实现：`pkg/hanjin_mode/rules/adaptation.lua`；事件接入：`pkg/hanjin_mode/skills/adaptation.lua`。
-
-### 卡牌或转化牌明确附带条目
-
-```lua
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-A.setCardEntries(card, {
-  { id = "skill_support", condition = "zhuzhan", effect = "execute_both" },
-})
-```
-
-正式牌堆也可在独立卡牌的 `extra_data.hanjin_adaptation` 中写入同样的条目数组。未写 ID 时按 `card:序号` 自动编号；本次使用增加的条目按 `use:序号` 编号。
-
-扩充正式牌堆时 MUST 按牌位核对应变元数据。例如，势备篇 ♠9、♠10 雷杀带有孤军，势备篇 ♠J 雷杀只有合纵，标准版一 ♣6 雷杀两者皆无。其余雷杀使用单独的牌型并沿用雷杀基础效果；新增同名牌位时须检查其实际取得的条目，避免从牌型继承孤军。
-
-### 本次使用增添条目、给予一个忽略令牌
-
-```lua
-A.addEntry(use, { id = "skill_extra", condition = "gujun", effect = "damage" })
-A.grantIgnore(use, "providing_skill", "skill_extra") -- 仅此一项
-A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定则选择一项
-```
-
-这些接口 MUST 在本次应变准备前调用，通常在转化牌构建或 `PreCardUse` 阶段完成。准备阶段固定条目与令牌；即使默认逐项重检条件，也不得在准备完成后偷偷增加条目或无视来源。
-
-### 识别与后续技能监听
-
-- `A.isAdaptationCard(card, use?)`：识别明确拥有条件和效果的牌，包括技能赋予的虚拟牌和使用级附加条目。
-- `A.getResult(use)`：本次执行结果，含 `triggered`、`triggered_count`、逐项记录和效果次数。
-- `A.hasEffect(use, "execute_both")`：供独立卡牌的效果实现判断是否执行两种选项。
-- `A.Triggered`：每个成功条目的触发事件，数据含 `use` 和本条目的 `entry` 结果。尚未实装的刘渊、贾充等应明确区分检查“是应变牌”还是检查“本次触发应变”。
-- `A.registerEffect(name, {apply = function(room, use, entry) ... end})`：注册明确的新效果。若是增减目标，须声明 `target_change = true` 并以布尔值返回是否实际改变目标。
-
-内置效果：`draw`、`damage`、`disresponsive`、`add_target`、`remove_target`、`obtain_response_card`、`execute_both`、`ignore_times`。
-
-其中 `execute_both` 仅提供语义标记与次数：未来【逐近弃远】等独立牌的实现 MUST 主动读取并执行两个不同选项；不得把它实现为对原效果再结算一次，也不表示本轮已创建该卡牌。
-
 ## 8. ADAPT-006：单张杀的“无视次数”与状态型无次数限制
 
 ### 8.1 语义区分
@@ -136,13 +90,6 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 2. 正式确认（`fk.PreCardUse`，在记数前）MUST 锁定本条条件的结果，并在需要时设置 `use.extraUse = true`。锁定后，本次使用不再因之后的条件/座次/明置变化而改变。
 3. 应变常规结算仍在 `fk.AfterCardTargetDeclared` 按条目声明顺序进行。`ignore_times` 条目使用锁定结果，只在轮到它时发出一次成功事件；不得在选牌、锁定时或重复 `A.resolve` 时重复发事件。
 4. 其他条目按已确认的 `sequential` 规则逐项重检、独立执行，取消增减目标不计触发，并遵循“一令牌一项”规则。`ignore_times` 的自然条件不消耗令牌；显式指定该条目 ID 的令牌可在 `PreCardUse` 锁定阶段支付并取得本次豁免；未指定条目的令牌不会被提前挪用，也不会在记数后追认豁免。
-
-### 8.3 实现接口
-
-- `A.ignoreTimesCandidate(room, player, card, use?)`：只读查询，供卡的 `cardskill.can_use` 和 `target_filter` 在次数已满时判断能否选择。不会锁条件或发事件。
-- `A.lockIgnoreTimes(room, use)`：幂等；在 `fk.PreCardUse` 调用，记录 `use.extra_data.hanjin_adaptation_locked[entry.id]` 并按结果设置 `use.extraUse`。直接按规则 API 使用而未经过 `PreCardUse` 时，`A.prepare` 会补锁，但此时已晚于引擎记数，不能替代正式用牌路径。
-- `A.conditionSatisfied(room, player, condition)`：五种条件的只读判定，供 `A.snapshot` 和选牌阶段共用；`zhuzhan` 仍需在实际结算时询问，不能提前判定。
-- 卡的 `target_filter` MUST 继续执行攻击距离检查；无视次数只豁免次数，不改变距离、目标合法性或响应规则。
 
 ## 9. ADAPT-007：已确认效果、UI 文本与卡牌专属结算
 
@@ -201,20 +148,6 @@ UI MUST 按用户给定原文显示，不把内部效果标识或扩写后的规
 - 目标角色 MUST 不能使用【杀】响应此牌效果。
 - 实现与测试 MUST 同时覆盖锦囊无懈响应窗口和借刀内部询问使用杀的窗口；不能仅设置通用不可响应标记就声称两个窗口均已覆盖。
 
-### 后续实装验收要求（尚未完成）
+## 开发资料
 
-须分别覆盖：两张锦囊执行两项的先后顺序；逐近弃远距离 1 且仅一张牌的强制拆牌；增减目标确认/取消及触发记录；使用闪与打出闪的区别及所获响应牌的身份；借刀杀人的两层响应禁止；全部 16 组元数据和 UI 文本与基础牌表一致。不得将这些待新增场景描述为已有测试通过。
-
-## 10. 现有实现的验收
-
-`tests/mode_rules.lua` 覆盖国战公共规则与汉晋规则的实际挂接、回合开始明置主将/副将/全亮/取消、禁止明置，以及汉晋君主升变与原生转换的兼容。
-
-`tests/adaptation_display.lua` 覆盖手牌标记与选牌提示、同名牌位隔离、多条目、虚拟牌与材料牌、标记清理和可见范围，以及五种条件的具体触发提示、失败/取消不提示、无视令牌、真实用牌入口与重复处理。
-
-运行 `python scripts/test.py`，或单独运行 `python scripts/test.py --file tests/adaptation.lua`。
-
-覆盖虚拟牌与使用级条目识别、五种条件、强制独立结算、默认逐项重检（条件变为不满足及变为满足）、保留统一快照策略、策略在单次使用中固定、无视令牌延后使用、重入顺序保护、一令牌一条件、两来源令牌、目标选择取消与成功事件、助战同时竞速/只弃一张/非法回复过滤/无人助战/独立助战分别付费，以及真实使用最后一张手牌的空巢检测。测试只使用独立测试内容，不创建正式武将或装备。
-
-`tests/ignore_times.lua` 额外覆盖：正式牌包中恰好两张可用雷杀（♠9/♠10）、雷杀身份与雷电伤害、孤军/未确定势力/有同势力存活角色、次数已满/未满、距离仍受限、选牌与选目标无副作用、PreCardUse 锁定后状态变化不改变本次结果、锁定后本次不计数、孤军失去后下一次照常计数、咆哮/连弩只绕过上限且失去状态后计数仍保留、其它条目的逐项顺序与一令牌一项。正式牌不再是测试专用内容；测试仍不创建正式武将。
-
-尚未人工验证多人网络客户端的助战界面与取消请求展示；原生 Request 的并发与取消流程已由自动化测试调用和检查。
+接口、接线及验收依据见[实现文档](../docs/development/implementation/adaptation.md)；当前完成度与验证记录统一见[开发状态](../docs/development/status.md)。实现资料不构成新增游戏规则。

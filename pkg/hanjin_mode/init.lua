@@ -3,9 +3,17 @@ extension.extensionName = "hanjin"
 extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_mode/skills")
 
 -- Register after all extensions are installed; hanjin may load before hegemony.
+-- Do not create a second boardgame: Fk:loadPackages() iterates Fk.boardgames and
+-- postLoads every entry.  A new board entry would make the same engine postLoad
+-- twice, duplicating game modes and card types.  The existing board keeps its
+-- engine/room/page/settings; only the extension client is installed, and the
+-- client delegates every non-HanJin room or skill back to the base handlers.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Hanjin requires the hegemony extension")
   local mode = require("packages.hanjin.pkg.hanjin_mode.mode").create(base)
+  local board = assert(Fk:getBoardGame(base.name), "Hanjin requires the hegemony boardgame")
+  board.client_klass = require "packages.hanjin.pkg.hanjin_mode.client"
+  mode.game_name = base.game_name
   extension:addGameMode(mode)
   Fk:addGameMode(mode)
   Fk:loadDisabled()
@@ -13,7 +21,8 @@ end)
 
 Fk:loadTranslationTable {
   ["hanjin_wolves"] = "群狼环鼎",
-  ["help: hanjin_wolves"] = "默认关闭。开启后启用新鏖战、历史事件（含赋礼、不进则退等）及奇珍规则；关闭时使用普通鏖战。",
+  ["help: hanjin_wolves"] = "默认关闭。无论开关，鏖战均为【桃】只能当【杀】或【闪】使用或打出；"
+    .. "开启后仅额外启用历史事件（含赋礼、不进则退等）及奇珍规则。",
   ["hanjin_mode"] = "紫乔汉晋·规则",
   ["han"] = "汉",
   ["hanjin_heg_mode"] = "紫乔汉晋国战",
@@ -52,6 +61,9 @@ if not Fk.choose_general_rule.hanjin_heg_pair then
     card_filter = function(to_select, selected, data, extra_data)
       if #selected == 0 then return true end
       if #selected >= 2 then return false end
+      -- Free assignment deliberately ignores the pairing map. The server still
+      -- requires two distinct real cards, so the client only blocks a duplicate.
+      if extra_data and extra_data.freeAssign then return to_select ~= selected[1] end
       local pairing = extra_data and extra_data.pairing or {}
       local wild = extra_data and extra_data.wild or {}
       -- Wild-exclusive generals may only be the main general.
@@ -62,6 +74,7 @@ if not Fk.choose_general_rule.hanjin_heg_pair then
     end,
     feasible = function(selected, data, extra_data)
       if #selected ~= 2 then return false end
+      if extra_data and extra_data.freeAssign then return selected[1] ~= selected[2] end
       local pairing = extra_data and extra_data.pairing or {}
       local wild = extra_data and extra_data.wild or {}
       if wild[selected[2]] then return false end
@@ -77,6 +90,13 @@ if not Fk.choose_general_rule.hanjin_heg_pair then
           local partners = pairing[first]
           if first ~= second and not wild[second] and partners and table.contains(partners, second) then
             return { first, second }
+          end
+        end
+      end
+      if extra_data and extra_data.freeAssign then
+        for _, first in ipairs(generals) do
+          for _, second in ipairs(generals) do
+            if first ~= second then return { first, second } end
           end
         end
       end

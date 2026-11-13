@@ -8,8 +8,9 @@ end
 
 function M.apply(room)
   local enabled = M.enabled(room)
-  -- The upstream entry point reads this setting when entering battle royal.
-  -- Normalize it per room so the optional variant has one authoritative switch.
+  -- The upstream entry point reads this setting when deciding whether to add
+  -- the historical-event skill. 汉晋鏖战的桃用途统一由 only_as 来源提供，
+  -- 因此该设置只影响事件/奇珍等附加机制，不再影响桃的转换目标。
   room.settings._mode = table.clone(room.settings._mode or {})
   room.settings._mode.old_battle_royal = not enabled
   room.settings.old_battle_royal = not enabled

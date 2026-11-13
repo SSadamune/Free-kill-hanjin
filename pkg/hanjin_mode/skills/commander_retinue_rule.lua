@@ -154,6 +154,10 @@ Fk:addPostLoadFunc(function()
     "#hanjin_exchange_history",
     "#hanjin_ascension_rule",
     "#hanjin_adaptation_display",
+    "#hanjin_only_as_rule",
+    "#hanjin_only_as_prohibit",
+    "#hanjin_battle_royal_rule",
+    "#hanjin_use_targets_rule",
   }) do
     local dependency = Fk.skills[name]
     if dependency ~= nil then table.insertIfNeed(base.related_skills, dependency) end
