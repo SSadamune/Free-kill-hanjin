@@ -14,7 +14,7 @@ def build(output=OUTPUT):
         if not source.exists():
             raise FileNotFoundError(source)
         files.extend([source] if source.is_file() else sorted(source.rglob('*')))
-    files = [path for path in files if path.is_file()]
+    files = [path for path in files if path.is_file() and path.name != '.gitkeep']
     # Resolve paths before packaging so links cannot import development files.
     for path in files:
         relative = path.resolve().relative_to(ROOT.resolve())
