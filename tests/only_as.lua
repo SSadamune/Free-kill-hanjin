@@ -123,6 +123,23 @@ function Testhanjin_only_as:testTurnExpiryAndIndependentSources()
   for _, rec in ipairs(mark) do lu.assertNotEquals(rec.def, "tuxi") end
 end
 
+function Testhanjin_only_as:testInternalRuleTriggersAreNotPlayerChoiceEntries()
+  local count = 0
+  for _, list in pairs(room().logic.skill_table or {}) do
+    for _, s in ipairs(list) do
+      local skel = s:getSkeleton()
+      if skel ~= nil and skel.name == O.RULE_SKILL then
+        count = count + 1
+        -- Positive priorities enter the trigger-selection UI when another global
+        -- trigger shares the timing. The internal rule must run automatically.
+        lu.assertTrue(s.priority <= 0, "Internal rule trigger must not be a player choice: " .. s.name)
+        lu.assertTrue(s.mute, "Internal rule trigger must stay mute")
+      end
+    end
+  end
+  lu.assertTrue(count > 0)
+end
+
 function Testhanjin_only_as:testRealUseRequestRejectsDirectPeachAndAllowsConversion()
   local player, target = room().players[1], room().players[2]
   enterBattleRoyal()

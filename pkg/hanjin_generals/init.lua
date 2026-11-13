@@ -1,8 +1,9 @@
 -- 紫乔汉晋·标准武将包
 --
 -- 六势力各 15 张正式独立武将，另有 14 种翼从和 19 条统领来源。牌面数据全部
--- 来自 rules/standard-generals.md 的已确认表；普通技能与翼从技能目前只登记
--- 名称、原文和标签，骨架不含任何 effect，因此没有游戏效果。偏将的「限一」
+-- 来自 rules/standard-generals.md 的已确认表。大多数普通技能与全部翼从技能
+-- 仍只登记名称、原文和标签，骨架不含 effect，因此没有游戏效果；已正式实装
+-- 的例外集中登记在下方 implemented 白名单，并断言确有 effect。偏将的「限一」
 -- 只在这里登记牌面标记，每局唯一取得与限一统领能力由公共规则实现。
 local extension = Package:new("hanjin_generals")
 extension.extensionName = "hanjin"
@@ -102,6 +103,8 @@ Fk:addPostLoadFunc(function()
   local implemented = {
     ["hanjin__skill_han001_1"] = true,
     ["hanjin__skill_han001_2"] = true,
+    ["hanjin__skill_jin001_1"] = true,
+    ["hanjin__skill_jin001_2"] = true,
   }
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do

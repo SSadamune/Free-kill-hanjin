@@ -3,16 +3,17 @@ extension.extensionName = "hanjin"
 extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_mode/skills")
 
 -- Register after all extensions are installed; hanjin may load before hegemony.
+-- Do not create a second boardgame: Fk:loadPackages() iterates Fk.boardgames and
+-- postLoads every entry.  A new board entry would make the same engine postLoad
+-- twice, duplicating game modes and card types.  The existing board keeps its
+-- engine/room/page/settings; only the extension client is installed, and the
+-- client delegates every non-HanJin room or skill back to the base handlers.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Hanjin requires the hegemony extension")
   local mode = require("packages.hanjin.pkg.hanjin_mode.mode").create(base)
-  local board = Fk:getBoardGame(base.name)
-  Fk:addBoardGame {
-    name = "hanjin", engine = board.engine, room_klass = board.room_klass,
-    client_klass = require "packages.hanjin.pkg.hanjin_mode.client",
-    page = board.page, ui_settings = board.ui_settings,
-  }
-  mode.game_name = "hanjin"
+  local board = assert(Fk:getBoardGame(base.name), "Hanjin requires the hegemony boardgame")
+  board.client_klass = require "packages.hanjin.pkg.hanjin_mode.client"
+  mode.game_name = base.game_name
   extension:addGameMode(mode)
   Fk:addGameMode(mode)
   Fk:loadDisabled()

@@ -33,6 +33,7 @@ end
 -- 执行同一幂等操作，避免不同引擎版本只触发其中一个时机。
 skill:addEffect(fk.GamePrepared, {
   global = true,
+  priority = 0,
   mute = true,
   can_refresh = function(self, event, target, player)
     return player.seat == 1 and inHanjin(player)
@@ -43,6 +44,7 @@ skill:addEffect(fk.GamePrepared, {
 })
 skill:addEffect(fk.GameStart, {
   global = true,
+  priority = 0,
   mute = true,
   can_refresh = function(self, event, target, player)
     return player.seat == 1 and inHanjin(player)
@@ -57,7 +59,7 @@ skill:addEffect(fk.AskForCardUse, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_trigger = function(self, event, target, player, data)
     return target == player and inHanjin(player) and data ~= nil
   end,
@@ -70,7 +72,7 @@ skill:addEffect(fk.AskForCardResponse, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_trigger = function(self, event, target, player, data)
     return target == player and inHanjin(player) and data ~= nil
   end,
@@ -115,6 +117,7 @@ skill:addEffect(fk.AfterAskForCardResponse, {
 -- 移动后立即撤销临时取牌授权，即使牌之后回到原牌区也不能复活旧授权。
 skill:addEffect(fk.AfterCardsMove, {
   global = true,
+  priority = 0,
   mute = true,
   can_refresh = function(self, event, target, player)
     return player.seat == 1 and inHanjin(player)
@@ -133,7 +136,7 @@ skill:addEffect(fk.PreCardUse, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_trigger = function(self, event, target, player, data)
     return target == player and inHanjin(player) and data ~= nil and data.card ~= nil
   end,
@@ -152,7 +155,7 @@ skill:addEffect(fk.PreCardRespond, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_trigger = function(self, event, target, player, data)
     return target == player and inHanjin(player) and data ~= nil and data.card ~= nil
   end,
@@ -174,7 +177,7 @@ skill:addEffect(fk.TurnStart, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_trigger = function(self, event, target, player)
     return target == player and inHanjin(player)
   end,
@@ -187,7 +190,7 @@ skill:addEffect(fk.RoundStart, {
   global = true,
   mute = true,
   is_delay_effect = true,
-  priority = 10,
+  priority = 0,
   can_refresh = function(self, event, target, player)
     return player.seat == 1 and inHanjin(player)
   end,
@@ -202,6 +205,7 @@ end
 
 skill:addEffect(fk.GeneralShown, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -209,6 +213,7 @@ skill:addEffect(fk.GeneralShown, {
 })
 skill:addEffect(fk.GeneralHidden, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -216,6 +221,7 @@ skill:addEffect(fk.GeneralHidden, {
 })
 skill:addEffect(H.GeneralRemoved, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -223,6 +229,7 @@ skill:addEffect(H.GeneralRemoved, {
 })
 skill:addEffect(fk.AfterPropertyChange, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -230,6 +237,7 @@ skill:addEffect(fk.AfterPropertyChange, {
 })
 skill:addEffect(fk.Death, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -237,6 +245,7 @@ skill:addEffect(fk.Death, {
 })
 skill:addEffect(fk.EventLoseSkill, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,
@@ -244,6 +253,7 @@ skill:addEffect(fk.EventLoseSkill, {
 })
 skill:addEffect(fk.TurnEnd, {
   global = true,
+  priority = 0,
   mute = true,
   can_trigger = function(self, event, target, player) return target == player and inHanjin(player) end,
   on_cost = Util.TrueFunc,

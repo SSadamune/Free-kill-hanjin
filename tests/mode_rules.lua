@@ -68,6 +68,25 @@ function Testmode_rules:testModeRuleLoadsNationalWarRuleAndExchangeHistory()
   lu.assertEquals(statusCount, 1)
 end
 
+function Testmode_rules:testBoardGameRegistrationUsesOneSharedEngine()
+  local base = Fk:getBoardGame("new_heg_mode")
+  local hanjin = Fk:getBoardGame("hanjin_heg_mode")
+  -- The extension must not add a second boardgame that reuses the same Engine:
+  -- Fk:loadPackages() postLoads every board entry, which would run the Engine's
+  -- postLoad twice and duplicate game modes/card types.
+  lu.assertIs(hanjin, base)
+  lu.assertIs(hanjin.engine, Fk)
+  lu.assertNil(Fk.boardgames.hanjin)
+  lu.assertIs(hanjin.client_klass, require "packages.hanjin.pkg.hanjin_mode.client")
+  lu.assertEquals(Fk.game_modes.hanjin_heg_mode.game_name,
+    Fk.game_modes.new_heg_mode.game_name)
+  local shared = 0
+  for _, board in pairs(Fk.boardgames) do
+    if board.engine == Fk then shared = shared + 1 end
+  end
+  lu.assertEquals(shared, 1)
+end
+
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealMain()
   local p = room().players[1]
   hidden(p, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")

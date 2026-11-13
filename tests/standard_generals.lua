@@ -15,6 +15,8 @@ local SIX = { "han", "wei", "shu", "wu", "qun", "jin" }
 local IMPLEMENTED = {
   ["hanjin__skill_han001_1"] = true,
   ["hanjin__skill_han001_2"] = true,
+  ["hanjin__skill_jin001_1"] = true,
+  ["hanjin__skill_jin001_2"] = true,
 }
 
 local function formalOnlyDisabledPacks()
@@ -142,6 +144,26 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
     lu.assertEquals(#Fk.skills[data.skill.id].related_skills, 0)
   end
   lu.assertEquals(retinueTotal, 14)
+end
+
+function Teststandard_generals:testImplementedExceptionListMatchesRegisteredEffects()
+  local names = {}
+  for name in pairs(IMPLEMENTED) do table.insert(names, name) end
+  table.sort(names)
+  lu.assertEquals(names, {
+    "hanjin__skill_han001_1",
+    "hanjin__skill_han001_2",
+    "hanjin__skill_jin001_1",
+    "hanjin__skill_jin001_2",
+  })
+  for _, name in ipairs(names) do
+    local skel = assert(Fk.skill_skels[name], "Missing implemented skeleton " .. name)
+    lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. name)
+    lu.assertTrue(#skel.tests > 0, "Implemented skill needs its room-guarded addTest: " .. name)
+  end
+  local jin = assert(Fk.generals["hanjin__jin001"])
+  lu.assertTrue(table.contains(jin:getSkillNameList(), "hanjin__skill_jin001_1"))
+  lu.assertTrue(table.contains(jin:getSkillNameList(), "hanjin__skill_jin001_2"))
 end
 
 function Teststandard_generals:testHalfHpAndMainDeputyAdjustments()

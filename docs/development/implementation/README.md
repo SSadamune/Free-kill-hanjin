@@ -14,6 +14,7 @@
 - [第二君主：实现与验证](second-lord.md)
 - [野心家效忠：实现与验证](wild-allegiance.md)
 - [HAN001 刘协：天命、密诏结算与测试草案：实现与验证](generals/han001-liuxie.md)
+- [JIN001 司马炎：垂统、兴图实装与验证](generals/jin001-simayan.md)
 - [紫乔汉晋国战：应变规范：实现与验证](adaptation.md)
 - [紫乔汉晋国战：基础牌表：实现与验证](card-deck.md)
 

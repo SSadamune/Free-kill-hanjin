@@ -1670,20 +1670,31 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
     -- 技能严格只允许一名收牌者；汉晋客户端将新点击解释为替换。
     lu.assertTrue(skill:targetFilter(me, first, {}, ids))
     lu.assertFalse(skill:targetFilter(me, second, { first }, ids))
+
+    -- 只登记一个共享 Engine 的 boardgame；汉晋与上游国战指向同一注册。
     local base = Fk:getBoardGame("new_heg_mode")
     local board = Fk:getBoardGame("hanjin_heg_mode")
-    lu.assertNotEquals(board.client_klass, base.client_klass)
-    lu.assertEquals(board.room_klass, base.room_klass)
-    lu.assertEquals(board.page, base.page)
-    local client = board.client_klass:new(ClientInstance.client)
-    for _, handlerClass in ipairs({ client.request_handlers.PlayCard,
-      client.request_handlers.AskForUseActiveSkill }) do
+    lu.assertIs(board, base)
+    lu.assertIs(board.engine, Fk)
+    lu.assertIs(board.client_klass, require "packages.hanjin.pkg.hanjin_mode.client")
+    lu.assertNil(Fk.boardgames.hanjin)
+
+    local function handlerFor(handlerClass, mode)
+      room.settings.gameMode = mode
       local handler = handlerClass:new(me, { MZ, "", true, {} })
       handler.skill_name = MZ
       handler:setup()
       for _, id in ipairs(ids) do
         handler:update("CardItem", id, "click", { selected = true })
       end
+      return handler
+    end
+
+    local client = board.client_klass:new(ClientInstance.client)
+    for _, handlerClass in ipairs({ client.request_handlers.PlayCard,
+      client.request_handlers.AskForUseActiveSkill }) do
+      -- 汉晋房间：点击新收牌者替换旧收牌者。
+      local handler = handlerFor(handlerClass, "hanjin_heg_mode")
       handler:update("Photo", first.id, "click", { selected = true })
       lu.assertEquals(handler.selected_targets, { first.id })
       lu.assertTrue(handler:feasible())
@@ -1701,7 +1712,15 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
       lu.assertEquals(handler.selected_targets, {})
       lu.assertFalse(handler:feasible())
       handler:_finish()
+
+      -- 普通上游国战沿用原请求类：第二次点击是追加，不是替换。
+      local normal = handlerFor(handlerClass, "new_heg_mode")
+      normal:update("Photo", first.id, "click", { selected = true })
+      normal:update("Photo", second.id, "click", { selected = true })
+      lu.assertEquals(normal.selected_targets, { first.id, second.id })
+      normal:_finish()
     end
+    room.settings.gameMode = "hanjin_heg_mode"
   end)
 end
 
