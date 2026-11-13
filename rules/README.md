@@ -29,9 +29,14 @@
 - [HAN016A 刘宠结算约定](generals/han016a-liuchong.md)：劲弩排除阶段内零用牌、威屯先选同一组目标。
 - [HAN017 刘繇结算约定](generals/han017-liuyao.md)：戡难按每名角色限次；逆拒每次没赢摸牌，点数增益累计且封顶 13。
 - [JIN001 司马炎结算约定](generals/jin001-simayan.md)：垂统的濒死装备移动与兴图的回合用牌检查、选项及转化用桃。
+- [WEI002 司马懿结算约定](generals/wei002-simayi.md)：应期的配将体力贡献、开局判定及多势力／客将依据。
+- [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
+- [WEI016 乐进结算约定](generals/wei016-yuejin.md)：骁果弃置基本牌为发动消耗，不能零弃牌发动。
+- [JIN009 司马懿结算约定](generals/jin009-simayi.md)：引用同文应期的公共裁定。
 
 ## 阅读与维护
 
+- 外部[《规则向FAQ文件》](../docs/规则向FAQ文件.md)与 `docs/石激桑武将列表.json` 均可作为汉晋原创规则参考。FAQ 保留来源，不随项目维护更新；采用的规则及已确认差异在本目录另行记录。
 - 具体武将按编号集中在 `generals/`，引用公共规范，不重复另定通则。现有标准武将表保留卡面描述；规范描述的精确抽象写法见[编写指南](../docs/development/normalized-descriptions.md)。
 - 《汉晋规则集》采用外部基准的术语和结算结构，根据汉晋设计独立编写正式条文；本目录提供依据，不代替该成果。
 - 接口、接线、测试方法、故障案例与开发完成度统一查阅[开发指南](../docs/development/README.md)及[状态表](../docs/development/status.md)。本索引不再重复记录测试数量或“已实现”等动态说明。

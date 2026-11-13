@@ -1,6 +1,6 @@
 # HAN004 张让：滔乱结算约定
 
-卡面原文见[标准武将表](../standard-generals.md)，资料来源为 [`docs/heroes.json`](../../docs/heroes.json)。本文记录项目裁定，不表示已经实装或完成正式规范描述。
+卡面原文见[标准武将表](../standard-generals.md)，资料来源为 [`docs/石激桑武将列表.json`](../../docs/石激桑武将列表.json)。本文记录项目裁定，不表示已经实装或完成正式规范描述。
 
 ## 回合末后续效果每回合一次
 
