@@ -106,6 +106,11 @@ Fk:addPostLoadFunc(function()
     ["hanjin__skill_jin001_1"] = true,
     ["hanjin__skill_jin001_2"] = true,
   }
+  --- 新的正式技能在自身骨架上显式赋 `hanjinImplemented = true`；
+  --- 旧白名单继续保留，避免破坏既有实装登记。两者都必须确有 effect。
+  local function isImplemented(skel)
+    return implemented[skel.name] == true or skel.hanjinImplemented == true
+  end
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do
     local general = assert(Fk.generals[data.id], "Missing formal general: " .. data.id)
@@ -139,7 +144,7 @@ Fk:addPostLoadFunc(function()
     end
     for _, skill in ipairs(data.skills) do
       local skel = assert(Fk.skill_skels[skill.id], "Missing skill skeleton: " .. skill.id)
-      if implemented[skill.id] then
+      if isImplemented(skel) then
         assert(#skel.effects > 0, "Implemented skill must have an effect: " .. skill.id)
       else
         assert(#skel.effects == 0, "Formal display skill must have no effect: " .. skill.id)
@@ -153,7 +158,11 @@ Fk:addPostLoadFunc(function()
     local general = assert(Fk.generals[data.id], "Missing retinue general: " .. data.id)
     assert(general.hidden, "Retinue must be hidden: " .. data.id)
     local skill = assert(Fk.skill_skels[data.skill.id], "Missing retinue skill: " .. data.skill.id)
-    assert(#skill.effects == 0, "Retinue display skill must have no effect: " .. data.skill.id)
+    if skill.hanjinImplemented == true then
+      assert(#skill.effects > 0, "Implemented retinue skill must have an effect: " .. data.skill.id)
+    else
+      assert(#skill.effects == 0, "Retinue display skill must have no effect: " .. data.skill.id)
+    end
     retinues = retinues + 1
     retinue_skills = retinue_skills + 1
   end

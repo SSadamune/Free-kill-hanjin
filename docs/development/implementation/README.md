@@ -13,9 +13,12 @@
 - [“X 只能当 Y 使用／打出”：实现与验证](only-as.md)
 - [第二君主：实现与验证](second-lord.md)
 - [野心家效忠：实现与验证](wild-allegiance.md)
-- [HAN001 刘协：天命、密诏结算与测试草案：实现与验证](generals/han001-liuxie.md)
-- [JIN001 司马炎：垂统、兴图实装与验证](generals/jin001-simayan.md)
 - [紫乔汉晋国战：应变规范：实现与验证](adaptation.md)
 - [紫乔汉晋国战：基础牌表：实现与验证](card-deck.md)
+
+## 武将与翼从
+
+- [汉势力标准包：全 15 将 25 技能及穆顺、西园军实现与验证](generals/han-standard.md)：全包入口，汇总逐将实现说明、专项测试、发布接线与验收边界；刘协等武将的详细记录由此进入。
+- [JIN001 司马炎：垂统、兴图实装与验证](generals/jin001-simayan.md)
 
 新入口须区分只选择、返回待执行数据和已执行，核对当前事件数据的类型及客户端可见信息。上游接口以 `dependencies.lock.json` 锁定版本的本地源码核实，外部规则资料中的 API 引用仅供查找。

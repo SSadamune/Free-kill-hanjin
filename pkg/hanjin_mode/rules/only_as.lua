@@ -658,12 +658,37 @@ function M.availableTargets(room, player, cardId, mode)
   return targets
 end
 
-local function canUseInCurrent(player, card)
-  if Fk.currentResponsePattern ~= nil and ClientInstance ~= nil
-    and ClientInstance.current_request_handler == nil then
-    return card:matchVSPattern(Fk.currentResponsePattern) and not player:prohibitUse(card)
+-- “使用”窗口有两种：出牌阶段的空闲使用（PlayCard）与请求型使用
+-- （AskForUseCard，如“被杀时使用【闪】”）。请求型使用必须先满足请求
+-- pattern；其中【闪】/【无懈】等被动牌没有主动 canUse，须按引擎
+-- ReqUseCard:cardFeasible 与 handleUseCardReply 的被动牌例外放行。
+local function passiveUsableInRequest(card, pattern, extra_data)
+  if not card.is_passive or pattern == nil then return false end
+  if not card:matchVSPattern(pattern) then return false end
+  return not (extra_data or {}).not_passive
+end
+
+-- 当前请求 pattern。客户端读公开的 Fk.currentResponsePattern；服务端读本房间
+-- 自己的请求栈，避免把客户端请求状态误当成服务端窗口。
+local function currentPattern(player)
+  local room = player and player.room
+  if room ~= nil and M.isServer(room) then
+    local request = M.currentRequest(room)
+    return request and request.pattern or nil
   end
-  return player:canUseOrResponseInCurrent(card)
+  return Fk.currentResponsePattern
+end
+
+local function canUseNow(player, card, extra_data)
+  local pattern = currentPattern(player)
+  if pattern ~= nil and not card:matchVSPattern(pattern) then return false end
+  if player:prohibitUse(card) then return false end
+  if card.is_passive then
+    -- 没有请求 pattern 时被动牌不能主动“使用”。
+    return passiveUsableInRequest(card, pattern, extra_data)
+  end
+  if not card:getSkill(player):canUse(player, card, extra_data) then return false end
+  return #card:getAvailableTargets(player, extra_data) > 0
 end
 
 --- 构造转化牌。实体牌只作为子卡，牌名保持不变。
@@ -688,17 +713,16 @@ end
 function M.canUseInCurrent(player, target, cardId, mode, extra_data, skillName)
   local card = M.buildCard(player, cardId, target, skillName)
   if card == nil then return false end
+  mode = mode or M.currentMode(player)
   if mode == "response" then
-    if Fk.currentResponsePattern ~= nil then
-      return card:matchVSPattern(Fk.currentResponsePattern) and not player:prohibitResponse(card)
+    local pattern = currentPattern(player)
+    if pattern == nil then
+      -- 没有请求 pattern 时不能证明该响应窗口合法。
+      return false
     end
-    -- 没有请求 pattern 时不能证明该响应窗口合法。
-    return false
+    return card:matchVSPattern(pattern) and not player:prohibitResponse(card)
   end
-  if card.is_passive then return false end
-  return not player:prohibitUse(card)
-    and card:getSkill(player):canUse(player, card, extra_data)
-    and #card:getAvailableTargets(player, extra_data) > 0
+  return canUseNow(player, card, extra_data)
 end
 
 --- 受限入口使用显式请求 pattern 判断目标是否属于当前窗口。
@@ -709,9 +733,11 @@ function M.targetAllowedInRequest(player, target, cardId, mode, pattern, extra_d
   if mode == "response" then
     return not player:prohibitResponse(card)
   end
-  if card.is_passive then return false end
-  return not player:prohibitUse(card)
-    and card:getSkill(player):canUse(player, card, extra_data)
+  if player:prohibitUse(card) then return false end
+  if card.is_passive then
+    return passiveUsableInRequest(card, pattern, extra_data)
+  end
+  return card:getSkill(player):canUse(player, card, extra_data)
     and #card:getAvailableTargets(player, extra_data) > 0
 end
 
@@ -855,7 +881,12 @@ function M.validateUse(room, player, use, opts)
   if mode == "use" then
     if player:prohibitUse(card) then return false, "prohibit-use" end
     local stage = opts.stage or "selection"
-    if policyRecord ~= nil then
+    if passiveUsableInRequest(card, pattern, extra_data) then
+      -- 【闪】/【无懈】以“使用”响应具体牌时（如被杀询问使用【闪】）没有角色
+      -- 目标，不能套用主动使用所需的 canUse/可选目标条件；但仍须请求 pattern
+      -- 匹配、未被禁止使用且请求未声明 not_passive。
+      if use.tos ~= nil and #use.tos > 0 then return false, "passive-targets" end
+    elseif policyRecord ~= nil then
       local lib = cardUseTargets()
       local ok, reason = lib.validateUse(room, player, use, policyRecord, nil,
         { require_trusted = not trustedActive, trusted_active = trustedActive,
@@ -1151,7 +1182,11 @@ function M.addViewAsEffect(skill, definition, prompt)
     handly_pile = true,
     interaction = function(self, player)
       local choices = M.interactionChoices(player, definition)
-      if #choices > 0 then return UI.ComboBox { choices = choices } end
+      -- 只列出当前窗口真正合法的用途；只剩一个时明确作为默认项，避免沿用
+      -- 上一个请求的旧选择。
+      if #choices > 0 then
+        return UI.ComboBox { choices = choices, default = choices[1] }
+      end
     end,
     card_filter = function(self, player, id, selected)
       local target = self.interaction and self.interaction.data

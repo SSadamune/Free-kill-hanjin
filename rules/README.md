@@ -23,6 +23,11 @@
 - [“只能当”描述约定](only-as.md)：转换用途、权限、牌名与多来源共存。
 - [鏖战状态](battle-royal.md)：实体桃的使用限制与转换用途。
 - [HAN001 刘协裁定草案](generals/han001-liuxie.md)：六项确认裁定及仍标为建议的内容。
+- [HAN004 张让结算约定](generals/han004-zhangrang.md)：同一回合多次滔乱，回合末后续效果统一结算一次，候选取本回合指定过的角色并集。
+- [HAN007 王荣结算约定](generals/han007-wangrong.md)：追德提供敏思额外发动；次数原则引用通用约定。
+- [HAN008 伏皇后结算约定](generals/han008-fuhuanghou.md)：求援仅调整牌效果的结算先后。
+- [HAN016A 刘宠结算约定](generals/han016a-liuchong.md)：劲弩排除阶段内零用牌、威屯先选同一组目标。
+- [HAN017 刘繇结算约定](generals/han017-liuyao.md)：戡难按每名角色限次；逆拒每次没赢摸牌，点数增益累计且封顶 13。
 - [JIN001 司马炎结算约定](generals/jin001-simayan.md)：垂统的濒死装备移动与兴图的回合用牌检查、选项及转化用桃。
 
 ## 阅读与维护
