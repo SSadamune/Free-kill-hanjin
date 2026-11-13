@@ -83,7 +83,7 @@ python scripts/build_release.py
 
 构建脚本从项目中的 `init.lua`、`pkg/`、`image/`、`audio/` 打包，排除开发脚本、测试、原素材和 `.dev/` 环境，确保本体适配与用户安装包隔离。
 
-默认武将及卡牌图片按引擎固定目录和程序 ID 保存，例如 `image/generals/hanjin__han001.jpg`；构建与开发同步按原相对路径复制，不做图片改名。额外插画的皮肤接口及维护约定见[图片资源保存规范](docs/development/assets.md)。
+默认武将及卡牌图片按引擎固定目录和程序 ID 保存，例如 `image/generals/hanjin__han001.jpg`；构建与开发同步按原相对路径复制，不做图片改名。客将附加插画的保存与读取约定见[图片资源保存规范](docs/development/assets.md)。
 
 ## 日常开发与测试
 
