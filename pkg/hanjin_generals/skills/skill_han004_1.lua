@@ -1,7 +1,7 @@
 -- HAN004 张让 · 滔乱
 --
--- 规则依据：rules/generals/han004-zhangrang.md（暂行：每次发动分别产生一次
--- 回合结束结算，候选仍取本回合以此法使用牌指定过的角色）。
+-- 规则依据：rules/generals/han004-zhangrang.md（同一回合无论发动几次，回合结束只
+-- 进行一次结算；候选取本回合以此法使用牌指定过的角色的并集）。
 --
 -- 统一使用 ViewAs：正常出牌阶段和合法的「使用」窗口（含使用闪/无懈）都走
 -- 同一入口；不接纯打出。view_as 在仍暗置时记录来源武将；room:useSkill 在
@@ -83,7 +83,8 @@ local function ensureDelaySkill(player)
     })
 
     -- 每个回合结束扫描一次所有仍持有发动记录的玩家；用房间 tag 防止
-    -- 对每名候选重复触发，结算前清空记录保证每次只结算一次。结算必须自动
+    -- 对每名候选重复触发。每名角色至多结算一次（发动次数不决定轮数），
+    -- 结算前清空待结算记录，同一次回合结束不会重复收牌。结算必须自动
     -- 发生，用 refresh 而非需要询问发动的 trigger；房间级同名触发器也无需
     -- 再登记 Fk.skills。
     skel:addEffect(fk.TurnEnd, {
@@ -100,13 +101,11 @@ local function ensureDelaySkill(player)
         local room = player.room
         room:setTag(SETTLING_TAG, true)
         for _, p in ipairs(room.players) do
-          local count = p:getMark(ACT_MARK)
-          if count > 0 then
+          -- 同一角色同一回合至多结算一次：发动次数只用于判断是否有待结算记录，
+          -- 不决定结算轮数；结算前清空记录，避免同一次回合结束重复收牌。
+          if p:getMark(ACT_MARK) > 0 then
             room:setPlayerMark(p, ACT_MARK, 0)
-            for _ = 1, count do
-              if p.dead then break end
-              settle(room, p)
-            end
+            if not p.dead then settle(room, p) end
           end
         end
         room:setTag(SETTLING_TAG, false)

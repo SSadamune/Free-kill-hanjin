@@ -4,25 +4,27 @@
 
 ## 1. 范围与总览
 
-| 编号 | 武将 | 技能 | 运行时 id |
-| --- | --- | --- | --- |
-| HAN001 | 刘协 | 天命、密诏 | `hanjin__han001` |
-| HAN002 | 刘辩 | 诗怨、毒逝 | `hanjin__han002` |
-| HAN004 | 张让 | 滔乱 | `hanjin__han004` |
-| HAN005 | 何进 | 谋诛、构难 | `hanjin__han005` |
-| HAN006 | 王允 | 连计、定著 | `hanjin__han006` |
-| HAN007 | 王荣 | 敏思、追德 | `hanjin__han007` |
-| HAN008 | 伏皇后 | 惴恐、求援 | `hanjin__han008` |
-| HAN009 | 伏完 | 谋溃 | `hanjin__han009` |
-| HAN010 | 董承 | 承诏 | `hanjin__han010` |
-| HAN011 | 唐姬 | 哀舞、诀别 | `hanjin__han011` |
-| HAN012 | 蔡邕 | 铸典、博通 | `hanjin__han012` |
-| HAN013 | 皇甫嵩 | 奋钺 | `hanjin__han013` |
-| HAN016A | 刘宠 | 劲弩、威屯 | `hanjin__han016` |
-| HAN017 | 刘繇 | 戡难、逆拒 | `hanjin__han017` |
-| HAN018 | 蹇硕 | 集兵 | `hanjin__han018` |
+| 编号 | 武将 | 技能 | 运行时 id | 实现详情 | 专项测试 |
+| --- | --- | --- | --- | --- | --- |
+| HAN001 | 刘协 | 天命、密诏 | `hanjin__han001` | [专项说明](han001-liuxie.md) | [han001_liuxie](../../../../tests/han001_liuxie.lua) |
+| HAN002 | 刘辩 | 诗怨、毒逝 | `hanjin__han002` | [诗怨源码](../../../../pkg/hanjin_generals/skills/skill_han002_1.lua)、[毒逝源码](../../../../pkg/hanjin_generals/skills/skill_han002_2.lua) | [han_standard](../../../../tests/han_standard.lua) |
+| HAN004 | 张让 | 滔乱 | `hanjin__han004` | [专项说明](han004-zhangrang.md) | [han004_zhangrang](../../../../tests/han004_zhangrang.lua) |
+| HAN005 | 何进 | 谋诛、构难 | `hanjin__han005` | [专项说明](han005-hejin.md) | [han005_hejin](../../../../tests/han005_hejin.lua) |
+| HAN006 | 王允 | 连计、定著 | `hanjin__han006` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN007 | 王荣 | 敏思、追德 | `hanjin__han007` | [专项说明](han007-wangrong.md) | [han007_wangrong](../../../../tests/han007_wangrong.lua) |
+| HAN008 | 伏皇后 | 惴恐、求援 | `hanjin__han008` | [专项说明](han008-fuhuanghou.md) | [han008_fuhuanghou](../../../../tests/han008_fuhuanghou.lua) |
+| HAN009 | 伏完 | 谋溃 | `hanjin__han009` | [专项说明](han009-fuwan.md) | [han009_fuwan](../../../../tests/han009_fuwan.lua) |
+| HAN010 | 董承 | 承诏 | `hanjin__han010` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN011 | 唐姬 | 哀舞、诀别 | `hanjin__han011` | [专项说明](han011-tangji.md) | [han011_tangji](../../../../tests/han011_tangji.lua) |
+| HAN012 | 蔡邕 | 铸典、博通 | `hanjin__han012` | [专项说明](han012-caiyong.md) | [han012_caiyong](../../../../tests/han012_caiyong.lua) |
+| HAN013 | 皇甫嵩 | 奋钺 | `hanjin__han013` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN016A | 刘宠 | 劲弩、威屯 | `hanjin__han016` | [专项说明](han016a-liuchong.md) | [han016_liuchong](../../../../tests/han016_liuchong.lua) |
+| HAN017 | 刘繇 | 戡难、逆拒 | `hanjin__han017` | [专项说明](han017-liuyao.md) | [han017_liuyao](../../../../tests/han017_liuyao.lua) |
+| HAN018 | 蹇硕 | 集兵 | `hanjin__han018` | [集兵源码](../../../../pkg/hanjin_generals/skills/skill_han018_1.lua) | [han_standard](../../../../tests/han_standard.lua) |
 
-汉关联翼从 2 名：穆顺（`hanjin__retinue_mushun`）、西园军（`hanjin__retinue_xiyuanjun`）。HAN016A 的牌面编号保留 `A`，运行时 id 仍为 `hanjin__han016`，避免资源和已接线的汉区数据改名。
+本页为全包入口；专项页面保留各将接口与验收依据。刘辩、蹇硕的实现与核心行为测试分别直接链接至源码和共享套件；王允、董承、皇甫嵩共用拼点组说明及测试。所有上述测试均纳入默认国战套件。
+
+汉关联翼从 2 名：穆顺（`hanjin__retinue_mushun`）、西园军（`hanjin__retinue_xiyuanjun`），见[翼从实现说明](han-retinues.md)及[专项测试](../../../../tests/han_retinues.lua)。HAN016A 的牌面编号保留 `A`，运行时 id 仍为 `hanjin__han016`，避免资源和已接线的汉区数据改名。
 
 ## 2. 接线
 
@@ -48,23 +50,16 @@
 
 ## 4. 验证结果
 
-默认全量（本轮一次）：
+最新代码验证已包含鏖战杀／闪选择修复及滔乱每回合一次的裁定：同一角色同回合多次发动滔乱，回合末后续效果只结算一次，候选取本回合指定目标并集。历次验证记录见[开发状态](../../status.md)。
+
+最近一次实际执行的默认全量：
 
 ```text
 python scripts/test.py --timeout 120
-Ran 564 tests in 82.006 seconds, 564 successes, 0 failures
+Ran 567 tests in 83.184 seconds, 567 successes, 0 failures
 ```
 
-定向复核（本轮实际执行）：
-
-| 套件 | 结果 |
-| --- | --- |
-| `tests/han008_fuhuanghou.lua` | 3 用例，3 成功 |
-| `tests/han009_fuwan.lua` | 3 用例，3 成功 |
-| `tests/han016_liuchong.lua` | 4 用例，4 成功 |
-| `tests/han_retinues.lua` | 2 用例，2 成功 |
-
-交接已确认通过、并由本次默认全量一并覆盖的套件：`han_standard` 8、`han_standard_pindian` 12、`han007_wangrong` 5、`han012_caiyong` 4、`han011_tangji` 4、`han017_liuyao` 4、`standard_generals` 10、`han004_zhangrang` 3、`han005_hejin` 3。
+滔乱专项 `tests/han004_zhangrang.lua` 最近一次定向验证为 4 项全部通过，包含同回合两次发动仅一次后续结算及候选合并。其余武将的测试入口见上表，均由这次默认全量覆盖；刘协详细验收依据见其专项页面，不将服务端自动化通过等同于客户端人工验收完成。
 
 安装包：
 
