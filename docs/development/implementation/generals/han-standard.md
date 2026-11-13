@@ -1,6 +1,6 @@
 # 汉势力标准包：实现与验证
 
-本页记录汉势力标准 15 将 25 技能与 2 名汉关联翼从的实装接线、数据同步和验证结果，不替代规则裁定。规则表见[标准武将表](../../../../rules/standard-generals.md)，卡面资料来源为 [`docs/heroes.json`](../../../../docs/heroes.json)；逐将裁定以 `rules/generals/` 的已确认文件为准。
+本页记录汉势力标准 15 将 25 技能与 2 名汉关联翼从的实装接线、数据同步和验证结果，不替代规则裁定。规则表见[标准武将表](../../../../rules/standard-generals.md)，卡面资料来源为 [`docs/石激桑武将列表.json`](../../../../docs/石激桑武将列表.json)；逐将裁定以 `rules/generals/` 的已确认文件为准。
 
 ## 1. 范围与总览
 
@@ -29,15 +29,15 @@
 ## 2. 接线
 
 - `pkg/hanjin_generals/init.lua`：注册 90 名正式武将、14 名翼从、19 条统领来源；按 `data/standard.lua` 生成称号、技能名、技能原文翻译。
-- `pkg/hanjin_generals/data/standard.lua`：六势力牌面数据。汉区本轮的 25 条技能原文与 15 个主称号已按 `rules/standard-generals.md` 汉区及 `docs/heroes.json` 同步；`M.skillCount` 保持 160，不因汉区 25 条而改动。
+- `pkg/hanjin_generals/data/standard.lua`：六势力牌面数据。汉区本轮的 25 条技能原文与 15 个主称号已按 `rules/standard-generals.md` 汉区及 `docs/石激桑武将列表.json` 同步；`M.skillCount` 保持 160，不因汉区 25 条而改动。
 - `pkg/hanjin_generals/skills/`：汉区 25 个技能骨架均已实装（HAN001 走 `init.lua` 既有白名单，其余通过骨架的 `hanjinImplemented = true` 登记）；其他势力未实装条目仍为零 effect 展示壳。翼从穆顺、西园军同样带 `hanjinImplemented`。
 - `pkg/hanjin_generals/util/`：汉区共享的 `han_history.lua`、`minsi.lua`。
 - `pkg/hanjin_mode/client.lua` 及 `pkg/hanjin_mode/rules/`：汉区客户端接线与公共用牌/目标/统领规则；发布包需包含这些文件，不能只靠开发本体补丁。
 
 ## 3. 数据同步与本轮修正
 
-- 15 个汉区主称号按 `docs/heroes.json` 的 `titles[0]` 同步；多称号武将（董承、蔡邕）主称号只取首项，第二称号不拼进主称号。
-- 25 条技能原文已逐条与 `docs/heroes.json` 比对为零差异；本轮修正 3 条旧文本：
+- 15 个汉区主称号按 `docs/石激桑武将列表.json` 的 `titles[0]` 同步；多称号武将（董承、蔡邕）主称号只取首项，第二称号不拼进主称号。
+- 25 条技能原文已逐条与 `docs/石激桑武将列表.json` 比对为零差异；本轮修正 3 条旧文本：
   - 滔乱：“本回合以此法使用的牌指定过的” → “本回合以此法使用牌指定过的”；
   - 定著：“副将技（阴阳鱼-1）” → “副将技（☯️-1）”；
   - 集兵：“造成伤害值小于X” → “造成伤害数小于X”。

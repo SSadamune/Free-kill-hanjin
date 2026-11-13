@@ -37,7 +37,7 @@
 - **测试待集成执行**：按协作安排，本轮未启动 FreeKill、未运行 `scripts/test.py`，也未部署共享运行时；上述用例尚未产生命令输出，不宣称验收完成。
 - 定向命令（由串行组执行）：`python scripts/test.py --file tests/han007_wangrong.lua --timeout 120`。
 - 套件尚未加入 `tests/all.lua`（本轮禁止修改该文件）；进入默认国战套件需另行安排。
-- 既有空壳 `skill_han007_1.lua`、`skill_han007_2.lua` 已由本轮实现覆盖；`data/`、`init.lua`、`rules/`、`rulebook/` 与 `docs/heroes.json` 未改。
+- 既有空壳 `skill_han007_1.lua`、`skill_han007_2.lua` 已由本轮实现覆盖；`data/`、`init.lua`、`rules/`、`rulebook/` 与 `docs/石激桑武将列表.json` 未改。
 
 ## 5. 未覆盖与风险
 

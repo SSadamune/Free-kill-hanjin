@@ -1,10 +1,12 @@
 -- 紫乔汉晋·标准武将包
 --
 -- 六势力各 15 张正式独立武将，另有 14 种翼从和 19 条统领来源。牌面数据全部
--- 来自 rules/standard-generals.md 的已确认表。大多数普通技能与全部翼从技能
--- 仍只登记名称、原文和标签，骨架不含 effect，因此没有游戏效果；已正式实装
--- 的例外集中登记在下方 implemented 白名单，并断言确有 effect。偏将的「限一」
--- 只在这里登记牌面标记，每局唯一取得与限一统领能力由公共规则实现。
+-- 来自 rules/standard-generals.md 的已确认表。魏区 25 个技能与并州狼骑/虎卫军/
+-- 牛金 3 个魏关联翼从技能已正式实装；汉区标准技能及 JIN001 等也已有实现。
+-- 其余势力尚未实装的条目仍只登记名称、原文和标签，骨架不含 effect，因此没有
+-- 游戏效果。已实装条目通过骨架的 hanjinImplemented 或下方 implemented 白名单
+-- 登记，并在加载时断言确有 effect。偏将的「限一」只在这里登记牌面标记，每局
+-- 唯一取得与限一统领能力由公共规则实现。
 local extension = Package:new("hanjin_generals")
 extension.extensionName = "hanjin"
 extension.game_modes_whitelist = { "hanjin_heg_mode" }

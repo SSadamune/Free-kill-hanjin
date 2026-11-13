@@ -17,6 +17,8 @@
 | 独立测试内容与翼从技能 | `tests/support/hanjin_content.lua` |
 | 自动化验收 | `tests/commander_retinue.lua` |
 
+正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/han-retinues.md)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/wei-retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
+
 ### 公共登记 API
 
 正式内容包或测试内容按以下顺序登记（翼从必须先登记，统领登记时校验其兵种）：
