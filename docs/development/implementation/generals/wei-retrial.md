@@ -14,7 +14,7 @@
 4. **复核与替换**：打出后复核 `room:getCardArea(id) == Card.Processing`，再调用 `room:changeJudge { card = card, player = player, data = data, skillName = ..., response = true }`；`data` 标记确保同一判定只替换一次。
 5. 翻译：`hanjin__skill_wei002_2`、提示 `#hanjin__skill_wei002_2-invoke`、`#hanjin__skill_wei002_2-ask`。
 
-## 测试（`tests/wei_retrial.lua`，已由整合方加入 all.lua）
+## 测试（[wei_retrial.lua](../../../../tests/wei_retrial.lua)，已由整合方加入 all.lua）
 
 1. 真实 `room:judge` 流程中替换牌成为最终判定牌；`responseCard` 与 `changeJudge` 均走真实实现，用例只固定是否发动与选择哪张牌两个输入。
 2. 被 `prohibitResponse` 禁止的牌不能作为候选，不产生改判。

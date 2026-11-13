@@ -17,7 +17,7 @@
 
 ## 2. 接线与公共机制
 
-- 8 个技能骨架均在源码内显式 `hanjinImplemented = true`；`pkg/hanjin_generals/init.lua` 的既有无 effect 断言据此放行，无需改 `init.lua`、`data/standard.lua` 或公共测试文件。
+- 8 个技能骨架均在源码内显式 `hanjinImplemented = true`；[init.lua](../../../../pkg/hanjin_generals/init.lua) 的既有无 effect 断言据此放行，无需改 `init.lua`、`data/standard.lua` 或公共测试文件。
 - 主副将、明暗置、势力来源：技能均以 `player:hasSkill(技能名)` 判定当前是否持有；效果通过玩家自身技能、牌与事件结算，不依赖服务端私有字段。技能的来源武将、称号与描述继续由 `data/standard.lua` 统一注册。
 - 客户端可见性：选牌/选目标使用 `askToDiscard`、`askToChooseCard`、`askToChoosePlayers`、`askToChooseCardsAndPlayers` 等正式请求接口；遗计以 `expand_pile` 展示牌堆顶两张。裸衣的回合标记只服务端判定，不使用 `@@` 展示标记。
 - 裸衣效果独立于技能存在：延时效果通过回合标记与 `fk.DamageCaused` 结算，不检查 `hasSkill`；标记命名为 `hanjin_wei005_luoyi-turn`，不以技能名前缀开头，避免武将交换把它当成来源技能标记迁走，回合结束由 `-turn` 后缀清理。
@@ -26,7 +26,7 @@
 
 ## 3. 定向验证
 
-测试文件：[tests/wei_damage.lua](../../../../tests/wei_damage.lua)（本轮未改 `tests/all.lua`，由 Codex 统一并入默认国战套件）。
+测试文件：[tests/wei_damage.lua](../../../../tests/wei_damage.lua)（本轮未改 [all.lua](../../../../tests/all.lua)，由 Codex 统一并入默认国战套件）。
 
 ```text
 python scripts/test.py --file tests/wei_damage.lua --timeout 180
@@ -40,7 +40,7 @@ Ran 8 tests in 1.923 seconds, 8 successes, 0 failures
 ## 4. 未完成项与边界
 
 - 最终默认全量已由 DSH 工具原生检查确认 608/608 通过，包含本组 8 项；逐项客户端人工交互仍待验收。
-- 本组已接入 `tests/all.lua` 默认国战套件。
+- 本组已接入 [all.lua](../../../../tests/all.lua) 默认国战套件。
 - 未做真实客户端 QML 交互（选牌、选目标、确认/取消）与明暗置、主副将来源切换的人工验收。
 - 遗计使用 `getNCards(2)` 读取牌堆顶两张（该接口只读取、不移入处理区），选择对话框以 `expand_pile` 展示这两张，再按两次分配从牌堆移动到目标手牌；未新增仅客户端可见的私有展示层。
 - 行殇在 `fk.Death` 取得死亡角色的手牌与装备牌；判定区牌不移动，只有判定区牌的死亡角色按“没有牌”回复体力。未展开与白银狮子等死亡时失去装备触发之间的完整时序回归。

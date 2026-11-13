@@ -1,6 +1,6 @@
 # 魏势力标准包：持重、突袭、放逐与行殇修正
 
-本页记录 WEI003 持重、WEI004 突袭、WEI014 放逐的最小可运行实现与接口接线，并记录同轮 WEI014 行殇的取牌范围修正。规则依据见[标准武将表](../../../../rules/standard-generals.md)魏区、[WEI014 曹丕结算约定](../../../../rules/generals/wei014-caopi.md)、[叠置与平置](../../../../rulebook/terms/general-op-terms/stack.md)、[“X 只能当 Y 使用／打出”实现说明](../only-as.md)。本轮已定向运行 `tests/wei_support.lua` 与 `tests/wei_damage.lua`，结果见第 3 节。
+本页记录 WEI003 持重、WEI004 突袭、WEI014 放逐的最小可运行实现与接口接线，并记录同轮 WEI014 行殇的取牌范围修正。规则依据见[标准武将表](../../../../rules/standard-generals.md)魏区、[WEI014 曹丕结算约定](../../../../rules/generals/wei014-caopi.md)、[叠置与平置](../../../../rulebook/terms/general-op-terms/stack.md)、[“X 只能当 Y 使用／打出”实现说明](../only-as.md)。本轮已定向运行 [wei_support.lua](../../../../tests/wei_support.lua) 与 [wei_damage.lua](../../../../tests/wei_damage.lua)，结果见第 3 节。
 
 ## 1. 实现与接线
 
@@ -11,7 +11,7 @@
 | 放逐 | `hanjin__skill_wei014_2` | [skill_wei014_2.lua](../../../../pkg/hanjin_generals/skills/skill_wei014_2.lua) | `fk.Damaged` 每次伤害事件一次；目标叠置并摸2，手牌/装备合计≥4时可足额弃4并平置，牌名字数之和>7则失去1点体力 |
 | 行殇（修正） | `hanjin__skill_wei014_1` | [skill_wei014_1.lua](../../../../pkg/hanjin_generals/skills/skill_wei014_1.lua) | 取牌范围由 `getCardIds()` 改为 `getCardIds("he")`；“某人的牌”只含手牌与装备，只有判定区牌的死亡角色视为没有牌并改为回复1点体力 |
 
-三个技能骨架均显式 `hanjinImplemented = true`，未改动 `init.lua`、`tests/all.lua`、`status.md` 或公共实现；魏区 `data/standard.lua` 仅在持重问题解决后同步牌面数据（见第 4 节），其他势力数据未改。
+三个技能骨架均显式 `hanjinImplemented = true`，通过既有加载断言接入正式内容；专项已加入 [all.lua](../../../../tests/all.lua)，当前完成度与最终全量记录统一见[开发状态](../../status.md)。魏区 `data/standard.lua` 在持重问题解决后同步牌面数据（见第 4 节），其他势力数据未改。
 
 ### 持重
 
@@ -42,7 +42,7 @@
 
 - `rules/general-principles.md` 第 9 行：“某人的牌”指手牌区和装备区，不含判定区。
 - `rules/generals/wei014-caopi.md`：叠置/平置为定向操作；对已叠置目标不能把叠置执行成平置，已无法执行的一步与后续摸牌等效果分别判断。
-- 公共 only-as：`pkg/hanjin_mode/rules/only_as.lua` 的 `define("tuxi", ...)`、`addSource(..., duration = "turn")`、`isForbidden`、`actionsForCard`。来源不绑定技能时不会因技能/武将失去而删除。
+- 公共 only-as：[only_as.lua](../../../../pkg/hanjin_mode/rules/only_as.lua) 的 `define("tuxi", ...)`、`addSource(..., duration = "turn")`、`isForbidden`、`actionsForCard`。来源不绑定技能时不会因技能/武将失去而删除。
 - 公共分配：`Room:askToYiji` 与 `Room:doYiji`（“将一些卡牌同时分配给一些角色”）；持重只调用前者。
 
 ## 3. 验证文件与执行
@@ -71,13 +71,13 @@ python scripts/test.py --file tests/wei_damage.lua --timeout 180
 Ran 8 tests in 1.923 seconds, 8 successes, 0 failures
 ```
 
-`tests/wei_damage.lua` 的 `initializeGenerals` 也同步采用标记后重算 `maxHp/hp` 的夹具修正，避免同一随机初始双将问题影响行殇/节命等用例。
+[wei_damage.lua](../../../../tests/wei_damage.lua) 的 `initializeGenerals` 也同步采用标记后重算 `maxHp/hp` 的夹具修正，避免同一随机初始双将问题影响行殇/节命等用例。
 
 持重间歇失败（曾报 `tests/wei_support.lua:115 expected:1 actual:6`）的确定性原因：`initializeGenerals` 调用 `changeHero` 时，`__heg_general`/`__heg_deputy` 标记仍指向本局随机初始双将；引擎 `getGeneralMaxHp()` 优先读取这两个标记，于是测试角色的 `maxHp/hp` 随初始双将变为 3 或 4（并可更高），而不是测试将面的 4。若体力值使 `max(1, hp+1)` 大于回复中的 5 张，持重会正确判定选牌不足并取消发动，`p1` 保留 6 张牌，表现为“expected 1 actual 6”。诊断时保留的证据：初始双将始终被替换为 `hanjin_test__wei_1/wei_2`，但 `hp/maxhp` 出现 3/4 两种；`player.phase = Player.NotActive`、`RoundCount = 1`、技能来源仅为 `hanjin__skill_wei003_2`；请求消费为 `"1"→askToSkillInvoke`、`ReplyChooseCards→askToCards`、`ReplyChooseCardAndPlayers→askToYiji`，逐次 q 长度 3→2→1→0，均未错位。修复：写入测试双将标记后用 `pl:getGeneralMaxHp()` 重算 `maxHp/hp`，夹具固定为 4/4；未修改断言、未禁用测试、未固定随机种子。修复后连续 10 次运行均 3/3 通过。另：放逐用例曾因施放者连续承受三次1点伤害进入濒死导致一次 `faceup` 断言失败，已固定施放者体力为 10。
 
 ## 4. 魏区牌面数据同步
 
-本轮在持重问题解决后同步 `pkg/hanjin_generals/data/standard.lua` 的魏区：15 个主称号改为与 `rules/standard-generals.md` 魏区一致（含第二称号，统一简体），25 条技能原文逐条对齐。仅改动 WEI001—WEI016 的 `title` 与技能 `text`：修正应期“☯️+2”、刚烈“来源”、行殇“若其没有牌，则改为”等；其他势力数据未改。核对结果：15 主称号与 25 技能原文相对规则表差异为 0。
+本轮在持重问题解决后同步 [standard.lua](../../../../pkg/hanjin_generals/data/standard.lua) 的魏区：15 个主称号改为与 `rules/standard-generals.md` 魏区一致（含第二称号，统一简体），25 条技能原文逐条对齐。仅改动 WEI001—WEI016 的 `title` 与技能 `text`：修正应期“☯️+2”、刚烈“来源”、行殇“若其没有牌，则改为”等；其他势力数据未改。核对结果：15 主称号与 25 技能原文相对规则表差异为 0。
 
 ## 5. 未完成项与风险
 
