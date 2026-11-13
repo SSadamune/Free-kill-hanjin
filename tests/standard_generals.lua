@@ -9,6 +9,7 @@ local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Selection = require "packages.hanjin.pkg.hanjin_mode.rules.selection"
+local PairHp = require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
 local Data = require "packages.hanjin.pkg.hanjin_generals.data.standard"
 
 local SIX = { "han", "wei", "shu", "wu", "qun", "jin" }
@@ -309,11 +310,23 @@ function Teststandard_generals:testFormalRoomStartsWithBanSelectionAndHalfHp()
     lu.assertTrue(table.contains(allowed, player:getMark("__heg_kingdom")))
     lu.assertTrue(#Guest.pairKingdoms(room, main, deputy) > 0)
 
-    local a, b = Fk.generals[main], Fk.generals[deputy]
-    local sum = a.maxHp + a.mainMaxHpAdjustedValue + b.maxHp + b.deputyMaxHpAdjustedValue
-    lu.assertEquals(player.maxHp, sum // 2)
-    lu.assertEquals(player:getMark("HalfMaxHpLeft"), sum % 2)
+    -- 正式开局上限由配将贡献统一计算：引擎默认组合 + 应期等☯️修正。
+    local total = PairHp.half_hp(main, deputy)
+    lu.assertEquals(player.maxHp, total // 2)
+    lu.assertEquals(player:getMark("HalfMaxHpLeft"), total % 2)
   end
+end
+
+function Teststandard_generals:testPairHpYingqiContribution()
+  -- 应期 ☯️+2 = 2 个半格（1 点上限），与引擎默认组合公式分开核对。
+  lu.assertEquals(PairHp.base_half_hp("hanjin__wei002", "hanjin__wei001"), 7)
+  lu.assertEquals(PairHp.yinyang("hanjin__wei002", "hanjin__wei001"), 2)
+  lu.assertEquals(PairHp.half_hp("hanjin__wei002", "hanjin__wei001"), 9)
+  lu.assertEquals(PairHp.max_hp("hanjin__wei002", "hanjin__wei001"), 4)
+  lu.assertEquals(PairHp.half_left("hanjin__wei002", "hanjin__wei001"), 1)
+  -- 非多势力、非客将的配将不修正。
+  lu.assertEquals(PairHp.yinyang("hanjin__wei002", "hanjin__wei003"), 0)
+  lu.assertEquals(PairHp.max_hp("hanjin__wei002", "hanjin__wei003"), 3)
 end
 
 function Teststandard_generals:testSameNameConversionAndCompanions()
