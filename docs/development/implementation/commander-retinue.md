@@ -17,7 +17,7 @@
 | 独立测试内容与翼从技能 | `tests/support/hanjin_content.lua` |
 | 自动化验收 | `tests/commander_retinue.lua` |
 
-正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/retinues.md#han-retinues)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
+正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/retinues.md#han-retinues)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。锦帆军、曲阿小将见[吴关联翼从](generals/retinues.md#吴势力标准包)，专项 `tests/wu_damage.lua` 已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
 
 ### 公共登记 API
 

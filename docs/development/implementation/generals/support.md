@@ -1,6 +1,6 @@
 # 支持、手牌与状态：跨势力机制实现与验证
 
-本页汇总汉、魏两包中涉及摸牌、给牌、手牌上限、牌区分配与状态标记的技能实现、接口接线与真实验证状态，不替代规则条文。逐将检索见[汉势力标准包](han-standard.md#1-分组与逐将入口)与[魏势力标准包](wei-standard.md#1-分组与逐将入口)；整将记录按主要机制放入对应组，其他组只以锚点引用，不复制正文。
+本页汇总汉、魏、吴三包中涉及摸牌、给牌、手牌上限、牌区分配与状态标记的技能实现、接口接线与真实验证状态，不替代规则条文。逐将检索见[汉势力标准包](han-standard.md#1-分组与逐将入口)与[魏势力标准包](wei-standard.md#1-分组与逐将入口)；整将记录按主要机制放入对应组，其他组只以锚点引用，不复制正文。
 
 ## 魏势力标准包
 
@@ -145,3 +145,24 @@ Ran 8 tests in 1.923 seconds, 8 successes, 0 failures
 
 - 红桃判定使用 `Room:filterCard(id, player)` 的有效花色，已核对 `Fk:getCardById` 的过滤缓存行为；敏思摸牌标记与追德选牌均不再直接依赖实体牌的原始 `suit`。点数和仍取实体牌原始点数。
 - 手牌上限的引擎显示值不逐个扣除「不计入」的牌；实际弃牌阶段按 `MaxCardsSkill:excludeFrom` 计算。界面数字与有效上限的差异属引擎显示范围，未在本轮修改公共机制。
+
+## 吴势力标准包
+
+本组维护孙权、甘宁、周瑜、孙尚香、孙坚、张昭的接口与验证记录；逐将编号及测试见[吴包总表](wu-standard.md)。规则依据见[标准表](../../../../rules/standard-generals.md)、[反间](../../../../rules/generals/wu005-zhouyu.md)、[直谏](../../../../rules/generals/wu015a-zhangzhao.md)与[装备置入](../../../../rules/equipment-movement.md)。
+
+| 武将／技能 | 实现与接线 |
+| --- | --- |
+| 孙权·制衡 | [skill_wu001_1.lua](../../../../pkg/hanjin_generals/skills/skill_wu001_1.lua)：弃牌不超过体力上限；本次弃完已有手牌额外摸一张 |
+| 甘宁·奇袭 | [skill_wu002_1.lua](../../../../pkg/hanjin_generals/skills/skill_wu002_1.lua)：独立转换为汉晋【过河拆桥】，沿用公共用牌流程 |
+| 周瑜·英姿、反间 | [英姿](../../../../pkg/hanjin_generals/skills/skill_wu005_1.lua)、[反间](../../../../pkg/hanjin_generals/skills/skill_wu005_2.lua)：主将条件由 MainPlace 接线；交牌前快照展示花色；响应只展示手牌，弃同花色手牌与装备，检查至少两张及禁弃；弃置执行者是目标 |
+| 孙尚香·结姻、枭姬 | [结姻](../../../../pkg/hanjin_generals/skills/skill_wu008_1.lua)、[枭姬](../../../../pkg/hanjin_generals/skills/skill_wu008_2.lua)：仅展示合法弃牌／空栏置入候选；体力相等无较大／较小收益；失去装备逐张触发，回合内外分别摸一／二张 |
+| 孙坚·英魂 | [skill_wu009_1.lua](../../../../pkg/hanjin_generals/skills/skill_wu009_1.lua)：X 为已损失体力值，摸牌／弃牌两分支使用正式接口 |
+| 张昭·直谏、固政 | [直谏](../../../../pkg/hanjin_generals/skills/skill_wu015a_1.lua)、[固政](../../../../pkg/hanjin_generals/skills/skill_wu015a_2.lua)：手装来源决定摸牌者；同事件多个弃牌者由玩家择一，只取该角色本事件仍在弃牌堆的牌，返一后批量取得至多三张 |
+
+### 验证与边界
+
+`python scripts/test.py --file tests/wu_support.lua --timeout 180`：15 项通过、0 失败；已接入默认国战套件，最终全量与发布核对见[总表](wu-standard.md#3-真实验证与发布)。代表性真实 ClientPlayer 用例验证无 `room` 字段下的结姻可用性与直谏候选。
+
+定向测试覆盖制衡数量与额外摸牌、奇袭转换、英姿／英魂、反间接受与拒绝、结姻置入、枭姬回合内外、直谏两来源、固政同事件多弃牌者选择。测试请求覆盖仅拦截本技能，避免错误拦截引擎多触发技选择的 `trigger` 请求导致夹具污染。
+
+反间红颜组合及实际 ProhibitSkill 禁弃组合未单独验证；未做客户端点击、联网／重连人工验收。吴区正式数据已同步，未完成项不再包含旧文案同步。
