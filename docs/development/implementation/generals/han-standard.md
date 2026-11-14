@@ -2,29 +2,29 @@
 
 本页记录汉势力标准 15 将 25 技能与 2 名汉关联翼从的实装接线、数据同步和验证结果，不替代规则裁定。规则表见[标准武将表](../../../../rules/standard-generals.md)，卡面资料来源为 [`docs/石激桑武将列表.json`](../../../../docs/石激桑武将列表.json)；逐将裁定以 `rules/generals/` 的已确认文件为准。
 
-## 1. 范围与总览
+## 1. 分组与逐将入口
 
-| 编号 | 武将 | 技能 | 运行时 id | 实现详情 | 专项测试 |
+| 编号 | 武将 | 技能 | 运行时 id | 机制专项 | 专项测试 |
 | --- | --- | --- | --- | --- | --- |
-| HAN001 | 刘协 | 天命、密诏 | `hanjin__han001` | [专项说明](han001-liuxie.md) | [han001_liuxie](../../../../tests/han001_liuxie.lua) |
-| HAN002 | 刘辩 | 诗怨、毒逝 | `hanjin__han002` | [诗怨源码](../../../../pkg/hanjin_generals/skills/skill_han002_1.lua)、[毒逝源码](../../../../pkg/hanjin_generals/skills/skill_han002_2.lua) | [han_standard](../../../../tests/han_standard.lua) |
-| HAN004 | 张让 | 滔乱 | `hanjin__han004` | [专项说明](han004-zhangrang.md) | [han004_zhangrang](../../../../tests/han004_zhangrang.lua) |
-| HAN005 | 何进 | 谋诛、构难 | `hanjin__han005` | [专项说明](han005-hejin.md) | [han005_hejin](../../../../tests/han005_hejin.lua) |
-| HAN006 | 王允 | 连计、定著 | `hanjin__han006` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
-| HAN007 | 王荣 | 敏思、追德 | `hanjin__han007` | [专项说明](han007-wangrong.md) | [han007_wangrong](../../../../tests/han007_wangrong.lua) |
-| HAN008 | 伏皇后 | 惴恐、求援 | `hanjin__han008` | [专项说明](han008-fuhuanghou.md) | [han008_fuhuanghou](../../../../tests/han008_fuhuanghou.lua) |
-| HAN009 | 伏完 | 谋溃 | `hanjin__han009` | [专项说明](han009-fuwan.md) | [han009_fuwan](../../../../tests/han009_fuwan.lua) |
-| HAN010 | 董承 | 承诏 | `hanjin__han010` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
-| HAN011 | 唐姬 | 哀舞、诀别 | `hanjin__han011` | [专项说明](han011-tangji.md) | [han011_tangji](../../../../tests/han011_tangji.lua) |
-| HAN012 | 蔡邕 | 铸典、博通 | `hanjin__han012` | [专项说明](han012-caiyong.md) | [han012_caiyong](../../../../tests/han012_caiyong.lua) |
-| HAN013 | 皇甫嵩 | 奋钺 | `hanjin__han013` | [拼点组说明](han-pindian.md) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
-| HAN016A | 刘宠 | 劲弩、威屯 | `hanjin__han016` | [专项说明](han016a-liuchong.md) | [han016_liuchong](../../../../tests/han016_liuchong.lua) |
-| HAN017 | 刘繇 | 戡难、逆拒 | `hanjin__han017` | [专项说明](han017-liuyao.md) | [han017_liuyao](../../../../tests/han017_liuyao.lua) |
-| HAN018 | 蹇硕 | 集兵 | `hanjin__han018` | [集兵源码](../../../../pkg/hanjin_generals/skills/skill_han018_1.lua) | [han_standard](../../../../tests/han_standard.lua) |
+| HAN001 | 刘协 | 天命、密诏 | `hanjin__han001` | [拼点组：天命、密诏](pindian.md#han001) | [han001_liuxie](../../../../tests/han001_liuxie.lua) |
+| HAN002 | 刘辩 | 诗怨、毒逝 | `hanjin__han002` | [支持、手牌与状态组](support.md#han002)；[诗怨源码](../../../../pkg/hanjin_generals/skills/skill_han002_1.lua)、[毒逝源码](../../../../pkg/hanjin_generals/skills/skill_han002_2.lua) | [han_standard](../../../../tests/han_standard.lua) |
+| HAN004 | 张让 | 滔乱 | `hanjin__han004` | [阶段、转换与限定技组](phases.md#han004) | [han004_zhangrang](../../../../tests/han004_zhangrang.lua) |
+| HAN005 | 何进 | 谋诛、构难 | `hanjin__han005` | [主动、用牌与目标组](active.md#han005) | [han005_hejin](../../../../tests/han005_hejin.lua) |
+| HAN006 | 王允 | 连计、定著 | `hanjin__han006` | [拼点组](pindian.md#han006) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN007 | 王荣 | 敏思、追德 | `hanjin__han007` | [支持、手牌与状态组](support.md#han007) | [han007_wangrong](../../../../tests/han007_wangrong.lua) |
+| HAN008 | 伏皇后 | 惴恐、求援 | `hanjin__han008` | [拼点组](pindian.md#han008) | [han008_fuhuanghou](../../../../tests/han008_fuhuanghou.lua) |
+| HAN009 | 伏完 | 谋溃 | `hanjin__han009` | [主动、用牌与目标组](active.md#han009) | [han009_fuwan](../../../../tests/han009_fuwan.lua) |
+| HAN010 | 董承 | 承诏 | `hanjin__han010` | [拼点组](pindian.md#han010) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN011 | 唐姬 | 哀舞、诀别 | `hanjin__han011` | [受伤、伤害与死亡组](damage.md#han011) | [han011_tangji](../../../../tests/han011_tangji.lua) |
+| HAN012 | 蔡邕 | 铸典、博通 | `hanjin__han012` | [阶段、转换与限定技组](phases.md#han012) | [han012_caiyong](../../../../tests/han012_caiyong.lua) |
+| HAN013 | 皇甫嵩 | 奋钺 | `hanjin__han013` | [拼点组](pindian.md#han013) | [han_standard_pindian](../../../../tests/han_standard_pindian.lua) |
+| HAN016A | 刘宠 | 劲弩、威屯 | `hanjin__han016` | [阶段、转换与限定技组](phases.md#han016a) | [han016_liuchong](../../../../tests/han016_liuchong.lua) |
+| HAN017 | 刘繇 | 戡难、逆拒 | `hanjin__han017` | [拼点组](pindian.md#han017) | [han017_liuyao](../../../../tests/han017_liuyao.lua) |
+| HAN018 | 蹇硕 | 集兵 | `hanjin__han018` | [阶段、转换与限定技组](phases.md#han018)；[集兵源码](../../../../pkg/hanjin_generals/skills/skill_han018_1.lua) | [han_standard](../../../../tests/han_standard.lua) |
 
-本页为全包入口；专项页面保留各将接口与验收依据。刘辩、蹇硕的实现与核心行为测试分别直接链接至源码和共享套件；王允、董承、皇甫嵩共用拼点组说明及测试。所有上述测试均纳入默认国战套件。
+本页只保留逐将检索；各将的接口接线、历史测试结果与未完成边界在机制专项组内，按“整将记录放主要组、其他组以锚点引用”维护。刘辩、蹇硕的专项入口分别并入“支持、手牌与状态”组与“阶段、转换与限定技”组，原有源码链接保留；王允、董承、皇甫嵩、刘协、伏皇后、刘繇的记录集中在拼点组。所有上述测试均纳入默认国战套件。
 
-汉关联翼从 2 名：穆顺（`hanjin__retinue_mushun`）、西园军（`hanjin__retinue_xiyuanjun`），见[翼从实现说明](han-retinues.md)及[专项测试](../../../../tests/han_retinues.lua)。HAN016A 的牌面编号保留 `A`，运行时 id 仍为 `hanjin__han016`，避免资源和已接线的汉区数据改名。
+汉关联翼从 2 名：穆顺（`hanjin__retinue_mushun`）、西园军（`hanjin__retinue_xiyuanjun`），见[翼从实现说明](retinues.md#han-retinues)及[专项测试](../../../../tests/han_retinues.lua)。HAN016A 的牌面编号保留 `A`，运行时 id 仍为 `hanjin__han016`，避免资源和已接线的汉区数据改名。
 
 ## 2. 接线
 
@@ -59,7 +59,7 @@ python scripts/test.py --timeout 120
 Ran 567 tests in 83.184 seconds, 567 successes, 0 failures
 ```
 
-滔乱专项 `tests/han004_zhangrang.lua` 最近一次定向验证为 4 项全部通过，包含同回合两次发动仅一次后续结算及候选合并。其余武将的测试入口见上表，均由这次默认全量覆盖；刘协详细验收依据见其专项页面，不将服务端自动化通过等同于客户端人工验收完成。
+滔乱专项 `tests/han004_zhangrang.lua` 最近一次定向验证为 4 项全部通过，包含同回合两次发动仅一次后续结算及候选合并。其余武将的测试入口见上表，均由这次默认全量覆盖；刘协详细验收依据见[拼点组 HAN001](pindian.md#han001)，不将服务端自动化通过等同于客户端人工验收完成。
 
 安装包：
 

@@ -18,23 +18,24 @@
 
 ## 武将与翼从
 
-- [汉势力标准包：全 15 将 25 技能及穆顺、西园军实现与验证](generals/han-standard.md)：全包入口，汇总逐将实现说明、专项测试、发布接线与验收边界；刘协等武将的详细记录由此进入。
-- [魏势力标准包：全 15 将 25 技能及并州狼骑、虎卫军、牛金实现与验证](generals/wei-standard.md)：魏区总入口，按受伤/伤害、主动/距离、阶段/转换、改判、配将体力、翼从分组进入专项说明与真实验证状态。
+- [汉势力标准包：全 15 将 25 技能及穆顺、西园军实现与验证](generals/han-standard.md)：汉区逐将总表，按编号、运行时 ID、源码和机制专项检索。
+- [魏势力标准包：全 15 将 25 技能及并州狼骑、虎卫军、牛金实现与验证](generals/wei-standard.md)：魏区逐将总表，按编号、运行时 ID、源码和机制专项检索。
 - [JIN001 司马炎：垂统、兴图实装与验证](generals/jin001-simayan.md)
-- [WEI002／JIN009 司马懿：应期与配将体力贡献](generals/wei-pair-hp.md)：开局与升变共用计算；晋司马懿仅应期随本批接入。
+- [WEI002／JIN009 司马懿：应期与配将体力贡献](generals/pair-hp.md)：开局与升变共用计算；晋司马懿仅应期随本批接入。
 
-### 魏势力专项入口
+### 机制专项入口（汉、魏共用）
 
-按武将编号、运行时 ID 或源码查找，先看[魏包逐将总表](generals/wei-standard.md#1-分组与逐将入口)。多个武将共用同一组说明，不另复制逐将正文。
+按武将编号、运行时 ID 或源码查找，先看[汉包逐将总表](generals/han-standard.md#1-分组与逐将入口)或[魏包逐将总表](generals/wei-standard.md#1-分组与逐将入口)。同一个机制只维护一份专项正文；整将记录放在其主要机制组，其他组以锚点引用，不复制逐将正文。
 
-| 分组 | 覆盖技能／机制 |
-| --- | --- |
-| [受伤／伤害](generals/wei-damage.md) | 奸雄、狼顾、刚烈、裸衣、遗计、节命、行殇、骁果 |
-| [支持与状态](generals/wei-support.md) | 持重、突袭、放逐及行殇牌区修正 |
-| [阶段与转换](generals/wei-phases.md) | 轻辎、倾国、洛神、神速、设变、巧变、断粮、励战 |
-| [主动与距离](generals/wei-active.md) | 长驱、伪溃、强袭、驱虎；公开伤害记录与持续距离 |
-| [改判](generals/wei-retrial.md) | 鹰视真实打出与判定替换 |
-| [配将体力](generals/wei-pair-hp.md) | 应期的开局贡献、身份判定及升变复用 |
-| [翼从](generals/wei-retinues.md) | 并州狼骑、虎卫军、牛金的专属技能；统领能力仍见公共机制文档 |
+| 机制专项 | 汉包覆盖 | 魏包覆盖 |
+| --- | --- | --- |
+| [受伤、伤害与死亡](generals/damage.md) | [唐姬](generals/damage.md#han011)（哀舞、诀别） | 奸雄、狼顾、刚烈、裸衣、遗计、节命、行殇、骁果 |
+| [支持、手牌与状态](generals/support.md) | [刘辩](generals/support.md#han002)（诗怨、毒逝）、[王荣](generals/support.md#han007)（敏思、追德） | 持重、突袭、放逐及行殇牌区修正 |
+| [阶段、转换与限定技](generals/phases.md) | [张让](generals/phases.md#han004)（滔乱）、[蔡邕](generals/phases.md#han012)（铸典、博通）、[刘宠](generals/phases.md#han016a)（劲弩、威屯）、[蹇硕](generals/phases.md#han018)（集兵） | 轻辎、倾国、洛神、神速、设变、巧变、断粮、励战 |
+| [主动、用牌与目标](generals/active.md) | [何进](generals/active.md#han005)（谋诛、构难）、[伏完](generals/active.md#han009)（谋溃） | 长驱、伪溃、强袭、驱虎；公开伤害记录与持续距离 |
+| [拼点](generals/pindian.md) | [刘协](generals/pindian.md#han001)（天命、密诏）、[王允](generals/pindian.md#han006)（连计、定著）、[伏皇后](generals/pindian.md#han008)（惴恐、求援）、[董承](generals/pindian.md#han010)（承诏）、[皇甫嵩](generals/pindian.md#han013)（奋钺）、[刘繇](generals/pindian.md#han017)（戡难、逆拒） | 驱虎的拼点分支随[主动、用牌与目标](generals/active.md)整将记录，不另复制 |
+| [改判](generals/retrial.md) | — | 鹰视真实打出与判定替换 |
+| [配将体力](generals/pair-hp.md) | — | 应期的开局贡献、身份判定及升变复用 |
+| [翼从](generals/retinues.md) | [穆顺](generals/retinues.md#mushun)、[西园军](generals/retinues.md#xiyuanjun) | 并州狼骑、虎卫军、牛金的专属技能；统领能力仍见公共机制文档 |
 
 新入口须区分只选择、返回待执行数据和已执行，核对当前事件数据的类型及客户端可见信息。上游接口以 `dependencies.lock.json` 锁定版本的本地源码核实，外部规则资料中的 API 引用仅供查找。

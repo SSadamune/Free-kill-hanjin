@@ -95,4 +95,4 @@ Q1—Q6 已按用户裁定或规则集定义明确。第 2、3 节其余标为�
 
 ## 开发资料
 
-接口、接线及验收依据见[实现文档](../../docs/development/implementation/generals/han001-liuxie.md)；当前完成度与验证记录统一见[开发状态](../../docs/development/status.md)。实现资料不构成新增游戏规则。
+接口、接线及验收依据见[实现文档](../../docs/development/implementation/generals/pindian.md#han001)；当前完成度与验证记录统一见[开发状态](../../docs/development/status.md)。实现资料不构成新增游戏规则。

@@ -6,29 +6,29 @@
 
 | 编号 | 武将 | 技能 | 运行时 id | 实现详情 | 专项测试 |
 | --- | --- | --- | --- | --- | --- |
-| WEI001 | 曹操 | 奸雄 | `hanjin__wei001` | [受伤/伤害组](wei-damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
-| WEI002 | 司马懿 | 狼顾、鹰视、应期 | `hanjin__wei002` | 狼顾见[受伤/伤害组](wei-damage.md)；鹰视见[改判组](wei-retrial.md)；应期见[配将体力组](wei-pair-hp.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_retrial.lua](../../../../tests/wei_retrial.lua)、[wei_pair_hp.lua](../../../../tests/wei_pair_hp.lua) |
-| WEI003 | 夏侯惇 | 刚烈、持重 | `hanjin__wei003` | 刚烈见[受伤/伤害组](wei-damage.md)；持重见[支持与状态组](wei-support.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_support.lua](../../../../tests/wei_support.lua) |
-| WEI004 | 张辽 | 突袭 | `hanjin__wei004` | [支持与状态组](wei-support.md) | [wei_support.lua](../../../../tests/wei_support.lua) |
-| WEI005 | 许褚 | 裸衣 | `hanjin__wei005` | [受伤/伤害组](wei-damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
-| WEI006 | 郭嘉 | 轻辎、遗计 | `hanjin__wei006` | 轻辎见[阶段/转换组](wei-phases.md)；遗计见[受伤/伤害组](wei-damage.md) | [wei_phases.lua](../../../../tests/wei_phases.lua)、[wei_damage.lua](../../../../tests/wei_damage.lua) |
-| WEI007 | 甄姬 | 倾国、洛神 | `hanjin__wei007` | [阶段/转换组](wei-phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
-| WEI008 | 夏侯渊 | 神速、设变 | `hanjin__wei008` | [阶段/转换组](wei-phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
-| WEI009 | 张郃 | 巧变 | `hanjin__wei009` | [阶段/转换组](wei-phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
-| WEI010 | 徐晃 | 断粮、长驱 | `hanjin__wei010` | 断粮见[阶段/转换组](wei-phases.md)；长驱见[主动/距离组](wei-active.md) | [wei_phases.lua](../../../../tests/wei_phases.lua)、[wei_active.lua](../../../../tests/wei_active.lua) |
-| WEI011 | 曹仁 | 伪溃、励战 | `hanjin__wei011` | 伪溃见[主动/距离组](wei-active.md)；励战见[阶段/转换组](wei-phases.md) | [wei_active.lua](../../../../tests/wei_active.lua)、[wei_phases.lua](../../../../tests/wei_phases.lua) |
-| WEI012 | 典韦 | 强袭 | `hanjin__wei012` | [主动/距离组](wei-active.md) | [wei_active.lua](../../../../tests/wei_active.lua) |
-| WEI013 | 荀彧 | 驱虎、节命 | `hanjin__wei013` | 驱虎见[主动/距离组](wei-active.md)；节命见[受伤/伤害组](wei-damage.md) | [wei_active.lua](../../../../tests/wei_active.lua)、[wei_damage.lua](../../../../tests/wei_damage.lua) |
-| WEI014 | 曹丕 | 行殇、放逐 | `hanjin__wei014` | 行殇见[受伤/伤害组](wei-damage.md)；放逐见[支持与状态组](wei-support.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_support.lua](../../../../tests/wei_support.lua) |
-| WEI016 | 乐进 | 骁果 | `hanjin__wei016` | [受伤/伤害组](wei-damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
+| WEI001 | 曹操 | 奸雄 | `hanjin__wei001` | [受伤、伤害与死亡组](damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
+| WEI002 | 司马懿 | 狼顾、鹰视、应期 | `hanjin__wei002` | 狼顾见[受伤、伤害与死亡组](damage.md)；鹰视见[改判组](retrial.md)；应期见[配将体力组](pair-hp.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_retrial.lua](../../../../tests/wei_retrial.lua)、[wei_pair_hp.lua](../../../../tests/wei_pair_hp.lua) |
+| WEI003 | 夏侯惇 | 刚烈、持重 | `hanjin__wei003` | 刚烈见[受伤、伤害与死亡组](damage.md)；持重见[支持、手牌与状态组](support.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_support.lua](../../../../tests/wei_support.lua) |
+| WEI004 | 张辽 | 突袭 | `hanjin__wei004` | [支持、手牌与状态组](support.md) | [wei_support.lua](../../../../tests/wei_support.lua) |
+| WEI005 | 许褚 | 裸衣 | `hanjin__wei005` | [受伤、伤害与死亡组](damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
+| WEI006 | 郭嘉 | 轻辎、遗计 | `hanjin__wei006` | 轻辎见[阶段、转换与限定技组](phases.md)；遗计见[受伤、伤害与死亡组](damage.md) | [wei_phases.lua](../../../../tests/wei_phases.lua)、[wei_damage.lua](../../../../tests/wei_damage.lua) |
+| WEI007 | 甄姬 | 倾国、洛神 | `hanjin__wei007` | [阶段、转换与限定技组](phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
+| WEI008 | 夏侯渊 | 神速、设变 | `hanjin__wei008` | [阶段、转换与限定技组](phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
+| WEI009 | 张郃 | 巧变 | `hanjin__wei009` | [阶段、转换与限定技组](phases.md) | [wei_phases.lua](../../../../tests/wei_phases.lua) |
+| WEI010 | 徐晃 | 断粮、长驱 | `hanjin__wei010` | 断粮见[阶段、转换与限定技组](phases.md)；长驱见[主动、用牌与目标组](active.md) | [wei_phases.lua](../../../../tests/wei_phases.lua)、[wei_active.lua](../../../../tests/wei_active.lua) |
+| WEI011 | 曹仁 | 伪溃、励战 | `hanjin__wei011` | 伪溃见[主动、用牌与目标组](active.md)；励战见[阶段、转换与限定技组](phases.md) | [wei_active.lua](../../../../tests/wei_active.lua)、[wei_phases.lua](../../../../tests/wei_phases.lua) |
+| WEI012 | 典韦 | 强袭 | `hanjin__wei012` | [主动、用牌与目标组](active.md) | [wei_active.lua](../../../../tests/wei_active.lua) |
+| WEI013 | 荀彧 | 驱虎、节命 | `hanjin__wei013` | 驱虎见[主动、用牌与目标组](active.md)；节命见[受伤、伤害与死亡组](damage.md) | [wei_active.lua](../../../../tests/wei_active.lua)、[wei_damage.lua](../../../../tests/wei_damage.lua) |
+| WEI014 | 曹丕 | 行殇、放逐 | `hanjin__wei014` | 行殇见[受伤、伤害与死亡组](damage.md)；放逐见[支持、手牌与状态组](support.md) | [wei_damage.lua](../../../../tests/wei_damage.lua)、[wei_support.lua](../../../../tests/wei_support.lua) |
+| WEI016 | 乐进 | 骁果 | `hanjin__wei016` | [受伤、伤害与死亡组](damage.md) | [wei_damage.lua](../../../../tests/wei_damage.lua) |
 
 ## 2. 魏关联翼从
 
 | 翼从 | 运行时 id | 技能要点 | 实现详情 | 专项测试 |
 | --- | --- | --- | --- | --- |
-| 并州狼骑 | `hanjin__retinue_bingzhou_langqi` | 出牌阶段限一次，令一名其他角色视为对你使用【决斗】，本回合距离视为1 | [翼从组](wei-retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
-| 虎卫军 | `hanjin__retinue_huweijun` | 每回合结束时，若本回合造成和受到的伤害数合计大于1，可移动场上一张牌 | [翼从组](wei-retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
-| 牛金 | `hanjin__retinue_niujin` | 同势力角色回合结束时，可使用每种类别至多各一张牌；以此法杀死角色后摸三张牌 | [翼从组](wei-retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
+| 并州狼骑 | `hanjin__retinue_bingzhou_langqi` | 出牌阶段限一次，令一名其他角色视为对你使用【决斗】，本回合距离视为1 | [翼从组](retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
+| 虎卫军 | `hanjin__retinue_huweijun` | 每回合结束时，若本回合造成和受到的伤害数合计大于1，可移动场上一张牌 | [翼从组](retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
+| 牛金 | `hanjin__retinue_niujin` | 同势力角色回合结束时，可使用每种类别至多各一张牌；以此法杀死角色后摸三张牌 | [翼从组](retinues.md) | [wei_retinues.lua](../../../../tests/wei_retinues.lua) |
 
 ## 3. 真实验证状态
 
