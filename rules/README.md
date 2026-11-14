@@ -33,6 +33,10 @@
 - [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
 - [WEI016 乐进结算约定](generals/wei016-yuejin.md)：骁果弃置基本牌为发动消耗，不能零弃牌发动。
 - [JIN009 司马懿结算约定](generals/jin009-simayi.md)：引用同文应期的公共裁定。
+- [WU003 吕蒙结算约定](generals/wu003-lvmeng.md)：谋断仅获得涉猎，涉猎为后天技能及其定义。
+- [WU005 周瑜结算约定](generals/wu005-zhouyu.md)：反间响应选择及同花色手牌、装备牌的弃置范围。
+- [WU013 周泰结算约定](generals/wu013-zhoutai.md)：不屈病句修正，摸牌数与置“创”张数的区别。
+- [WU015A 张昭结算约定](generals/wu015a-zhangzhao.md)：直谏的原区域与摸牌者按斜线顺序对应。
 
 ## 阅读与维护
 
