@@ -9,6 +9,7 @@ local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions
 local Ascension = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
 local PairHp = require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
 local WeiHistory = require "packages.hanjin.pkg.hanjin_mode.rules.wei_history"
+local WuHistory = require "packages.hanjin.pkg.hanjin_mode.rules.wu_history"
 local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
 local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
 local W = require "ui_emu.preferences"
@@ -173,6 +174,10 @@ function M.create(base)
     function logic:start()
       self.room:addSkill(WeiHistory.HISTORY_SKILL)
       self.room:addSkill(WeiHistory.WEIKUI_DISTANCE_SKILL)
+      self.room:addSkill(WuHistory.HISTORY_SKILL)
+      self.room:addSkill(WuHistory.DISTANCE_SKILL)
+      self.room:addSkill("hanjin__wu_turn_effects")
+      self.room:addSkill("hanjin__wu_dimeng_expiry")
       if baseStart then return baseStart(self) end
     end
     return logic

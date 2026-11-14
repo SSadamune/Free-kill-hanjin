@@ -2,7 +2,7 @@
 
 紫乔汉晋是新月杀的自定义国战模式，包含魏、蜀、吴、群、汉、晋六势力，以及统领、翼从、应变等规则。
 
-项目仍在开发中。已登记 90 张武将和 14 种翼从；汉、魏势力标准包各 15 将 25 个技能、关联翼从穆顺、西园军、并州狼骑、虎卫军、牛金，以及司马炎的垂统、兴图和晋司马懿的应期已实现并通过自动化回归。其他武将与翼从的专属技能主要仍为名称与说明；大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。项目方向见[愿景说明](docs/vision.md)，规则集底稿见 [`rulebook/`](rulebook/README.md)，设计裁定见[项目规范](rules/README.md)，具体实装与验证范围见[开发状态](docs/development/status.md)、[汉势力实现总览](docs/development/implementation/generals/han-standard.md)和[魏势力实现总览](docs/development/implementation/generals/wei-standard.md)。
+项目仍在开发中。已登记 90 张武将和 14 种翼从；汉、魏势力标准包各 15 将 25 个技能，吴势力标准包 15 将 27 个天生技能及后天涉猎，关联翼从穆顺、西园军、并州狼骑、虎卫军、牛金、锦帆军、曲阿小将，以及司马炎的垂统、兴图和晋司马懿的应期已实现并通过自动化回归。其他武将与翼从的专属技能主要仍为名称与说明；大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。项目方向见[愿景说明](docs/vision.md)，规则集底稿见 [`rulebook/`](rulebook/README.md)，设计裁定见[项目规范](rules/README.md)，具体实装与验证范围见[开发状态](docs/development/status.md)、[汉势力实现总览](docs/development/implementation/generals/han-standard.md)、[魏势力实现总览](docs/development/implementation/generals/wei-standard.md)和[吴势力实现总览](docs/development/implementation/generals/wu-standard.md)。
 
 ## 准备开发环境
 
@@ -104,11 +104,31 @@ python scripts/test.py
 python scripts/test.py --file tests/adaptation.lua
 ```
 
+测试入口会对共享运行时加进程间锁，占用时立即报告，不与另一轮测试同时同步或执行。新套件模板、公共夹具、请求辅助和串行调度要求见[测试规范](docs/development/testing.md)。这些工具仅供开发，不进入用户安装包。
+
 VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同步、语法检查和自动化测试。界面、联网和断线重连表现仍需在游戏客户端人工验证。
 
 开发前请阅读[项目约定](AGENTS.md)与[开发指南](docs/development/README.md)。
 
 新增武将或卡牌时，先确认规则与引擎接口，再打通正常流程，尽早检查真实客户端选择与提示，随后补核心回归并运行默认全量。夹具、间歇失败诊断及简短故障记录的要求见[测试规范](docs/development/testing.md)。面向玩家的交互应随正式安装包发布；创建或更新 PR 时按[项目模板](.github/pull_request_template.md)填写，并同步对应规则文档的状态。
+
+### 使用 AI agent 开发内容
+
+武将、卡牌及规则交互开发使用项目 [hanjin-content-development skill](.agents/skills/hanjin-content-development/SKILL.md)。通常只需给出动作和范围，例如：
+
+```text
+按照 hanjin-content-development 审阅蜀势力标准包
+```
+
+规则确认后开始实装：
+
+```text
+根据已确认规则实装蜀势力标准包
+```
+
+将示例中的势力或内容范围替换为本轮目标即可。agent 应自行查找仓库资料，按 skill 完成规则核对、裁定记录、拆批、实现、验证与收尾；仅审阅时不修改技能实现。你只需补充仓库外资料、尚未记录的裁定或特殊限制，提交、推送及 PR 操作另行授权。
+
+流程支持不同开发者和 agent，默认由当前 agent 执行；委派遵循明确指定或已有协作配置。不支持 skill 加载的工具可直接读取上述 `SKILL.md`，完整流程见[开发指南](docs/development/README.md#新会话入口)。
 
 ## 文件结构
 

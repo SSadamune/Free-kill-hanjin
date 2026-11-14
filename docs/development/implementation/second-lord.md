@@ -10,7 +10,7 @@
 | --- | --- |
 | 显式版本登记 | `pkg/hanjin_mode/rules/general_versions.lua`：`Versions.register { normal, lord, loyalty }`、`lord_version`、`lord_kingdoms`、`is_lord`、`selectable` |
 | 升变通则 | `pkg/hanjin_mode/rules/ascension.lua`：`pair_max_hp`、`population_blocks`、`ascend`、`flip_lord_for_death`、`death_succession`、`convert_to_wild`、`get_winner` |
-| 配将体力贡献 | `pkg/hanjin_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](generals/wei-pair-hp.md) |
+| 配将体力贡献 | `pkg/hanjin_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](generals/pair-hp.md) |
 | 模式规则技能 | `pkg/hanjin_mode/skills/ascension_rule.lua`：`fk.TurnStart` 普通升变、`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
 | 模式接线 | `pkg/hanjin_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
 
