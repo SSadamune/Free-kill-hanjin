@@ -3,6 +3,7 @@
 -- rules/generals/wu015a-zhangzhao.md、rules/equipment-movement.md。
 -- 夹具使用白板双将并重算 hp，避免随机初始双将的额外触发干扰。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 local ZHI = "hanjin__skill_wu001_1"
 local QI = "hanjin__skill_wu002_1"
@@ -80,24 +81,7 @@ local function setPlayPhase(player)
 end
 
 local function initializeGenerals(room)
-  inRoom(function()
-    for i, pl in ipairs(room.players) do
-      local kingdom = DEFAULT_KINGDOMS[i] or "wu"
-      pl:revealGeneral(false, true)
-      pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
-      pl.kingdom = kingdom
-      room:setPlayerProperty(pl, "kingdom", kingdom)
-      room:setPlayerMark(pl, "__heg_general", pl.general)
-      room:setPlayerMark(pl, "__heg_deputy", pl.deputyGeneral)
-      room:setPlayerMark(pl, "__heg_kingdom", kingdom)
-      room:setPlayerMark(pl, "__heg_init_kingdom", kingdom)
-      room:setPlayerMark(pl, "__heg_wild", 0)
-      pl.maxHp = pl:getGeneralMaxHp()
-      pl.hp = pl.maxHp
-    end
-  end)
+  inRoom(function() skill_test.installBlankGenerals(room, DEFAULT_KINGDOMS) end)
 end
 
 local function prepare()
@@ -188,29 +172,24 @@ function Testhanjin_wu_support:testYinghunDrawThenDiscard()
     p1.phase = Player.Start
   end)
   local oldChoose, oldChoice, oldDiscard = room().askToChoosePlayers, room().askToChoice, room().askToDiscard
-  room().askToChoosePlayers = function(self, player, params)
-    if params.skill_name ~= YINGHUN then return oldChoose(self, player, params) end
-    return { p2 }
-  end
-  room().askToChoice = function(self, player, params)
-    if params.skill_name ~= YINGHUN then return oldChoice(self, player, params) end
-    return "#hanjin__skill_wu009_1-draw"
-  end
-  room().askToDiscard = function(self, player, params)
-    if params.skill_name ~= YINGHUN then return oldDiscard(self, player, params) end
-    local id = player:getCardIds("h")[1]
-    self:throwCard({ id }, params.skill_name, player, player)
-    return { id }
-  end
-  local ok, err = pcall(function()
+  skill_test.withSkillRequests(room(), YINGHUN, {
+    askToChoosePlayers = function(self, player, params) return { p2 } end,
+    askToChoice = function(self, player, params) return "#hanjin__skill_wu009_1-draw" end,
+    askToDiscard = function(self, player, params)
+      local id = player:getCardIds("h")[1]
+      self:throwCard({ id }, params.skill_name, player, player)
+      return { id }
+    end,
+  }, function()
     inRoom(function()
       room().logic:trigger(fk.EventPhaseStart, p1, PhaseData:new {
         who = p1, reason = "game_rule", phase = Player.Start,
       })
     end)
   end)
-  room().askToChoosePlayers, room().askToChoice, room().askToDiscard = oldChoose, oldChoice, oldDiscard
-  assert(ok, err)
+  lu.assertIs(room().askToChoosePlayers, oldChoose)
+  lu.assertIs(room().askToChoice, oldChoice)
+  lu.assertIs(room().askToDiscard, oldDiscard)
   -- X=2：摸 2 后弃 1，净得 1 张。
   lu.assertEquals(#p2:getCardIds("h"), 1)
 end
