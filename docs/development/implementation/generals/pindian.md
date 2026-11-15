@@ -14,6 +14,7 @@
 | WEI013 | 荀彧 | [驱虎](#wei013-1) |
 | SHU015 | 祝融夫人 | [烈刃](#shu015-2) |
 | WU012 | 太史慈 | [天义](#wu012-1)、[酣战](#wu012-2) |
+| JIN008 | 夏侯徽 | [识度](#jin008-2) |
 
 ## 技能条目
 
@@ -131,3 +132,13 @@
 - **实现与接口**：在拼点结束、牌仍在处理区时，取得本次拼点中最大点数的【杀】；并列最大者一并取得，不额外加入只选一张的限制。
 - **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖酣战取得及并列用例；历史 22/22。
 - **未完成与边界**：多人联网、重连或实际客户端拼点交互未验收。
+
+### 晋
+
+<a id="jin008-2"></a>
+#### 识度（JIN008 夏侯徽）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin008_2`；源码 [skill_jin008_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin008_2.lua)。规则见[夏侯徽规范](../../../../rules/generals/jin008-xiahouhui.md)。同将宜室见[辅助与牌资源](support.md#jin008-1)。
+- **实现与接口**：出牌阶段限一次，`active` 选一名合法其他角色真实拼点；只有 `pindian.results[to].winner == player` 才获得其所有手牌，再按此时自己全部手牌数向下取半交还，不使用拼点前快照；平局为没赢，不进入获得与交还分支。交还使用 `askToChooseCardsAndPlayers` 的交给语义，只从手牌选择，不按弃置过滤；客户端可用性用 `canPindian`，不读 `player.room`。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖赢得拼点后获得再交还半数、平局不获得；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：拼点牌被移走、手牌不足半数、目标死亡与客户端拼点交互未人工验收。

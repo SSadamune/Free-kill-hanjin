@@ -14,6 +14,9 @@
 local extension = Package:new("hanjin_cards", Package.CardPack)
 extension.extensionName = "hanjin"
 extension.game_modes_whitelist = { "hanjin_heg_mode" }
+-- 与锁定应变参考包 variation_cards/init.lua 保持同一冰冻伤害登记；
+-- 缺失登记会令正式冰杀跳过 ChangeHp 的重置及连环处理。
+Fk:addDamageNature(fk.IceDamage, "ice_damage")
 extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_cards/skills")
 
 local CardData = require "packages.hanjin.pkg.hanjin_cards.data.cards"

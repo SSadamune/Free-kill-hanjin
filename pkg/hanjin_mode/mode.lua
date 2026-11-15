@@ -188,6 +188,11 @@ function M.create(base)
       self.room:addSkill("hanjin__qun_damage_history")
       self.room:addSkill("hanjin__qun_control_rule")
       self.room:addSkill("hanjin__qun_duanchang_rule")
+      self.room:addSkill("hanjin__jin_resources_rule")
+      self.room:addSkill("hanjin__jin_deck_rule")
+      self.room:addSkill("hanjin__jin_information_rule")
+      self.room:addSkill("hanjin__jin_adaptation_rule")
+      self.room:addSkill("hanjin__jin_sources_rule")
       if baseStart then return baseStart(self) end
     end
     return logic

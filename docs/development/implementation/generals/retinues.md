@@ -1,6 +1,6 @@
 # 翼从专属技能：跨势力实现与验证
 
-本页是十二名汉、魏、蜀、吴、群翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
+本页是汉、魏、蜀、吴、群、晋翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
 
 ## 技能索引
 
@@ -18,6 +18,8 @@
 | WU | 锦帆军 | [锦帆军](#jinfanjun) |
 | WU | 曲阿小将 | [曲阿小将](#quaxiaojiang) |
 | QUN | 黄巾雷使 | [黄巾雷使](#huangjin-leishi) |
+| JIN | 腹心死士 | [腹心死士](#fuxin-sishi) |
+| JIN | 文虎 | [文虎](#wenhu) |
 
 ## 技能条目
 
@@ -143,3 +145,21 @@
 - **实现与接口**：模式级常驻记录器 [qun_damage_history](../../../../pkg/hanjin_mode/skills/qun_damage_history.lua) 在开局安装，记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；黄巾雷使只在该时机开放一次选择，未发动／无手牌／放弃都消耗本回合机会。记录器按真实 `DamageData` 的 `chain/parent` 与 `UseCardData:isUsingHandcard` 判断直接渠道，翼从本体不重复判断。
 - **验证依据**：已执行 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testHuangjinBlackIncreasesFirstNonHandcardDamage`、`testHuangjinRedGivesJudgeCardToSource`、`testHuangjinLateAcquisitionDoesNotReopenFirstChance`、`testHuangjinIgnoresHandcardSlashDamage`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：转化牌、无实体牌、铁索传导组合未穷举；客户端判定与增伤提示未人工验收。
+
+### 晋
+
+<a id="fuxin-sishi"></a>
+#### 腹心死士
+
+- **标识与依据**：翼从 ID `hanjin__retinue_fuxin_sishi`，技能 ID `hanjin__retinue_skill_fuxin_sishi`；源码 [retinue_skill_fuxin_sishi.lua](../../../../pkg/hanjin_generals/skills/retinue_skill_fuxin_sishi.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从腹心死士与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为司马师（JIN002）与司马懿（JIN009）。
+- **实现与接口**：同势力角色回合结束时，由 [jin_resources.lua](../../../../pkg/hanjin_generals/util/jin_resources.lua) 的 `hasUnusedLimitedSkill`／`limitedUsedThisTurn` 按真实限定技标签与发动历史分别检查两项，可都执行。条件一：其仍有未发动限定技时，翼从持有者摸一张，然后交给其一张自己的牌；目标就是持有者时只摸不交。条件二：其本回合发动过限定技时，可视为使用一张【杀】，目标范围按当前回合角色（`target`）的攻击范围计算，不是翼从持有者；接入 `C.explicit` 的 `in_attack_range_of` 与 `room:useCard`。统领取得、限一与翼从来源由公共规则处理，本技能不重写。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖未用限定技给牌、自己为目标只摸不交、已用限定技时用当前回合角色攻击范围使用【杀】；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：暗置来源、多个限定技、目标死亡、无合法【杀】目标与客户端交互未人工验收。
+
+<a id="wenhu"></a>
+#### 文虎
+
+- **标识与依据**：翼从 ID `hanjin__retinue_wenhu`，技能 ID `hanjin__retinue_skill_wenhu`；源码 [retinue_skill_wenhu.lua](../../../../pkg/hanjin_generals/skills/retinue_skill_wenhu.lua)。规则见[文鸯规范](../../../../rules/generals/jin014-wenyang.md)与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为文鸯（JIN014），限一；同一武将的冰杀统领能力另见公共统领记录。
+- **实现与接口**：出牌阶段限一次，`askToChoices` 让玩家勾选手牌/装备/判定三区中任意个非空且全部可弃置的区域；选定后先固定所有选中区的原始牌，再用**一次** `throwCard` 同时弃置，避免逐区重新读取把弃牌触发技新增的牌一并收走。X 按选择时固定牌的完整选中区计算，不按牌数或装备栏数。随后以 `card_use_targets` 的 `C.askToUseVirtualCard` 使用正式 `hanjin__duel`，`C.default` 只把 `max_targets` 改为 X，保留原牌其他目标条件，不放宽距离。
+- **验证依据**：[jin_chain.lua](../../../../tests/jin_chain.lua) 覆盖完整弃置手牌区+装备区（X=2）、判定区保留、决斗有 2 名目标；定向 6/6，见[共享验证证据](verification-evidence.md#jin-chain)。
+- **未完成与边界**：仅弃判定区、区域含禁弃牌、空区/部分弃置、目标上限大于可指定人数、客户端多选与联网未人工验收。

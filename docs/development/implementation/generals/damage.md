@@ -31,6 +31,11 @@
 | QUN010 | 张角 | [雷击](#qun010-1) |
 | QUN012 | 蔡文姬 | [断肠](#qun012-2) |
 | QUN016 | 田丰 | [随势](#qun016-2) |
+| JIN002 | 司马师 | [夷灭](#jin002-2) |
+| JIN004 | 贾充 | [悖弑](#jin004-2) |
+| JIN005 | 羊祜 | [顺流](#jin005-2) |
+| JIN010 | 张春华 | [扼绝](#jin010-2) |
+| JIN013 | 王濬 | [乘流](#jin013-1) |
 
 ## 技能条目
 
@@ -279,3 +284,45 @@
 - **实现与接口**：锁定技，两个独立分支。其他角色进入濒死时，检查造成此次濒死的来源（不是濒死角色）与田丰势力相同才摸一张；无来源的体力流失不摸。与自己势力相同的其他角色死亡时，由田丰选择失去 1 点体力或弃置所有手牌，即使当前无手牌也提供两选项，不强制失去体力。
 - **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testSuishiEnterDyingDrawsForSameKingdomKiller`、`testSuishiDeathChoiceDiscardsAllHandcards`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：来源为暗将／野心家、死亡时无手牌可选、同回合多次濒死未穷举；客户端选择未人工验收。
+
+### 晋
+
+<a id="jin002-2"></a>
+#### 夷灭（JIN002 司马师）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin002_2`；源码 [skill_jin002_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin002_2.lua)。规则见[司马师规范](../../../../rules/generals/jin002-simashi.md)。同将泰然见[辅助与牌资源](support.md#jin002-1)。
+- **实现与接口**：限定技，`fk.DamageCaused`（造成伤害时、确定伤害值时）；`data.from == player`、当前伤害值 > 0，且目标体力值不小于司马师当前体力值。发动后 `data:changeDamage(data.damage)` 令本次伤害翻倍；取消不消耗 `HistoryGame` 限定机会，发动后才计入。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖仅对体力不小于自己的目标翻倍、同一局只发动一次、目标体力更低时不触发；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：伤害被防止、连锁传导、伤害值已被其他效果修改、暗置来源未单独验；客户端发动提示未人工验收。
+
+<a id="jin004-2"></a>
+#### 悖弑（JIN004 贾充）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin004_2`；源码 [skill_jin004_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin004_2.lua)。规则见[贾充规范](../../../../rules/generals/jin004-jiachong.md)。同将通法见[辅助与牌资源](support.md#jin004-1)。
+- **实现与接口**：`fk.TargetConfirmed` 时若成为其他角色使用的【杀】或锦囊牌（含延时）唯一实际目标，弃一张同类别自己的牌，取消该目标并从原牌可得实体材料中取得材料；随后用 `card_use_targets` 允许使用一张无距离限制的牌。后续用牌在本次 `use.extra_data` 写 token `{ actor, source, damaged }`；房间级 `fk.Damage` 读取该 token，要求 `data.card == use.card`、伤害对象是原使用者 `source`，才记对原来源的伤害。未使用、取消或未造成伤害时失去 1 点体力。
+- **验证依据**：[jin_reactive.lua](../../../../tests/jin_reactive.lua) 覆盖取消唯一目标、无伤害失去体力及原来源/非原来源分支；6/6（1.379s）通过，见[共享验证证据](verification-evidence.md#jin-reactive)。
+- **未完成与边界**：多目标、延时锦囊、转化牌材料、后续用牌被抵消与客户端选牌未人工验收。
+
+<a id="jin005-2"></a>
+#### 顺流（JIN005 羊祜）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin005_2`；源码 [skill_jin005_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin005_2.lua)。规则见[羊祜规范](../../../../rules/generals/jin005-yanghu.md)。副将技；同将柔克见[转化与生成用牌](conversion.md#jin005-1)。
+- **实现与接口**：`Skill.DeputyPlace`；副将体力贡献 -1 由 `data/standard.lua` 的 `deputyHpAdjust` 提供，不另发标记。`fk.Damage`（造成伤害后）且 `data.from == player`、伤害为火/雷/冰属性。先固定“伤害后、第一次弃牌前”的横置名单，再先由羊祜为受伤者选一张手牌/装备弃置，后按名单为每名横置角色各弃一张；不做全局去重，受伤者若仍横置会再次纳入。弃牌走 `askToChooseCard`＋`throwCard`，由羊祜选牌。
+- **验证依据**：[jin_chain.lua](../../../../tests/jin_chain.lua) 覆盖受伤者与当时横置者各弃一张、受伤者不重复按伤害前快照纳入；定向 6/6，见[共享验证证据](verification-evidence.md#jin-chain)。
+- **未完成与边界**：受伤者仍横置时二次弃牌、冰属性连锁、无牌/禁弃、目标死亡与客户端选牌未单独验。
+
+<a id="jin010-2"></a>
+#### 扼绝（JIN010 张春华）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin010_2`；源码 [skill_jin010_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin010_2.lua)。规则见[张春华规范](../../../../rules/generals/jin010-zhangchunhua.md)。同将伤逝见[转化与生成用牌](conversion.md#jin010-1)。
+- **实现与接口**：`fk.DamageCaused`，张春华无手牌时可失去自己的一个其他技能，令本次伤害 +1。失技候选走 [jin_sources.lua](../../../../pkg/hanjin_generals/util/jin_sources.lua) 的 `choices`，排除扼绝自身、内部骨架、装备技能与未取得技能；失去后已建立效果不撤销；伤害增加在确定伤害值时写入本次 `DamageData`。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖真实 `Exchange.exchange` 保留失技及外部来源不随牌移动、加伤；9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：无合法失技候选、失去后伤害被防止、客户端选项未人工验收。
+
+<a id="jin013-1"></a>
+#### 乘流（JIN013 王濬）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin013_1`；源码 [skill_jin013_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin013_1.lua)。规则见[王濬规范](../../../../rules/generals/jin013-wangjun.md)与[应变规范](../../../../rules/adaptation.md)。同将克清见[用牌目标与距离](active.md#jin013-2)。
+- **实现与接口**：`fk.PreCardUse` 对王濬使用的伤害牌加入〈富甲→改为雷电伤害〉条目；条目写在本次 `use` 上，由共享应变规则 [jin_adaptation_rule](../../../../pkg/hanjin_mode/skills/jin_adaptation_rule.lua) 读取，不覆盖其他条目，也不把牌永久改成雷伤。`fk.CardUseFinished` 按本次 `damageDealt` 的关联角色提供横置，不要求富甲已触发，也不使用回合总伤害或当前手牌实体。已明置时自动赋条目；暗置时走真实 `TriggerSkill` 选择明置后发动。
+- **验证依据**：[jin_adaptation.lua](../../../../tests/jin_adaptation.lua) 覆盖本次雷伤、无富甲也可横置实际受伤者；应变定向 5/5；公共应变 25/25、`ignore_times` 14/14 属公共机制历史结果，不挪作本技能覆盖，见[共享验证证据](verification-evidence.md#jin-adaptation)。
+- **未完成与边界**：暗置来源、伤害牌被抵消、多个伤害目标、条目被其他效果覆盖与客户端条目显示未人工验收。

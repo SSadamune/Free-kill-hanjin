@@ -211,6 +211,37 @@ local function otherProvided(room, player, isDeputy, cardName, printed)
   return result
 end
 
+--- 可复用的“单技能失去”入口：只把指定技能记录到指定武将牌。
+--- 若同名技能还有另一张将牌/预亮/外部来源，记录该牌已失去，但不实际移除
+--- 仍在生效的技能；否则移除当前实际持有的技能（暗置牌移除 fake skill）。
+--- 原断肠的整牌失去仍使用自己的 applyLoss，不改其记录格式。
+---@param room Room
+---@param player ServerPlayer
+---@param isDeputy boolean
+---@param skillName string
+---@return boolean lostRecorded
+function M.loseCardSkill(room, player, isDeputy, skillName)
+  if room == nil or player == nil or type(skillName) ~= "string" then return false end
+  local cardName = Exchange.actualGeneral(player, isDeputy)
+  if cardName == "" or cardName == "anjiang" then return false end
+  local printed = printedSkills(player, cardName)
+  if not table.contains(printed, skillName) then return false end
+  if M.isLost(room, cardName, skillName) then return false end
+
+  M.markLost(room, cardName, { skillName })
+  local protected = otherProvided(room, player, isDeputy, cardName, printed)
+  if table.contains(protected, skillName) then return true end
+
+  local skill = Fk.skills[skillName]
+  if skill == nil then return true end
+  if not Exchange.isRevealed(player, isDeputy) and player:isFakeSkill(skill) then
+    player:loseFakeSkill(skill)
+  elseif player:hasSkill(skillName, true, true) then
+    room:handleAddLoseSkills(player, "-" .. skillName, nil, true, false)
+  end
+  return true
+end
+
 --- 断肠可选的目标将牌。暗置牌只显示主将／副将位置，不暴露牌名。
 ---@param source ServerPlayer
 ---@return string[]
