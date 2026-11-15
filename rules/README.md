@@ -33,7 +33,8 @@
 - [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
 - [WEI016 乐进结算约定](generals/wei016-yuejin.md)：骁果弃置基本牌为发动消耗，不能零弃牌发动。
 - [SHU007 黄月英结算约定](generals/shu007-huangyueying.md)：集智包含有对应实体牌且未经转化的普通、延时锦囊；区分玩家文本与规范描述中的“虚拟牌”。
-- [JIN009 司马懿结算约定](generals/jin009-simayi.md)：引用同文应期的公共裁定。
+- [JIN009 司马懿结算约定](generals/jin009-simayi.md)：权变的阶段花色事实、骤霆的亮出上限及同文应期的公共裁定。
+- 晋标准包其余逐将审阅：[司马师](generals/jin002-simashi.md)、[司马昭](generals/jin003-simazhao.md)、[贾充](generals/jin004-jiachong.md)、[羊祜](generals/jin005-yanghu.md)、[王元姬](generals/jin007-wangyuanji.md)、[夏侯徽](generals/jin008-xiahouhui.md)、[张春华](generals/jin010-zhangchunhua.md)、[张虎&乐綝](generals/jin011-zhanghu-yuechen.md)、[羊徽瑜](generals/jin012-yanghuiyu.md)、[王濬](generals/jin013-wangjun.md)、[文鸯](generals/jin014-wenyang.md)、[石苞](generals/jin015-shibao.md)、[张华](generals/jin016-zhanghua.md)。待裁定项目保留在对应逐将页，腹心死士与文虎专属技能分别归入司马师、文鸯页。
 - [WU003 吕蒙结算约定](generals/wu003-lvmeng.md)：谋断仅获得涉猎，涉猎为后天技能及其定义。
 - [WU005 周瑜结算约定](generals/wu005-zhouyu.md)：反间响应选择及同花色手牌、装备牌的弃置范围。
 - [WU013 周泰结算约定](generals/wu013-zhoutai.md)：不屈病句修正，摸牌数与置“创”张数的区别。
