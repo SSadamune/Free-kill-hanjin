@@ -1917,7 +1917,7 @@ M.generals = {
     id = [==[hanjin__qun001]==],
     name = [==[华佗]==],
     kingdom = [==[qun]==],
-    title = [==[仙山遊醫]==],
+    title = [==[仙山游医]==],
     halfHp = 1.5,
     hp = 3,
     mainHpAdjust = 0,
@@ -1931,7 +1931,7 @@ M.generals = {
       {
         id = [==[hanjin__skill_qun001_1]==],
         name = [==[济世]==],
-        text = [==[你可以将红色牌当【桃】对濒死角色使用，此濒死结算后，若此武将为客将，与你势力不同的角色依次选择是否用一个武将交换此武将。]==],
+        text = [==[你可以将红色牌当【桃】对濒死角色使用 [，此濒死结算后，若此武将为客将，与你势力不同的角色依次选择是否用一个武将交换此武将]。]==],
         related = false,
         tags = {  },
       },
@@ -1949,7 +1949,7 @@ M.generals = {
     id = [==[hanjin__qun002]==],
     name = [==[吕布]==],
     kingdom = [==[qun]==],
-    title = [==[虎視中原]==],
+    title = [==[虎视中原]==],
     halfHp = 2.5,
     hp = 5,
     mainHpAdjust = 0,
@@ -1988,7 +1988,7 @@ M.generals = {
     id = [==[hanjin__qun003]==],
     name = [==[貂蝉]==],
     kingdom = [==[qun]==],
-    title = [==[舞盡惡終]==],
+    title = [==[舞尽恶终]==],
     halfHp = 1.5,
     hp = 3,
     mainHpAdjust = 0,
@@ -2020,7 +2020,7 @@ M.generals = {
     id = [==[hanjin__qun004]==],
     name = [==[袁绍]==],
     kingdom = [==[qun]==],
-    title = [==[勢橫海內]==],
+    title = [==[势横海内]==],
     halfHp = 2.0,
     hp = 4,
     mainHpAdjust = 0,
@@ -2070,7 +2070,7 @@ M.generals = {
     id = [==[hanjin__qun007]==],
     name = [==[贾诩]==],
     kingdom = [==[qun]==],
-    title = [==[晦謀獨善]==],
+    title = [==[晦谋独善]==],
     halfHp = 1.5,
     hp = 3,
     mainHpAdjust = 0,
@@ -2091,7 +2091,7 @@ M.generals = {
       {
         id = [==[hanjin__skill_qun007_2]==],
         name = [==[乱武]==],
-        text = [==[限定技，出牌阶段，你可以令所有其他角色各选择一项：1.对其距离最小的另一名角色使用一张【杀】；2.失去1点体力。]==],
+        text = [==[限定技，出牌阶段，你可以令所有其他角色各选择一项：1.使用一张【杀】（须指定其距离最近的另一名角色为目标）；2.失去1点体力。]==],
         related = false,
         tags = { [==[Limited]==] },
       },
@@ -2121,7 +2121,7 @@ M.generals = {
     companionsUnresolved = {  },
     skills = {
       {
-        id = [==[hanjin__skill_qun008_1]==],
+        id = [==[hanjin__skill_shu006_1]==],
         name = [==[马术]==],
         text = [==[锁定技，你计算与其他角色的距离-1。]==],
         related = false,
@@ -2141,7 +2141,7 @@ M.generals = {
     id = [==[hanjin__qun010]==],
     name = [==[张角]==],
     kingdom = [==[qun]==],
-    title = [==[大賢良師]==],
+    title = [==[大贤良师]==],
     halfHp = 1.5,
     hp = 3,
     mainHpAdjust = 0,
@@ -2212,7 +2212,7 @@ M.generals = {
     id = [==[hanjin__qun013]==],
     name = [==[马腾]==],
     kingdom = [==[qun]==],
-    title = [==[心懸關隴]==],
+    title = [==[心悬关陇]==],
     halfHp = 2.0,
     hp = 4,
     mainHpAdjust = 0,
@@ -2224,7 +2224,7 @@ M.generals = {
     companionsUnresolved = {  },
     skills = {
       {
-        id = [==[hanjin__skill_qun013_1]==],
+        id = [==[hanjin__skill_shu006_1]==],
         name = [==[马术]==],
         text = [==[锁定技，你计算与其他角色的距离-1。]==],
         related = false,
@@ -2251,7 +2251,7 @@ M.generals = {
     id = [==[hanjin__qun015]==],
     name = [==[纪灵]==],
     kingdom = [==[qun]==],
-    title = [==[仲家的主將]==],
+    title = [==[仲家的主将]==],
     halfHp = 2.0,
     hp = 4,
     mainHpAdjust = 0,
@@ -2265,7 +2265,7 @@ M.generals = {
       {
         id = [==[hanjin__skill_qun015_1]==],
         name = [==[双刃]==],
-        text = [==[出牌阶段开始时，你可以与一名角色拼点：若你赢，你视为对包含其在内的至多两名角色使用一张【杀】；若你没赢，你手牌中的【杀】只能当【借刀杀人】使用。]==],
+        text = [==[出牌阶段开始时，你可以与一名角色拼点：若你赢，你视为对包含其在内的至多两名角色使用一张【杀】；若你没赢，本回合你手牌中的【杀】只能当【借刀杀人】使用。]==],
         related = false,
         tags = {  },
       },
@@ -2276,7 +2276,7 @@ M.generals = {
     id = [==[hanjin__qun016]==],
     name = [==[田丰]==],
     kingdom = [==[qun]==],
-    title = [==[河北瑰傑]==],
+    title = [==[河北瑰杰]==],
     halfHp = 1.5,
     hp = 3,
     mainHpAdjust = 0,
@@ -2290,14 +2290,14 @@ M.generals = {
       {
         id = [==[hanjin__skill_qun016_1]==],
         name = [==[死谏]==],
-        text = [==[当你的手牌数/体力值变为0后，你可以弃置一名其他角色区域内的一张牌，然后其可以令你/其回复1点体力。]==],
+        text = [==[当你失去最后的手牌后，或当你的体力值变化为1后，你可以弃置一名其他角色的一张牌。]==],
         related = false,
         tags = {  },
       },
       {
         id = [==[hanjin__skill_qun016_2]==],
         name = [==[随势]==],
-        text = [==[锁定技，当其他角色进入濒死状态时，若来源与你势力相同，你摸一张牌；当其他与你势力相同的角色死亡时，你失去1点体力。]==],
+        text = [==[锁定技，其他角色进入濒死时，若来源与你势力相同，你摸一张牌；与你势力相同的其他角色死亡时，你失去1点体力或弃置所有手牌。]==],
         related = false,
         tags = { [==[Compulsory]==] },
       },
@@ -2308,7 +2308,7 @@ M.generals = {
     id = [==[hanjin__qun017]==],
     name = [==[潘凤]==],
     kingdom = [==[qun]==],
-    title = [==[無雙上將]==],
+    title = [==[无双上将]==],
     halfHp = 2.0,
     hp = 4,
     mainHpAdjust = 0,
@@ -2377,7 +2377,7 @@ M.generals = {
     companionsUnresolved = {  },
     skills = {
       {
-        id = [==[hanjin__skill_qun027_1]==],
+        id = [==[hanjin__skill_shu006_1]==],
         name = [==[马术]==],
         text = [==[锁定技，你计算与其他角色的距离-1。]==],
         related = false,
@@ -3264,5 +3264,39 @@ M.commanders = {
     sourceText = [==[文虎(限一)｜冰杀]==],
   },
 }
+
+-- 性别元数据 -----------------------------------------------------------------
+-- 按单张武将牌的原有性别登记（与锁定上游同名 General.Female 实例核对），
+-- 未列出的正式武将均为男性。数据只放明确字段值，运行时不解析中文姓名；
+-- init.lua 把 "female"/"male" 映射成 General.Female/General.Male。
+local femaleGeneralIds = {
+  ["hanjin__han007"] = "王荣",
+  ["hanjin__han008"] = "伏皇后",
+  ["hanjin__han011"] = "唐姬",
+  ["hanjin__wei007"] = "甄姬",
+  ["hanjin__shu007"] = "黄月英",
+  ["hanjin__shu015"] = "祝融夫人",
+  ["hanjin__shu016"] = "甘夫人",
+  ["hanjin__wu006"] = "大乔",
+  ["hanjin__wu008"] = "孙尚香",
+  ["hanjin__wu011"] = "小乔",
+  ["hanjin__qun003"] = "貂蝉",
+  ["hanjin__qun012"] = "蔡文姬",
+  ["hanjin__qun018"] = "邹氏",
+  ["hanjin__jin007"] = "王元姬",
+  ["hanjin__jin008"] = "夏侯徽",
+  ["hanjin__jin010"] = "张春华",
+  ["hanjin__jin012"] = "羊徽瑜",
+}
+local matchedFemale = 0
+for _, general in ipairs(M.generals) do
+  if femaleGeneralIds[general.id] then
+    matchedFemale = matchedFemale + 1
+    general.gender = "female"
+  else
+    general.gender = "male"
+  end
+end
+assert(matchedFemale == 17, "gender metadata: expected 17 female generals, matched " .. matchedFemale)
 
 return M

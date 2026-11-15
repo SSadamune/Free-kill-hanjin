@@ -1,6 +1,6 @@
 # 共享验证证据
 
-本附录按原测试文件集中保存一次历史命令输出与真实结果，供各机制页条目引用；条目只写覆盖点，不重复粘贴命令。**本附录不重跑测试、不新增覆盖、不把旧定向结果冒充本轮运行**。不同日期的全量数字来自不同批次，按当时记录保留，不代表同一轮复跑；最新完成度仍以[开发状态](../../status.md)为准。
+本附录按测试文件保存历史验证结果，供各机制页引用。各结果适用于所标明的批次与覆盖范围；最新完成度见[开发状态](../../status.md)。
 
 ## 汉区
 
@@ -33,37 +33,37 @@ Ran 4 tests in 0.981 seconds, 4 successes, 0 failures
 <a id="han007_wangrong"></a>
 ### han007_wangrong.lua
 
-原记录为“测试待基础组集成执行”，未产生独立命令输出；后续 2026-11-13 的汉区最终集成复核确认其已纳入默认套件（564/564 通过）。该旧“未运行”状态已被最终通过取代，但不得把它当作本轮新运行。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han008_fuhuanghou"></a>
 ### han008_fuhuanghou.lua
 
-原记录为“测试待基础组统一执行”，未产生独立命令输出；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。旧记录保留的计划定向入口为 `python scripts/test.py --file tests/han008_fuhuanghou.lua --timeout 120`，当时未执行，后由默认套件覆盖。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han009_fuwan"></a>
 ### han009_fuwan.lua
 
-原记录为“测试待基础组统一执行”，未产生独立命令输出；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。旧记录保留的计划定向入口为 `python scripts/test.py --file tests/han009_fuwan.lua --timeout 120`，当时未执行，后由默认套件覆盖。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han012_caiyong"></a>
 ### han012_caiyong.lua
 
-原记录为“测试待基础组集成执行”，仅静态解析通过；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han016_liuchong"></a>
 ### han016_liuchong.lua
 
-原记录为“测试待基础组统一执行”，未产生独立命令输出；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。旧记录保留的计划定向入口为 `python scripts/test.py --file tests/han016_liuchong.lua --timeout 120`，当时未执行，后由默认套件覆盖。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han017_liuyao"></a>
 ### han017_liuyao.lua
 
-原记录为“测试待基础组统一执行”，未产生独立命令输出；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。旧记录保留的计划定向入口为 `python scripts/test.py --file tests/han017_liuyao.lua --timeout 120`，当时未执行，后由默认套件覆盖。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 <a id="han_retinues"></a>
 ### han_retinues.lua
 
-原记录为“测试待基础组集成执行”，仅静态解析通过；后续汉区最终集成复核确认已纳入默认套件（564/564 通过）。
+2026-11-13 汉区集成复核已覆盖本套件（默认全量 564/564 通过）；未保存独立定向运行输出。
 
 ## 魏区
 
@@ -259,3 +259,62 @@ DSH 分批实现，Codex 审阅并接手收尾修复与验收。规则资料提�
 测试诊断：全局替换请求会污染技能排序，已改按技能限定。放权用例曾深比较带环引用的玩家对象造成挂起，身份断言修正后完整路径及失技路径均通过；不将该断言问题归为游戏故障。Codex 沙箱内启动原生运行时超时后，按授权以本机权限执行；最终结果均来自同一锁定运行时和正式测试入口，没有另建环境绕行。
 
 未完成真实客户端点击、多人联网／重连、干净本体安装人工验收。复杂插入移牌、多重抵消及多来源组合未穷举；自动化通过不扩展为这些结论。
+
+<a id="qun-standard"></a>
+## 群势力标准包（2026-11-15）
+
+客户端按钮修复后的最新验收：除疠、乱武、狂斧、祸水、倾城、骁逆不再在客户端读取 `player.room`。`tests/qun_basic.lua` 使用真实 `ClientPlayer`、配套房间与独立牌区，走 `ReqPlayCard.setup`／`skillButtonValidity`；覆盖六技能合法场景、除疠无牌／无候选／次数耗尽、倾城性别筛选及狂斧／骁逆全体目标被禁止的禁用场景。服务端目标策略与执行前复核保留。
+
+```text
+python scripts/test.py --file tests/qun_basic.lua --timeout 90
+Ran 15 tests in 3.697 seconds, 15 successes, 0 failures
+python scripts/test.py --timeout 240
+Ran 764 tests in 140.766 seconds, 764 successes, 0 failures
+python scripts/check_lua.py
+exit 0
+python scripts/build_release.py
+Built .dev/dist/hanjin.zip (466 files)
+```
+
+24 个群技能文件与包内逐字节一致，包内路径仅限正式发布目录。日志为本地 `.dev/logs/qun_client_fixed.log`、`.dev/logs/qun_client_full.log`；全量仍有原生 Distance malfunction 警告，未出现 critical Lua 错误或失败断言。客户端点击、联网／重连与干净本体安装未人工验收。故障预防与夹具说明补在 [lessons.md](../../lessons.md) 及 [testing.md](../../testing.md)，不重复增加原则性警告。以下保留首次集成的历史结果与有复用价值的经验。
+
+DSH 分批实现，Codex 审阅、集中串行运行。范围为 15 将、27 条技能记录及黄巾雷使；马术共用蜀马超实现，并州狼骑／西凉精骑沿用现有实现。
+
+已执行的定向验收（正常权限运行锁定 Windows 运行时）：
+
+```text
+python scripts/test.py --file tests/qun_standard.lua --timeout 180
+Ran 47 tests in 11.927 seconds, 47 successes, 0 failures
+python scripts/test.py --file tests/mode_rules.lua --timeout 120
+Ran 10 tests in 1.454 seconds, 10 successes, 0 failures
+python scripts/test.py --file tests/standard_generals.lua --timeout 120
+Ran 12 tests in 0.366 seconds, 12 successes, 0 failures
+python scripts/test.py --file tests/general_exchange.lua --timeout 180
+Ran 17 tests in 2.081 seconds, 17 successes, 0 failures
+```
+
+有复用价值的故障与修复：
+
+- 济世救活后不交换：引擎回复至 1 点体力时立即清除 `dying`，`after_use` 再据此记录会漏掉已救活者。现于 `CardUsing`、回复生效前记录本次濒死来源；救活和未救活两条真实路径均覆盖。
+- 房间事实维护进入技能发动流程会扰动其他技能的触发顺序／测试回复；`global=true` 还会使监听加入所有模式。祸水状态维护改为只由汉晋模式安装的 refresh；黄巾伤害事实记录同样仅由模式安装。
+- 断肠不得把普通明置中缺失的技能自动补回。仅在本角色至少一张将牌有断肠记录时，恢复仍有效的共享同名来源；永久失技记录覆盖整张将牌，主副位置变化不刷新。
+- 乱击房间监听原先对每名角色重复询问，单个同意回复会掩盖后续重复。按 `target == player` 限一次，并用始终同意的请求辅助断言询问次数为 1。
+- 测试探针应直接或必然执行，并限定同一事件只记录一次；`AskForChoices` 使用选项表回复。效果中用杀不占通常用杀次数，应观察真实 `CardUsing` 与实体牌移动。
+- 受限执行环境出现原生进程无输出超时，正常权限下公共辅助套件 6/6 及后续定向可运行。不能把这种超时记作测试已执行失败断言或已通过。
+
+真实客户端点击、联网／重连、干净本体安装人工验收未进行。
+
+最终集成与发布核对：
+
+```text
+python scripts/test.py --timeout 240
+Ran 761 tests in 129.619 seconds, 761 successes, 0 failures
+python scripts/check_lua.py
+exit 0
+python scripts/build_release.py
+Built .dev/dist/hanjin.zip (466 files)
+```
+
+受影响的汉区拼点、司马炎、吴区伤害与群包十套件共同执行 98 项全部通过（22.964 秒）；使用的是原套件断言，临时组合入口随后删除。安装包内 40 个新增／修改正式文件与工作区逐字节一致，三个旧群马术骨架不在包内，且排除测试、脚本与开发本体适配。正式将性别登记为 17 女／73 男，离间／倾城针对真实双将的性别过滤已有回归。默认全量完整输出保存在本地 `.dev/logs/qun_full_final.log`。
+
+自动记账即使写为 `on_trigger`，无条件加入触发池仍可能扰动承诏、兴图、不屈的选择；濒死序号、完杀清理和乱击花色清理均改为 refresh，只在本次确有济世记录时触发交换。无记录时不生成新的发动选项。

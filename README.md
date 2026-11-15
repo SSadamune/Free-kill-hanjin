@@ -2,13 +2,13 @@
 
 紫乔汉晋是新月杀的自定义国战模式，包含魏、蜀、吴、群、汉、晋六势力，以及统领、翼从、应变等规则。
 
-项目仍在开发中。已登记 90 张武将和 14 种翼从；汉、魏、蜀、吴四势力标准包及其关联的 11 种翼从已实装并通过自动化回归，另已实现司马炎的垂统、兴图及晋司马懿的应期。其余武将与翼从的专属技能主要仍为名称与说明；大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。客户端交互、多人联网／重连及干净本体安装的完整人工验收尚未完成。
+项目仍在开发中。已登记 90 张武将和 14 种翼从；汉、魏、蜀、吴、群五势力标准包及其关联的 12 种翼从已实装并通过自动化回归，另已实现司马炎的垂统、兴图及晋司马懿的应期。其余武将与翼从的专属技能主要仍为名称与说明；大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。客户端交互、多人联网／重连及干净本体安装的完整人工验收尚未完成。
 
 - [项目愿景](docs/vision.md)与[文档入口](docs/README.md)
 - [规则集工作底稿](rulebook/README.md)与[项目设计、裁定](rules/README.md)
 - [开发状态与待办](docs/development/status.md)及[实现导航](docs/development/implementation/README.md)
 
-标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md)。具体技能与验证范围以对应文档为准。
+标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md) · [群](docs/development/implementation/generals/qun-standard.md)。具体技能与验证范围以对应文档为准。
 
 ## 准备开发环境
 

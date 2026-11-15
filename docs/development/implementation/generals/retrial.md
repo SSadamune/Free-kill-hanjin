@@ -9,6 +9,8 @@
 | WEI002 | 司马懿 | [鹰视](#wei002-2) |
 | WEI007 | 甄姬 | [洛神](#wei007-2) |
 | WU011 | 小乔 | [红颜](#wu011-2) |
+| QUN010 | 张角 | [鬼道](#qun010-2) |
+| QUN012 | 蔡文姬 | [悲歌](#qun012-1) |
 
 ## 技能条目
 
@@ -47,3 +49,21 @@
 - **实现与接口**：覆盖手牌、装备牌及判定牌的锁视过滤；供天香等按有效花色判定。
 - **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖天香／红颜组合；历史 22/22，见[共享验证证据](verification-evidence.md#wu_damage)。
 - **未完成与边界**：红颜失技／交换后的实际客户端刷新、少见红颜／禁弃组合未独立验收；客户端点击、联网／重连未人工验证。
+
+### 群
+
+<a id="qun010-2"></a>
+#### 鬼道（QUN010 张角）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun010_2`；源码 [skill_qun010_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun010_2.lua)。规则见[张角规范](../../../../rules/generals/qun010-zhangjiao.md)。同将雷击见[伤害、体力与死亡](damage.md#qun010-1)。
+- **实现与接口**：`fk.AskForRetrial` 时从手牌或装备区选一张黑色、未被禁止打出的牌，先走真实 `responseCard` 完成打出（跳过默认弃置），再 `changeJudge{exchange=true}` 替换判定牌并把原判定牌交给张角；`response=true` 只指定移动原因，不产生完整打出事件，不能省去 `responseCard`。
+- **验证依据**：已执行 [qun_retrial.lua](../../../../tests/qun_retrial.lua) 的 `testGuidaoBlackCardReplacesAndObtainsOldJudge`、`testGuidaoRedCardCannotReplace`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **未完成与边界**：其他改判者竞争、打出牌被中途移动、装备区最后一牌等边界未穷举；客户端改判提示未人工验收。
+
+<a id="qun012-1"></a>
+#### 悲歌（QUN012 蔡文姬）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun012_1`；源码 [skill_qun012_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun012_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN012。同将断肠见[伤害、体力与死亡](damage.md#qun012-2)。
+- **实现与接口**：角色受到【杀】造成的伤害后，蔡文姬弃一张牌，令受伤角色走正式判定（鬼道可改判）；红桃其回复 1 点，方片其摸两张，梅花伤害来源弃两张，黑桃伤害来源定向叠置。叠置仅平置→叠置，已叠置不翻回；来源缺失或已死亡时该分支不执行。
+- **验证依据**：已执行 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testBeigeHeartRecoversDamagedPlayer`、`testBeigeSpadeStacksSourceWithoutFlippingBack`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **未完成与边界**：方片／梅花分支、无来源伤害、来源中途死亡未逐项覆盖；客户端判定与弃牌未人工验收。

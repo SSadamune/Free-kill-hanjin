@@ -56,4 +56,29 @@ function HanjinClient:serialize()
   return o
 end
 
+-- 实体牌和虚拟牌脚注共用 parseMsg(msg, true)，但引擎仍给玩家名加 font/b
+-- 标签。汉晋脚注去除这些标签，避免标签泄漏到结算区；普通日志及其他模式沿用原格式。
+local function stripRichText(text)
+  if type(text) ~= "string" then return text end
+  text = text:gsub("<%s*/?%s*[Bb]%s*>", "")
+  text = text:gsub("<%s*/?%s*[Ff][Oo][Nn][Tt][^>]*>", "")
+  return text
+end
+
+local function isHanjinMode()
+  local room = Fk:currentRoom()
+  if room == nil or type(room.getSettings) ~= "function" then return false end
+  return room:getSettings("gameMode") == "hanjin_heg_mode"
+end
+
+--- 脚注/虚拟牌提示的纯文本化：只覆盖 nocolor == true 的调用，继承
+--- setCardNote 与 showVirtualCard 两条通知路径，不另写重复的脚注流程。
+function HanjinClient:parseMsg(msg, nocolor, visible_data)
+  local text = BaseClient.parseMsg(self, msg, nocolor, visible_data)
+  if nocolor == true and isHanjinMode() then
+    return stripRichText(text)
+  end
+  return text
+end
+
 return HanjinClient

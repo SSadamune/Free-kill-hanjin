@@ -1,7 +1,18 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
 local CardData = require "packages.hanjin.pkg.hanjin_cards.data.cards"
-Testhanjin_card_reuse = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wu", "wu" }
+
+-- 固定全体白板双将：卡牌复用/应变用例只依赖卡牌与请求顺序，不能因随机双将
+-- 引入额外技能询问；需要特定武将的交互用例在本用例内自行装入。
+Testhanjin_card_reuse = {
+  setup = function()
+    local room = support.initHanjinRoom()
+    FkTest.runInRoom(function() skill_test.installBlankGenerals(room, DEFAULT_KINGDOMS) end)
+  end,
+  tearDown = support.clearRoom,
+}
 
 local function card(name, suit, number)
   return assert(table.find(Fk.cards, function(c)
@@ -371,21 +382,72 @@ end
 function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation()
   local room = FkTest.room
   local target, jink, seen
+  local initial = {}
+  local nullify_asks, nullify_targeted = 0, false
+  local jink_responses, jink_uses = 0, 0
   FkTest.runInRoom(function()
+    -- 本用例需要「目标可把任意牌当无懈」的隐将张让：万箭齐发结算时先有真实
+    -- 无懈请求，再有为万箭准备的【闪】响应；两次回复分别对应这两次请求。
+    target = room.players[2]
+    skill_test.installDualGenerals(room, target, {
+      main = "hanjin__han004", deputy = "hanjin_test__han_2", kingdom = "han",
+    })
+    target:hideGeneral(false)
     clearAllAreas(room)
     local attacker = room.players[1]
-    target = room.players[2]
     setSingleKingdom(room, target)
+    for _, player in ipairs(room.players) do
+      table.insert(initial, { player.id, player.general, player.deputyGeneral,
+        player:getMark("__heg_general"), player:getMark("__heg_deputy") })
+    end
     jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
     local archery = give(room, attacker, card("hanjin__archery_attack"))
     lu.assertTrue(A.isAdaptationCard(jink))
     seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_pure_response")
-    FkTest.setNextReplies(target, { { card = jink.id } })
+    -- 必达探针：本用例的【闪】只能以「打出」进入 RespondCard，不能出现
+    -- CardUsing；A.Triggered 为 0 是结果，探针负责区分路径。
+    local use_probe = fk.CreateSkill { name = "#hanjin_test_jink_use_probe" }
+    use_probe:addEffect(fk.CardUsing, {
+      can_refresh = function(self, event, target, player, data)
+        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+      end,
+      on_refresh = function() jink_uses = jink_uses + 1 end,
+    })
+    use_probe:addEffect(fk.CardResponding, {
+      can_refresh = function(self, event, target, player, data)
+        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+      end,
+      on_refresh = function() jink_responses = jink_responses + 1 end,
+    })
+    room:addSkill(use_probe:createSkill())
+    -- 第一条取消先来的无懈请求，第二条才是万箭的【闪】响应。
+    FkTest.setNextReplies(target, { "", { card = jink.id } })
     for index = 3, #room.players do FkTest.setNextReplies(room.players[index], { "" }) end
-    local tos = table.slice(room.players, 2)
-    room:useCard(UseCardData:new { from = attacker, tos = tos, card = archery, extra_data = {} })
+
+    local original_nullify = room.askToNullification
+    room.askToNullification = function(self, players, params)
+      nullify_asks = nullify_asks + 1
+      if table.contains(players, target) then nullify_targeted = true end
+      return original_nullify(self, players, params)
+    end
+    local ok, err = pcall(function()
+      local tos = table.slice(room.players, 2)
+      room:useCard(UseCardData:new { from = attacker, tos = tos, card = archery, extra_data = {} })
+    end)
+    room.askToNullification = original_nullify
+    if not ok then error(err) end
   end)
-  lu.assertEquals(#seen, 0)
+  local observed = table.map(seen, function(data)
+    return { from = data.use.from.id, card = data.use.card.name,
+      skills = data.use.card.skillNames, condition = data.entry.condition,
+      effect = data.entry.effect, against = data.use.toCard and data.use.toCard.name }
+  end)
+  lu.assertTrue(nullify_asks >= 1, json.encode { initial = initial, nullify_asks = nullify_asks })
+  lu.assertTrue(nullify_targeted, json.encode { initial = initial, nullify_asks = nullify_asks })
+  lu.assertEquals(#seen, 0, json.encode { initial = initial, observed = observed,
+    nullify_asks = nullify_asks, jink_responses = jink_responses })
+  lu.assertEquals(jink_responses, 1, "【闪】必须经 RespondCard 打出一次")
+  lu.assertEquals(jink_uses, 0, "万箭的【闪】不能走 CardUsing（只能是打出）")
   lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
   lu.assertEquals(#target:getCardIds("h"), 0)
   lu.assertEquals(target.hp, target.maxHp)
