@@ -4,6 +4,7 @@
 -- docs/development/implementation/generals/qun-standard.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local CHULI = "hanjin__skill_qun001_2"
 local LIJIAN = "hanjin__skill_qun003_1"
@@ -321,8 +322,178 @@ function Testhanjin_qun_basic:testMaleOnlyFiltersUseRegisteredGeneralGender()
 
   local qingcheng = Fk.skills[QINGCHENG]
   lu.assertNotNil(qingcheng, "倾城应已实装")
-  lu.assertFalse(qingcheng:targetFilter(p1, p2, {}, {}))
-  lu.assertTrue(qingcheng:targetFilter(p1, p3, {}, {}))
+  inRoom(function()
+    lu.assertFalse(qingcheng:targetFilter(p1, p2, {}, {}))
+    lu.assertTrue(qingcheng:targetFilter(p1, p3, {}, {}))
+  end)
+end
+
+-- 真实 ClientPlayer 夹具：参考 tests/commander_retinue.lua 的
+-- testRealClientPlayerWithoutServerRoomCanUseCommanderSlash。不伪造 player.room：
+-- 构建 clientRoom 并临时替换 Fk.currentRoom，恢复在 pcall 之后执行。
+-- 每个 ClientPlayer 使用独立的牌区副本，场景内清空候选不会改到服务端状态。
+local function withClientRoom(current, fn)
+  local ClientPlayer = require "ltk.client.clientplayer"
+  local clients = {}
+  for _, original in ipairs(current.players) do
+    local copy = ClientPlayer:new(original._splayer)
+    for key, value in pairs(original) do
+      if key ~= "room" and key ~= "class" and key ~= "serverplayer" then copy[key] = value end
+    end
+    local cards = {}
+    for area, ids in pairs(copy.player_cards or {}) do cards[area] = table.simpleClone(ids) end
+    copy.player_cards = cards
+    table.insert(clients, copy)
+  end
+  for index, player in ipairs(clients) do
+    player.next = clients[index % #clients + 1]
+  end
+  local clientRoom = setmetatable(
+    { players = clients, alive_players = clients, current = clients[1] },
+    { __index = current })
+  local originalRoom = Fk.currentRoom
+  Fk.currentRoom = function() return clientRoom end
+  local ok, err = pcall(function() fn(clients, clientRoom) end)
+  Fk.currentRoom = originalRoom
+  if not ok then error(err) end
+  return clients, clientRoom
+end
+
+local function clientPlayHandler(client, skillName)
+  local handler = ReqPlayCard:new(client)
+  handler.skill_name = skillName
+  handler:setup()
+  return handler
+end
+
+-- 除疠客户端可用性：真实 ClientPlayer 没有 room 字段，出牌阶段走
+-- ReqPlayCard.setup → skillButtonValidity → ActiveSkill:canUse。
+function Testhanjin_qun_basic:testChuliClientAvailabilityWithoutPlayerRoom()
+  local p1, p2 = p(1), p(2)
+  clearCards(p1)
+  clearCards(p2)
+  grant(p1, CHULI)
+  local mine = give(p1, "hanjin__jink", Card.Heart, 2)
+  give(p2, "hanjin__jink", Card.Spade, 3)
+  inRoom(function() p1.phase = Player.Play end)
+
+  withClientRoom(room(), function(clients)
+    local me = clients[1]
+    lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
+    lu.assertEquals(me.class.name, "ClientPlayer")
+    local handler = clientPlayHandler(me, CHULI)
+    lu.assertTrue(handler:skillButtonValidity(CHULI), "有合法候选时除疠应可用")
+
+    -- 本人无牌 → 禁用
+    me.player_cards[Player.Hand] = {}
+    lu.assertFalse(handler:skillButtonValidity(CHULI), "本人无牌应禁用")
+    me.player_cards[Player.Hand] = { mine }
+
+    -- 全体候选都清空 → 无合格候选，禁用
+    for index = 2, #clients do
+      clients[index].player_cards[Player.Hand] = {}
+      clients[index].player_cards[Player.Equip] = {}
+    end
+    lu.assertFalse(handler:skillButtonValidity(CHULI), "无合格候选应禁用")
+    handler:_finish()
+  end)
+
+  -- 已用次数：客户端自身的历史记录显示本阶段已发动 → 禁用。
+  withClientRoom(room(), function(clients)
+    local me = clients[1]
+    me.skillUsedHistory = table.simpleClone(me.skillUsedHistory or {})
+    me.skillUsedHistory[CHULI] = { [Player.HistoryPhase] = 1 }
+    local handler = clientPlayHandler(me, CHULI)
+    lu.assertFalse(handler:skillButtonValidity(CHULI), "本阶段已发动应禁用")
+    handler:_finish()
+  end)
+end
+
+-- 五个同类主动入口的真实客户端按钮校验：乱武、狂斧、祸水、倾城、骁逆。
+-- 每个技能在当前场景至少一个合法用例；倾城另外触达目标筛选（男收女拒）。
+function Testhanjin_qun_basic:testQunActiveSkillButtonsOnRealClientPlayer()
+  local p1, p2, p3, p4 = p(1), p(2), p(3), p(4)
+  for _, player in ipairs({ p1, p2, p3, p4 }) do clearCards(player) end
+  -- p4 换成女性主将（蔡文姬），用于倾城目标筛选的拒绝分支；势力保持 wei，
+  -- 以便骁逆仍有「其他势力」候选。
+  inRoom(function()
+    skill_test.installDualGenerals(room(), p4, {
+      main = "hanjin__qun012", deputy = "hanjin_test__wei_2", kingdom = "wei",
+    })
+  end)
+  clearCards(p4)
+  give(p1, "hanjin__jink", Card.Spade, 2)   -- 祸水支付用的黑牌
+  give(p1, "hanjin__peach", Card.Heart, 3)  -- 倾城的手牌数比较
+  give(p2, "hanjin__jink", Card.Heart, 4)
+  give(p4, "hanjin__jink", Card.Heart, 5)
+  local equipId = give(p2, "jueying", Card.Spade, 5) -- 狂斧需要场上装备
+  inRoom(function() room():moveCardIntoEquip(p2, equipId, "test", true, p2) end)
+  inRoom(function() p1.phase = Player.Play end)
+
+  local cases = {
+    { name = "hanjin__skill_qun007_2", label = "乱武" },
+    { name = "hanjin__skill_qun017_1", label = "狂斧" },
+    { name = "hanjin__skill_qun018_1", label = "祸水" },
+    { name = "hanjin__skill_qun018_2", label = "倾城" },
+    { name = "hanjin__skill_qun027_2", label = "骁逆" },
+  }
+
+  withClientRoom(room(), function(clients)
+    local me = clients[1]
+    lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
+    lu.assertEquals(me.class.name, "ClientPlayer")
+    for _, case in ipairs(cases) do
+      local handler = clientPlayHandler(me, case.name)
+      lu.assertTrue(handler:skillButtonValidity(case.name), case.label .. " 在合法场景应可用")
+      handler:_finish()
+    end
+
+    -- 倾城目标筛选：男性 p2 接受，女性 p4 拒绝。
+    local qingcheng = Fk.skills[QINGCHENG]
+    lu.assertNotNil(qingcheng, "倾城应已实装")
+    lu.assertTrue(qingcheng:targetFilter(me, clients[2], {}, {}), "男性目标应接受")
+    lu.assertFalse(qingcheng:targetFilter(me, clients[4], {}, {}), "女性目标应拒绝")
+    lu.assertTrue(p4:isFemale(), "p4 主将蔡文姬应为女性")
+  end)
+end
+
+--- 房间级禁止技能：所有【杀】的目标都被禁止。客户端按钮必须因此禁用，
+--- 不能靠「存在存活角色」这类近似判断误开。
+local function installProhibitSlashTargets()
+  local name = "#qun_prohibit_slash_targets"
+  if Fk.skills[name] == nil then
+    local skel = fk.CreateSkill { name = name }
+    skel:addEffect("prohibit", {
+      is_prohibited = function(self, from, to, card)
+        return card ~= nil and card.trueName == "slash"
+      end,
+    })
+    local skill = skel:createSkill()
+    Fk.skills[name] = skill
+    inRoom(function() room():addSkill(skill) end)
+  end
+end
+
+function Testhanjin_qun_basic:testProhibitedSlashTargetsDisableClientButtons()
+  local p1, p2 = p(1), p(2)
+  clearCards(p1)
+  clearCards(p2)
+  give(p1, "hanjin__jink", Card.Spade, 2)
+  give(p2, "hanjin__jink", Card.Heart, 4)
+  local equipId = give(p2, "jueying", Card.Spade, 5)
+  inRoom(function() room():moveCardIntoEquip(p2, equipId, "test", true, p2) end)
+  inRoom(function() p1.phase = Player.Play end)
+  installProhibitSlashTargets()
+
+  withClientRoom(room(), function(clients)
+    local me = clients[1]
+    for _, name in ipairs({ "hanjin__skill_qun017_1", "hanjin__skill_qun027_2" }) do
+      local handler = clientPlayHandler(me, name)
+      lu.assertFalse(handler:skillButtonValidity(name),
+        name .. "：全体目标被禁止时客户端应禁用")
+      handler:_finish()
+    end
+  end)
 end
 
 -- 闭月：结束阶段入口按摸牌前是否空手决定张数。

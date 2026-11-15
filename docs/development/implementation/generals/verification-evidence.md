@@ -263,6 +263,21 @@ DSH 分批实现，Codex 审阅并接手收尾修复与验收。规则资料提�
 <a id="qun-standard"></a>
 ## 群势力标准包（2026-11-15）
 
+客户端按钮修复后的最新验收：除疠、乱武、狂斧、祸水、倾城、骁逆不再在客户端读取 `player.room`。`tests/qun_basic.lua` 使用真实 `ClientPlayer`、配套房间与独立牌区，走 `ReqPlayCard.setup`／`skillButtonValidity`；覆盖六技能合法场景、除疠无牌／无候选／次数耗尽、倾城性别筛选及狂斧／骁逆全体目标被禁止的禁用场景。服务端目标策略与执行前复核保留。
+
+```text
+python scripts/test.py --file tests/qun_basic.lua --timeout 90
+Ran 15 tests in 3.697 seconds, 15 successes, 0 failures
+python scripts/test.py --timeout 240
+Ran 764 tests in 140.766 seconds, 764 successes, 0 failures
+python scripts/check_lua.py
+exit 0
+python scripts/build_release.py
+Built .dev/dist/hanjin.zip (466 files)
+```
+
+24 个群技能文件与包内逐字节一致，包内路径仅限正式发布目录。日志为本地 `.dev/logs/qun_client_fixed.log`、`.dev/logs/qun_client_full.log`；全量仍有原生 Distance malfunction 警告，未出现 critical Lua 错误或失败断言。客户端点击、联网／重连与干净本体安装未人工验收。故障预防与夹具说明补在 [lessons.md](../../lessons.md) 及 [testing.md](../../testing.md)，不重复增加原则性警告。以下保留首次集成的历史结果与有复用价值的经验。
+
 DSH 分批实现，Codex 审阅、集中串行运行。范围为 15 将、27 条技能记录及黄巾雷使；马术共用蜀马超实现，并州狼骑／西凉精骑沿用现有实现。
 
 已执行的定向验收（正常权限运行锁定 Windows 运行时）：

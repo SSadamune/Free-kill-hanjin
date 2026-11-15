@@ -8,7 +8,7 @@
 - [魏势力标准包](generals/wei-standard.md)
 - [蜀势力标准包](generals/shu-standard.md)
 - [吴势力标准包](generals/wu-standard.md)
-- [群势力标准包逐将检索](generals/qun-standard.md)（稳定部分已落机制页；测试结果待 A 回填）
+- [群势力标准包逐将检索](generals/qun-standard.md)（验证结果见开发状态及对应验证记录）
 - [晋势力标准包](generals/jin001-simayan.md)
 
 ## 基础机制

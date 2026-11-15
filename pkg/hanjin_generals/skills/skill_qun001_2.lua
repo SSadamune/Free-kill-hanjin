@@ -16,15 +16,17 @@ local function sameKingdom(a, b)
   return a == b or H.compareKingdomWith(a, b)
 end
 
---- 跨客户端/服务端取存活角色：服务端 Room 有 getAlivePlayers，客户端房间只有
---- alive_players 字段，双方都要能跑 can_use/target_filter。
----@param room Room
+--- 技能可用性在服务端（ServerPlayer）与客户端（ClientPlayer）都会执行：
+--- 客户端走 ReqPlayCard.skillButtonValidity → ActiveSkill:canUse，而 ClientPlayer
+--- 没有 room 字段，只有 ServerPlayer 才有。因此统一经 Fk:currentRoom() 取公开
+--- 存活角色（核心 card.lua 的 getAvailableTargets 亦使用 room.alive_players）。
 ---@return ServerPlayer[]|ClientPlayer[]
-local function alivePlayers(room)
-  if type(room.getAlivePlayers) == "function" then
-    return room:getAlivePlayers()
-  end
-  return room.alive_players or room.players or {}
+local function alivePlayers()
+  local room = Fk:currentRoom()
+  if room == nil then return {} end
+  if room.alive_players ~= nil then return room.alive_players end
+  if type(room.getAlivePlayers) == "function" then return room:getAlivePlayers() end
+  return {}
 end
 
 skill:addEffect("active", {
@@ -36,9 +38,9 @@ skill:addEffect("active", {
   can_use = function(self, player)
     if player:usedSkillTimes(skill.name, Player.HistoryPhase) > 0 then return false end
     if player:isNude() then return false end
-    -- 服务端与客户端共用：经 alivePlayers 兼容 getAlivePlayers/alive_players，
-    -- 不直接依赖只在服务端存在的房间方法或只在客户端存在的字段。
-    return table.find(alivePlayers(player.room), function(p)
+    -- 双方共用：不读 player.room（ClientPlayer 没有该字段），经 Fk:currentRoom()
+    -- 取得客户端/服务端同源的公开存活角色列表。
+    return table.find(alivePlayers(), function(p)
       return p ~= player and not p:isRemoved() and not p:isNude()
     end) ~= nil
   end,

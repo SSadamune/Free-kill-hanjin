@@ -353,6 +353,7 @@
 - **标识与依据**：运行时 ID `hanjin__skill_qun001_2`；源码 [skill_qun001_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun001_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN001。同将济世见[伤害、体力与死亡](damage.md#qun001-1)。
 - **实现与接口**：出牌阶段限一次，选至多三名**彼此势力不相同**的其他角色，不要求与华佗不同；随后华佗与这些角色各弃一张手牌或装备。全部弃置完成后按实际失去的牌结算，失去黑桃者各摸一张，后弃的黑桃不漏记。
 - **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testChuliTwoCandidatesSpadeDraws`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **客户端入口**：按钮计算经 `Fk:currentRoom()` 读取公开存活角色，不读取 `ClientPlayer` 不具备的 `room` 字段。`testChuliClientAvailabilityWithoutPlayerRoom` 使用配套客户端角色／房间走 `ReqPlayCard.setup` 与 `skillButtonValidity`，覆盖合法候选、本人无牌、全场无候选及阶段次数耗尽；已通过自动化回归。
 - **未完成与边界**：候选势力并列、目标无牌、华佗自己无牌等边界未穷举；客户端选人／弃牌未人工验收。
 
 <a id="qun003-2"></a>

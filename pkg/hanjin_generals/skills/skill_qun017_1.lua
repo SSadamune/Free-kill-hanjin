@@ -23,14 +23,33 @@ local function slashPolicy()
 end
 
 local function equipmentOwners(room)
+  if room == nil or room.alive_players == nil then return {} end
   return table.filter(room.alive_players, function(p)
     return not p:isRemoved() and #p:getCardIds("e") > 0
   end)
 end
 
-local function slashTargets(player)
-  return C.candidates(player.room, player, Fk:cloneCard(SLASH), slashPolicy(),
+local function slashTargets(room, player)
+  return C.candidates(room, player, Fk:cloneCard(SLASH), slashPolicy(),
     { bypass_times = true })
+end
+
+--- 客户端与服务端共用「存在合法【杀】目标」判断。card_use_targets 的策略栈只在
+--- 服务端可用（该模块的 isServer 断言），客户端改用公开接口：
+--- Player:canUseTo(slash, to, {bypass_times, bypass_distances})（锁定
+--- ltk/core/player.lua:1219），包含禁止使用/禁止指定目标与杀的目标条件，
+--- 与服务端显式策略的禁止语义一致，不再用「有存活角色」的近似分支。
+local function hasSlashTarget(room, player)
+  if room == nil then return false end
+  if player.class ~= nil and player.class.name == "ServerPlayer" then
+    return #slashTargets(room, player) > 0
+  end
+  local slash = Fk:cloneCard(SLASH)
+  slash.skillName = skill.name
+  return table.find(room.alive_players or {}, function(p)
+    return p ~= player and not p.dead and not p:isRemoved()
+      and player:canUseTo(slash, p, { bypass_times = true, bypass_distances = true })
+  end) ~= nil
 end
 
 skill:addEffect("active", {
@@ -41,10 +60,11 @@ skill:addEffect("active", {
   card_filter = Util.FalseFunc,
   target_filter = Util.FalseFunc,
   can_use = function(self, player)
+    local room = Fk:currentRoom()
     return player.phase == Player.Play
       and player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
-      and #equipmentOwners(player.room) > 0
-      and #slashTargets(player) > 0
+      and #equipmentOwners(room) > 0
+      and hasSlashTarget(room, player)
   end,
   on_use = function(self, room, effect)
     local player = effect.from
@@ -77,7 +97,7 @@ skill:addEffect("active", {
     room:throwCard({ cardId }, skill.name, owner, player)
 
     -- 弃置后重新计算目标与最大目标数（可能失去方天画戟等来源）。
-    local targets = slashTargets(player)
+    local targets = slashTargets(room, player)
     if #targets == 0 then return end
     local slash = Fk:cloneCard(SLASH)
     local maxNum = slash.skill:getMaxTargetNum(player, slash)

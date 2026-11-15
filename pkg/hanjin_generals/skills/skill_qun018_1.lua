@@ -21,10 +21,18 @@ local skill = fk.CreateSkill {
 skill.hanjinImplemented = true
 
 --- 双将均明置的其他存活角色：主动段的合法目标。
+--- 直接遍历公开的存活列表，不依赖 Room:getOtherPlayers：客户端（ClientPlayer）
+--- 也会执行 can_use，而 ClientPlayer 没有 room 字段，公共房间经 Fk:currentRoom()。
 local function hideTargets(room, player)
-  return table.filter(room:getOtherPlayers(player, false), function(target)
-    return target:isAlive() and not target:isRemoved() and Q.allGeneralsRevealed(target)
-  end)
+  local ret = {}
+  if room == nil then return ret end
+  for _, target in ipairs(room.alive_players or {}) do
+    if target ~= player and target:isAlive() and not target:isRemoved()
+      and Q.allGeneralsRevealed(target) then
+      table.insert(ret, target)
+    end
+  end
+  return ret
 end
 
 --- 可用于支付的黑牌：只在自己的手牌或装备区，且未被禁止弃置。
@@ -53,9 +61,10 @@ skill:addEffect("active", {
     return #selected < 1 and to_select ~= player and Q.allGeneralsRevealed(to_select)
   end,
   can_use = function(self, player)
+    local room = Fk:currentRoom()
     return player.phase == Player.Play
       and #payableCards(player) > 0
-      and #hideTargets(player.room, player) > 0
+      and #hideTargets(room, player) > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from

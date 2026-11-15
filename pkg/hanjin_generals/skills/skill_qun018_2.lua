@@ -9,12 +9,13 @@ local skill = fk.CreateSkill {
 }
 skill.hanjinImplemented = true
 
----@param player ServerPlayer
----@return ServerPlayer[]
-local function candidates(player)
-  local room = player.room
+---@param room Room|ClientRoom|nil
+---@param player ServerPlayer|ClientPlayer
+---@return ServerPlayer[]|ClientPlayer[]
+local function candidates(room, player)
+  if room == nil then return {} end
   local handCount = #player:getCardIds("h")
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room.alive_players or {}, function(p)
     return p ~= player and not p.dead and not p:isRemoved() and p:isMale()
       and #p:getCardIds("h") <= handCount
   end)
@@ -25,18 +26,20 @@ skill:addEffect("active", {
   target_num = 1,
   prompt = "#hanjin__skill_qun018_2-prompt",
   target_filter = function(self, player, to_select, selected)
-    return #selected == 0 and table.contains(candidates(player), to_select)
+    -- 客户端目标筛选同样走公开房间；ClientPlayer 没有 room 字段。
+    return #selected == 0 and table.contains(candidates(Fk:currentRoom(), player), to_select)
   end,
   can_use = function(self, player)
+    local room = Fk:currentRoom()
     return player.phase == Player.Play
       and player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
-      and #candidates(player) > 0
+      and #candidates(room, player) > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from
     local to = effect.tos and effect.tos[1]
     if player == nil or to == nil or player.dead or to.dead or to:isRemoved() then return end
-    if not table.contains(candidates(player), to) then return end
+    if not table.contains(candidates(room, player), to) then return end
 
     local mine = player:getCardIds("h")
     local theirs = to:getCardIds("h")
