@@ -8,6 +8,22 @@
 - 根因：可用性、交牌下限及提示会在 `ClientPlayer` 上计算，不能假定它有 `ServerPlayer.room`。
 - 修复：密诏使用兼容客户端的当前房间接口读取可见状态，保留服务端执行前复核。
 - 回归：`tests/han001_liuxie.lua` 中 `testMZ31RealClientPlayerWithoutRoomComputesKnownFaction`、`testMZ32ClientWithoutRoomPredictsHiddenOwnFaction`。
+- 群包再次出现同类问题：张角／华佗进入出牌阶段，`ReqPlayCard.skillButtonValidity` 调用除疠 `can_use` 时访问 `player.room`。服务端效果用例通过不能证明客户端按钮可用；应沿调用链检查 `can_use`、目标筛选及它们调用的辅助函数。
+- 夹具也须使用客户端房间：仅换成 `ClientPlayer` 而让 `Fk:currentRoom()` 仍返回服务端房间，会混用两套角色和牌区。`tests/qun_basic.lua` 的 `withClientRoom` 展示成套客户端角色、独立牌区及异常后恢复上下文；测试同时断言合法场景可用、无候选和次数耗尽时禁用，避免用空列表掩盖错误。
+
+## 卡牌脚注泄漏富文本标签
+
+- 现象：使用助战杀时，结算区卡牌上显示 `</b></font>` 等标签并折行遮挡牌面。
+- 接口核对：锁定引擎 `Client:parseMsg(msg, true)` 仍给玩家名加 `font/b` 标签；实体牌 `setCardNote` 与虚拟牌 `showVirtualCard` 都调用它。截图含张虎&乐綝，但 `&` 是否导致 Qt AutoText 解析失败尚未通过渲染验证。
+- 修复：正式扩展的 `HanjinClient:parseMsg` 仅对汉晋模式的 `nocolor == true` 输出去除这些格式标签；继承两条通知路径，普通日志及其他模式保留原行为，不修改本体 QML。
+- 回归：`tests/han001_liuxie.lua` 的 `testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式双将名及真实 `##UseCardTo` 消息，捕获两条客户端通知，核对脚注、普通日志与模式隔离；客户端实际渲染待人工验收。
+
+## 预排的闪回复被无懈询问提前消费
+
+- 现象：纯打出闪不触发应变的测试偶发观察到一次应变；单独测试可能通过。
+- 根因：随机初始双将包含暗置张让时，滔乱使持闪的目标进入万箭齐发的无懈候选。`FkTest.setNextReplies` 按请求先后消费且不校验牌名，原本供 `AskForResponseCard` 的闪回复被更早的无懈 `AskForUseCard` 消费，测试因此错误执行了一次使用闪。观察到的牌没有转化技能名，所响应牌为万箭；固定隐张让组合可复现。
+- 修复：纯卡牌套件固定白板双将；该交互用例明确装入隐张让，先为无懈请求安排取消，再为万箭安排打出闪。保留真实询问，并观察无懈候选和卡牌事件。
+- 回归：`tests/card_reuse.lua:testJinkPlayedAsResponseDoesNotTriggerAdaptation` 断言目标实际进入无懈候选、`CardResponding` 一次、`CardUsing` 零次、应变零次。万箭齐发只能通过打出闪响应；生产实现的 `askToResponse → responseCard` 不变。本次修复测试驱动，不放宽规则或失败断言。
 
 ## 同名语义不代表事件数据拥有同一方法（已修复）
 
