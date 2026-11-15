@@ -12,6 +12,13 @@
 | WEI010 | 徐晃 | [长驱](#wei010-2) |
 | WEI011 | 曹仁 | [伪溃](#wei011-1) |
 | WEI013 | 荀彧 | [驱虎](#wei013-1)（分记录；主记录见[拼点](pindian.md#wei013-1)） |
+| SHU003 | 张飞 | [咆哮](#shu003-1) |
+| SHU004 | 诸葛亮 | [空城](#shu004-2) |
+| SHU005 | 赵云 | [突阵](#shu005-2) |
+| SHU006 | 马超 | [马术](#shu006-1) |
+| SHU006 | 马超 | [铁骑](#shu006-2) |
+| SHU008 | 黄忠 | [烈勇](#shu008-1) |
+| SHU013 | 刘禅 | [享乐](#shu013-1) |
 | WU006 | 大乔 | [流离](#wu006-2) |
 | WU007 | 陆逊 | [谦逊](#wu007-1) |
 | WU012 | 太史慈 | [天义](#wu012-1)（分记录；主记录见[拼点](pindian.md#wu012-1)） |
@@ -88,6 +95,64 @@
 - **实现与接口**：拼点赢→对手为来源、对其攻击范围内由你选择的角色造成 1 点伤害；没赢（含平局／空结果）→对手视为对你使用【杀】（`extra = true` 不计次数、显式目标策略）。赢的伤害来源与没赢的用牌都按真实使用数据结算，不重复用牌。
 - **验证依据**：[wei_active.lua](../../../../tests/wei_active.lua) 覆盖驱虎赢（伤害来源为对手；该用例以测试桩固定拼点结果，属输入夹具）与驱虎平局（双方各出一张同点数牌经官方回复队列完成拼点，随后对手视为对发动者使用【杀】，验证恰好一次真实使用、来源为拼点对手、目标为发动者、发动者受伤而对手不受伤）；历史 6/6，见[共享验证证据](verification-evidence.md#wei_active)。
 - **未完成与边界**：若后续改动技能内嵌使用流程，需重跑并重新核对请求消费顺序；客户端拼点与目标选择未人工验收。
+
+### 蜀
+
+<a id="shu003-1"></a>
+#### 咆哮（SHU003 张飞）
+
+- **标识与依据**：`hanjin__skill_shu003_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu003_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU003。
+- **实现与接口**：targetmod 提供状态型次数上限豁免；服务端真实 UseCard 事件历史统计整回合第二张杀，包含得技前和不计次数的使用。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu004-2"></a>
+#### 空城（SHU004 诸葛亮）
+
+- **标识与依据**：`hanjin__skill_shu004_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu004_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU004。
+- **实现与接口**：主将技配将贡献已为减一；失去手牌后空手可建立持续无效状态，模式级对杀或决斗设置无效，到下次摸牌前清理；普通获得牌不结束，不禁止成为目标。
+- **验证依据**：[shu_phases.lua](../../../../tests/shu_phases.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu005-2"></a>
+#### 突阵（SHU005 赵云）
+
+- **标识与依据**：`hanjin__skill_shu005_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu005_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU005。
+- **实现与接口**：CardEffectCancelledOut 关联真实响应 UseCard 确认抵消者；只在目标本人抵消红色牌时选择另一名其他角色造成伤害，不按响应牌当前持有者判断。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。目标自己无懈的代表路径尚未专项验证。
+
+<a id="shu006-1"></a>
+#### 马术（SHU006 马超）
+
+- **标识与依据**：`hanjin__skill_shu006_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu006_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU006。
+- **实现与接口**：distance 修正持有者至其他角色的距离减一，不修改反方向距离。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu006-2"></a>
+#### 铁骑（SHU006 马超）
+
+- **标识与依据**：`hanjin__skill_shu006_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu006_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU006。
+- **实现与接口**：指定杀目标后按主副位置失效非锁定将牌技能，暗将仅展示位置；模式级 invalidity 动态按所选位置判断，回合末自动清理；先失效后判定，目标展示手牌并弃结果花色全部手牌才可响应。
+- **验证依据**：[shu_tieqi.lua](../../../../tests/shu_tieqi.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu008-1"></a>
+#### 烈勇（SHU008 黄忠）
+
+- **标识与依据**：`hanjin__skill_shu008_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu008_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU008。
+- **实现与接口**：攻击范围加 max(已损失体力,1)；逐目标任选不可响应或加伤；加伤记录在本次使用中，由模式 shu_lieyong_bonus 持续处理，不因失技或一次结算而消失。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu013-1"></a>
+#### 享乐（SHU013 刘禅）
+
+- **标识与依据**：`hanjin__skill_shu013_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu013_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU013。
+- **实现与接口**：TargetConfirmed 由杀使用者选择自行弃一张基本牌或此杀对刘禅无效，弃牌操作者保留为使用者，只影响当前目标。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
 

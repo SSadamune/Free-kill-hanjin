@@ -12,6 +12,13 @@
 | HAN016A | 刘宠 | [劲弩](#han016a-1) |
 | WEI007 | 甄姬 | [倾国](#wei007-1) |
 | WEI010 | 徐晃 | [断粮](#wei010-1) |
+| SHU001 | 刘备 | [仁德](#shu001-1) |
+| SHU002 | 关羽 | [武圣](#shu002-1) |
+| SHU005 | 赵云 | [龙胆](#shu005-1) |
+| SHU010 | 庞统 | [连环](#shu010-1) |
+| SHU011 | 诸葛亮 | [八阵](#shu011-1) |
+| SHU011 | 诸葛亮 | [火计](#shu011-2) |
+| SHU011 | 诸葛亮 | [看破](#shu011-3) |
 | WU002 | 甘宁 | [奇袭](#wu002-1) |
 | WU006 | 大乔 | [国色](#wu006-1) |
 | WU007 | 陆逊 | [度势](#wu007-2) |
@@ -93,6 +100,64 @@
 - **实现与接口**：黑色非锦囊牌当【兵粮寸断】；转换模板按黑色及类别位 `basic,equip` 排除锦囊，底牌区域按引擎视为技选牌权限处理。其他角色跳摸牌阶段后令一名角色摸一张牌；本轮专项主要触达跳过摸牌阶段后的摸牌分支。
 - **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖断粮在他人跳过摸牌阶段后令一名角色摸牌；历史 14/14。
 - **未完成与边界**：装备区素材的真实客户端选取尚未人工验收，不将“仅手牌”增写为规则限制。
+
+### 蜀
+
+<a id="shu001-1"></a>
+#### 仁德（SHU001 刘备）
+
+- **标识与依据**：`hanjin__skill_shu001_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu001_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU001。
+- **实现与接口**：主动给牌按接收者记录阶段次数，累计跨过第二张时提供一次基本牌选择；选择后经公共目标策略真实使用一次，传递 bypass_times 与 extraUse，取消不再询问。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu002-1"></a>
+#### 武圣（SHU002 关羽）
+
+- **标识与依据**：`hanjin__skill_shu002_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu002_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU002。
+- **实现与接口**：红色牌当杀；方片用牌绕过距离；红桃牌对唯一目标造成伤害后通过公共目标接口使用正式水淹七军。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu005-1"></a>
+#### 龙胆（SHU005 赵云）
+
+- **标识与依据**：`hanjin__skill_shu005_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu005_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU005。
+- **实现与接口**：ViewAs 提供杀闪、桃酒四组互转，并分别按当前使用或打出请求筛选；实体桃仍可用于龙胆转换。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu010-1"></a>
+#### 连环（SHU010 庞统）
+
+- **标识与依据**：`hanjin__skill_shu010_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu010_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU010。
+- **实现与接口**：梅花手牌通过 ViewAs 当正式铁索连环；辅助重铸入口受主技能有效性约束，重铸走 recastCard。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu011-1"></a>
+#### 八阵（SHU011 诸葛亮）
+
+- **标识与依据**：`hanjin__skill_shu011_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu011_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU011。
+- **实现与接口**：无防具时复用正式八卦阵技能；处理来源明暗置及移除，暗将通过需要闪的请求明置发动，预亮接线由模式 shu_hidden_prelight 提供。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu011-2"></a>
+#### 火计（SHU011 诸葛亮）
+
+- **标识与依据**：`hanjin__skill_shu011_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu011_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU011。
+- **实现与接口**：ViewAs 将红色手牌转换为正式火攻，素材不含装备区。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu011-3"></a>
+#### 看破（SHU011 诸葛亮）
+
+- **标识与依据**：`hanjin__skill_shu011_3`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu011_3.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU011。
+- **实现与接口**：黑色手牌当无懈仅开放使用；按成功抵消事件确认实际抵消者，包含闪抵消杀及非看破无懈，回合末可私看当前角色手牌。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
 

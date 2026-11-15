@@ -1,6 +1,6 @@
 # 翼从专属技能：跨势力实现与验证
 
-本页是七名汉、魏、吴翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
+本页是十一名汉、魏、蜀、吴翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
 
 ## 技能索引
 
@@ -11,6 +11,10 @@
 | WEI | 并州狼骑 | [并州狼骑](#bingzhou-langqi) |
 | WEI | 虎卫军 | [虎卫军](#huweijun) |
 | WEI | 牛金 | [牛金](#niujin) |
+| SHU | 周仓 | [周仓](#zhoucang) |
+| SHU | 白马义从 | [白马义从](#baima-yicong) |
+| SHU | 西凉精骑 | [西凉精骑](#xiliang-jingqi) |
+| SHU | 象兵 | [象兵](#xiangbing) |
 | WU | 锦帆军 | [锦帆军](#jinfanjun) |
 | WU | 曲阿小将 | [曲阿小将](#quaxiaojiang) |
 
@@ -76,6 +80,40 @@
   - 来源写入本次 `use.extra_data`；房间级奖励监听在 `fk.Death` 中向上追溯 `GameEvent.UseCard` 的 `extra_data`，仅在本次窗口用牌击杀时摸三张，不依赖持有者之后是否仍有技能。
 - **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实用【杀】击杀不同势力角色，牛金奖励恰好一次 3 张，另加标准国战击杀奖励 1 张，总手牌 4；断言技能／同势力／实际用牌后再断言击杀奖励。历史 3/3。此前 `expected 3 actual 25` 的根因与修复见[共享验证证据](verification-evidence.md#牛金奖励根因)。
 - **未完成与边界**：每类别用牌的真实客户端面板未人工验收；若后续改用牌流程，需复核 `extra_data` 来源追溯仍只奖励一次。
+
+### 蜀关联翼从
+
+<a id="zhoucang"></a>
+#### 周仓
+
+- **标识与依据**：`hanjin__retinue_skill_zhoucang`；[源码](../../../../pkg/hanjin_generals/skills/retinue_skill_zhoucang.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
+- **实现与接口**：杀后从仍可取得的本次杀或目标闪实体牌中选牌给第三人；红牌受赠者以实际手牌／转化使用杀，显式目标条件读取周仓攻击范围，选择及执行沿用同一策略，绕过通常次数且不计次。
+- **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
+
+<a id="baima-yicong"></a>
+#### 白马义从
+
+- **标识与依据**：`hanjin__retinue_skill_baima_yicong`；[源码](../../../../pkg/hanjin_generals/skills/retinue_skill_baima_yicong.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
+- **实现与接口**：CardUsing／CardResponding 两入口定位 responseToEvent.from，在使用／打出闪时获得对方一张手牌或装备；包含虚拟闪，不按响应牌当前持有者猜对方。
+- **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
+
+<a id="xiliang-jingqi"></a>
+#### 西凉精骑
+
+- **标识与依据**：`hanjin__retinue_skill_xiliang_jingqi`；[源码](../../../../pkg/hanjin_generals/skills/retinue_skill_xiliang_jingqi.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
+- **实现与接口**：结束阶段选择实际手牌／转化杀，正确传递四种杀名、pattern、bypass_times 与 extraUse，恰执行一次；目标攻击范围内无持有者时，可令目标自行强制弃一张牌。
+- **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
+
+<a id="xiangbing"></a>
+#### 象兵
+
+- **标识与依据**：`hanjin__retinue_skill_xiangbing`；[源码](../../../../pkg/hanjin_generals/skills/retinue_skill_xiangbing.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
+- **实现与接口**：杀后按实际伤害记录与该杀目标集合的交集，一次生成南蛮；火伤后按座次相邻且去重的集合，一次生成杀；显式目标数量等于选定集合。火伤生成的杀造成伤害后仍正常触发杀后南蛮，不添加无依据豁免。
+- **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
 
 ### 吴
 

@@ -20,6 +20,9 @@
 | WEI013 | 荀彧 | [节命](#wei013-2) |
 | WEI014 | 曹丕 | [行殇](#wei014-1) |
 | WEI016 | 乐进 | [骁果](#wei016-1) |
+| SHU009 | 魏延 | [狂骨](#shu009-1) |
+| SHU010 | 庞统 | [涅槃](#shu010-2) |
+| SHU014 | 孟获 | [祸首](#shu014-1) |
 | WU004 | 黄盖 | [苦肉](#wu004-1)、[诈降](#wu004-2) |
 | WU011 | 小乔 | [天香](#wu011-1) |
 | WU013 | 周泰 | [不屈](#wu013-1) |
@@ -170,6 +173,32 @@
 - **实现与接口**：`fk.EventPhaseStart`（其他角色准备阶段）触发；弃置至少一张基本牌为消耗，目标弃置等量装备（不足全弃），实际基本数 > 装备数则造成 1 点伤害，否则摸一张。消耗规范：须至少一张，`skip = true` 后在 `on_use` 统一移动；无装备不弃；伤害比较用实际弃置张数。
 - **验证依据**：[wei_damage.lua](../../../../tests/wei_damage.lua) 覆盖基本数多于装备数造成伤害、相等时摸牌；历史 8/8。
 - **未完成与边界**：客户端消耗与目标装备弃置交互未人工验收。
+
+### 蜀
+
+<a id="shu009-1"></a>
+#### 狂骨（SHU009 魏延）
+
+- **标识与依据**：`hanjin__skill_shu009_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu009_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU009。
+- **实现与接口**：伤害前快照距离条件，每次伤害后选择摸牌或回复；相邻两次选择不同则增加本回合公共杀次数额度，失技后仍保留。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。击杀后收益由真实伤害、死亡、摸牌回归确认。
+
+<a id="shu010-2"></a>
+#### 涅槃（SHU010 庞统）
+
+- **标识与依据**：`hanjin__skill_shu010_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu010_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU010。
+- **实现与接口**：EnterDying 限定次数判断，弃手装判及个人牌堆，复原 faceup/chained，摸三张并回复至 min(3,maxHp)；通过真实失去体力进入濒死验证。
+- **验证依据**：[shu_phases.lua](../../../../tests/shu_phases.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu014-1"></a>
+#### 祸首（SHU014 孟获）
+
+- **标识与依据**：`hanjin__skill_shu014_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu014_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU014。
+- **实现与接口**：南蛮对持有者无效；指定目标后仅记录本次南蛮伤害来源，不改变用牌者。模式级匹配同次用牌伤害改来源，失技后记录保留，来源死亡则设为空。
+- **验证依据**：[shu_savage.lua](../../../../tests/shu_savage.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
 

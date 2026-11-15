@@ -9,6 +9,7 @@
 | HAN016A | 刘宠 | [威屯](#han016a-2) |
 | WEI008 | 夏侯渊 | [神速](#wei008-1) |
 | WEI009 | 张郃 | [巧变](#wei009-1) |
+| SHU013 | 刘禅 | [放权](#shu013-2) |
 
 ## 技能条目
 
@@ -49,3 +50,12 @@
   - 不读取服务端私有字段：同势力候选复用 hegemony 公共的 `HegUtil.compareExpectedKingdomWith`，他人暗置时公开势力为 `unknown`，不进入候选。
 - **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖巧变真实移牌与请求级用例；历史 14/14。此前 90 秒超时的根因是测试直接比较 `ServerPlayer` 对象导致 LuaUnit 挂起，非请求 schema 或嵌套事件，见[共享验证证据](verification-evidence.md#设变巧变超时根因)。
 - **未完成与边界**：客户端阶段跳过确认与两步移牌选择未人工验收；摸牌阶段获得手牌为服务端随机隐藏选择，未增加客户端可见性测试。
+### 蜀
+
+<a id="shu013-2"></a>
+#### 放权（SHU013 刘禅）
+
+- **标识与依据**：`hanjin__skill_shu013_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu013_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU013。
+- **实现与接口**：阶段变化时每轮可跳过一次出牌阶段，建立本回合末的可选后续；模式级延时触发先选其他角色、支付一张手牌，`gainAnExtraTurn(true)` 排队，失技后仍执行。`askToDiscard` 已执行弃牌，不再重复移动。
+- **验证依据**：[shu_phases.lua](../../../../tests/shu_phases.lua) 真实跳阶段、失技、支付手牌、额外回合排队；[共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：客户端、联网与重连未人工验收。曾将玩家对象用深相等断言比较导致测试挂起，现改身份断言；不将该测试问题视为游戏结算故障。
