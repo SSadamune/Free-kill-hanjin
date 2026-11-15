@@ -15,11 +15,10 @@ local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 
 local M = {}
 
---- 应期（WEI002/JIN009 同名同文锁定技）的技能名。君主版/效忠版若沿用同一
---- 技能名，也一并识别；两个版本同场时只修正一次。
+--- 应期（WEI002/JIN009 同名同文锁定技）的唯一技能 ID。两版司马懿引用同一
+--- 技能，不按武将来源另设识别项；君主版/效忠版若沿用同一技能名，也一并识别。
 M.YINGQI_SKILLS = {
   ["hanjin__skill_wei002_3"] = true,
-  ["hanjin__skill_jin009_3"] = true,
 }
 
 --- 应期的半格修正值：☯️+2。

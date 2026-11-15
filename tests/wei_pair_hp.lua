@@ -69,6 +69,22 @@ Testhanjin_wei_pair_hp.tearDown = support.clearRoom
 
 function Testhanjin_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   local P = pairHp()
+  -- 身份/来源接线：两版司马懿引用同一个应期技能 ID，晋不另设骨架或识别项。
+  local YINGQI = "hanjin__skill_wei002_3"
+  for _, generalName in ipairs({ WEI002, JIN009 }) do
+    local count = 0
+    for _, name in ipairs(Fk.generals[generalName]:getSkillNameList()) do
+      if name == YINGQI then count = count + 1 end
+    end
+    lu.assertEquals(count, 1, "应期应只注册一次：" .. generalName)
+    lu.assertTrue(P.has_yingqi(generalName))
+  end
+  lu.assertNil(Fk.skill_skels["hanjin__skill_jin009_3"])
+  lu.assertNil(P.YINGQI_SKILLS["hanjin__skill_jin009_3"])
+  -- 两处卡面文本统一到魏文本；同 ID 下晋条目不会把翻译覆盖成旧“阴阳鱼+2”。
+  lu.assertEquals(Fk:translate(":" .. YINGQI),
+    "锁定技，若你配将为多势力或客将，☯️+2。")
+
   -- 无☯️修正为 3 + 4 = 7 半格；应期 +2 后为 9 半格 → 4 点上限，余 1 个半格。
   lu.assertEquals(P.base_half_hp(WEI002, GUEST), 7)
   lu.assertEquals(P.half_hp(WEI002, GUEST), 9)
@@ -76,13 +92,20 @@ function Testhanjin_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   lu.assertEquals(P.half_left(WEI002, GUEST), 1)
   lu.assertEquals(P.yinyang(WEI002, GUEST), 2)
 
-  for _, main in ipairs({ WEI002, JIN009 }) do
+  -- 两版本各自主将/副将，与客将配将组成四组合，都走真实开局广播。
+  for _, combo in ipairs({
+    { main = WEI002, deputy = GUEST },
+    { main = GUEST, deputy = WEI002 },
+    { main = JIN009, deputy = GUEST },
+    { main = GUEST, deputy = JIN009 },
+  }) do
     local p = p1()
-    installHiddenPair(p, main, GUEST)
+    installHiddenPair(p, combo.main, combo.deputy)
     -- 引擎真实开局调用的体力上限广播；即使主将仍暗置也必须已计入应期。
     inRoom(function() room().logic:broadcastGeneral() end)
     lu.assertEquals(p.general, "anjiang")
-    lu.assertEquals(p:getMark("__heg_general"), main)
+    lu.assertEquals(p:getMark("__heg_general"), combo.main)
+    lu.assertEquals(p:getMark("__heg_deputy"), combo.deputy)
     lu.assertEquals(p.maxHp, 4)
     lu.assertEquals(p.hp, 4)
     lu.assertEquals(p:getMark("HalfMaxHpLeft"), 1)

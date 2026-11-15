@@ -2663,9 +2663,9 @@ M.generals = {
         tags = { [==[Limited]==] },
       },
       {
-        id = [==[hanjin__skill_jin009_3]==],
+        id = [==[hanjin__skill_wei002_3]==],
         name = [==[应期]==],
-        text = [==[锁定技，若你配将为多势力或客将，阴阳鱼+2。]==],
+        text = [==[锁定技，若你配将为多势力或客将，☯️+2。]==],
         related = false,
         tags = { [==[Compulsory]==] },
       },
