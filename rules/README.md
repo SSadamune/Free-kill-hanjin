@@ -38,6 +38,11 @@
 - [WU005 周瑜结算约定](generals/wu005-zhouyu.md)：反间响应选择及同花色手牌、装备牌的弃置范围。
 - [WU013 周泰结算约定](generals/wu013-zhoutai.md)：不屈病句修正，摸牌数与置“创”张数的区别。
 - [WU015A 张昭结算约定](generals/wu015a-zhangzhao.md)：直谏的原区域与摸牌者按斜线顺序对应。
+- [QUN001 华佗结算约定](generals/qun001-huatuo.md)：济世受客将替换设置控制，默认开启；跨势力交换首次成功即止。
+- [QUN002 吕布结算约定](generals/qun002-lvbu.md)：无双响应数增量与虓猛当前回合角色选择。
+- [QUN010 张角结算约定](generals/qun010-zhangjiao.md)：鬼道的替换包含获得原判定牌。
+- [QUN015 纪灵结算约定](generals/qun015-jiling.md)：双刃没赢后的转换限制至本回合结束。
+- [QUN016 田丰来源基线](generals/qun016-tianfeng.md)：死谏和随势采用标准表原文，区别当前运行时资料中的版本。
 
 ## 阅读与维护
 

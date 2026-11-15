@@ -8,6 +8,7 @@
 - [魏势力标准包](generals/wei-standard.md)
 - [蜀势力标准包](generals/shu-standard.md)
 - [吴势力标准包](generals/wu-standard.md)
+- [群势力标准包审阅](generals/qun-standard.md)（规则与实现路径审阅，技能尚为空壳）
 - [晋势力标准包](generals/jin001-simayan.md)
 
 ## 基础机制
