@@ -197,7 +197,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun004_1`；源码 [skill_qun004_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun004_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN004。
 - **实现与接口**：`viewas` 将两张手牌转为正式【万箭齐发】，不要求两素材同花色；只排除本回合此前发动乱击已选过的花色，记录随提供技能的武将牌迁移。响应摸牌由 [qun_cards_rule](../../../../pkg/hanjin_mode/skills/qun_cards_rule.lua) 在牌效果建立后处理：实际打出【闪】的同势力角色选择摸一张，不依赖袁绍仍持有乱击。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testLuanjiDrawRuleUsesResponseFromWithoutSkill`、`testLuanjiSuitMarkClearsAfterSkillLost`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testLuanjiDrawRuleUsesResponseFromWithoutSkill`、`testLuanjiSuitMarkClearsAfterSkillLost`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：同回合多次乱击的花色组合、无懈与复杂响应未穷举；客户端转化选择未人工验收。
 
 <a id="qun005-1"></a>
@@ -205,23 +205,23 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun005_1`；源码 [skill_qun005_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun005_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN005。
 - **实现与接口**：摸牌阶段结束时弃一张自己的手牌或装备，记录其颜色；本回合可将一张异色牌当【决斗】使用，权限由独立状态骨架 `hanjin__qun_cards_state` 提供，范围不缩为手牌，失去双雄后已建立权限仍可执行。结束阶段独立检查本回合实际造成过伤害且仍在弃牌堆的实体牌，不以前半段是否发动为条件，也不收回已被移走的牌。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua)，但现有用例未直接覆盖双雄；尚待本轮执行结果，结果集中见后续 verification-evidence。
-- **未完成与边界**：异色装备牌、转化【决斗】、伤害牌被移走等边界未直接覆盖；客户端转化未人工验收。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua)，覆盖异色转决斗及结束阶段收回伤害牌；本轮定向通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **未完成与边界**：异色装备牌、伤害牌被移走等边界未穷举；客户端转化未人工验收。
 
 <a id="qun015-1"></a>
 #### 双刃（QUN015 纪灵）
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun015_1`；源码 [skill_qun015_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun015_1.lua)。规则见[双刃持续期限](../../../../rules/generals/qun015-jiling.md)与[只能当](../only-as.md)。
 - **实现与接口**：出牌阶段开始时与一名角色真实拼点；赢时按显式目标条件视为对包含拼点对手在内的至多两名角色使用一张【杀】，不照搬上游同势力限制；没赢（含平局）时，手牌中的【杀】只能当【借刀杀人】使用至本回合结束，登记到公共 `only_as` 来源 `shuangren`，按当前手牌范围适用，转换后仍按【借刀杀人】自身规则选主副目标。
-- **验证依据**：已编写 [qun_control.lua](../../../../tests/qun_control.lua) 的 `testShuangrenWinUsesOneSlashWithOpponent`、`testShuangrenLoseRestrictsHandSlashUntilTurnEnd`，尚待本轮执行结果；结果集中见后续 verification-evidence。
-- **未完成与边界**：独立状态骨架 `hanjin__qun_shuangren_state` 承载已建立的转换权限，失去本体后保留至回合结束；失技后真实借刀用例已编写，尚待运行验证。客户端拼点与借刀主副目标未人工验收。
+- **验证依据**：已执行 [qun_control.lua](../../../../tests/qun_control.lua) 的 `testShuangrenWinUsesOneSlashWithOpponent`、`testShuangrenLoseRestrictsHandSlashUntilTurnEnd`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **未完成与边界**：独立状态骨架 `hanjin__qun_shuangren_state` 承载已建立的转换权限，失去本体后保留至回合结束；失技后真实借刀用例已通过定向验证。客户端拼点与借刀主副目标未人工验收。
 
 <a id="qun017-1"></a>
 #### 狂斧（QUN017 潘凤）
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun017_1`；源码 [skill_qun017_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun017_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN017。
 - **实现与接口**：出牌阶段限一次，弃置场上（含自己）一张装备牌，按 `bypassDistance` 显式策略视为使用一张无距离限制的【杀】；记录装备原所有者。后续摸两张／弃两张手牌由 [qun_cards_rule](../../../../pkg/hanjin_mode/skills/qun_cards_rule.lua) 在整次用牌结束后按本次【杀】的 `damageDealt` 结算，不以本回合其他【杀】代替，也不在声明时提前终止。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testKuangfuOwnEquipmentDamageDrawsTwo`、`testKuangfuRuleSettlesWithoutSkill`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testKuangfuOwnEquipmentDamageDrawsTwo`、`testKuangfuRuleSettlesWithoutSkill`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：弃置他人装备且未造成伤害、无牌可弃等分支未穷举；客户端选装备未人工验收。
 
 <a id="qun027-2"></a>
@@ -229,7 +229,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun027_2`；源码 [skill_qun027_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun027_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN027。
 - **实现与接口**：限定技，出牌阶段按 `different_kingdom + other_roles` 显式策略视为对任意名其他势力角色使用一张【杀】，目标不套通常攻击距离；后续由 [qun_cards_rule](../../../../pkg/hanjin_mode/skills/qun_cards_rule.lua) 在整次用牌结束后按实际 `damageDealt` 选一名未因此受伤的原目标弃置其两张牌，不把伤害总量为 0 当唯一判断。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua)，但现有用例未直接覆盖骁逆；尚待本轮执行结果，结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua)，覆盖一次多目标杀及未受伤目标弃牌；本轮定向通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：目标死亡／失技、全部受伤、无牌可弃等边界未直接覆盖；客户端多目标选择未人工验收。
 
 ### 晋

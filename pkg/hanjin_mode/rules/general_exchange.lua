@@ -46,6 +46,35 @@ M.skill_marks = {}
 
 local completion_listeners = {}
 
+-- External rules may permanently take one general card's printed skills away
+-- (e.g. 断肠).  A filter returns false when `generalName` no longer provides
+-- `skillName`; exchange then must not re-grant it.  The room is passed explicitly
+-- because the lost-skill record is room-scoped.
+local skill_provider_filters = {}
+
+---@param filter fun(room: Room, generalName: string, skillName: string): boolean?
+---@return fun(room: Room, generalName: string, skillName: string): boolean?
+function M.registerSkillProviderFilter(filter)
+  assert(type(filter) == "function", "A skill provider filter must be a function")
+  table.insertIfNeed(skill_provider_filters, filter)
+  return filter
+end
+
+function M.removeSkillProviderFilter(filter)
+  table.removeOne(skill_provider_filters, filter)
+end
+
+function M.clearSkillProviderFilters()
+  skill_provider_filters = {}
+end
+
+local function cardProvides(room, generalName, skillName)
+  for _, filter in ipairs(skill_provider_filters) do
+    if filter(room, generalName, skillName) == false then return false end
+  end
+  return true
+end
+
 local function heg()
   return require "packages.hegemony.util"
 end
@@ -377,7 +406,8 @@ function M.skillOwner(player, skillName)
     if Fk.generals[name] then
       local active = M.isRevealed(player, isDeputy)
         or player:isFakeSkill(skillName)
-      if active and table.contains(M.positionSkills(name, isDeputy, isLord, true), skillName) then
+      if active and cardProvides(room, name, skillName)
+        and table.contains(M.positionSkills(name, isDeputy, isLord, true), skillName) then
         table.insert(candidates, {
           name = name,
           revealed = M.isRevealed(player, isDeputy),
@@ -556,7 +586,9 @@ local function providedByOtherPosition(room, player, isDeputy, excludedNames)
     if otherDeputy ~= isDeputy and M.isRevealed(player, otherDeputy) then
       local name = M.publicGeneral(player, otherDeputy)
       for _, skillName in ipairs(M.positionSkills(name, otherDeputy, isLordPlayer(room, player), true)) do
-        table.insertIfNeed(result, skillName)
+        if cardProvides(room, name, skillName) then
+          table.insertIfNeed(result, skillName)
+        end
       end
     end
   end
@@ -821,7 +853,9 @@ local function postProvidedSkills(room, player, positions, excludedNames)
     local name = isDeputy and positions.deputy or positions.main
     if name and name ~= "" and name ~= "anjiang" then
       for _, skillName in ipairs(M.positionSkills(name, isDeputy, isLord, true)) do
-        table.insertIfNeed(result, skillName)
+        if cardProvides(room, name, skillName) then
+          table.insertIfNeed(result, skillName)
+        end
       end
     end
   end
@@ -844,7 +878,9 @@ local function postAttachableSkills(room, player, positions)
     local name = isDeputy and positions.deputy or positions.main
     if name and name ~= "" and name ~= "anjiang" then
       for _, skillName in ipairs(M.positionSkills(name, isDeputy, isLord, false)) do
-        table.insertIfNeed(result, skillName)
+        if cardProvides(room, name, skillName) then
+          table.insertIfNeed(result, skillName)
+        end
       end
     end
   end

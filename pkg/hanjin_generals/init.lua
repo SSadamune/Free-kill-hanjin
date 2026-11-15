@@ -5,6 +5,7 @@
 -- 牛金 3 个魏关联翼从技能已正式实装；汉区标准技能及 JIN001 等也已有实现；
 -- 蜀区 26 个技能及周仓/白马义从/西凉精骑/象兵四翼从、
 -- 吴区 27 个天生技能、涉猎及锦帆军/曲阿小将亦已实装。
+-- 群区 27 条技能记录（马术复用蜀马超）及黄巾雷使均已实装。
 -- 其余势力尚未实装的条目仍只登记名称、原文和标签，骨架不含 effect，因此没有
 -- 游戏效果。已实装条目通过骨架的 hanjinImplemented 或下方 implemented 白名单
 -- 登记，并在加载时断言确有 effect。偏将的「限一」只在这里登记牌面标记，每局
@@ -40,7 +41,12 @@ Fk:loadTranslationTable(translations)
 
 -- Formal generals -----------------------------------------------------------
 for _, data in ipairs(Data.generals) do
-  local general = General:new(extension, data.id, data.kingdom, data.hp)
+  -- 第 6 个参数是 General.initialize 的 gender；缺省会令角色性别变为 nil，
+  -- 使离间/倾城等「男性」目标条件错误。数据侧必须给出显式的 female/male。
+  assert(data.gender == "female" or data.gender == "male",
+    "Missing gender metadata for " .. data.id)
+  local general = General:new(extension, data.id, data.kingdom, data.hp, nil,
+    data.gender == "female" and General.Female or General.Male)
   -- Two printed versions can share a Chinese name (司马懿, 诸葛亮); the engine
   -- groups same-name conversion by `trueName`. The unique card id stays the key.
   general.trueName = data.name

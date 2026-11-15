@@ -259,3 +259,47 @@ DSH 分批实现，Codex 审阅并接手收尾修复与验收。规则资料提�
 测试诊断：全局替换请求会污染技能排序，已改按技能限定。放权用例曾深比较带环引用的玩家对象造成挂起，身份断言修正后完整路径及失技路径均通过；不将该断言问题归为游戏故障。Codex 沙箱内启动原生运行时超时后，按授权以本机权限执行；最终结果均来自同一锁定运行时和正式测试入口，没有另建环境绕行。
 
 未完成真实客户端点击、多人联网／重连、干净本体安装人工验收。复杂插入移牌、多重抵消及多来源组合未穷举；自动化通过不扩展为这些结论。
+
+<a id="qun-standard"></a>
+## 群势力标准包（2026-11-15）
+
+DSH 分批实现，Codex 审阅、集中串行运行。范围为 15 将、27 条技能记录及黄巾雷使；马术共用蜀马超实现，并州狼骑／西凉精骑沿用现有实现。
+
+已执行的定向验收（正常权限运行锁定 Windows 运行时）：
+
+```text
+python scripts/test.py --file tests/qun_standard.lua --timeout 180
+Ran 47 tests in 11.927 seconds, 47 successes, 0 failures
+python scripts/test.py --file tests/mode_rules.lua --timeout 120
+Ran 10 tests in 1.454 seconds, 10 successes, 0 failures
+python scripts/test.py --file tests/standard_generals.lua --timeout 120
+Ran 12 tests in 0.366 seconds, 12 successes, 0 failures
+python scripts/test.py --file tests/general_exchange.lua --timeout 180
+Ran 17 tests in 2.081 seconds, 17 successes, 0 failures
+```
+
+有复用价值的故障与修复：
+
+- 济世救活后不交换：引擎回复至 1 点体力时立即清除 `dying`，`after_use` 再据此记录会漏掉已救活者。现于 `CardUsing`、回复生效前记录本次濒死来源；救活和未救活两条真实路径均覆盖。
+- 房间事实维护进入技能发动流程会扰动其他技能的触发顺序／测试回复；`global=true` 还会使监听加入所有模式。祸水状态维护改为只由汉晋模式安装的 refresh；黄巾伤害事实记录同样仅由模式安装。
+- 断肠不得把普通明置中缺失的技能自动补回。仅在本角色至少一张将牌有断肠记录时，恢复仍有效的共享同名来源；永久失技记录覆盖整张将牌，主副位置变化不刷新。
+- 乱击房间监听原先对每名角色重复询问，单个同意回复会掩盖后续重复。按 `target == player` 限一次，并用始终同意的请求辅助断言询问次数为 1。
+- 测试探针应直接或必然执行，并限定同一事件只记录一次；`AskForChoices` 使用选项表回复。效果中用杀不占通常用杀次数，应观察真实 `CardUsing` 与实体牌移动。
+- 受限执行环境出现原生进程无输出超时，正常权限下公共辅助套件 6/6 及后续定向可运行。不能把这种超时记作测试已执行失败断言或已通过。
+
+真实客户端点击、联网／重连、干净本体安装人工验收未进行。
+
+最终集成与发布核对：
+
+```text
+python scripts/test.py --timeout 240
+Ran 761 tests in 129.619 seconds, 761 successes, 0 failures
+python scripts/check_lua.py
+exit 0
+python scripts/build_release.py
+Built .dev/dist/hanjin.zip (466 files)
+```
+
+受影响的汉区拼点、司马炎、吴区伤害与群包十套件共同执行 98 项全部通过（22.964 秒）；使用的是原套件断言，临时组合入口随后删除。安装包内 40 个新增／修改正式文件与工作区逐字节一致，三个旧群马术骨架不在包内，且排除测试、脚本与开发本体适配。正式将性别登记为 17 女／73 男，离间／倾城针对真实双将的性别过滤已有回归。默认全量完整输出保存在本地 `.dev/logs/qun_full_final.log`。
+
+自动记账即使写为 `on_trigger`，无条件加入触发池仍可能扰动承诏、兴图、不屈的选择；濒死序号、完杀清理和乱击花色清理均改为 refresh，只在本次确有济世记录时触发交换。无记录时不生成新的发动选项。

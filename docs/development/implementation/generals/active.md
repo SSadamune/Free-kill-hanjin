@@ -210,7 +210,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun002_1`；源码 [skill_qun002_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun002_1.lua)。规则见[吕布规范](../../../../rules/generals/qun002-lvbu.md)。同将虓猛见[本页](#qun002-2)。
 - **实现与接口**：`fk.TargetSpecified` 分别接【杀】与【决斗】；【杀】目标在当前 `AimData:getResponseTimes` 上累加一张【闪】，【决斗】对方每次多打出一张【杀】。按增量累加，不写死为 2；与短兵等增量叠加。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testWushuangStacksWithDuanbing`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testWushuangStacksWithDuanbing`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：已写入响应数在暗置／失技后的持续只由公共 AimData 语义保证；客户端响应提示未人工验收。
 
 <a id="qun002-2"></a>
@@ -218,7 +218,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun002_2`；源码 [skill_qun002_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun002_2.lua)。规则见[吕布规范](../../../../rules/generals/qun002-lvbu.md)与[指定额外目标](../extra-targets.md)。同将无双见[本页](#qun002-1)。
 - **实现与接口**：`fk.AfterCardTargetDeclared` 后由当前回合角色（不一定是吕布）为本次【决斗】追加至多两名“与吕布势力不同”的其他角色；候选走 `extra_targets` 的 `different_kingdom + other_roles` 显式条件，目标在声明后加入，不重新使用此牌。每回合限一次。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua)，但现有用例未直接覆盖虓猛；尚待本轮执行结果，结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua)，覆盖转化决斗由当前回合角色增目标；本轮定向通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：当前回合角色非吕布、转化【决斗】及额外目标失效边界未直接覆盖；客户端选目标未人工验收。
 
 <a id="qun003-1"></a>
@@ -226,7 +226,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun003_1`；源码 [skill_qun003_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun003_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN003。
 - **实现与接口**：主动技弃置一张自己的牌并选两名其他男性；由后选者视为对先选者使用正式【决斗】，使用者不是貂蝉。目标按 `card_use_targets` 显式策略声明；“不可被抵消”使用 `AimData:setUnoffsetable`／`UseCardData.unoffsetableList` 排除【无懈可击】响应，不把决斗内打出【杀】也改成不可响应。
-- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testLijianFormalDuelUsedBySelectedMale`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testLijianFormalDuelUsedBySelectedMale`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：客户端选人／无懈窗口未人工验收；决斗内复杂响应组合未专项覆盖。
 
 <a id="qun007-2"></a>
@@ -234,7 +234,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun007_2`；源码 [skill_qun007_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun007_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN007。同将完杀见[伤害、体力与死亡](damage.md#qun007-1)，帷幕见[本页](#qun007-3)。
 - **实现与接口**：限定技，出牌阶段从当前回合角色起逆时针逐人处理其他角色；先按全体其他角色算最近距离，再用 `card_use_targets` 的显式策略要求所选【杀】目标至少包含一名最近且合法角色，最后按通常【杀】流程真实使用一张【杀】，不能改选较远目标，也不是“视为使用”。
-- **验证依据**：已编写 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testLuanwuRealSlashIncludesNearest`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua) 的 `testLuanwuRealSlashIncludesNearest`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：无合法【杀】目标、最近目标死亡／失技、多目标上限等排列未逐项覆盖；客户端选目标未人工验收。
 
 <a id="qun007-3"></a>
@@ -242,7 +242,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun007_3`；源码 [skill_qun007_3.lua](../../../../pkg/hanjin_generals/skills/skill_qun007_3.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN007。
 - **实现与接口**：锁定技，`fk.TargetConfirming` 时若目标为贾诩、牌为黑色锦囊，则 `data:cancelTarget(player)` 取消该目标；不改成禁止选取，也不额外用 `BeforeCardsMove` 拦截黑色延时锦囊移入判定区。
-- **验证依据**：已编写 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testWeimuCancelsOnlyBlackTrickTarget`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testWeimuCancelsOnlyBlackTrickTarget`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：多目标黑色锦囊、其他角色同时改目标等组合未专项覆盖；客户端提示未人工验收。
 
 <a id="qun008-2"></a>
@@ -250,7 +250,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun008_2`；源码 [skill_qun008_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun008_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN008。同将马术见[本页马术条目](#shu006-1)。
 - **实现与接口**：`fk.TargetSpecified` 后弃目标一张手牌或装备；弃到基本牌时只把本次【杀】可获得的实体牌交给目标，不终止已声明的用牌；非基本牌时仅该目标 `AimData:setDisresponsive`，不影响其他目标。
-- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testMenghanBasicObtainsSlashAndUseContinues`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testMenghanBasicObtainsSlashAndUseContinues`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：转化【杀】、无实体牌及多目标后续结算未逐项覆盖；客户端交互未人工验收。
 
 <a id="qun018-1"></a>
@@ -258,5 +258,5 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun018_1`；源码 [skill_qun018_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun018_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN018。同将倾城见[辅助与牌资源](support.md#qun018-2)。
 - **实现与接口**：主动段未写限一次，每阶段可反复发动；弃一张自己的黑色牌，选一名双将均明置的其他角色暗置其一张武将牌，再令其交给自己一张牌。暗置复用公共 `doHideGeneral` 的主副将选择与来源迁移。被动“回合内其他角色不能明置”不在技能本体重复实现，由 [qun_control_rule](../../../../pkg/hanjin_mode/skills/qun_control_rule.lua) 与 [util/qun_control](../../../../pkg/hanjin_generals/util/qun_control.lua) 按持有者＋技能来源维护，失技／暗置只撤销本条来源。
-- **验证依据**：已编写 [qun_control.lua](../../../../tests/qun_control.lua) 的 `testHuoshuiRevealProhibitionFollowsItsOwnSource`、`testHuoshuiActiveHidesGeneralAndTakesCardTwice`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_control.lua](../../../../tests/qun_control.lua) 的 `testHuoshuiRevealProhibitionFollowsItsOwnSource`、`testHuoshuiActiveHidesGeneralAndTakesCardTwice`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：死亡翻面不按明置拦截、其他禁明置来源并存、双将明暗组合未穷举；客户端交互未人工验收。

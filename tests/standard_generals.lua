@@ -109,6 +109,53 @@ function Teststandard_generals:testRegistryHasNinetyGeneralsAndFourteenRetinues(
   lu.assertEquals(hp[5], 6)  -- 2.5 contribution
 end
 
+-- 性别元数据：17 名女性、73 名男性，均由正式武将数据显式登记。
+-- 只统计 Data.generals（90 张正式将），翼从仍隐藏且不进入该统计。
+function Teststandard_generals:testFormalGeneralGendersAreExplicit()
+  local expectedFemale = {
+    ["hanjin__han007"] = true,
+    ["hanjin__han008"] = true,
+    ["hanjin__han011"] = true,
+    ["hanjin__wei007"] = true,
+    ["hanjin__shu007"] = true,
+    ["hanjin__shu015"] = true,
+    ["hanjin__shu016"] = true,
+    ["hanjin__wu006"] = true,
+    ["hanjin__wu008"] = true,
+    ["hanjin__wu011"] = true,
+    ["hanjin__qun003"] = true,
+    ["hanjin__qun012"] = true,
+    ["hanjin__qun018"] = true,
+    ["hanjin__jin007"] = true,
+    ["hanjin__jin008"] = true,
+    ["hanjin__jin010"] = true,
+    ["hanjin__jin012"] = true,
+  }
+  local female, male = 0, 0
+  for _, data in ipairs(Data.generals) do
+    local general = assert(Fk.generals[data.id], "Missing " .. data.id)
+    lu.assertNotNil(data.gender, "Missing gender data for " .. data.id)
+    lu.assertTrue(general.gender == General.Male or general.gender == General.Female,
+      "Unregistered gender for " .. data.id)
+    if general.gender == General.Female then
+      female = female + 1
+      lu.assertTrue(expectedFemale[data.id], "Unexpected female general " .. data.id)
+    else
+      male = male + 1
+      lu.assertNil(expectedFemale[data.id], "Female general registered as male: " .. data.id)
+    end
+  end
+  lu.assertEquals(female, 17)
+  lu.assertEquals(male, 73)
+  lu.assertEquals(Fk.generals["hanjin__qun003"].gender, General.Female) -- 貂蝉
+  lu.assertEquals(Fk.generals["hanjin__qun002"].gender, General.Male)   -- 吕布
+  -- 翼从不在 90 将性别统计内，且仍保持隐藏。
+  lu.assertEquals(#Data.generals, 90)
+  for _, retinue in ipairs(Data.retinues) do
+    lu.assertTrue(Fk.generals[retinue.id].hidden, "Retinue must stay hidden: " .. retinue.id)
+  end
+end
+
 function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder()
   local total, retinueTotal = 0, 0
   for _, data in ipairs(Data.generals) do

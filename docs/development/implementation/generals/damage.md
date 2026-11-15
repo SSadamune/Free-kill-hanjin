@@ -245,8 +245,8 @@
 #### 济世（QUN001 华佗）
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun001_1`；源码 [skill_qun001_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun001_1.lua)。规则见[华佗规范](../../../../rules/generals/qun001-huatuo.md)。同将除疠见[辅助与牌资源](support.md#qun001-2)。
-- **实现与接口**：可用自己的红色手牌或装备牌当【桃】对濒死角色使用，没有回合外限制；客户端请求与服务端 `before_use` 都复核目标确实处于濒死及材料归属。救援记录绑定模式级 [qun_dying_rule](../../../../pkg/hanjin_mode/skills/qun_dying_rule.lua) 分配的本次濒死序号；濒死结算结束后，仅当提供技能的华佗将牌为客将，才按逆时针逐人询问是否用一张明置武将牌交换，首次成功即止，跨势力许可与交换本身复用公共交换模块。
-- **验证依据**：已编写 [qun_dying.lua](../../../../tests/qun_dying.lua) 的 `testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce`、`testJishiStillExchangesWhenDyingPlayerDies`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **实现与接口**：可用自己的红色手牌或装备牌当【桃】对濒死角色使用，没有回合外限制；客户端请求与服务端 `before_use` 都复核目标确实处于濒死及材料归属。救援记录在本次桃的 `CardUsing` 时建立，先于回复清除濒死状态，绑定模式级 [qun_dying_rule](../../../../pkg/hanjin_mode/skills/qun_dying_rule.lua) 分配的本次濒死序号；濒死结算结束后，仅当提供技能的华佗将牌为客将，才按逆时针逐人询问是否用一张明置武将牌交换，首次成功即止，跨势力许可与交换本身复用公共交换模块。
+- **验证依据**：已执行 [qun_dying.lua](../../../../tests/qun_dying.lua) 的 `testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce`、`testJishiStillExchangesWhenDyingPlayerDies`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：客将设置未实装时默认开启这一过渡状态仍需按[华佗规范](../../../../rules/generals/qun001-huatuo.md)处理；“客将替换”房间设置真实关闭、连续交换与中途死亡组合未人工验收。
 
 <a id="qun007-1"></a>
@@ -254,7 +254,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun007_1`；源码 [skill_qun007_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun007_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN007。同将乱武、帷幕见[用牌目标与距离](active.md#qun007-2)。
 - **实现与接口**：`fk.EnterDying` 仅在贾诩自己的回合、其他角色进入濒死时给本次濒死设置标记；实际用桃禁止与清理放在模式级 [qun_dying_rule](../../../../pkg/hanjin_mode/skills/qun_dying_rule.lua)，除濒死者外均受限，贾诩本人也无豁免，不把限制写成永久状态。
-- **验证依据**：已编写 [qun_dying.lua](../../../../tests/qun_dying.lua) 的 `testWanshaBlocksEveryoneButDyingPlayer`、`testWanshaAllowsDyingPlayerOwnPeach`、`testWanshaInactiveOutsideJiaxuTurn`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_dying.lua](../../../../tests/qun_dying.lua) 的 `testWanshaBlocksEveryoneButDyingPlayer`、`testWanshaAllowsDyingPlayerOwnPeach`、`testWanshaInactiveOutsideJiaxuTurn`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：贾诩在濒死结算中死亡／失技、多个完杀来源并存未穷举；客户端求桃提示未人工验收。
 
 <a id="qun010-1"></a>
@@ -262,7 +262,7 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun010_1`；源码 [skill_qun010_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun010_1.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN010。同将鬼道见[判定与花色](retrial.md#qun010-2)。
 - **实现与接口**：分别接使用【闪】的 `fk.CardUsing` 与纯打出的 `fk.CardResponding`，不以一个入口覆盖两者；令一名其他角色走正式判定，黑桃造成 2 点雷电伤害，梅花先由张角回复 1 点、再造成 1 点雷电伤害。判定使用最终生效结果，改判后按新花色结算。
-- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testLeijiOneAskPerJinkAndSpadeDamage`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testLeijiOneAskPerJinkAndSpadeDamage`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：梅花分支、改判后重结算、无其他角色可选的边界未直接覆盖；客户端判定展示未人工验收。
 
 <a id="qun012-2"></a>
@@ -270,12 +270,12 @@
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun012_2`；源码 [skill_qun012_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun012_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN012 与[技能效果分类](../../../../rulebook/topics/skill-effect-classification.md)。同将悲歌见[判定与花色](retrial.md#qun012-1)。
 - **实现与接口**：锁定技，`fk.Death` 时由蔡文姬选择来源的一张武将牌，按该牌移除技能并作永久失技记录；来源选择、按牌失技与记录在模式级 [qun_duanchang](../../../../pkg/hanjin_mode/rules/qun_duanchang.lua)，[qun_duanchang_rule](../../../../pkg/hanjin_mode/skills/qun_duanchang_rule.lua) 在后续明置时幂等兜底，交换通过 `general_exchange` 来源过滤器避免重新授技。已建立的延时效果不因失技撤销。
-- **验证依据**：已编写 [qun_duanchang.lua](../../../../tests/qun_duanchang.lua) 的 `testChooseOneCardKeepsTheOther`、`testHiddenCardStaysLostAfterReveal`、`testExchangeDoesNotRestoreLostSkills`，尚待本轮执行结果；结果集中见后续 verification-evidence。
-- **未完成与边界**：失技记录覆盖整张将牌的印刷技能；预亮不作为本牌的独立来源，另一将同名来源须仍有效。`GeneralShown` 复核已失来源及仍存来源，相关暗将与共享马术回归尚待运行验证。客户端选择与明置提示未人工验收。
+- **验证依据**：已执行 [qun_duanchang.lua](../../../../tests/qun_duanchang.lua) 的 `testChooseOneCardKeepsTheOther`、`testHiddenCardStaysLostAfterReveal`、`testExchangeDoesNotRestoreLostSkills`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **未完成与边界**：失技记录覆盖整张将牌的印刷技能；预亮不作为本牌的独立来源，另一将同名来源须仍有效。`GeneralShown` 复核已失来源及仍存来源，相关暗将与共享马术回归已通过定向验证；同名来源恢复只在该角色持有被断肠将牌时启用，不处理普通明置的授技。客户端选择与明置提示未人工验收。
 <a id="qun016-2"></a>
 #### 随势（QUN016 田丰）
 
 - **标识与依据**：运行时 ID `hanjin__skill_qun016_2`；源码 [skill_qun016_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun016_2.lua)。规则见[田丰来源基线](../../../../rules/generals/qun016-tianfeng.md)。同将死谏见[辅助与牌资源](support.md#qun016-1)。
 - **实现与接口**：锁定技，两个独立分支。其他角色进入濒死时，检查造成此次濒死的来源（不是濒死角色）与田丰势力相同才摸一张；无来源的体力流失不摸。与自己势力相同的其他角色死亡时，由田丰选择失去 1 点体力或弃置所有手牌，即使当前无手牌也提供两选项，不强制失去体力。
-- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testSuishiEnterDyingDrawsForSameKingdomKiller`、`testSuishiDeathChoiceDiscardsAllHandcards`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testSuishiEnterDyingDrawsForSameKingdomKiller`、`testSuishiDeathChoiceDiscardsAllHandcards`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：来源为暗将／野心家、死亡时无手牌可选、同回合多次濒死未穷举；客户端选择未人工验收。
