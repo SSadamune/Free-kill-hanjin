@@ -8,6 +8,8 @@
 
 实现位于 `pkg/hanjin_mode/rules/card_use_targets.lua`，房间内筛选代理及宣告复核位于 `skills/card_use_targets.lua`。原牌面条件、仅无距离限制和显式条件三种策略与目标数量分别传递；普通上游国战房间不安装汉晋行为。
 
+周仓接入的显式条件增加 `in_attack_range_of = <公开角色 ID>`：目标须在该锚点角色的攻击范围内，距离关系不改用实际使用者计算。条件保持声明式并与目标数量分别传递；选择和执行须沿用同一策略，不能在 `useCard` 时重新套用默认条件。周仓的实牌入口及范围方向回归见[翼从技能](generals/retinues.md#zhoucang)。
+
 ## 当前实现核对
 
 ### 执行入口与次数

@@ -32,6 +32,7 @@
 - [WEI002 司马懿结算约定](generals/wei002-simayi.md)：应期的配将体力贡献、开局判定及多势力／客将依据。
 - [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
 - [WEI016 乐进结算约定](generals/wei016-yuejin.md)：骁果弃置基本牌为发动消耗，不能零弃牌发动。
+- [SHU007 黄月英结算约定](generals/shu007-huangyueying.md)：集智包含有对应实体牌且未经转化的普通、延时锦囊；区分玩家文本与规范描述中的“虚拟牌”。
 - [JIN009 司马懿结算约定](generals/jin009-simayi.md)：引用同文应期的公共裁定。
 - [WU003 吕蒙结算约定](generals/wu003-lvmeng.md)：谋断仅获得涉猎，涉猎为后天技能及其定义。
 - [WU005 周瑜结算约定](generals/wu005-zhouyu.md)：反间响应选择及同花色手牌、装备牌的弃置范围。

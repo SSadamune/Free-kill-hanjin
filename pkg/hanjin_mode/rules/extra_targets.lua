@@ -118,6 +118,12 @@ function E.matchesTarget(room, player, card, target, condition)
     end
     if #ids == 0 then return false end
   end
+  if condition.in_attack_range_of ~= nil then
+    local anchor = room:getPlayerById(condition.in_attack_range_of)
+    if anchor == nil or anchor.dead or not anchor:inMyAttackRange(target) then
+      return false
+    end
+  end
   return true
 end
 

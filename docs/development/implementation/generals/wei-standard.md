@@ -34,7 +34,7 @@
 
 ## 3. 接线
 
-- [skills/](../../../../pkg/hanjin_generals/skills/)：25 个魏技能与 3 个翼从技能均 `hanjinImplemented = true`，骨架含 effect；`init.lua` 的加载断言会检查已实装条目确有 effect。
+- [skills/](../../../../pkg/hanjin_generals/skills/)：25 个魏技能与 3 个翼从技能均 `hanjinImplemented = true`，骨架含 effect；`init.lua` 的加载断言会检查已实装条目确有 effect。应期只保留 `hanjin__skill_wei002_3` 一份骨架，晋司马懿直接引用同一 ID，不另设薄包装；两处卡面文本统一为魏文本“☯️+2”。
 - [standard.lua](../../../../pkg/hanjin_generals/data/standard.lua)：魏区 15 主称号与 25 技能原文已与 `rules/standard-generals.md` 魏区及 `docs/石激桑武将列表.json` 卡面核对，逐项差异为 0；其他势力数据未改。
 - [all.lua](../../../../tests/all.lua)：已追加 `wei_damage`、`wei_support`、`wei_phases`、`wei_pair_hp`、`wei_active`、`wei_retrial`、`wei_retinues` 7 个专项。
 - 本批实质修正：伪溃私看由全体展示 `room:showCards(hand, player)` 改为真实私看 `room:viewCards(player, { cards = hand, skill_name = ..., prompt = ... })`，测试记录收件角色与牌集；长驱不再使用私有 `room:getTag`，新增公开事实层（`hanjin_wei_damage_targets`）与模式级 `fk.Damage` 记录器，客户端与服务端读同一公开数据；伪溃 `can_use` 要求 `player.hp >= 1`，强袭要求体力至少 1 或拥有可弃武器牌（失去体力消耗不得超过当前体力，不把有可弃武器的强袭一并限制为体力至少 1）；驱虎 `winner ~= player`（含平局／空结果）走真实视为【杀】分支；鹰视新增 `skill_wei002_2.lua`。

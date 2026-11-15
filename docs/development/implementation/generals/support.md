@@ -17,6 +17,13 @@
 | WEI008 | 夏侯渊 | [设变](#wei008-2) |
 | WEI011 | 曹仁 | [励战](#wei011-2) |
 | WEI014 | 曹丕 | [放逐](#wei014-2) |
+| SHU004 | 诸葛亮 | [观星](#shu004-1) |
+| SHU007 | 黄月英 | [集智](#shu007-1) |
+| SHU007 | 黄月英 | [藏机](#shu007-2) |
+| SHU014 | 孟获 | [再起](#shu014-2) |
+| SHU015 | 祝融夫人 | [巨象](#shu015-1) |
+| SHU016 | 甘夫人 | [淑慎](#shu016-1) |
+| SHU016 | 甘夫人 | [神智](#shu016-2) |
 | WU001 | 孙权 | [制衡](#wu001-1) |
 | WU003 | 吕蒙 | [克己](#wu003-1)、[谋断](#wu003-2)、[涉猎](#wu003-3) |
 | WU005 | 周瑜 | [英姿](#wu005-1)、[反间](#wu005-2) |
@@ -152,6 +159,64 @@
   - 使用原生翻面入口，保留 `BeforeTurnOver`／`TurnedOver` 事件、翻面跳回合流程与客户端 `faceup` 朝向显示；未修改引擎本体。
 - **验证依据**：[wei_support.lua](../../../../tests/wei_support.lua) 的 `testFangzhuStackDrawDiscardAndHpLoss`：平置→叠置并摸 2；足额弃 4 后平置且牌名字数和 >7 失去体力；已有叠置目标不反转且仍摸 2；不足 4 张时不提供弃牌分支、保持叠置。历史 3/3。
 - **未完成与边界**：客户端翻面朝向与弃牌交互未人工验收。
+
+### 蜀
+
+<a id="shu004-1"></a>
+#### 观星（SHU004 诸葛亮）
+
+- **标识与依据**：`hanjin__skill_shu004_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu004_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU004。
+- **实现与接口**：准备阶段卜算五张，存活角色不足四时三张；全置底记录本回合结束阶段强制再执行，模式级后续不依赖仍持有观星，回合末清理未执行记录。
+- **验证依据**：[shu_phases.lua](../../../../tests/shu_phases.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu007-1"></a>
+#### 集智（SHU007 黄月英）
+
+- **标识与依据**：`hanjin__skill_shu007_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu007_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU007。
+- **实现与接口**：CardUsing 检查锦囊类别、非转化且有实体牌对应，普通和延时锦囊均可触发；适用[集智已确认的描述层次裁定](../../../../rules/generals/shu007-huangyueying.md)。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu007-2"></a>
+#### 藏机（SHU007 黄月英）
+
+- **标识与依据**：`hanjin__skill_shu007_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu007_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU007。
+- **实现与接口**：BeforeCardsMove 筛选本人装备区因弃置离开的非坐骑牌，每回合可取消其中一张的移动，保留其余移动。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu014-2"></a>
+#### 再起（SHU014 孟获）
+
+- **标识与依据**：`hanjin__skill_shu014_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu014_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU014。
+- **实现与接口**：模式级 AfterCardsMove 累计当前回合全场红牌进入弃牌堆次数；弃牌阶段结束先选至多 X 名角色含自己，座次依次由各人选摸一或令孟获回复。
+- **验证依据**：[shu_savage.lua](../../../../tests/shu_savage.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu015-1"></a>
+#### 巨象（SHU015 祝融夫人）
+
+- **标识与依据**：`hanjin__skill_shu015_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu015_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU015。
+- **实现与接口**：只对持有者设置南蛮无效；他人南蛮 CardUseFinished 后获得仍可取得的对应实体牌，不提前到每目标结算时取得。
+- **验证依据**：[shu_savage.lua](../../../../tests/shu_savage.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu016-1"></a>
+#### 淑慎（SHU016 甘夫人）
+
+- **标识与依据**：`hanjin__skill_shu016_1`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu016_1.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU016。
+- **实现与接口**：HpRecover 按实际回复点数提供独立机会，持有者选其他角色回复一点或双方各摸一张，满体力不开放回复分支。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
+
+<a id="shu016-2"></a>
+#### 神智（SHU016 甘夫人）
+
+- **标识与依据**：`hanjin__skill_shu016_2`；[源码](../../../../pkg/hanjin_generals/skills/skill_shu016_2.lua)；[标准武将表](../../../../rules/standard-generals.md) SHU016。
+- **实现与接口**：准备阶段检查能足额弃置非空的全部手牌，再比较弃牌数与结算时体力，满足则回复一点。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
 

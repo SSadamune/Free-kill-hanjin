@@ -178,6 +178,11 @@ function M.create(base)
       self.room:addSkill(WuHistory.DISTANCE_SKILL)
       self.room:addSkill("hanjin__wu_turn_effects")
       self.room:addSkill("hanjin__wu_dimeng_expiry")
+      self.room:addSkill("hanjin__shu_hidden_prelight")
+      self.room:addSkill("hanjin__shu_lieyong_bonus")
+      self.room:addSkill("hanjin__shu_state_rule")
+      self.room:addSkill("hanjin__shu_savage_rule")
+      self.room:addSkill("hanjin__shu_tieqi_invalidity")
       if baseStart then return baseStart(self) end
     end
     return logic

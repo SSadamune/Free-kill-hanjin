@@ -7,9 +7,9 @@
 | 编号 | 武将 | 技能 | 运行时 ID | 源码 | 实现详情 | 验证 |
 | --- | --- | --- | --- | --- | --- | --- |
 | JIN001 | 司马炎 | 垂统、兴图 | `hanjin__jin001` | [skill_jin001_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin001_1.lua)、[skill_jin001_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin001_2.lua) | [垂统](support.md#jin001-1)、[兴图](conversion.md#jin001-2) | [jin001_simayan](../../../../tests/jin001_simayan.lua) |
-| JIN009 | 司马懿 | 应期（同文，已实装） | `hanjin__jin009` | [skill_jin009_3.lua](../../../../pkg/hanjin_generals/skills/skill_jin009_3.lua) | [应期](pair-hp.md#wei002-3)（与 WEI002 共享正文，不另设） | [wei_pair_hp](../../../../tests/wei_pair_hp.lua) |
+| JIN009 | 司马懿 | 应期（同文，已实装） | `hanjin__jin009` | [skill_wei002_3.lua](../../../../pkg/hanjin_generals/skills/skill_wei002_3.lua)（与 WEI002 共用同一技能 ID） | [应期](pair-hp.md#wei002-3)（与 WEI002 共享正文，不另设） | [wei_pair_hp](../../../../tests/wei_pair_hp.lua) |
 
-JIN009 仅列已实装的同文应期引用；其权变、骤霆等其余技能未在本批实装，不计入晋完成度。
+JIN009 仅列已实装的同文应期引用，运行时直接引用 WEI002 的 `hanjin__skill_wei002_3`，不另建骨架；其权变、骤霆等其余技能未在本批实装，不计入晋完成度。
 
 ## 2. 关联翼从
 
