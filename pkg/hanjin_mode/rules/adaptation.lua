@@ -233,8 +233,13 @@ function A.cardTips(card)
 end
 
 -- Each grant is one token and can bypass only one entry, even if conditions repeat.
+-- A use-scoped trigger may register its token after AfterCardUseDeclared (for
+-- example 通法 pays when the card is actually used); resolve reads the same live
+-- table, so such a token is still considered once per unsettled entry. It must
+-- not be added while entries are already resolving.
 function A.grantIgnore(use, source, entryId)
-  assert(not states[use], "Grant ignores before condition detection")
+  assert(states[use] == nil or not states[use].resolving,
+    "Grant ignores before resolution starts")
   assert(type(source) == "string" and source ~= "", "Ignore effects need a source identifier")
   local data = extra(use)
   data.hanjin_adaptation_ignores = data.hanjin_adaptation_ignores or {}
@@ -377,10 +382,20 @@ function A.prepare(room, use)
   -- ignore_times result consistent, although only PreCardUse is early enough
   -- to keep the use out of the engine's history count.
   local locked = A.lockIgnoreTimes(room, use)
+  -- Materialize the live token table now. A use-scoped skill may append its
+  -- token after this refresh (通法); resolve must see the same table.
+  local tokenTable = extra(use).hanjin_adaptation_ignores
+  if tokenTable == nil then
+    tokenTable = {}
+    use.extra_data.hanjin_adaptation_ignores = tokenTable
+  end
   local state = { entries = entries, timing = timing,
     snapshot = timing == "snapshot" and A.snapshot(room, use) or nil,
     locked = locked,
-    tokens = table.clone((use.extra_data or {}).hanjin_adaptation_ignores or {}), result = {
+    -- Keep the live table: a token can be registered by a skill triggered after
+    -- this refresh (通法) and MUST still be readable when resolve reaches a later
+    -- unsatisfied entry.
+    tokens = tokenTable, result = {
     condition_timing = timing,
     is_adaptation_card = #entries > 0, triggered = false, triggered_count = 0, entries = {}, effects = {},
   } }
@@ -518,6 +533,25 @@ A.registerEffect("remove_target", { target_change = true, apply = function(room,
   local selected = room:askToChoosePlayers(use.from, { min_num = 1, max_num = 1, targets = use.tos,
     skill_name = "#hanjin_adaptation_rule", prompt = "#hanjin_adaptation_remove_target", cancelable = true })
   return selected[1] and use:removeTarget(selected[1]) or false
+end })
+-- 乘流: this use's damage becomes thunder. The type is recorded on the use, not
+-- on the shared card prototype; damage handlers read it through the parent use.
+A.registerEffect("thunder_damage", { apply = function(room, use)
+  extra(use).hanjin_damage_type = fk.ThunderDamage
+end })
+-- 前驱: discard one equipment card from each actual target of this use. The
+-- card's user chooses; a target with no equipment is simply skipped.
+A.registerEffect("discard_target_equip", { apply = function(room, use)
+  if use.from == nil or use.from.dead then return end
+  for _, to in ipairs(use.tos or {}) do
+    if to:isAlive() and not to:isRemoved() and #to:getCardIds(Player.Equip) > 0 then
+      local id = room:askToChooseCard(use.from, { target = to, flag = "e",
+        skill_name = "#hanjin_adaptation_rule", prompt = "#hanjin_adaptation_discard_equip" })
+      if id ~= nil and to:isAlive() and table.contains(to:getCardIds(Player.Equip), id) then
+        room:throwCard({ id }, "#hanjin_adaptation_rule", to, use.from)
+      end
+    end
+  end
 end })
 
 return A

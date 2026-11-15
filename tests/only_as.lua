@@ -1,4 +1,5 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local content = __dofile("../../../tests/support/only_as_content.lua")
 local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
 local BattleRoyal = require "packages.hanjin.pkg.hanjin_mode.rules.battle_royal"
@@ -6,7 +7,12 @@ local H = require "packages.hegemony.util"
 
 local function setup()
   Fk.currentResponsePattern = nil
-  return support.initHanjinRoom()
+  local room = support.initHanjinRoom()
+  -- 公共转换测试固定双将，防止随机暗将的响应技能提前消费预排回复。
+  FkTest.runInRoom(function()
+    skill_test.installBlankGenerals(room, { "han", "wei", "shu", "wu", "qun", "jin", "han", "wei" })
+  end)
+  return room
 end
 
 local function teardown()
@@ -183,6 +189,36 @@ function Testhanjin_only_as:testRealUseRequestRejectsDirectPeachAndAllowsConvers
   lu.assertEquals(Fk:getCardById(peach.id).trueName, "peach")
   run(function() room():useCard(use) end)
   lu.assertEquals(target.hp, hp - 1)
+  lu.assertFalse(table.contains(player:getCardIds("h"), peach.id))
+end
+
+function Testhanjin_only_as:testHiddenBazhenDeclineKeepsConvertedResponseRequest()
+  local player = room().players[1]
+  run(function()
+    skill_test.installDualGenerals(room(), player, {
+      main = "hanjin__shu011", deputy = "hanjin_test__shu_2", kingdom = "shu",
+    })
+    player:hideGeneral(false)
+    player:prelightSkill("hanjin__skill_shu011_1", true)
+  end)
+  enterBattleRoyal()
+  local peach = give(player, "hanjin__peach", Card.Heart, 4)
+  -- 八阵的询问先于 AskForResponseCard；先放弃八阵，再提交真实转换回复。
+  FkTest.setNextReplies(player, { "", {
+    card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
+    targets = {}, interaction_data = "hanjin__jink",
+  } })
+  local respond
+  run(function()
+    respond = room():askToResponse(player, {
+      pattern = "jink", skill_name = "hanjin_test_response", cancelable = true,
+    })
+  end)
+  lu.assertNotNil(respond)
+  lu.assertEquals(respond.card.trueName, "jink")
+  lu.assertEquals(respond.card.subcards, { peach.id })
+  lu.assertFalse(player:hasShownSkill("hanjin__skill_shu011_1"))
+  run(function() room():responseCard(respond) end)
   lu.assertFalse(table.contains(player:getCardIds("h"), peach.id))
 end
 
@@ -688,11 +724,14 @@ function Testhanjin_only_as:testSkillSourceFollowsGeneralVisibilityAndLoss()
   lu.assertTrue(hasTarget(O.availableTargets(room(), player, slash.id, "use"), "hanjin__collateral"))
 
   -- 技能被临时无效化时 hasShownSkill 为 false，来源应暂时失效并可恢复。
+  local invalidTargets
   run(function()
     room():invalidateSkill(player, "hanjin_test__only_as_source_skill", "", "test")
+    lu.assertFalse(player:hasShownSkill("hanjin_test__only_as_source_skill"), "来源技能应在真实房间内无效")
     O.refresh(room())
+    invalidTargets = O.availableTargets(room(), player, slash.id, "use")
   end)
-  lu.assertFalse(hasTarget(O.availableTargets(room(), player, slash.id, "use"), "hanjin__collateral"))
+  lu.assertFalse(hasTarget(invalidTargets, "hanjin__collateral"))
   run(function()
     room():validateSkill(player, "hanjin_test__only_as_source_skill", "", "test")
     O.refresh(room())

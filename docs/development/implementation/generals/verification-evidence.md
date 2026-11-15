@@ -201,6 +201,25 @@ Built .dev/dist/hanjin.zip (452 files)
 
 ## 晋区
 
+<a id="jin-standard"></a>
+## 晋势力标准包最终验收（2026-11-16）
+
+DSH分批实现，Codex审阅并完成整合修复、串行验收。范围为15将29条天生技能记录及腹心死士、文虎；应期复用魏技能，既有司马炎保留。规则审阅提交 `b28ad21`；本轮实现与验证记录一并提交。泰然后续时机尚未定案，当前暂按回合结束时逐次结算。
+
+```text
+python scripts/test.py --timeout 240
+Ran 831 tests in 158.697 seconds, 831 successes, 0 failures
+exit 0
+python scripts/check_lua.py
+366 Lua files OK, exit 0
+python scripts/build_release.py
+Built .dev/dist/hanjin.zip (477 files)
+```
+
+八套新增晋专项共65项纳入默认套件，公共转换额外加入暗卧龙回归。默认全量输出 `.dev/logs/jin_full_final.log`；保留原生 Distance malfunction 警告，无critical Lua错误或失败断言。安装包全部477文件与工作区 `init.lua`、`pkg/`、`image/`、`audio/` 精确逐字节一致，包含五个新增正式模式规则、共享辅助及技能接线，无测试、脚本或本体开发补丁。文档本地链接和差异格式检查通过。
+
+真实客户端点击、多人联网／重连及干净本体安装人工验收未执行；自动化通过不扩展为这些结论。以下保留各专项证据及整合期间发现的问题。
+
 <a id="jin001_simayan"></a>
 ### jin001_simayan.lua
 
@@ -211,6 +230,63 @@ Ran 17 tests ... 17 successes, 0 failures
 ```
 
 原文省略了运行时间。默认全量 507/507（该批次）；安装包已构建。最近完整验证记录见[开发状态](../../status.md)。
+
+<a id="jin-basic"></a>
+### jin_basic.lua
+
+JIN011 果毅、JIN012 慈威/弘训、JIN014 膂力/夺气的定向套件。19/19 通过；膂力在 `fk.Damage`（造成伤害后）读取、两项合法选项的可执行性已修正。该结果不变。
+
+<a id="jin-resources"></a>
+### jin_resources.lua
+
+JIN002 泰然/夷灭、JIN007 恤下、JIN008 宜室/识度及腹心死士的定向套件。最新实际执行：15/15（3.686 秒）。恤下真实“0 明置→发动后明置→交给两张→摸两张”现通过。泰然后续仍按暂定 `fk.TurnEnd` 逐条结算，不是最终裁定。
+
+恤下暗将回归故障（仅此一处记录）：触发为真实暗将来源、0 明置时发动恤下；证据为快速 cost 引擎在追加暗将确认请求后未收到回复、后续交给/摸牌断言失败；根因在测试后端的快速 cost 流程，不在恤下效果；由 Codex 修正测试后端补齐暗将确认回复，原技能/效果断言未删；测试入口为 [jin_resources.lua](../../../../tests/jin_resources.lua) 的 `testXuxiaRealDarkSourceIsRegisteredAndTriggers`。
+
+<a id="jin-deck"></a>
+### jin_deck.lua
+
+JIN009 权变/骤霆的定向套件。最新实际执行：3/3（0.787 秒）；处理区唯一牌修正已通过，不再以历史 2/2 代表当前状态。
+
+<a id="jin-adaptation"></a>
+### jin_adaptation.lua
+
+JIN004 通法、JIN013 乘流、JIN015 前驱的定向套件，5/5 通过；同批公共应变 25/25、`ignore_times` 14/14。该结果属于应变公共机制与本批定向，不挪作其他技能的新增覆盖。
+
+<a id="jin-chain"></a>
+### jin_chain.lua
+
+JIN005 柔克/顺流、JIN013 克清、JIN014 文虎及真实冰属性重置的定向套件。2026-11-16 实际执行：
+
+```text
+python scripts/test.py --file tests/jin_chain.lua --timeout 180
+Ran 6 tests in 1.448 seconds, 6 successes, 0 failures
+```
+
+覆盖柔克改冰杀与失技后本次后续、顺流受伤者与横置者弃牌、克清失技持续/来源不再存活、文虎整区一次弃置与决斗目标上限、冰杀伤害重置横置受伤者。冰属性在正式 `pkg/hanjin_cards/init.lua` 按锁定参考 `variation_cards/init.lua` 注册（引擎默认 `can_chain = true`），用例用真实冰杀伤害观察重置。克清真实 `killPlayer` 因夹具先触发游戏结束，死亡用例改用真实 `dead` 状态后继续真实用牌；`fk.Death` 清理链路仍待独立夹具或人工复核，客户端/联网重连未验。
+
+<a id="jin-information"></a>
+### jin_information.lua
+
+JIN003 昭然、JIN007 识人的定向套件。DSH 首次定向 2/2（0.511 秒）通过；可见性兼容修复后由 Codex 复核 2/2（0.513 秒）通过。
+
+<a id="jin-reactive"></a>
+### jin_reactive.lua
+
+JIN003 挟征、JIN004 悖弑的定向套件。最新实际执行：6/6（1.465 秒）通过。挟征已改为 `C.explicit({ other_roles = true })`、移除默认攻击距离并固定实际目标；悖弑改为本次 `use.extra_data` token `{ actor, source, damaged }`，核对 `data.card == use.card`，只记录对原来源的伤害，并新增远距离反制、原来源/非原来源分支。
+
+<a id="jin-sources"></a>
+### jin_sources.lua
+
+JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。最新实际执行：9/9（2.179 秒）通过。扼绝已用真实 `Exchange.exchange` 验证保留失技及外部来源不随牌移动；风物已用真实 `ClientPlayer` 与四花色验证；伤逝零材料的明确确认已验证；复礼的独立 `jin_sources_rule` 已正式 mode 接线。相关公共套件 `qun_duanchang` 5/5（1.194 秒）、`general_exchange` 17/17（1.498 秒）。
+
+### 晋包整合中的可见性与响应夹具修正
+
+昭然的技能及模式级 `visibility.card_visible` 原先在不适用时返回 `false`，使西园军原有公开效果被覆盖。首次默认套件虽汇总830项成功，仍在 `han_retinues.lua:128` 的回调内报告 critical 断言，测试入口按要求返回失败；不能仅凭汇总判通过。改为仅对昭然有效手牌返回 `true`，其余返回 `nil`，让其他可见性来源继续判断。修复后 `han_retinues` 2/2（0.508秒）及 `jin_information` 2/2（0.513秒）通过。
+
+随后全量为829/830，`only_as` 的直接打出回复返回 nil。原套件使用随机真实双将；固定暗卧龙、黑色判定牌与同一回复可确定性重现：八阵先询问并消费给响应窗口的回复，最终响应为 nil。原失败没有记录初始双将，不追认此为当次唯一根因。公共套件改为固定多势力白板双将，并显式添加暗卧龙先放弃八阵再桃当闪打出的回归；来源无效化查询放在真实房间上下文内。`python scripts/test.py --file tests/only_as.lua --timeout 120` 为25/25（5.757秒）。临时固定复现入口1/1（0.313秒）后移除，不加入正式默认套件；原断言均保留。
+
+挟征罚则用例在全量中为830/831：只给目标一张桃、发动者没有其他牌，却仅以结算后桃的归属判断罚则是否执行，遗漏了随后强制返牌的合法路径。用例改为将目标体力固定为1，发动者另持一张闪，按技能限定选择返还闪；同时断言返牌请求中已获得桃、返牌数量及最终两牌归属，正式技能未因此修改。
 
 ## 历史故障根因与旧状态
 

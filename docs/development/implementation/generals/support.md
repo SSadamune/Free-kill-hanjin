@@ -39,6 +39,16 @@
 | QUN016 | 田丰 | [死谏](#qun016-1) |
 | QUN018 | 邹氏 | [倾城](#qun018-2) |
 | JIN001 | 司马炎 | [垂统](#jin001-1) |
+| JIN002 | 司马师 | [泰然](#jin002-1) |
+| JIN003 | 司马昭 | [昭然](#jin003-1) |
+| JIN004 | 贾充 | [通法](#jin004-1) |
+| JIN007 | 王元姬 | [识人](#jin007-1)、[恤下](#jin007-2) |
+| JIN008 | 夏侯徽 | [宜室](#jin008-1) |
+| JIN009 | 司马懿 | [权变](#jin009-1) |
+| JIN011 | 张虎&乐綝 | [果毅](#jin011-1) |
+| JIN012 | 羊徽瑜 | [弘训](#jin012-2) |
+| JIN014 | 文鸯 | [膂力](#jin014-1) |
+| JIN016 | 张华 | [复礼](#jin016-1)、[风物](#jin016-2) |
 
 ## 技能条目
 
@@ -401,3 +411,99 @@
   - 发动在 `askToSkillInvoke` 处可取消；取消、候选为空或复核失败时不移动。
 - **验证依据**：[jin001_simayan.lua](../../../../tests/jin001_simayan.lua) 覆盖其他角色进入濒死时移入空置对应栏且非手牌；同类栏已占用、废除栏、无牌、取消、自己濒死均不移动；`hp = 0` 的完整濒死流程只提供一次发动；主将、副将、暗置预亮来源均验证。历史 17/17，见[共享验证证据](verification-evidence.md#jin001_simayan)。
 - **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；规范化描述待办见[司马炎入口](jin001-simayan.md#jin001-todo)。
+
+<a id="jin002-1"></a>
+#### 泰然（JIN002 司马师）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin002_1`；源码 [skill_jin002_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin002_1.lua)。规则见[司马师规范](../../../../rules/generals/jin002-simashi.md)。同将夷灭见[伤害、体力与死亡](damage.md#jin002-2)。
+- **实现与接口**：`fk.EventPhaseStart`（出牌阶段）询问是否失去任意点体力，并可弃置至多当前已损失体力值的牌；两项都可放弃。实际失去量与弃牌数分别交给 [jin_resources.lua](../../../../pkg/hanjin_generals/util/jin_resources.lua) 记录，由模式规则 [jin_resources_rule](../../../../pkg/hanjin_mode/skills/jin_resources_rule.lua) 在 `fk.TurnEnd` 逐条结算：先回复该次实际失去的体力，再摸该次实际弃牌数。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖记录与回末结算、两条记录分别结算、救回后按实际失去量记录；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：后续时机尚未定案，当前暂按 `fk.TurnEnd` 逐条结算，**不是最终裁定**；回合结束前死亡、弃牌触发插入效果、客户端交互未验。
+
+<a id="jin003-1"></a>
+#### 昭然（JIN003 司马昭）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin003_1`；源码 [skill_jin003_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin003_1.lua)。规则见[司马昭规范](../../../../rules/generals/jin003-simazhao.md)。同将挟征见[用牌目标与距离](active.md#jin003-2)。
+- **实现与接口**：出牌阶段开始加 `-phase` 可见标记；`visibility` 的 `card_visible` 只认当前在所有者手牌区的牌，因此本阶段之后获得的手牌也可见。`fk.AfterCardsMove` 以移动前牌面快照统计每种花色首次失去最后一张手牌，按 `newlyLostSuits` 固定并记录到 `lost_suits`；每个新花色由司马昭选择摸一张或弃其他角色一张。房间级可见性来源 [jin_information_rule](../../../../pkg/hanjin_mode/skills/jin_information_rule.lua) 已随 mode 接线，保证失去昭然后本阶段已经公开的手牌仍可见。阶段标记由 `-phase` 后缀清理，同花色事实不因重新获得而重开。
+- **验证依据**：[jin_information.lua](../../../../tests/jin_information.lua) 覆盖可见性与首次失去花色；2/2（0.511s）通过，见[共享验证证据](verification-evidence.md#jin-information)。
+- **未完成与边界**：客户端可见性、同事件多花色、摸回同花色与暗置来源未人工验收。
+
+<a id="jin004-1"></a>
+#### 通法（JIN004 贾充）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin004_1`；源码 [skill_jin004_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin004_1.lua)。规则见[贾充规范](../../../../rules/generals/jin004-jiachong.md)与[应变规范](../../../../rules/adaptation.md)。同将悖弑见[伤害、体力与死亡](damage.md#jin004-2)。
+- **实现与接口**：全局监听 `fk.AfterCardUseDeclared`，只对同势力实际使用应变牌的角色触发。使用者自己支付一张手牌/装备（`askToDiscard`，已执行）或交给贾充一张（`askToChooseCard`＋`obtainCard`）；随后 `A.grantIgnore` 只给本次 `use` 增加一个“无视一个尚未满足条件”的应变令牌，不把所有条目一起视为成立，也不覆盖已有条目；条目由共享 [jin_adaptation_rule](../../../../pkg/hanjin_mode/skills/jin_adaptation_rule.lua) 在结算时读取。`PAID` 写在 `data.extra_data`，同一使用不重复收费。
+- **验证依据**：[jin_adaptation.lua](../../../../tests/jin_adaptation.lua) 覆盖付费后一个条目触发与延迟 ignore 令牌；应变定向 5/5；公共应变 25/25、`ignore_times` 14/14 属公共机制历史结果，不挪作本技能覆盖，见[共享验证证据](verification-evidence.md#jin-adaptation)。
+- **未完成与边界**：暗置来源明置、多个应变条目同时满足、无法支付与同一使用多次询问未单独验；客户端交互未人工验收。
+
+<a id="jin007-1"></a>
+#### 识人（JIN007 王元姬）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin007_1`；源码 [skill_jin007_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin007_1.lua)。规则见[王元姬规范](../../../../rules/generals/jin007-wangyuanji.md)。同将恤下见本页[恤下](#jin007-2)。
+- **实现与接口**：准备阶段选择至多三名其他势力、仍有手牌的角色，逐个以 `askToChooseCard(flag="h")` 隐藏选牌并先固定；随后按行动顺序让各拥有者用 `askToChoice` 声明一个牌名。只展示并获得其中一张；仅将该牌实际牌名与其拥有者声明比较，不同才把其余已选牌一并获得。选牌阶段不展示、不提前公开；声明及比较按通用牌名口径与 `trueName` 去重；不将应变分组专属的属性杀区分规则推广到识人。
+- **验证依据**：[jin_information.lua](../../../../tests/jin_information.lua) 覆盖隐藏选牌、声明与只展示一张；2/2（0.511s）通过，见[共享验证证据](verification-evidence.md#jin-information)。
+- **未完成与边界**：取消选择后的部分名单、目标死亡/手牌变化、声明牌名集合与客户端展示未人工验收。
+
+<a id="jin007-2"></a>
+#### 恤下（JIN007 王元姬）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin007_2`；源码 [skill_jin007_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin007_2.lua)。规则见[王元姬规范](../../../../rules/generals/jin007-wangyuanji.md)。同将识人见本页[识人](#jin007-1)。
+- **实现与接口**：全局监听 `fk.Damaged`，目标为受伤的其他角色；按 `H.getGeneralsRevealedNum` 读取实际明置将数，少于王元姬（含暗置来源的预测）才可发动，每回合一次（`HistoryTurn`）。消耗为交给目标两张自己的手牌/装备，使用 `askToChooseCardsAndPlayers` 的“交给”而非弃置过滤；随后摸两张。暗置来源的明置由引擎 `SkillEffect` 完成，技能只预测并检查 `prohibitReveal`，不自行明置。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 有交两张摸两张、明置数不足与两张牌门槛；定向 15/15（3.686s）；恤下真实“0 明置→发动后明置→交给两张→摸两张”已通过，见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：目标死亡、禁明置、交给中插入移牌、客户端交互未人工验收。
+
+<a id="jin008-1"></a>
+#### 宜室（JIN008 夏侯徽）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin008_1`；源码 [skill_jin008_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin008_1.lua)。规则见[夏侯徽规范](../../../../rules/generals/jin008-xiahouhui.md)。同将识度见[拼点](pindian.md#jin008-2)。
+- **实现与接口**：全局监听 `fk.AfterCardsMove`，每回合一次；按弃置操作者 `proposer`（不是牌的原拥有者 `from`）和同势力筛选，收集本批仍在弃牌堆的牌。选一张交给操作者，再从剩余牌中选一张获得；只取一张，不收取全部剩余。已被其他同时机效果移走的牌不再从新区域强取；第一步合法执行后不因第二步无法执行而倒推取消。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖交给一张再获得一张、按操作者势力而非原拥有者；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
+- **未完成与边界**：多批弃牌、同一操作者多次弃置、目标死亡与客户端选牌未人工验收。
+
+<a id="jin009-1"></a>
+#### 权变（JIN009 司马懿）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin009_1`；源码 [skill_jin009_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin009_1.lua)。规则见[司马懿规范](../../../../rules/generals/jin009-simayi.md)；共享工具 [jin_deck.lua](../../../../pkg/hanjin_generals/util/jin_deck.lua)。同将骤霆见[转化与生成用牌](conversion.md#jin009-2)。
+- **实现与接口**：`fk.AfterCardUseDeclared` 按本阶段 `GameEvent.UseCard` 历史判断每种花色的首张真实手牌使用；响应中的实际使用也计入，纯打出不计。发动后把该花色写入 `jin_deck.lua` 的中性 `-phase` 标记；模式规则 [jin_deck_rule](../../../../pkg/hanjin_mode/skills/jin_deck_rule.lua) 在真实用牌入口禁止使用该花色手牌，但不禁止打出、不限制非手牌来源，失技后已建立限制保留。
+- **验证依据**：[jin_deck.lua](../../../../tests/jin_deck.lua) 覆盖首张红桃后禁手牌不禁响应；3/3（0.787s），见[共享验证证据](verification-evidence.md#jin-deck)。
+- **未完成与边界**：暗置/晚明置、同花色重复获得、客户端禁选显示未人工验收。
+
+<a id="jin011-1"></a>
+#### 果毅（JIN011 张虎&乐綝）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin011_1`；源码 [skill_jin011_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin011_1.lua)。规则见[张虎&乐綝规范](../../../../rules/generals/jin011-zhanghu-yuechen.md)。同将无其他已实装技能。
+- **实现与接口**：`active` 效果使用引擎正式选牌／选目标请求；`include_equip = true`，候选基本牌同时检查 `prohibitDiscard`，目标为有手牌或有装备的其他存活角色。`feasible` 要求已选目标数等于已选基本牌数，`on_use` 再复核至少一张、数量相等及素材归属；随后 `Room:throwCard` 实际弃置。每名目标按 `askToChoice` 只在“其有可弃装备／其有手牌”中显示可执行分支，选牌操作者均为发动者（`askToChooseCard`＋`throwCard`／`obtainCard`）。全部目标完成后，统计的是“两项分支是否均被目标选择过”，不是移牌是否最终成功；选择后插入的移牌或失去牌结算不会抹除已选择事实。仅两项均有人选过时才询问一名目标并调用 `Room:damage`，一次发动至多造成1点伤害。短时按同名与关键事件查找项目及锁定上游，未发现同效果实现；复用引擎 `active` 选牌／选人、`askToChooseCard`、`throwCard`／`obtainCard` 与 `damage`。
+- **验证依据**：[jin_basic.lua](../../../../tests/jin_basic.lua) 以真实出牌阶段验证两张基本牌弃置、等量目标、装备与手牌两分支、两项均有人选后对一名目标造成伤害、仅单分支不造成伤害、分支选择只显示合法项、服务端拒绝牌数与目标数不符。本批定向 19/19。
+- **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；目标同时具两分支时的界面选择只覆盖一个代表性用例，客户端多选顺序与暗置来源未人工验收。
+
+<a id="jin012-2"></a>
+#### 弘训（JIN012 羊徽瑜）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin012_2`；源码 [skill_jin012_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin012_2.lua)。规则见[羊徽瑜规范](../../../../rules/generals/jin012-yanghuiyu.md)。同将慈威见[用牌目标与距离](active.md#jin012-1)。
+- **实现与接口**：锁定技，`fk.EventPhaseStart`（`Player.Finish`）的全局触发；`B.sameKingdom` 复用 [jin_basic.lua](../../../../pkg/hanjin_generals/util/jin_basic.lua) 与 hegemony 公共势力比较，合法情况下包含自己。已受伤先摸一张；已横置先用 `setChainState(false)` 定向重置，再摸一张；两项分别检查，可各执行一次。没有发动询问，也不依赖服务端私有字段。短时按同名查找未发现同效果上游实现；重置复用引擎 `setChainState`，摸牌复用 `drawCards`。
+- **验证依据**：[jin_basic.lua](../../../../tests/jin_basic.lua) 覆盖自己同时受伤且横置时摸两张并重置、同势力仅受伤／仅横置分别摸一张、不同势力不摸牌且不重置。本批 `jin_basic` 套件合计 19/19。
+- **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；暗置来源、多来源同势力与死亡中断未单独覆盖。
+
+<a id="jin014-1"></a>
+#### 膂力（JIN014 文鸯）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin014_1`；源码 [skill_jin014_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin014_1.lua)。规则见[文鸯规范](../../../../rules/generals/jin014-wenyang.md)。同将夺气见[阶段与回合流程](phases.md#jin014-2)，文虎翼从未在本批实装。
+- **实现与接口**：`fk.Damage`（造成伤害后，使用者为事件目标；不是 `DamageFinished`）且 `data.from == player`、`data.damage > 0`，按 `HistoryTurn` 每回合限一次，不按伤害点数重复。选项一仅在当前手牌数小于体力值时出现，使用 [jin_basic.lua](../../../../pkg/hanjin_generals/util/jin_basic.lua) 的 `drawHandToHp`，按当前体力值与手牌数差额摸牌；手牌已不少于体力值时不展示无效的补至项。选项二仅在 `canDiscardAllHand` 为真（手牌非空且全部可弃）时出现；先实际弃置全部手牌，再按实际张数 `recoverHpTo`，受体力上限限制，当前体力高于目标值时不降低。两项均不可执行时不发动、不占次数；空手不能以部分弃置充作全弃。短时按同名查找未发现同效果上游实现；复用引擎 `Damage`、`drawCards`、`throwCard` 与 `recover`。
+- **验证依据**：[jin_basic.lua](../../../../tests/jin_basic.lua) 覆盖补至当前体力值、弃两张后回复至2、体力高于弃牌数时不被降低、空手只显示摸牌项、手牌不少于体力值时隐藏补至项、`fk.Damage` 早于 `fk.Damaged` 的结算顺序、同一回合第二次伤害不再发动。本批定向 19/19。
+- **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；伤害被防止、濒死死亡、禁弃来源并存等边界未单独覆盖。
+
+<a id="jin016-1"></a>
+#### 复礼（JIN016 张华）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin016_1`；源码 [skill_jin016_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin016_1.lua)。规则见[张华规范](../../../../rules/generals/jin016-zhanghua.md)。同将风物见本页[风物](#jin016-2)。
+- **实现与接口**：全局监听 `fk.DrawNCards`，同势力角色摸牌阶段可多摸一张，并把 `{target, source}` 承诺写入房间 tag；`jin_sources_rule` 在摸牌完成后的正式流程读取承诺，令其展示一张手牌、交给张华，并建立本回合不能使用/打出该花色的标记。自己展示自己时不虚构交给移动；限制由房间规则读取角色标记，失技不撤销已建立限制。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖复礼多摸、展示交给与花色标记；独立 `jin_sources_rule` 已正式 mode 接线，9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：真实暗将、目标死亡、无手牌展示、同回合多花色与客户端交互未人工验收。
+
+<a id="jin016-2"></a>
+#### 风物（JIN016 张华）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin016_2`；源码 [skill_jin016_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin016_2.lua)。规则见[张华规范](../../../../rules/generals/jin016-zhanghua.md)。同将复礼见本页[复礼](#jin016-1)。
+- **实现与接口**：出牌阶段限一次主动技，选至多三名角色依次使用一张牌，每人可放弃；效果内用牌走真实用牌入口并标 `extraUse`，不占空闲出杀次数。全部询问结束后读取 `wu_history` 的本回合全体真实使用记录，四花色齐备才摸两张并回复1点体力；不是只检查本次询问，也不把纯打出计入。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖真实 `ClientPlayer` 与四花色；9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：目标放弃、用牌被抵消、四花色跨回合与客户端交互未验。

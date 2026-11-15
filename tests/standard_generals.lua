@@ -381,7 +381,7 @@ function Teststandard_generals:testSameNameConversionAndCompanions()
   for _, data in ipairs(Data.generals) do
     if data.companionText ~= "—" then companionRows = companionRows + 1 end
   end
-  lu.assertEquals(companionRows, 46)
+  lu.assertEquals(companionRows, 47)
   local room = create {
     formalOnly = true,
     settings = {
@@ -409,6 +409,7 @@ function Teststandard_generals:testSameNameConversionAndCompanions()
   lu.assertTrue(Fk.generals["hanjin__shu001"]:isCompanionWith(Fk.generals["hanjin__shu011"]))
   lu.assertTrue(Fk.generals["hanjin__jin010"]:isCompanionWith(Fk.generals["hanjin__wei002"]))
   lu.assertTrue(Fk.generals["hanjin__jin010"]:isCompanionWith(Fk.generals["hanjin__jin009"]))
+  lu.assertTrue(Fk.generals["hanjin__jin003"]:isCompanionWith(Fk.generals["hanjin__jin002"]))
   lu.assertTrue(Fk.generals["hanjin__wei001"]:isCompanionWith(Fk.generals["hanjin__wei012"]))
   lu.assertTrue(Fk.generals["hanjin__wei001"]:isCompanionWith(Fk.generals["hanjin__wei005"]))
   -- Partners outside this 90-card pack stay recorded as printed names.

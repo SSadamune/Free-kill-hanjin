@@ -28,6 +28,9 @@
 | QUN017 | 潘凤 | [狂斧](#qun017-1) |
 | QUN027 | 韩遂 | [骁逆](#qun027-2) |
 | JIN001 | 司马炎 | [兴图](#jin001-2) |
+| JIN005 | 羊祜 | [柔克](#jin005-1) |
+| JIN009 | 司马懿 | [骤霆](#jin009-2) |
+| JIN010 | 张春华 | [伤逝](#jin010-1) |
 
 ## 技能条目
 
@@ -245,3 +248,30 @@
   - 第二项：直接 `drawCards(1, skill.name)`，不要求拥有装备牌。任一项都可取消；选择第一项后在选牌／选目标处取消，不摸牌、不使用、不移动。
 - **验证依据**：[jin001_simayan.lua](../../../../tests/jin001_simayan.lua) 覆盖无应变用牌／普通牌／纯打出不触发；其他角色在本回合使用应变牌、条件未成功触发也计数；用牌发生在获得技能之前仍计入；下一回合清空；任意角色回合结束可发动；摸牌项与拒绝；第一项用手牌或装备区装备作材料、对受伤或其他满体力角色完整使用一次【桃】、材料离区且 `skillName` 为兴图；无合法装备时只提供摸牌项；主将、副将、暗置来源；真实 `ClientPlayer` 装备牌／非装备牌与目标可选性。历史 17/17，见[共享验证证据](verification-evidence.md#jin001_simayan)。
 - **未完成与边界**：用户曾报告“应变牌后的下一回合，敌方普通杀→八卦阵视为闪，兴图误触发”，自动化未复现；真实连续回合回归及虚拟闪无应变条目检查通过，2026-11-13 用户复测确认无异常、反馈关闭，不据此追认具体根因，也未保留无复现依据的回合序号补丁。全局记录以使用牌事件为准，未覆盖“无任何目标但被使用”的边缘牌型。规范化描述待办见[司马炎入口](jin001-simayan.md#jin001-todo)。
+
+<a id="jin005-1"></a>
+#### 柔克（JIN005 羊祜）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin005_1`；源码 [skill_jin005_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin005_1.lua)。规则见[羊祜规范](../../../../rules/generals/jin005-yanghu.md)与[易读描述的时机与然后](../../../../rules/general-principles.md)。同将顺流见[伤害、体力与死亡](damage.md#jin005-2)。
+- **实现与接口**：
+  - `fk.PreCardUse` 全局触发；首张杀事实读取本回合 `GameEvent.UseCard` 历史，暗置/尚未取得时的使用仍保留。实际改牌通过 `UseCardData:changeCard("hanjin__ice__slash", ..., skill.name)` 完成，保留本次使用与实体材料，不发起第二张杀；使用前已是冰杀时不重复改、不取得后续。
+  - `data.hanjin_jin005_1_changed` 记录实际改牌来源的 `player.id`；房间级监听器 `#hanjin__skill_jin005_1_follow` 在 `fk.CardUseFinished` 只让该来源获得“未造成伤害后至多两名角色横置/重置”，不检查 `hasSkill`，因此本次用牌结束前失去柔克仍处理已建立后续。
+  - `maxcards.correct_func` 先按 `player:hasSkill("hanjin__skill_jin005_1")` 过滤，仅持有者获得“当前横置角色数”的手牌上限修正；`hasSkill` 为客户端公开判定。
+- **验证依据**：[jin_chain.lua](../../../../tests/jin_chain.lua) 覆盖同势力首张杀改冰杀、被闪未伤害后横置/重置、持有者与非持有者手牌上限、改牌后失技后续仍执行；定向 6/6，见[共享验证证据](verification-evidence.md#jin-chain)。
+- **未完成与边界**：多羊祜来源仅由来源 id 设计覆盖，未做双来源夹具；冰杀真实伤害重置由同一套件单独验证；客户端改牌显示与暗置历史未人工验收。
+
+<a id="jin009-2"></a>
+#### 骤霆（JIN009 司马懿）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin009_2`；源码 [skill_jin009_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin009_2.lua)。规则见[司马懿规范](../../../../rules/generals/jin009-simayi.md)。同将权变见[辅助与牌资源](support.md#jin009-1)。
+- **实现与接口**：限定技，出牌阶段发动；每次只从牌堆顶亮出一张并移入处理区，用正式 `askToUseRealCard` 实际使用（默认已执行，`extraUse` 不占空闲杀次数），完整结算后再取下一张；无法使用或亮出数达到当前存活角色数即止，不能任意取消。`expand_pile` 只授权本次亮出的处理区牌，不先拿入手牌，因此不会触发权变。
+- **验证依据**：[jin_deck.lua](../../../../tests/jin_deck.lua) 覆盖处理区顶牌真实使用、无法使用即止、不能以手牌替代；3/3（0.787s），处理区唯一牌修正已通过，见[共享验证证据](verification-evidence.md#jin-deck)。
+- **未完成与边界**：亮出即死亡、使用被抵消、牌堆不足与客户端连续用牌未人工验收。
+
+<a id="jin010-1"></a>
+#### 伤逝（JIN010 张春华）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin010_1`；源码 [skill_jin010_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin010_1.lua)。规则见[张春华规范](../../../../rules/generals/jin010-zhangchunhua.md)。同将扼绝见[伤害、体力与死亡](damage.md#jin010-2)。
+- **实现与接口**：任一角色结束阶段，张春华选择：1. 若其手牌数大于张春华，将任意张张春华自己的手牌当一张冰【杀】对其使用；2. 摸牌至张春华已损失的体力值。冰杀使用 `C.useVirtualCard`，以 `C.explicit({}, { names = { "hanjin__ice__slash" }, min_targets = 1, max_targets = 1 })` 固定效果目标，不叠加默认攻击距离；`extraUse` 不占空闲出杀次数。两项均不可执行时不发动。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖结束阶段摸至已损失体力值与零材料明确确认；9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：目标手牌数动态变化、无合法冰杀材料、被闪、目标死亡与客户端选项未人工验收。

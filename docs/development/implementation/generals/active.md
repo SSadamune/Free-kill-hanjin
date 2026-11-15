@@ -30,6 +30,10 @@
 | QUN013 | 马腾 | [马术](#shu006-1) |
 | QUN018 | 邹氏 | [祸水](#qun018-1) |
 | QUN027 | 韩遂 | [马术](#shu006-1) |
+| JIN003 | 司马昭 | [挟征](#jin003-2) |
+| JIN012 | 羊徽瑜 | [慈威](#jin012-1) |
+| JIN013 | 王濬 | [克清](#jin013-2) |
+| JIN015 | 石苞 | [前驱](#jin015-1) |
 
 ## 技能条目
 
@@ -260,3 +264,37 @@
 - **实现与接口**：主动段未写限一次，每阶段可反复发动；弃一张自己的黑色牌，选一名双将均明置的其他角色暗置其一张武将牌，再令其交给自己一张牌。暗置复用公共 `doHideGeneral` 的主副将选择与来源迁移。被动“回合内其他角色不能明置”不在技能本体重复实现，由 [qun_control_rule](../../../../pkg/hanjin_mode/skills/qun_control_rule.lua) 与 [util/qun_control](../../../../pkg/hanjin_generals/util/qun_control.lua) 按持有者＋技能来源维护，失技／暗置只撤销本条来源。
 - **验证依据**：已执行 [qun_control.lua](../../../../tests/qun_control.lua) 的 `testHuoshuiRevealProhibitionFollowsItsOwnSource`、`testHuoshuiActiveHidesGeneralAndTakesCardTwice`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：死亡翻面不按明置拦截、其他禁明置来源并存、双将明暗组合未穷举；客户端交互未人工验收。
+
+### 晋
+
+<a id="jin012-1"></a>
+#### 慈威（JIN012 羊徽瑜）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin012_1`；源码 [skill_jin012_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin012_1.lua)。规则见[羊徽瑜规范](../../../../rules/generals/jin012-yanghuiyu.md)。同将弘训见[辅助与牌资源](support.md#jin012-2)。
+- **实现与接口**：全局监听 `fk.AfterCardUseDeclared`，只在该事件使用者就是当前回合角色、且其为其他角色时检查。第二张牌按本回合 `GameEvent.UseCard` 事件计数，包含响应中的实际使用和装备使用；纯“打出”只生成 `RespondCard`，不计入。发动消耗为弃置自己一张手牌或装备牌（`askToDiscard(skip)`＋`throwCard`）。若此牌为基本牌或普通锦囊，允许选择任意个当前目标（含零个），写入 `UseCardData.nullifiedTargets`，由引擎按目标跳过响应与效果，不 `removeTarget`、不取消整张牌；装备牌或延时锦囊则对使用者调用 `setChainState(true)`，不翻面、不重置。锁定上游 `hegemony/pkg/jin_zqdl/skills/ciwei.lua` 的慈威是旧版“取消整张牌所有目标”，效果不同且未复用；本实装采用引擎目标级 `nullifiedTargets` 字段。
+- **验证依据**：[jin_basic.lua](../../../../tests/jin_basic.lua) 以真实 `Turn`／`useCard`／`responseCard` 验证：第一张装备后纯打出【闪】不计，第二张【杀】的目标无效且不受伤；普通锦囊【决斗】目标无效；第二张装备与延时锦囊均横置使用者且延时牌正常进入判定区；每例弃置一张牌。本批 `jin_basic` 套件合计 19/19。
+- **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；在“使用时”之后由其他技能追加的目标不进入本次无效名单，客户端多目标选择未人工验收。
+
+<a id="jin003-2"></a>
+#### 挟征（JIN003 司马昭）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin003_2`；源码 [skill_jin003_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin003_2.lua)。规则见[司马昭规范](../../../../rules/generals/jin003-simazhao.md)。同将昭然见[辅助与牌资源](support.md#jin003-1)。
+- **实现与接口**：限定技，`active` 选两名不同角色：第一名被要求将一张基本牌当【杀】对第二名实际使用，第二名由效果显式指定；走 `card_use_targets` 的 `C.useVirtualCard`＋`C.explicit({ other_roles = true })`，移除默认攻击距离并把实际目标固定为第二名角色。被要求者可用 `askToSkillInvoke` 拒绝；拒绝、无基本牌或无法合法用出时，司马昭一次获得其所有手牌，再交给其等于其当前体力值张自己的牌。用出后即使被闪也不进入惩罚。
+- **验证依据**：[jin_reactive.lua](../../../../tests/jin_reactive.lua) 覆盖基本牌当杀与拒绝惩罚，并含远距离反制/原来源/非原来源分支；6/6（1.379s）通过，见[共享验证证据](verification-evidence.md#jin-reactive)。
+- **未完成与边界**：目标死亡、无牌可给、转化基本牌、客户端两次选人未人工验收。
+
+<a id="jin013-2"></a>
+#### 克清（JIN013 王濬）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin013_2`；源码 [skill_jin013_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin013_2.lua)。规则见[王濬规范](../../../../rules/generals/jin013-wangjun.md)。同将乘流见[伤害、体力与死亡](damage.md#jin013-1)。
+- **实现与接口**：出牌阶段限一次，`active` 选一名已横置其他角色。目标身上以表标记记录来源 id；首次发动时按需安装房间级延迟监听器 `#hanjin__skill_jin013_2_effect`，分别监听 `fk.CardUsing` 与 `fk.CardResponding`：目标横置且来源仍存活时，由目标自己 `askToDiscard`（已执行弃牌）一张手牌/装备，不双计、不每回合限一次。失去克清不撤销监听器；再次发动替换旧目标；来源死亡由 `fk.Death` 清理，监听器亦在下次触发时惰性清理已死来源。
+- **验证依据**：[jin_chain.lua](../../../../tests/jin_chain.lua) 覆盖发动、首次弃牌、失技后继续触发、来源不再存活后不触发；定向 6/6，见[共享验证证据](verification-evidence.md#jin-chain)。真实 `killPlayer` 因测试夹具先游戏结束，死亡用例改用真实 `dead` 状态后继续真实用牌，`fk.Death` 清理链路待独立夹具。
+- **未完成与边界**：真实死亡事件、跨重连监听器、多个来源/目标、客户端弃牌交互未人工验收。
+
+<a id="jin015-1"></a>
+#### 前驱（JIN015 石苞）
+
+- **标识与依据**：运行时 ID `hanjin__skill_jin015_1`；源码 [skill_jin015_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin015_1.lua)。规则见[石苞规范](../../../../rules/generals/jin015-shibao.md)与[应变规范](../../../../rules/adaptation.md)。同将无其他已实装技能。
+- **实现与接口**：全局监听同势力角色（含自己）准备阶段，石苞可用 `card_use_targets` 的 `askToUseCard` 选择一张【杀】的真实使用数据（允许合法转化，不凭空生成杀）；`C.bypassDistance` 只取消距离限制，`extra_data.bypass_times/extraUse` 不占通常出杀次数，随后 `C.useCard` 真实执行。本次使用附加〈助战→弃置目标角色装备区里的一张牌〉条目。`fk.CardUseFinished` 仅在此杀实际造成伤害时，由当前回合角色获得仍在处理区的实体材料并摸一张牌；无材料时不单方面摸牌。
+- **验证依据**：[jin_adaptation.lua](../../../../tests/jin_adaptation.lua) 覆盖无距离真实用杀、助战弃目标装备、造成伤害后当前回合角色获得此杀并摸牌；应变定向 5/5；公共应变 25/25、`ignore_times` 14/14 属公共机制历史结果，不挪作本技能覆盖，见[共享验证证据](verification-evidence.md#jin-adaptation)。
+- **未完成与边界**：未应用开发适配的本体交互未验；转化杀无实体材料、被闪、目标死亡与多来源同势力未单独覆盖。

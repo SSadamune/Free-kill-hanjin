@@ -1,19 +1,35 @@
 # 晋势力标准包：逐将检索与验证入口
 
-本页是晋势力标准包的逐将检索与验证入口，只保留编号、运行时 ID、源码、逐技能锚点与真实验证记录；技能正文已拆入机制页，本页不重复。当前只收已实装部分（JIN001 垂统、兴图及 JIN009 同文应期），不代表晋势力其余技能完成。游戏语义见[司马炎规范](../../../../rules/generals/jin001-simayan.md)及[装备移动通则](../../../../rules/equipment-movement.md)，本页不替代规则裁定。当前完成度与全局待办由[开发状态](../../status.md)维护。
+本页覆盖晋标准包15将、29条天生技能记录及腹心死士、文虎两种翼从，均已有正式实现。应期直接引用 WEI002 的同一技能 ID；其余技能按以下主记录检索，不重复正文。泰然后续时机尚未定案，当前按用户暂行指示在回合结束时逐次结算。规则依据见逐将页，当前验证与人工边界见[开发状态](../../status.md)。
 
 ## 1. 逐将表
 
-| 编号 | 武将 | 技能 | 运行时 ID | 源码 | 实现详情 | 验证 |
-| --- | --- | --- | --- | --- | --- | --- |
-| JIN001 | 司马炎 | 垂统、兴图 | `hanjin__jin001` | [skill_jin001_1.lua](../../../../pkg/hanjin_generals/skills/skill_jin001_1.lua)、[skill_jin001_2.lua](../../../../pkg/hanjin_generals/skills/skill_jin001_2.lua) | [垂统](support.md#jin001-1)、[兴图](conversion.md#jin001-2) | [jin001_simayan](../../../../tests/jin001_simayan.lua) |
-| JIN009 | 司马懿 | 应期（同文，已实装） | `hanjin__jin009` | [skill_wei002_3.lua](../../../../pkg/hanjin_generals/skills/skill_wei002_3.lua)（与 WEI002 共用同一技能 ID） | [应期](pair-hp.md#wei002-3)（与 WEI002 共享正文，不另设） | [wei_pair_hp](../../../../tests/wei_pair_hp.lua) |
+| 编号 | 武将 | 技能 |
+| --- | --- | --- |
+| JIN001 | 司马炎 | [垂统](support.md#jin001-1)、[兴图](conversion.md#jin001-2) |
+| JIN002 | 司马师 | [泰然](support.md#jin002-1)、[夷灭](damage.md#jin002-2) |
+| JIN003 | 司马昭 | [昭然](support.md#jin003-1)、[挟征](active.md#jin003-2) |
+| JIN004 | 贾充 | [通法](support.md#jin004-1)、[悖弑](damage.md#jin004-2) |
+| JIN005 | 羊祜 | [柔克](conversion.md#jin005-1)、[顺流](damage.md#jin005-2) |
+| JIN007 | 王元姬 | [识人](support.md#jin007-1)、[恤下](support.md#jin007-2) |
+| JIN008 | 夏侯徽 | [宜室](support.md#jin008-1)、[识度](pindian.md#jin008-2) |
+| JIN009 | 司马懿 | [权变](support.md#jin009-1)、[骤霆](conversion.md#jin009-2)、[应期](pair-hp.md#wei002-3) |
+| JIN010 | 张春华 | [伤逝](conversion.md#jin010-1)、[扼绝](damage.md#jin010-2) |
+| JIN011 | 张虎&乐綝 | [果毅](support.md#jin011-1) |
+| JIN012 | 羊徽瑜 | [慈威](active.md#jin012-1)、[弘训](support.md#jin012-2) |
+| JIN013 | 王濬 | [乘流](damage.md#jin013-1)、[克清](active.md#jin013-2) |
+| JIN014 | 文鸯 | [膂力](support.md#jin014-1)、[夺气](phases.md#jin014-2) |
+| JIN015 | 石苞 | [前驱](active.md#jin015-1) |
+| JIN016 | 张华 | [复礼](support.md#jin016-1)、[风物](support.md#jin016-2) |
 
-JIN009 仅列已实装的同文应期引用，运行时直接引用 WEI002 的 `hanjin__skill_wei002_3`，不另建骨架；其权变、骤霆等其余技能未在本批实装，不计入晋完成度。
+运行时武将 ID 为 `hanjin__jin编号`；除应期外，各技能源码为 `pkg/hanjin_generals/skills/skill_jin编号_顺序.lua`。应期仍为 `hanjin__skill_wei002_3`，不新增晋副本。
 
 ## 2. 关联翼从
 
-晋关联翼从腹心死士、文虎目前均为未实装骨架；统领能力与翼从效果见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)。2026-11-15 规则审阅与逐将入口见下节。
+[腹心死士](retinues.md#fuxin-sishi)、[文虎](retinues.md#wenhu)均已实现。三项统领能力沿用[公共机制](../commander-retinue.md)：JIN002 红桃出其不意附助战条目，JIN009 调虎离山，JIN014 限一冰杀；翼从取得和限一统领能力的计数分别处理。
+
+<details>
+<summary>2026-11-15 实装前审阅快照（保留依据，不代表当前完成度）</summary>
 
 ## 2026-11-15 晋标准包规则与实现路径审阅
 
@@ -69,11 +85,21 @@ JIN009 仅列已实装的同文应期引用，运行时直接引用 WEI002 的 `
 
 本轮静态核验：程序读取 JSON 与运行时晋区数据，确认 15 将共 29 条技能记录、28 个晋专属技能骨架中 26 个没有 `addEffect`（应期另复用魏技能）；检查本轮 17 个新增／修改 Markdown 文件的本地链接路径，未发现断链；`git diff --check` 通过。这些检查不验证未实现技能的游戏效果。
 
+</details>
+
 ## 3. 接线
 
-两技能已在 [init.lua](../../../../pkg/hanjin_generals/init.lua) 的正式实装例外白名单登记；[standard_generals.lua](../../../../tests/standard_generals.lua) 的同一白名单和事实断言同步更新。默认国战套件由 [all.lua](../../../../tests/all.lua) 接入 [jin001_simayan.lua](../../../../tests/jin001_simayan.lua)。技能入口：垂统 `fk.EnterDying`；兴图 `fk.TurnEnd`、全局 `fk.PreTurnStart`／`fk.AfterCardUseDeclared`、辅助主动技 `#hanjin__skill_jin001_2_active`。
+晋新增技能及两翼从均在骨架上设置 `hanjinImplemented = true`，加载断言核对实际 effect。既有司马炎保留白名单；应期共用魏技能。
+
+`mode.lua` 正式注册 `hanjin__jin_resources_rule`（泰然及限定技事实）、`hanjin__jin_deck_rule`（权变已建立禁用）、`hanjin__jin_information_rule`（昭然持续可见）、`hanjin__jin_adaptation_rule`（本次用牌雷伤）、`hanjin__jin_sources_rule`（复礼承诺与花色禁用）。柔克、克清的持续监听按需安装在房间中；扼绝复用单技能失去入口及交换来源过滤，保留将牌失技状态。正式卡包依锁定应变参考登记冰伤属性，真实冰伤重置有定向回归。
+
+默认 `tests/all.lua` 接入八套新增晋专项：`jin_basic`、`jin_resources`、`jin_deck`、`jin_information`、`jin_reactive`、`jin_adaptation`、`jin_chain`、`jin_sources`。原 `jin001_simayan` 与 `wei_pair_hp` 覆盖继续复用。
 
 ## 4. 验证
+
+2026-11-16 新增八套定向共65项通过（basic19、resources15、deck3、information2、reactive6、adaptation5、chain6、sources9）。资源及反制最终修复由 Codex 执行，其余由 DSH 执行；具体命令、时间与复用回归见[晋共享证据](verification-evidence.md#jin-standard)。最终默认831/831（158.697秒）通过，安装包477文件逐字节一致；不得以本段定向结果推定客户端点击、联网／重连或干净本体安装人工验收。
+
+### 司马炎既有专项与历史验证
 
 常规专项验收入口：
 
