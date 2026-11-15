@@ -1,6 +1,6 @@
 # 翼从专属技能：跨势力实现与验证
 
-本页是十一名汉、魏、蜀、吴翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
+本页是十二名汉、魏、蜀、吴、群翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
 
 ## 技能索引
 
@@ -17,6 +17,7 @@
 | SHU | 象兵 | [象兵](#xiangbing) |
 | WU | 锦帆军 | [锦帆军](#jinfanjun) |
 | WU | 曲阿小将 | [曲阿小将](#quaxiaojiang) |
+| QUN | 黄巾雷使 | [黄巾雷使](#huangjin-leishi) |
 
 ## 技能条目
 
@@ -132,3 +133,13 @@
 - **实现与接口**：读取服务器真实 `GameEvent.UseCard` 历史，按事件顺序取得当前使用前的上一张牌，包含同回合获得技能前的使用；不以结算完成顺序误认嵌套用牌。两次目标不完全相同时，可对重合存活目标各造成一点伤害，每回合限一次。
 - **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖曲阿小将完整两次用牌及重合目标伤害；历史 22/22。
 - **未完成与边界**：复杂嵌套／改目标组合未逐项新增独立用例；客户端与联网／重连未人工验收。
+
+### 群
+
+<a id="huangjin-leishi"></a>
+#### 黄巾雷使
+
+- **标识与依据**：翼从 ID `hanjin__retinue_huangjin_leishi`，技能 ID `hanjin__retinue_skill_huangjin_leishi`；源码 [retinue_skill_huangjin_leishi.lua](../../../../pkg/hanjin_generals/skills/retinue_skill_huangjin_leishi.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从黄巾雷使与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为张角（QUN010）。
+- **实现与接口**：模式级常驻记录器 [qun_damage_history](../../../../pkg/hanjin_mode/skills/qun_damage_history.lua) 在开局安装，记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；黄巾雷使只在该时机开放一次选择，未发动／无手牌／放弃都消耗本回合机会。记录器按真实 `DamageData` 的 `chain/parent` 与 `UseCardData:isUsingHandcard` 判断直接渠道，翼从本体不重复判断。
+- **验证依据**：已编写 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testHuangjinBlackIncreasesFirstNonHandcardDamage`、`testHuangjinRedGivesJudgeCardToSource`、`testHuangjinLateAcquisitionDoesNotReopenFirstChance`、`testHuangjinIgnoresHandcardSlashDamage`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：转化牌、无实体牌、铁索传导组合未穷举；客户端判定与增伤提示未人工验收。

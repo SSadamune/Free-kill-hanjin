@@ -1,60 +1,77 @@
-# 群势力标准包：审阅与实现入口
+# 群势力标准包：逐将检索
 
-2026-11-15 审阅范围：QUN001、002、003、004、005、007、008、010、012、013、015、016、017、018、027 共 15 将、27 条天生技能记录（马术三处同文，共 25 种技能），以及并州狼骑、西凉精骑、黄巾雷使三种关联翼从。不含君主版和其他编号版本。
+本页是群势力标准包的逐将入口，不重复技能正文。QUN001、002、003、004、005、007、008、010、012、013、015、016、017、018、027 共 15 将、27 条天生技能记录（马术三处同文，按一个技能计）及并州狼骑、西凉精骑、黄巾雷使三种关联翼从；不含君主版和其他编号版本。规则依据见[标准武将表](../../../../rules/standard-generals.md)及 `rules/generals/qun*.md`；实现与验证分别落在下列机制页。
 
-依据为[标准武将表](../../../../rules/standard-generals.md)、[外部资料登记](../../../README.md)、对应逐将裁定及下列公共规则。本轮仅审阅和记录，不修改技能实现或测试逻辑，不将空壳登记视为完成效果。
+## 逐将检索
 
-## 实际状态与发现
-
-- 27 个 `skill_qun*.lua` 均仅创建骨架／标签，没有 effect；黄巾雷使同样为空壳。并州狼骑和西凉精骑已有正式实现，沿用其原验证范围，本轮未重新运行游戏测试。
-- `pkg/hanjin_generals/data/standard.lua` 的死谏使用了体力变 0、可弃区域牌及额外回复的不同版本；随势缺少弃置所有手牌分支。须按[田丰来源基线](../../../../rules/generals/qun016-tianfeng.md)同步，不能按当前运行时文本实现。
-- 济世程序文本去掉了来源的方括号。现已[确认采用的条件及首次交换即止](../../../../rules/generals/qun001-huatuo.md)，后续应说明房间设置控制，不能继续将其呈现为不受设置影响的无条件段落。
-- 乱武运行时的“对其距离最小的另一名角色使用”省略了来源的“须指定……为目标”结构；后续同步原文，保留多目标【杀】至少包含最近角色的语义，不将其改为只能指定最近角色。悲歌仅存在换行转 `<br>` 的展示差异。
-- 三个群马术为空壳，而蜀马超的同名同效果马术已实现。后续直接引用 `hanjin__skill_shu006_1`，清理对应重复骨架和旧 ID 引用；不得再实现三份或使同一角色重复减距离。按[开发指南](../../README.md#复用现有实现)核对双将技能来源。
-
-## 逐将实现方向
-
-下表是接口审阅结论和差异提示，不代替正式技能条文或声称已经实现。基础牌区、消耗和用牌时机依[通用约定](../../../../rules/general-principles.md)，势力关系使用当前国战公共判断，不比较原印势力或把所有野心家视为同势力。
-
-| 编号 | 武将／技能 | 主要入口及必须保留的汉晋差异 |
+| 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| QUN001 | 华佗：济世、除疠 | 济世只开放濒死救援用桃，不照搬急救的回合外限制；在对应濒死结算结束后处理客将交换，使用交换公共模块的显式跨势力许可并保留来源牌身份。除疠由华佗选并弃置自己及候选的牌，候选彼此不为同势力，不要求与华佗不同；按实际失去的黑桃牌确定摸牌者。 |
-| QUN002 | 吕布：无双、虓猛 | 按目标的 `AimData:getResponseTimes/setResponseTimes` 累加一张；虓猛在目标声明完成后增加至多两名不同势力角色，由当前回合角色选择，每回合一次；见[逐将说明](../../../../rules/generals/qun002-lvbu.md)。 |
-| QUN003 | 貂蝉：离间、闭月 | 离间弃一张牌并确定两名其他男性及决斗方向，决斗由其中一人使用，不能变成貂蝉使用；“不可被抵消”与“所有角色不能响应”不同。闭月在结束阶段入口按摸牌前是否空手选择 1／2 张，不先摸一张后再判断。 |
-| QUN004 | 袁绍：乱击 | 两张手牌不要求同花色；回合内记录先前发动已用花色，不能重复选择，不能因这次两张同花色而拒绝。由打出闪的同势力角色选择是否摸牌，关联 `responseToEvent`，不只看当前嵌套事件；已建立用牌效果保留。 |
-| QUN005 | 颜良&文丑：双雄 | 在摸牌阶段结束弃自己的牌取得本回合异色牌转决斗权限，范围不额外缩为手牌；结束阶段独立检查本回合造成过自己伤害且仍在弃牌堆的实体牌，不以是否发动前半段作为额外条件，不收回已被其他效果移走的牌。 |
-| QUN007 | 贾诩：完杀、乱武、帷幕 | 完杀在自己回合其他角色进入濒死时建立针对这次濒死的用桃限制，按原文除濒死者外均受限，不能沿用旧版对贾诩本人的豁免。乱武逆时针逐人处理，最近距离先按全体其他角色计算，再检查合法用杀；不能改选较远但能杀的角色。帷幕在成为黑色锦囊目标时取消该目标，不直接改成禁止选取或一概拦截移入判定区。 |
-| QUN008 | 庞德：马术、猛撼 | 马术引用已实现共享 ID。猛撼在每个杀目标指定后选弃其手牌／装备，基本牌分支获得本次杀可获得的实体牌，不能因此自动终止已声明用牌；非基本牌分支只禁该目标响应，不禁其他目标。 |
-| QUN010 | 张角：雷击、鬼道 | 雷击分别接使用闪与打出闪，不以 `CardUsing` 覆盖两者；最终黑桃 2 雷伤，梅花先回复自己再造成 1 雷伤。鬼道真实 `responseCard` 后 `changeJudge`，获得原判定牌，详见[逐将裁定](../../../../rules/generals/qun010-zhangjiao.md)。 |
-| QUN012 | 蔡文姬：悲歌、断肠 | 悲歌在受到杀伤害后，弃牌者为蔡文姬、判定者为受伤者；黑桃让伤害来源定向叠置，已叠置不反向平置。断肠由蔡文姬选择来源的一张将牌，按来源移除其技能，不能简单清空全部技能、用铁骑的暂时非锁定失效代替，或删除另一将／后天取得的独立来源。暗将 fake skill、后续明置和交换不得把已失去的技能重新授回。 |
-| QUN013 | 马腾：马术、雄异 | 马术共享；雄异限定次数随来源记录，先给当前同势力角色各摸三张，再检查存活势力人数是否最少（含并列），符合则回复 1。复用锁定上游的势力统计入口，不用势力字符串聚合野心家。 |
-| QUN015 | 纪灵：双刃 | 自己的出牌阶段开始时拼点，赢后一次多目标杀，必须包含拼点对手；没赢用 `only_as` 机制限制当前手牌中的杀，至本回合结束，详见[逐将裁定](../../../../rules/generals/qun015-jiling.md)。 |
-| QUN016 | 田丰：死谏、随势 | 死谏检查真正失去最后手牌的移动批次，以及体力从非 1 变为 1，不能在空手的任意移动或维持 1 时重复触发；随势区分濒死来源与死亡角色，死亡分支给本人选择；见[来源基线](../../../../rules/generals/qun016-tianfeng.md)。 |
-| QUN017 | 潘凤：狂斧 | 主动弃置场上装备后生成无距离杀，不是杀后拿装备。记录装备原所有者，待整次用牌结束按本次杀是否造成伤害判断，弃置惩罚仅手牌；不以本回合其他杀的伤害代替。 |
-| QUN018 | 邹氏：祸水、倾城 | 祸水含回合内禁明置状态及主动黑牌暗置、收牌入口；明置后即时生效，失去当前技能时清理该来源禁令，不能清掉其他来源。主动段未写限一次，不能擅加。死亡流程的翻至正面不是明置，不能拦截，见[死亡事件](../../../../rulebook/events/death.md)。倾城为每阶段一次，与手牌不多于自己的其他男性交换全部手牌，不照搬上游同名暗将技能。 |
-| QUN027 | 韩遂：马术、骁逆 | 马术共享；骁逆使用一次含所选其他势力角色的多目标杀，按显式目标策略，不套通常攻击距离；待整次牌结束，从原目标中选未因此受到伤害者弃其两张牌，不把伤害总量为 0 作为唯一判断；限定记录随将。 |
+| QUN001 | 华佗 | [济世](damage.md#qun001-1)、[除疠](support.md#qun001-2) |
+| QUN002 | 吕布 | [无双](active.md#qun002-1)、[虓猛](active.md#qun002-2) |
+| QUN003 | 貂蝉 | [离间](active.md#qun003-1)、[闭月](support.md#qun003-2) |
+| QUN004 | 袁绍 | [乱击](conversion.md#qun004-1) |
+| QUN005 | 颜良&文丑 | [双雄](conversion.md#qun005-1) |
+| QUN007 | 贾诩 | [完杀](damage.md#qun007-1)、[乱武](active.md#qun007-2)、[帷幕](active.md#qun007-3) |
+| QUN008 | 庞德 | [马术](active.md#shu006-1)、[猛撼](active.md#qun008-2) |
+| QUN010 | 张角 | [雷击](damage.md#qun010-1)、[鬼道](retrial.md#qun010-2) |
+| QUN012 | 蔡文姬 | [悲歌](retrial.md#qun012-1)、[断肠](damage.md#qun012-2) |
+| QUN013 | 马腾 | [马术](active.md#shu006-1)、[雄异](support.md#qun013-2) |
+| QUN015 | 纪灵 | [双刃](conversion.md#qun015-1) |
+| QUN016 | 田丰 | [死谏](support.md#qun016-1)、[随势](damage.md#qun016-2) |
+| QUN017 | 潘凤 | [狂斧](conversion.md#qun017-1) |
+| QUN018 | 邹氏 | [祸水](active.md#qun018-1)、[倾城](support.md#qun018-2) |
+| QUN027 | 韩遂 | [马术](active.md#shu006-1)、[骁逆](conversion.md#qun027-2) |
 
-## 翼从与公共接线
+QUN008、QUN013、QUN027 的马术与 SHU006 马超共用 `hanjin__skill_shu006_1`，不另建正文；三处逐将链接复用[同一锚点](active.md#shu006-1)。黄巾雷使的翼从专属技能见[翼从专属技能](retinues.md#huangjin-leishi)。
 
-- 吕布的并州狼骑、马腾与韩遂的西凉精骑直接沿用已有技能；同兵种不重复创建。吕布、马腾、韩遂、张角的统领能力仍分别提供【杀】、【杀】、【逐近弃远】、【铁索连环】，不是翼从技能的用牌入口。
-- 黄巾雷使仍待实装。原文是每回合首次出现符合描述的伤害时开放机会，不是“每名角色首次”或“本回合首次发动”。应在伤害可加值时识别事件并记下首次机会，弃一张手牌后判定，黑色增伤，红色由造成伤害者获得判定牌。
-- “不因使用手牌”不能用伤害牌当前是否还在手中判断；锁定引擎 `UseCardData:isUsingHandcard` 读取使用时的 `subcardsFromInfo`。还须核对本次伤害的直接渠道，不能看到任意外层手牌用牌事件就把嵌套技能伤害归作手牌伤害。转化、无实体牌及连环等组合只在出现具体风险时补定向验证。
-- 效果指定目标统一走 `card_use_targets`，额外目标走既有机制；`askToUseCard`／`selectVirtualCard` 返回待执行数据，与已执行接口分别使用，避免重复 `useCard`。双刃转换登记到技能自己的 `only_as` 来源，不能添加面向玩家的“只能当”公共技能。
-- 武将交换、移除、暗置后的来源、技能状态和统领兵种迁移复用公共机制；断肠需额外核对永久失技状态与交换重新授技的交界，不能默认现有交换模块已支持。
+## 测试入口与当前状态
 
-## 实际核对的参考
+以下套件已编写，尚未记录本轮群包验证结果；各技能条目的“验证依据”不沿用其他包的通过基线，也不以测试文件名反推已覆盖全部技能。
 
-本地引擎 `fk_ver` 为 0.5.25，hegemony HEAD 为 `e8d93acd34a357f96b0105aef7d661708c211626`、utility HEAD 为 `b14e45d9adf67b06bf150f71022e8f1dc0e26116`，均与 `dependencies.lock.json` 一致。以下路径相对于 `.dev/runtime/FreeKill-release/`，只读未改上游。
+| 测试文件 | 对应技能 |
+| --- | --- |
+| [qun_basic.lua](../../../../tests/qun_basic.lua) | 除疠、离间、闭月、猛撼、雷击、雄异、死谏、随势 |
+| [qun_retrial.lua](../../../../tests/qun_retrial.lua) | 鬼道 |
+| [qun_cards.lua](../../../../tests/qun_cards.lua) | 无双、乱击、乱武、狂斧；虓猛、双雄、骁逆尚无直接用例 |
+| [qun_dying.lua](../../../../tests/qun_dying.lua) | 济世、完杀 |
+| [qun_judgement.lua](../../../../tests/qun_judgement.lua) | 帷幕、悲歌、倾城、黄巾雷使 |
+| [qun_control.lua](../../../../tests/qun_control.lua) | 双刃、祸水 |
+| [qun_duanchang.lua](../../../../tests/qun_duanchang.lua) | 断肠 |
+| [qun_standard.lua](../../../../tests/qun_standard.lua) | 上述套件的汇总入口 |
 
-- `packages/standard/pkg/skills/{jijiu,lijian,wushuang}.lua`：转桃、离间用牌及响应数入口。急救限制回合外，不符合济世；离间只禁止无懈的代码不能独自证明完整“不可被抵消”语义。
-- `packages/hegemony/pkg/standard/skills/{chuli,luanji,wushuang,shuangxiong,xiongyi,shuangren,sijian,suishi,kuangfu,huoshui,qingcheng,duanchang,weimu}.lua`，另读 `pkg/mobile_heg/skills/kuangfu.lua`：核对同名差异。尤其无双写死 2、双雄时机和牌区不同、双刃两分支不同、随势缺少弃手牌、狂斧效果不同，均不可直接复制。死谏参考的 `not player:isKongcheng()` 甚至与其自身空手描述不符；帷幕参考额外拦截黑色延时锦囊移入判定区，也不能仅因同文就照抄。
-- `packages/hegemony/util.lua` 的 `doHideGeneral`：主副将选择与暗置流程，须保留汉晋来源及禁明置规则。
-- `ltk/core/events/usecard.lua`：`AimData` 响应次数、`UseCardData:isUsingHandcard`、`damageDealt` 及响应关联字段；`ltk/core/events/hp.lua`：体力变化数据；`ltk/server/events/judge.lua`：`changeJudge{exchange=true}` 获得旧判定牌，而 `response=true` 本身只指定移动原因，不产生完整打出事件。
-- 项目 `skill_wei002_2.lua`、`skill_wu016_1.lua`、`skill_shu006_1.lua` 及两种已实现翼从：真实打出改判、响应数量累加、共享马术、翼从正式接线；`general_exchange.lua`、`only_as.lua`、`card_use_targets.lua` 为优先复用公共入口。
-- 已访问用户提供的 [Qsgs-Fans 仓库目录](https://gitee.com/organizations/qsgs-fans/projects)及 [shzl 仓库](https://gitee.com/qsgs-fans/shzl)。尝试读取鬼道／雷击 raw 页面未成功，未把远端技能代码记为已核实参考，也未更新锁定依赖。
+命令结果集中存入 `verification-evidence`；当前不宣称群包已通过自动化、客户端或联网验收。
 
-## 核心验收与边界
+## 保留的参考差异与边界
 
-后续实现优先验证：济世救援及一次跨势力交换、无双与短兵的响应增量、乱击响应摸牌、双刃的真实借刀主副目标和回合末清理、断肠来源及重新明置／交换、祸水即时禁明置及暗置收牌、黄巾雷使首个伤害机会。其他常规技能复用公共覆盖，稳定后再按项目要求运行默认全量，不把此表变成逐行新增测试义务。
+- **版本基线**：QUN016 死谏、随势按[来源基线](../../../../rules/generals/qun016-tianfeng.md)采用标准表／JSON 版本，不采用 `docs/药枫桑大合集337.csv` 中同编号的“变为 0／区域内牌／额外回复”以及“随势无弃手牌”异版。QUN015 双刃没赢后的转换限制按[逐将裁定](../../../../rules/generals/qun015-jiling.md)持续至本回合结束，不采用 CSV 的“本回合不能使用【杀】”。
+- **客将交换**：QUN001 济世方括号段按[华佗规范](../../../../rules/generals/qun001-huatuo.md)受“客将替换”设置控制；设置尚未实装时默认开启，跨势力交换显式许可，首次成功即止。文档不把该段写成无条件效果。
+- **目标与限制**：QUN007 乱武按最近距离先算全体其他角色，再检查合法用【杀】且至少包含一名最近角色，允许附带较远合法目标；不能改选较远但能杀的角色。完杀不保留贾诩本人豁免；帷幕只在成为黑色锦囊目标时取消该目标，不改成禁止选取或拦截延时锦囊移入判定区。
+- **判定差异**：QUN010 鬼道“替换”包含获得原判定牌，区别于鹰视“代替”；先真实打出再 `changeJudge{exchange=true}`。QUN012 悲歌的判定与分支效果见[判定与花色](retrial.md#qun012-1)。
+- **共享马术**：QUN008／QUN013／QUN027 直接引用 `hanjin__skill_shu006_1`，不再实现三份；双将同时提供同一技能时按公共技能来源去重，不重复减距离。
+- **来源与持续效果**：双刃已建立的转换权限由独立状态骨架承载至回合结束；断肠记录整张将牌技能的失去，明置及交换通过来源过滤维持结果。两者的真实运行验证仍待完成。
+- **黄巾雷使**：`hanjin__qun_damage_history` 记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；不是“每名角色首次”或“本回合首次发动”，晚取得翼从不重开已消耗的机会。
 
-本轮验证仅为原文对照、骨架与公共接口静态审阅、依赖版本核对和文档检查；未运行 `python scripts/test.py`，未构建安装包，未进行客户端、联网或重连人工验收。上述实现方向不构成这些验证已通过的证据。
+## 模式级接线
+
+以下技能已由 `pkg/hanjin_mode/mode.lua` 在 `logic:start` 注册房间规则；文档只记必要接线，不转为正式规则：
+
+- [qun_dying_rule](../../../../pkg/hanjin_mode/skills/qun_dying_rule.lua)：完杀用桃禁止与济世濒死序号／客将交换收尾，共享状态见 [util/qun_dying](../../../../pkg/hanjin_generals/util/qun_dying.lua)。
+- [qun_cards_rule](../../../../pkg/hanjin_mode/skills/qun_cards_rule.lua)：乱击响应摸牌、狂斧与骁逆的用牌后结算、乱击花色清理。
+- [qun_damage_history](../../../../pkg/hanjin_mode/skills/qun_damage_history.lua)：黄巾雷使的首个非手牌伤害机会事实。
+- [qun_control_rule](../../../../pkg/hanjin_mode/skills/qun_control_rule.lua)：祸水回合内禁明置的按来源维护，工具见 [util/qun_control](../../../../pkg/hanjin_generals/util/qun_control.lua)。
+- [qun_duanchang_rule](../../../../pkg/hanjin_mode/skills/qun_duanchang_rule.lua)：断肠已失技在后续明置时的幂等兜底，失技模块见 [qun_duanchang](../../../../pkg/hanjin_mode/rules/qun_duanchang.lua)。
+
+## 实际参考
+
+本地引擎 `fk_ver` 0.5.25；hegemony HEAD `e8d93acd34a357f96b0105aef7d661708c211626`、utility HEAD `b14e45d9adf67b06bf150f71022e8f1dc0e26116`，与 `dependencies.lock.json` 一致。以下路径相对于 `.dev/runtime/FreeKill-release/`，只读未改上游：
+
+- `packages/standard/pkg/skills/{jijiu,lijian,wushuang}.lua`：转桃、离间用牌及响应数入口；急救限制回合外，不符合济世。
+- `packages/hegemony/pkg/standard/skills/{chuli,luanji,wushuang,shuangxiong,xiongyi,shuangren,sijian,suishi,kuangfu,huoshui,qingcheng,duanchang,weimu}.lua`，另读 `pkg/mobile_heg/skills/kuangfu.lua`：同名差异明显，尤其无双写死 2、双雄时机和牌区不同、双刃两分支不同、随势缺少弃手牌、狂斧效果不同，均不可直接复制。
+- `ltk/core/events/usecard.lua`：`AimData` 响应次数、`UseCardData:isUsingHandcard`、`damageDealt` 及响应关联字段；`ltk/core/events/hp.lua`：体力变化数据；`ltk/server/events/judge.lua`：`changeJudge{exchange=true}` 获得旧判定牌。
+- 项目内复用：`skill_shu006_1.lua`（共享马术）、`skill_wei002_2.lua`（真实打出改判）、`general_exchange.lua`、`only_as.lua`、`card_use_targets.lua` 及 [黄巾雷使](retinues.md#huangjin-leishi)、[并州狼骑](retinues.md#bingzhou-langqi)、[西凉精骑](retinues.md#xiliang-jingqi) 的既有实现。
+
+## 待验证与待办
+
+- 执行上述定向套件并记录真实输出，稳定后运行默认全量；验证结果落地前不声称群包已验收。
+- 虓猛、双雄、骁逆目前没有直接用例，需要时按实际风险补；不把 `qun_cards.lua` 的存在当作三者已覆盖。
+- 客户端、联网／重连、干净本体安装未人工验收；`status.md` 与 `verification-evidence.md` 由负责人后续更新，本页不代填。

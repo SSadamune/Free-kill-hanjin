@@ -33,6 +33,11 @@
 | WU013 | 周泰 | [奋激](#wu013-2) |
 | WU014 | 鲁肃 | [好施](#wu014-1)、[缔盟](#wu014-2) |
 | WU015A | 张昭 | [直谏](#wu015a-1)、[固政](#wu015a-2) |
+| QUN001 | 华佗 | [除疠](#qun001-2) |
+| QUN003 | 貂蝉 | [闭月](#qun003-2) |
+| QUN013 | 马腾 | [雄异](#qun013-2) |
+| QUN016 | 田丰 | [死谏](#qun016-1) |
+| QUN018 | 邹氏 | [倾城](#qun018-2) |
 | JIN001 | 司马炎 | [垂统](#jin001-1) |
 
 ## 技能条目
@@ -339,6 +344,48 @@
 - **实现与接口**：同事件多个弃牌者由玩家择一，只取该角色本事件仍在弃牌堆的牌，返一后批量取得至多三张。
 - **验证依据**：[wu_support.lua](../../../../tests/wu_support.lua) 覆盖固政同事件多弃牌者选择；历史 15/15。
 - **未完成与边界**：客户端弃牌者选择未人工验收。
+
+### 群
+
+<a id="qun001-2"></a>
+#### 除疠（QUN001 华佗）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun001_2`；源码 [skill_qun001_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun001_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN001。同将济世见[伤害、体力与死亡](damage.md#qun001-1)。
+- **实现与接口**：出牌阶段限一次，选至多三名**彼此势力不相同**的其他角色，不要求与华佗不同；随后华佗与这些角色各弃一张手牌或装备。全部弃置完成后按实际失去的牌结算，失去黑桃者各摸一张，后弃的黑桃不漏记。
+- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testChuliTwoCandidatesSpadeDraws`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：候选势力并列、目标无牌、华佗自己无牌等边界未穷举；客户端选人／弃牌未人工验收。
+
+<a id="qun003-2"></a>
+#### 闭月（QUN003 貂蝉）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun003_2`；源码 [skill_qun003_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun003_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN003。同将离间见[用牌目标与距离](active.md#qun003-1)。
+- **实现与接口**：`fk.EventPhaseStart` 的结束阶段入口，按发动时（摸牌前）是否空手决定摸一张或两张；不先摸一张再判断。可取消，不强制发动。
+- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testBiyueEmptyHandDrawsTwo`、`testBiyueWithHandDrawsOne`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：结束阶段被跳过、其他结束阶段技能排队未专项覆盖；客户端提示未人工验收。
+
+<a id="qun013-2"></a>
+#### 雄异（QUN013 马腾）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun013_2`；源码 [skill_qun013_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun013_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN013。同将马术复用[共享马术锚点](active.md#shu006-1)。
+- **实现与接口**：限定技，出牌阶段先令所有与自己势力相同的角色（含自己）各摸三张；再按锁定上游 `hegemony.util` 的 `compareKingdomWith`／`getKingdomPlayersNum` 统计，若同势力人数全场最少（含并列）才回复 1 点，不自行聚合势力字符串。
+- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testXiongyiSameKingdomDrawsAndTieMinimumRecovers`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：野心家、并列最少、摸牌中死亡等边界未穷举；客户端提示未人工验收。
+
+<a id="qun016-1"></a>
+#### 死谏（QUN016 田丰）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun016_1`；源码 [skill_qun016_1.lua](../../../../pkg/hanjin_generals/skills/skill_qun016_1.lua)。规则见[田丰来源基线](../../../../rules/generals/qun016-tianfeng.md)。同将随势见[伤害、体力与死亡](damage.md#qun016-2)。
+- **实现与接口**：两个独立时机。失去最后的手牌：本次移动批次确实有手牌离开，且移动结束后为空手，不在已是空手的其他批次重复触发。体力值变化为 1：比较变化前后，仅从非 1 变为 1 时触发，维持在 1 或变为 0 不触发，也不要求是失去体力。效果为弃一名其他角色一张手牌或装备，不含判定区，不附带回复。
+- **验证依据**：已编写 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testSijianLastHandcardDiscardsOtherCard`、`testSijianNotTriggeredWhileStillHoldingHandcards`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：同批次多次失牌、体力一次变化跨过 1、目标无牌等边界未穷举；客户端选择未人工验收。
+
+<a id="qun018-2"></a>
+#### 倾城（QUN018 邹氏）
+
+- **标识与依据**：运行时 ID `hanjin__skill_qun018_2`；源码 [skill_qun018_2.lua](../../../../pkg/hanjin_generals/skills/skill_qun018_2.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)群区 QUN018。同将祸水见[用牌目标与距离](active.md#qun018-1)。
+- **实现与接口**：出牌阶段限一次，选一名手牌数小于等于自己的其他男性角色，双方交换全部手牌；交换的是一方或双方为空也可执行。保留来源：用一次移牌事件交换两边手牌，不逐张获得／交给。次数按本阶段记录。
+- **验证依据**：已编写 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testQingchengSwapsAllHandcardsOncePerPhase`，尚待本轮执行结果；结果集中见后续 verification-evidence。
+- **未完成与边界**：交换中手牌被其他效果移动、双方空手、手牌数变化等边界未穷举；客户端交换展示未人工验收。
 
 ### 晋
 
