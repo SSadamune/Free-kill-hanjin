@@ -43,7 +43,7 @@
 
 ## 共享验证证据与历史记录
 
-- [共享验证证据](generals/verification-evidence.md)：按原测试文件集中保存一次历史命令输出、日期与故障根因，各技能条目引用而不重复；不重跑、不新增覆盖。
+- [共享验证证据](generals/verification-evidence.md)：按原测试文件集中保存一次历史命令输出、日期与故障根因，各技能条目引用而不重复。
 - 实现与验证状态总览仍见[开发状态](../status.md)；测试分层见[测试规范](../testing.md)；故障案例见[故障案例](../lessons.md)。
 
 <details>

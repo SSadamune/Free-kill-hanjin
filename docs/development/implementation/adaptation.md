@@ -47,7 +47,7 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 
 内置效果：`draw`、`damage`、`disresponsive`、`add_target`、`remove_target`、`obtain_response_card`、`execute_both`、`ignore_times`。
 
-其中 `execute_both` 仅提供语义标记与次数：未来【逐近弃远】等独立牌的实现 MUST 主动读取并执行两个不同选项；不得把它实现为对原效果再结算一次，也不表示本轮已创建该卡牌。
+其中 `execute_both` 提供语义标记与次数；【逐近弃远】等独立牌的实现主动读取并执行两个不同选项，而非将原效果再结算一次。
 
 ### 8.3 实现接口
 
@@ -80,4 +80,4 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 
 尚未人工验证多人网络客户端的助战界面与取消请求展示；原生 Request 的并发与取消流程已由自动化测试调用和检查。
 
-结算区脚注修复不改变助战规则：正式扩展的 `pkg/hanjin_mode/client.lua` 在汉晋模式下将 `parseMsg(msg, true)` 的玩家名格式标签去除，实体牌及虚拟牌继承引擎通知路径；普通日志与其他模式保留富文本。`tests/han001_liuxie.lua:testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式张虎&乐綝双将名及 `##UseCardTo` 消息，验证两条通知与隔离。脚注定向 59/59；纯打出闪回归曾因测试回复被隐张让的无懈询问提前消费而失败，现固定场景并明确排队取消无懈、再打出闪，断言 CardResponding 一次、CardUsing 零次及应变零次。卡牌定向 35/35，默认全量 765/765，详见[开发状态](../status.md)与[故障案例](../lessons.md#预排的闪回复被无懈询问提前消费)。万箭齐发的生产结算仍是 askToResponse → responseCard，只允许打出闪；实际 Qt 渲染未人工验收。
+正式扩展的 `pkg/hanjin_mode/client.lua` 在汉晋模式的结算区脚注中将 `parseMsg(msg, true)` 的玩家名格式标签去除，实体牌及虚拟牌继承引擎通知路径；普通日志与其他模式保留富文本。`tests/han001_liuxie.lua:testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式张虎&乐綝双将名及 `##UseCardTo` 消息，验证两条通知与隔离。脚注定向 59/59；纯打出闪回归曾因测试回复被隐张让的无懈询问提前消费而失败，现固定场景并明确排队取消无懈、再打出闪，断言 CardResponding 一次、CardUsing 零次及应变零次。卡牌定向 35/35，默认全量 765/765，详见[开发状态](../status.md)与[故障案例](../lessons.md#预排的闪回复被无懈询问提前消费)。实际 Qt 渲染未人工验收。

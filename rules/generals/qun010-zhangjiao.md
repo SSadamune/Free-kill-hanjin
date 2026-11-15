@@ -6,4 +6,4 @@
 - 鹰视的“代替”不获得原判定牌，不能因共用改判接口而混同两者。
 - 判定使用最终生效的判定牌，参见[判定事件](../../rulebook/events/judge.md)。同一角色对同一判定的响应次数依[结算原则](../../rulebook/definitions/settlement-principles.md)，不通过重复改判绕过。
 
-雷击及关联黄巾雷使的实现方向见[群包审阅](../../docs/development/implementation/generals/qun-standard.md)。本轮未实现技能。
+雷击及关联黄巾雷使的实现与验证见[群包总览](../../docs/development/implementation/generals/qun-standard.md)。

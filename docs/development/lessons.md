@@ -23,7 +23,7 @@
 - 现象：纯打出闪不触发应变的测试偶发观察到一次应变；单独测试可能通过。
 - 根因：随机初始双将包含暗置张让时，滔乱使持闪的目标进入万箭齐发的无懈候选。`FkTest.setNextReplies` 按请求先后消费且不校验牌名，原本供 `AskForResponseCard` 的闪回复被更早的无懈 `AskForUseCard` 消费，测试因此错误执行了一次使用闪。观察到的牌没有转化技能名，所响应牌为万箭；固定隐张让组合可复现。
 - 修复：纯卡牌套件固定白板双将；该交互用例明确装入隐张让，先为无懈请求安排取消，再为万箭安排打出闪。保留真实询问，并观察无懈候选和卡牌事件。
-- 回归：`tests/card_reuse.lua:testJinkPlayedAsResponseDoesNotTriggerAdaptation` 断言目标实际进入无懈候选、`CardResponding` 一次、`CardUsing` 零次、应变零次。万箭齐发只能通过打出闪响应；生产实现的 `askToResponse → responseCard` 不变。本次修复测试驱动，不放宽规则或失败断言。
+- 回归：`tests/card_reuse.lua:testJinkPlayedAsResponseDoesNotTriggerAdaptation` 断言目标实际进入无懈候选、`CardResponding` 一次、`CardUsing` 零次、应变零次。
 
 ## 同名语义不代表事件数据拥有同一方法（已修复）
 

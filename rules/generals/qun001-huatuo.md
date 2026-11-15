@@ -8,4 +8,4 @@
 - 此效果明确优先于[普通交换](../general-exchange.md)的同势力限制；不据此放宽明置位置、君主／专属野心家等其他限制。
 - 首次成功交换后结束本次询问，不继续询问后续角色去交换已经转移的华佗。询问顺序依[通用约定](../general-principles.md)。
 
-规则已确认不表示已实装。接口方向及当前差异见[群包审阅](../../docs/development/implementation/generals/qun-standard.md)。
+实现与验证见[群包总览](../../docs/development/implementation/generals/qun-standard.md)。
