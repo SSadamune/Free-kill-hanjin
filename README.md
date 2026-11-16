@@ -83,9 +83,11 @@ python scripts/build_release.py
 
 构建脚本从项目中的 `init.lua`、`pkg/`、`image/`、`audio/` 打包，排除开发脚本、测试、原素材和 `.dev/` 环境，确保本体适配与用户安装包隔离。
 
+默认武将及卡牌图片按引擎固定目录和程序 ID 保存，例如 `image/generals/hanjin__han001.jpg`；构建与开发同步按原相对路径复制，不做图片改名。客将附加插画的保存与读取约定见[图片资源保存规范](docs/development/assets.md)。
+
 ## 日常开发与测试
 
-修改文件后，关闭开发版游戏，再运行启动命令，使改动同步到游戏。请在本项目中修改文件，开发版 `packages/hanjin/` 中的副本会在同步时被覆盖。删除或重命名文件后，还需清理开发副本中的旧文件。
+修改文件后，关闭开发版游戏，再运行启动命令，使改动同步到游戏。请在本项目中修改文件；同步按相对路径覆盖开发版 `packages/hanjin/` 中的对应文件，不要在该副本内保存唯一原稿。删除或重命名源文件后，仍需核对并清理开发副本中的旧文件。
 
 检查 Lua 语法、运行全部自动化测试：
 
@@ -121,6 +123,18 @@ VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同�
 ```
 
 将示例范围替换为本轮目标。默认由当前 agent 执行，委派遵循明确指定或已有协作配置；提交、推送及 PR 操作需有用户授权。不支持 skill 加载的工具可直接读取上述 `SKILL.md`。资料查找、裁定和协作要求见[新会话入口](docs/development/README.md#新会话入口)。
+
+图片、音效及素材配置使用项目 [hanjin-asset-development skill](.agents/skills/hanjin-asset-development/SKILL.md)。给出动作、范围和已提供的素材即可，例如：
+
+```text
+按照 hanjin-asset-development 替换刘协默认插画，素材在 assets-source/
+```
+
+```text
+按照 hanjin-asset-development 接入技能语音，素材已放在 assets-source/，目标技能见本轮说明
+```
+
+缺少原材料时先说明需求并索取；从零生图或绘制素材须用户明确批准；新音效依用户目标与现有接口处理，缺少影响成品的关键需求再澄清。素材技术规范见[图片与音效资源保存规范](docs/development/assets.md)，实际素材、接线与验证结果分别落在 `image/`、`audio/`、`pkg/` 和 `docs/development/`。默认由当前 agent 执行，不自动提交。
 
 ## 文件结构
 

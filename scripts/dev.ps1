@@ -29,12 +29,21 @@ if ((Test-Path -LiteralPath (Join-Path $runtimeRoot $clientUtil)) -and
 }
 $packageRoot = Join-Path $runtimeRoot 'packages/hanjin'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
-# Only copy release assets; never copy the workspace or .dev into itself.
-# No deletions: renamed/deleted source files require reviewing the dev copy.
+# Copy every release file by its relative path. Copying a source directory onto
+# an existing package directory previously created pkg/pkg; per-file copying
+# keeps the source layout and never nests directories.
 foreach ($entry in @('init.lua', 'pkg', 'audio', 'image')) {
   $source = Join-Path $projectRoot $entry
-  if (Test-Path -LiteralPath $source) {
-    Copy-Item -LiteralPath $source -Destination $packageRoot -Recurse -Force
+  if (-not (Test-Path -LiteralPath $source)) { continue }
+  if (Test-Path -LiteralPath $source -PathType Leaf) {
+    Copy-Item -LiteralPath $source -Destination $packageRoot -Force
+    continue
+  }
+  Get-ChildItem -LiteralPath $source -Recurse -File | Where-Object { $_.Name -ne '.gitkeep' } | ForEach-Object {
+    $relative = $_.FullName.Substring($projectRoot.Length + 1)
+    $destination = Join-Path $packageRoot $relative
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+    Copy-Item -LiteralPath $_.FullName -Destination $destination -Force
   }
 }
 Write-Host "Synced hanjin -> $packageRoot"
