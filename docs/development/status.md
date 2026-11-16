@@ -158,6 +158,8 @@
 
 本轮未重跑默认 Lua 全量套件，未关闭用户游戏，未实际同步正在使用的开发环境，未逐图目视或做客户端显示验收。静态检查不代替实际显示验收。客将默认插画将按 `image/generals/guest/<程序ID>.jpg` 由通用入口读取，选将与局内显示接线尚未实现；设计见[客将默认插画](guest-illustrations.md)。外部 `docs/heroes.json` 不作为正式编号、分包或构建规范。
 
+2026-11-17 阵势包武将图专项复核：从 `pkg/hanjin_generals/init.lua` 与 `data/zhen_shi*.lua` 实际登记取到 26 个正式将（24 普通、2 君主），全部按完整程序 ID 路径存在。24 普通图沿用合并素材；两个君主插画从合并素材的旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际登记 ID `hanjin__em_qun010.jpg`、`hanjin__em_shu001.jpg`，迁移前字节一致，旧路径已删除。Pillow 真实解码 26/26 成功，格式均为 JPEG、250×292、RGB，无缺图。`scripts/build_release.py` 生成 1028 文件 ZIP；`scripts/verify_image_assets.py --release` 核对源码发布集合与 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，ZIP 顶层仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含 `tests/`、`scripts/`、`.dev/`。仅完成静态路径、格式、构建与字节核对，尚未在真实客户端逐图显示或人工目视验收。
+
 ## 范围边界
 
 - 本仓库当前建设规则资料与新月杀实装，尚未建设群聊问答 bot。
