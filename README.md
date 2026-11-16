@@ -2,7 +2,13 @@
 
 紫乔汉晋是新月杀的自定义国战模式，包含魏、蜀、吴、群、汉、晋六势力，以及统领、翼从、应变等规则。
 
-项目仍在开发中。已登记 90 张武将和 14 种翼从，刘协的天命、密诏及司马炎的垂统、兴图已实现并通过自动化回归，其余专属技能目前仅展示名称与说明；大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。项目方向见[愿景说明](docs/vision.md)，规则集底稿见 [`rulebook/`](rulebook/README.md)，设计裁定见[项目规范](rules/README.md)，实装与验证进度见[开发状态](docs/development/status.md)。
+项目仍在开发中。六势力标准包共 90 张武将及 14 种翼从均已有正式技能实现；各批自动化验证范围见开发状态。晋司马懿的应期与魏司马懿共用技能，泰然后续时机尚未定案，暂按回合结束时逐次结算。大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。客户端交互、多人联网／重连及干净本体安装的完整人工验收尚未完成。
+
+- [项目愿景](docs/vision.md)与[文档入口](docs/README.md)
+- [规则集工作底稿](rulebook/README.md)与[项目设计、裁定](rules/README.md)
+- [开发状态与待办](docs/development/status.md)及[实现导航](docs/development/implementation/README.md)
+
+标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md) · [群](docs/development/implementation/generals/qun-standard.md) · [晋](docs/development/implementation/generals/jin001-simayan.md)。具体技能与验证范围以对应文档为准。
 
 ## 准备开发环境
 
@@ -54,13 +60,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 
 ### 测试用自由选将
 
-在房间的公共游戏规则设置中开启“自由选将”。进入汉晋选将界面后，右键或长按候选武将，打开武将替换窗口。开启时可选择候选列表外、被禁势力的武将，也可使用不同势力组合或野心家副将；仍须选择两张不同的有效武将牌。
-
-正常合法组合保留原有初始势力选项（含客将势力）；规则外组合改用两将原有势力的交集，无交集时从并集中选择，均无常规势力时使用本局首个允许势力兜底。该功能用于测试，不改变正式随机将池或牌堆；关闭后恢复正常选将限制。
-
-### 刘协技能交互
-
-密诏的收牌角色始终为单选：点击另一名合法角色会自动替换原选择，并保留已选的交牌；再次点击已选角色可取消选择。该交互随扩展安装包发布，无需修改本体。
+在房间的公共游戏规则设置中开启“自由选将”，然后右键或长按候选武将打开替换窗口。该测试功能允许候选外武将和规则外配对，仍须选择两张不同的有效武将牌；关闭后恢复正常选将限制。初始势力的处理见[自由选将例外](rules/faction-ban.md#测试用自由选将例外)。
 
 ### 仅开发环境生效的本体适配
 
@@ -96,17 +96,33 @@ python scripts/check_lua.py
 python scripts/test.py
 ```
 
-测试前关闭开发版游戏。默认测试包含国战回归、汉晋公共规则、选将与开局场景。单独运行某个测试文件可使用：
+测试前关闭开发版游戏。默认测试包含国战回归、汉晋公共规则、选将与开局场景，以及已实装武将和翼从的专项回归。单独运行某个测试文件可使用：
 
 ```powershell
 python scripts/test.py --file tests/adaptation.lua
 ```
 
+测试入口会对共享运行时加进程间锁，占用时立即报告，不与另一轮测试同时同步或执行。新套件模板、公共夹具、请求辅助和串行调度要求见[测试规范](docs/development/testing.md)。这些工具仅供开发，不进入用户安装包。
+
 VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同步、语法检查和自动化测试。界面、联网和断线重连表现仍需在游戏客户端人工验证。
 
-开发前请阅读[项目约定](AGENTS.md)与[开发指南](docs/development/README.md)。
+开发前请阅读[项目约定](AGENTS.md)与[开发指南](docs/development/README.md)。内容开发流程、文档职责和提交要求由这些文档统一维护；创建或更新 PR 使用[项目模板](.github/pull_request_template.md)。
 
-新增武将或卡牌时，先确认规则与引擎接口，再打通正常流程，尽早检查真实客户端选择与提示，随后补核心回归并运行默认全量。夹具、间歇失败诊断及简短故障记录的要求见[测试规范](docs/development/testing.md)。面向玩家的交互应随正式安装包发布；创建或更新 PR 时按[项目模板](.github/pull_request_template.md)填写，并同步对应规则文档的状态。
+### 使用 AI agent 开发内容
+
+武将、卡牌及规则交互开发使用项目 [hanjin-content-development skill](.agents/skills/hanjin-content-development/SKILL.md)。给出动作和范围即可，例如：
+
+```text
+按照 hanjin-content-development 审阅群势力标准包
+```
+
+规则确认后开始实装：
+
+```text
+根据已确认规则实装群势力标准包
+```
+
+将示例范围替换为本轮目标。默认由当前 agent 执行，委派遵循明确指定或已有协作配置；提交、推送及 PR 操作需有用户授权。不支持 skill 加载的工具可直接读取上述 `SKILL.md`。资料查找、裁定和协作要求见[新会话入口](docs/development/README.md#新会话入口)。
 
 ## 文件结构
 

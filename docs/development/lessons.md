@@ -8,6 +8,22 @@
 - 根因：可用性、交牌下限及提示会在 `ClientPlayer` 上计算，不能假定它有 `ServerPlayer.room`。
 - 修复：密诏使用兼容客户端的当前房间接口读取可见状态，保留服务端执行前复核。
 - 回归：`tests/han001_liuxie.lua` 中 `testMZ31RealClientPlayerWithoutRoomComputesKnownFaction`、`testMZ32ClientWithoutRoomPredictsHiddenOwnFaction`。
+- 群包再次出现同类问题：张角／华佗进入出牌阶段，`ReqPlayCard.skillButtonValidity` 调用除疠 `can_use` 时访问 `player.room`。服务端效果用例通过不能证明客户端按钮可用；应沿调用链检查 `can_use`、目标筛选及它们调用的辅助函数。
+- 夹具也须使用客户端房间：仅换成 `ClientPlayer` 而让 `Fk:currentRoom()` 仍返回服务端房间，会混用两套角色和牌区。`tests/qun_basic.lua` 的 `withClientRoom` 展示成套客户端角色、独立牌区及异常后恢复上下文；测试同时断言合法场景可用、无候选和次数耗尽时禁用，避免用空列表掩盖错误。
+
+## 卡牌脚注泄漏富文本标签
+
+- 现象：使用助战杀时，结算区卡牌上显示 `</b></font>` 等标签并折行遮挡牌面。
+- 接口核对：锁定引擎 `Client:parseMsg(msg, true)` 仍给玩家名加 `font/b` 标签；实体牌 `setCardNote` 与虚拟牌 `showVirtualCard` 都调用它。截图含张虎&乐綝，但 `&` 是否导致 Qt AutoText 解析失败尚未通过渲染验证。
+- 修复：正式扩展的 `HanjinClient:parseMsg` 仅对汉晋模式的 `nocolor == true` 输出去除这些格式标签；继承两条通知路径，普通日志及其他模式保留原行为，不修改本体 QML。
+- 回归：`tests/han001_liuxie.lua` 的 `testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式双将名及真实 `##UseCardTo` 消息，捕获两条客户端通知，核对脚注、普通日志与模式隔离；客户端实际渲染待人工验收。
+
+## 预排的闪回复被无懈询问提前消费
+
+- 现象：纯打出闪不触发应变的测试偶发观察到一次应变；单独测试可能通过。
+- 根因：随机初始双将包含暗置张让时，滔乱使持闪的目标进入万箭齐发的无懈候选。`FkTest.setNextReplies` 按请求先后消费且不校验牌名，原本供 `AskForResponseCard` 的闪回复被更早的无懈 `AskForUseCard` 消费，测试因此错误执行了一次使用闪。观察到的牌没有转化技能名，所响应牌为万箭；固定隐张让组合可复现。
+- 修复：纯卡牌套件固定白板双将；该交互用例明确装入隐张让，先为无懈请求安排取消，再为万箭安排打出闪。保留真实询问，并观察无懈候选和卡牌事件。
+- 回归：`tests/card_reuse.lua:testJinkPlayedAsResponseDoesNotTriggerAdaptation` 断言目标实际进入无懈候选、`CardResponding` 一次、`CardUsing` 零次、应变零次。
 
 ## 同名语义不代表事件数据拥有同一方法（已修复）
 
@@ -39,3 +55,24 @@
 - 根因：在引擎的 `postLoad` 回调中新增共享同一 Engine 的 boardgame；本体遍历 boardgame 调用各自引擎的 `postLoad`，可能再次初始化同一引擎。这不是可用重跑消除的环境问题。
 - 修复：沿用原 boardgame，仅替换客户端类；自定义请求同时限定汉晋模式和密诏技能，其余委托原处理器。子类序列化也需核对父类动态转发，避免递归。
 - 回归：`tests/mode_rules.lua` 检查同一 Engine 只登记一次；刘协 MZ33 同时验证汉晋单选替换和上游模式原有行为，默认全量套件验证完整加载。
+
+## 必然效果误走默认可选询问（已修复）
+
+- 现象：短兵对距离 1 的目标应增加一张闪的需求，真实用杀测试中却被一张闪抵消。
+- 根因：第二段效果没有声明 `on_cost`，锁定引擎沿用触发技默认的 `askToSkillInvoke`；无接受回复时根本没有写入双闪要求，并非 `AimData` 到牌效果的数据传播失效。
+- 修复：第二段必然效果显式使用 `Util.TrueFunc`，首段可选扩目标仍保留自己的询问。
+- 回归：`tests/wu_phases.lua` 的 `testDuanbingDistanceOneTargetNeedsTwoJinks`，通过实际用杀与一张闪回复验证目标仍受伤。
+
+## 外部套件缺少描述符，混入上游用例（已修复）
+
+- 现象：汉包、吴包定向验证曾运行超出目标文件范围的上游内置用例，产生无关失败。
+- 根因：外部套件未返回其 LuaUnit 分组描述符，运行器没有按目标套件隔离执行。
+- 修复：文件末尾返回 `return { name = "hanjin_套件名" }`，与测试类名 `Testhanjin_套件名` 对应；新套件从项目模板开始。入口要求非空成功汇总，空模板不能当作通过。
+- 复核依据：吴阶段套件补齐描述符后只运行本文件用例；历史定向结果见[共享验证证据](implementation/generals/verification-evidence.md#wu_phases)。
+
+## 请求覆盖误拦截引擎内部选择（已修复）
+
+- 现象：反间等测试覆盖 `askToChoice` 后，触发顺序选择得到普通分支字符串，引擎按技能名查找时得到 nil。
+- 根因：覆盖未检查 `params.skill_name`，连 `skill_name = "trigger"` 的多技能选择也被接管。
+- 修复：只覆盖目标技能请求，其他请求调用原方法；结束或断言异常后恢复覆盖，避免污染后续测试。
+- 回归入口：`tests/wu_support.lua` 的反间、英魂与固政真实流程用例；可复用辅助的隔离与恢复另由 `tests/test_support.lua` 验证。

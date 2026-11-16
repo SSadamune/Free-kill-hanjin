@@ -8,6 +8,7 @@ local H = require "packages.hegemony.util"
 local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
+local PairHp = require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
 local M = {}
 
 M.RULE_SKILL = "#hanjin_ascension_rule"
@@ -25,17 +26,11 @@ local function isUnknown(kingdom)
 end
 
 function M.actual_main(player)
-  if player == nil then return nil end
-  if player.general and player.general ~= "anjiang" then return player.general end
-  local mark = player:getMark("__heg_general")
-  return type(mark) == "string" and mark ~= "" and mark or nil
+  return PairHp.actual_main(player)
 end
 
 function M.actual_deputy(player)
-  if player == nil then return nil end
-  if player.deputyGeneral and player.deputyGeneral ~= "anjiang" then return player.deputyGeneral end
-  local mark = player:getMark("__heg_deputy")
-  return type(mark) == "string" and mark ~= "" and mark or nil
+  return PairHp.actual_deputy(player)
 end
 
 function M.faction_of(player)
@@ -44,14 +39,11 @@ function M.faction_of(player)
   return player.kingdom or "unknown"
 end
 
---- 国战双将体力上限：主将体力上限（含主将调整）+ 副将体力上限（含副将调整），向下取整。
+--- 国战双将体力上限：主将贡献 + 副将贡献（均含主将/副将调整），向下取整。
+--- 与开局接线共用 PairHp，因此应期的“☯️+2”在升变重算中也参与组合，而不是
+--- 在既有体力上限上另加一次。
 function M.pair_max_hp(main, deputy)
-  local mainGeneral = Fk.generals[main]
-  local deputyGeneral = Fk.generals[deputy]
-  if mainGeneral == nil or deputyGeneral == nil then return 0 end
-  local mainHp = mainGeneral.maxHp + (mainGeneral.mainMaxHpAdjustedValue or 0)
-  local deputyHp = deputyGeneral.maxHp + (deputyGeneral.deputyMaxHpAdjustedValue or 0)
-  return (mainHp + deputyHp) // 2
+  return PairHp.max_hp(main, deputy) or 0
 end
 
 --- 势力人数预演。包含其他存活角色与已死亡的同势力角色；君主在场不豁免。
@@ -233,9 +225,8 @@ function M.ascend(room, player, newMain, kingdom, options)
         room:setPlayerMark(player, M.COMPANION_MARK, 1)
         H.addHegMark(player, "companion")
       end
-      local totalHp = (mainGeneral.maxHp + (mainGeneral.mainMaxHpAdjustedValue or 0))
-        + (deputyGeneral.maxHp + (deputyGeneral.deputyMaxHpAdjustedValue or 0))
-      if totalHp % 2 == 1 and player:getMark(M.YINYANG_MARK) == 0 then
+      local totalHp = PairHp.half_hp(newMain, deputy)
+      if totalHp ~= nil and totalHp % 2 == 1 and player:getMark(M.YINYANG_MARK) == 0 then
         room:setPlayerMark(player, M.YINYANG_MARK, 1)
         H.addHegMark(player, "yinyangfish")
       end

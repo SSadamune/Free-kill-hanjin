@@ -51,6 +51,14 @@ function Testmode_rules:testModeRuleLoadsNationalWarRuleAndExchangeHistory()
   -- The display effects and status skill are room-scoped, not global.
   for _, skill in ipairs(Fk.global_trigger) do
     lu.assertFalse(skill.name:startsWith("#hanjin_adaptation_display"))
+    if skill.skeleton then
+      lu.assertNotEquals(skill.skeleton.name, "hanjin__qun_control_rule")
+      lu.assertNotEquals(skill.skeleton.name, "hanjin__qun_damage_history")
+    end
+  end
+  for _, name in ipairs({ "hanjin__qun_dying_rule", "hanjin__qun_cards_rule",
+    "hanjin__qun_control_rule", "hanjin__qun_damage_history", "hanjin__qun_duanchang_rule" }) do
+    lu.assertTrue(current:hasSkill(name), "Missing room rule: " .. name)
   end
   for _, list in pairs(Fk.global_status_skill) do
     for _, skill in ipairs(list) do

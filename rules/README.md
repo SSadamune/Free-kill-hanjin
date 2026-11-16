@@ -23,10 +23,31 @@
 - [“只能当”描述约定](only-as.md)：转换用途、权限、牌名与多来源共存。
 - [鏖战状态](battle-royal.md)：实体桃的使用限制与转换用途。
 - [HAN001 刘协裁定草案](generals/han001-liuxie.md)：六项确认裁定及仍标为建议的内容。
+- [HAN004 张让结算约定](generals/han004-zhangrang.md)：同一回合多次滔乱，回合末后续效果统一结算一次，候选取本回合指定过的角色并集。
+- [HAN007 王荣结算约定](generals/han007-wangrong.md)：追德提供敏思额外发动；次数原则引用通用约定。
+- [HAN008 伏皇后结算约定](generals/han008-fuhuanghou.md)：求援仅调整牌效果的结算先后。
+- [HAN016A 刘宠结算约定](generals/han016a-liuchong.md)：劲弩排除阶段内零用牌、威屯先选同一组目标。
+- [HAN017 刘繇结算约定](generals/han017-liuyao.md)：戡难按每名角色限次；逆拒每次没赢摸牌，点数增益累计且封顶 13。
 - [JIN001 司马炎结算约定](generals/jin001-simayan.md)：垂统的濒死装备移动与兴图的回合用牌检查、选项及转化用桃。
+- [WEI002 司马懿结算约定](generals/wei002-simayi.md)：应期的配将体力贡献、开局判定及多势力／客将依据。
+- [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
+- [WEI016 乐进结算约定](generals/wei016-yuejin.md)：骁果弃置基本牌为发动消耗，不能零弃牌发动。
+- [SHU007 黄月英结算约定](generals/shu007-huangyueying.md)：集智包含有对应实体牌且未经转化的普通、延时锦囊；区分玩家文本与规范描述中的“虚拟牌”。
+- [JIN009 司马懿结算约定](generals/jin009-simayi.md)：权变的阶段花色事实、骤霆的亮出上限及同文应期的公共裁定。
+- 晋标准包其余逐将审阅：[司马师](generals/jin002-simashi.md)、[司马昭](generals/jin003-simazhao.md)、[贾充](generals/jin004-jiachong.md)、[羊祜](generals/jin005-yanghu.md)、[王元姬](generals/jin007-wangyuanji.md)、[夏侯徽](generals/jin008-xiahouhui.md)、[张春华](generals/jin010-zhangchunhua.md)、[张虎&乐綝](generals/jin011-zhanghu-yuechen.md)、[羊徽瑜](generals/jin012-yanghuiyu.md)、[王濬](generals/jin013-wangjun.md)、[文鸯](generals/jin014-wenyang.md)、[石苞](generals/jin015-shibao.md)、[张华](generals/jin016-zhanghua.md)。待裁定项目保留在对应逐将页，腹心死士与文虎专属技能分别归入司马师、文鸯页。
+- [WU003 吕蒙结算约定](generals/wu003-lvmeng.md)：谋断仅获得涉猎，涉猎为后天技能及其定义。
+- [WU005 周瑜结算约定](generals/wu005-zhouyu.md)：反间响应选择及同花色手牌、装备牌的弃置范围。
+- [WU013 周泰结算约定](generals/wu013-zhoutai.md)：不屈病句修正，摸牌数与置“创”张数的区别。
+- [WU015A 张昭结算约定](generals/wu015a-zhangzhao.md)：直谏的原区域与摸牌者按斜线顺序对应。
+- [QUN001 华佗结算约定](generals/qun001-huatuo.md)：济世受客将替换设置控制，默认开启；跨势力交换首次成功即止。
+- [QUN002 吕布结算约定](generals/qun002-lvbu.md)：无双响应数增量与虓猛当前回合角色选择。
+- [QUN010 张角结算约定](generals/qun010-zhangjiao.md)：鬼道的替换包含获得原判定牌。
+- [QUN015 纪灵结算约定](generals/qun015-jiling.md)：双刃没赢后的转换限制至本回合结束。
+- [QUN016 田丰来源基线](generals/qun016-tianfeng.md)：死谏和随势采用标准表原文，区别当前运行时资料中的版本。
 
 ## 阅读与维护
 
+- 外部[《规则向FAQ文件》](../docs/规则向FAQ文件.md)与 `docs/石激桑武将列表.json` 均可作为汉晋原创规则参考。FAQ 保留来源，不随项目维护更新；采用的规则及已确认差异在本目录另行记录。
 - 具体武将按编号集中在 `generals/`，引用公共规范，不重复另定通则。现有标准武将表保留卡面描述；规范描述的精确抽象写法见[编写指南](../docs/development/normalized-descriptions.md)。
 - 《汉晋规则集》采用外部基准的术语和结算结构，根据汉晋设计独立编写正式条文；本目录提供依据，不代替该成果。
 - 接口、接线、测试方法、故障案例与开发完成度统一查阅[开发指南](../docs/development/README.md)及[状态表](../docs/development/status.md)。本索引不再重复记录测试数量或“已实现”等动态说明。

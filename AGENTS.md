@@ -1,6 +1,8 @@
 # 紫乔汉晋项目约定
 
 - 项目方向见 `docs/vision.md`。`rulebook/` 是《汉晋规则集》工作底稿，已从外部《三国杀规则集》复制，待逐项改编；`rules/` 是独立的项目设计与裁定规范，不等于正式规则集。当前按底稿中的基础条文和已确认的汉晋差异开发，规则差异与未决问题须标明，不由代码现状自动裁定。
+- `docs/规则向FAQ文件.md` 是用户提供的外部汉晋规则参考资料，与 `docs/石激桑武将列表.json` 一样可作为汉晋原创规则的参考；保留来源，不随项目开发维护更新。采用的条目及项目裁定另记入 `rules/` 和 `rulebook/`，不直接改写外部资料。
+- 外部参考资料的统一登记见 `docs/README.md`。《石激桑武将列表.json》和《药枫桑大合集337.csv》均为不随项目维护更新的外部参考；不要为标记来源而向 JSON／CSV 原始数据插入注释或额外记录。
 - 具体规则引用统一指向 `rulebook/` 的对应文章；`docs/rules/` 保留为外部来源副本。技能描述按规则集定义的术语、逻辑结构、时机、消耗与效果解析，不凭日常自然语言猜测，不把已有明确定义的规则写成建议或重新请求裁定；处理具体技能时须查阅相关原文。项目已确认的设计差异依用户裁定与 `rules/` 规范执行，须明确标注差异。
 - 具体武将的结算细节与裁定统一放在 `rules/generals/`，按武将编号一将一文件（如 `han001-liuxie.md`）；对应实现与测试依据放在 `docs/development/implementation/generals/`。公共项目规范由逐将文档引用，不重复另定；正式规范描述在 `rulebook/` 独立编纂。
 - 国战流程的实现参考 `Qsgs-Fans/hegemony` 的 `new_heg_mode`；`hegemony`、`utility` 的版本固定在 `dependencies.lock.json`。不要直接修改 `.dev/` 中的上游依赖。
@@ -12,15 +14,17 @@
 - 应变实现遵循 `rules/adaptation.md`，使用汉晋应变 API，并区分 `isAdaptationCard` 与 `Triggered` 事件。上游应变参考源码位于 `.dev/reference/gamemode`，版本登记在 `dependencies.lock.json`，仅供核对。
 - 默认运行 `python scripts/test.py`（`tests/all.lua`）。国战技能测试加入默认国战套件，汉晋技能 `addTest` 回调仅在汉晋测试房间运行；`--skills` 使用官方默认房间，仅用于工具或上游测试验证。
 - 测试按 `docs/development/testing.md` 分为核心行为、公共机制回归、风险边界三层。规则场景清单不等于逐项新增测试义务；优先定向验证，稳定后再跑默认全量验收，不以测试数量或完整映射表作为默认交付门槛。
+- 并行开发共享 `.dev/runtime` 时，须指定唯一测试执行者；其他批次不同时同步或启动该运行时。使用 `python scripts/test.py` 作为测试入口，具体调度、复用辅助与失败交回见 `docs/development/testing.md`。
+- 内容开发的拆批、关键接口前置审阅和审阅意见闭合遵循 `docs/development/README.md`；每批稳定后及时更新对应实现记录，不等全包结束后凭聊天补写。
 - `tests/support/hanjin_content.lua` 为测试专用内容，不得发布。实装与验证进度集中记录在 `docs/development/status.md`，接口及验收依据另见开发实现文档，对外说明须与当前实现一致。
-- `rules/` 与 `rulebook/` 的规则类内容由 Codex 维护。DSH 默认只读；需要修改时，须先说明具体文件、理由和拟议改动，经 Codex 审阅并明确允许后再修改。
+- `rules/` 与 `rulebook/` 的规则类内容由负责规则判断与审阅的角色维护。委派执行者默认只读；需要修改时，须先说明具体文件、理由和拟议改动，经负责人审阅并明确允许后再修改。
 - 需要 UI 素材时，先向用户说明需求并索取原材料，再按指示加工。从零生图或绘制素材须事先得到用户明确批准。
 - 图片目录、命名及导入遵循 `docs/development/assets.md`；默认图片按引擎固定目录及程序 ID 原样保存，不另建全量路径映射或构建改名。客将默认插画放在 `image/generals/guest/`，与普通插画同名，通过统一状态判断调用引擎附加图片入口。`docs/heroes.json` 仅为外部参考，不作为正式编号、分包或构建的规范来源。
 - 用户安装包使用 `python scripts/build_release.py` 构建，仅包含 `init.lua`、`pkg/`、`image/`、`audio/`。本体适配仅由开发脚本应用于本地运行环境，不得从扩展入口执行或打入用户安装包；仅开发环境生效的功能须在 README 中注明。
 - 面向玩家的功能及交互默认须随正式扩展发布，不得用仅开发环境有效的补丁代替交付。涉及客户端注册或加载路径时，应验证安装包包含实现及接线，并检查不依赖开发环境改动。
 - 提交前核对项目规范、正式规则底稿及开发状态的一致性；创建或更新 PR 时先读取 `.github/pull_request_template.md`，按最终范围填写。优先围绕可独立验收的目标拆分 PR，参考数据导入与临时诊断工具避免无关混入。
 
-- 新增、修复或审阅汉晋武将技能、卡牌效果及相关交互时，使用项目 skill `.agents/skills/hanjin-content-development/SKILL.md`，按需查阅相关资料；纯格式或无关文档修改不必加载。规范描述编写见 `docs/development/normalized-descriptions.md`，保持卡面描述、规则抽象和引擎代码的职责区别。
+- 新增、修复或审阅汉晋武将技能、卡牌效果及相关交互时，使用项目 skill `.agents/skills/hanjin-content-development/SKILL.md`，按需查阅相关资料；不支持 skill 加载的 agent 直接读取该文件。短指令中的“审阅”“实装”“安排 DSH 实装”按 skill 的默认流程执行，无须用户重复交代步骤；未指定委派时由当前 agent 完成，已有明确协作配置则遵循配置。纯格式或无关文档修改不必加载。规范描述编写见 `docs/development/normalized-descriptions.md`，保持卡面描述、规则抽象和引擎代码的职责区别。
 
 ## 提交格式
 

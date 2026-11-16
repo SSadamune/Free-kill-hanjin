@@ -7,6 +7,9 @@ local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Pool = require "packages.hanjin.pkg.hanjin_mode.rules.general_pool"
 local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
 local Ascension = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
+local PairHp = require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
+local WeiHistory = require "packages.hanjin.pkg.hanjin_mode.rules.wei_history"
+local WuHistory = require "packages.hanjin.pkg.hanjin_mode.rules.wu_history"
 local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
 local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
 local W = require "ui_emu.preferences"
@@ -153,6 +156,44 @@ function M.create(base)
       -- player's offers; never put any selected card back into the general pile.
       if freeAssign then unused = Selection.pruneUnused(unused, selected) end
       room:returnToGeneralPile(unused, "random")
+    end
+    -- 开局体力上限：引擎（上游 HegLogic:broadcastGeneral）按双将组合写入
+    -- maxHp / hp / HalfMaxHpLeft。这里在同一开局时点补上配将体力贡献修正
+    -- （应期 ☯️+2 = 2 个半格），不等待明置；普通交换/移除/替换不重算，
+    -- 升变另走 ascension.lua 的公共流程。
+    local baseBroadcastGeneral = parent.broadcastGeneral
+    function logic:broadcastGeneral()
+      if baseBroadcastGeneral then baseBroadcastGeneral(self) end
+      for _, player in ipairs(self.room.players) do
+        PairHp.apply_start(self.room, player)
+      end
+    end
+    -- 长驱需要的“本回合实际伤害目标”由模式级全局记录器提供，必须在第一个事件
+    -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
+    local baseStart = parent.start or GameLogic.start
+    function logic:start()
+      self.room:addSkill(WeiHistory.HISTORY_SKILL)
+      self.room:addSkill(WeiHistory.WEIKUI_DISTANCE_SKILL)
+      self.room:addSkill(WuHistory.HISTORY_SKILL)
+      self.room:addSkill(WuHistory.DISTANCE_SKILL)
+      self.room:addSkill("hanjin__wu_turn_effects")
+      self.room:addSkill("hanjin__wu_dimeng_expiry")
+      self.room:addSkill("hanjin__shu_hidden_prelight")
+      self.room:addSkill("hanjin__shu_lieyong_bonus")
+      self.room:addSkill("hanjin__shu_state_rule")
+      self.room:addSkill("hanjin__shu_savage_rule")
+      self.room:addSkill("hanjin__shu_tieqi_invalidity")
+      self.room:addSkill("hanjin__qun_dying_rule")
+      self.room:addSkill("hanjin__qun_cards_rule")
+      self.room:addSkill("hanjin__qun_damage_history")
+      self.room:addSkill("hanjin__qun_control_rule")
+      self.room:addSkill("hanjin__qun_duanchang_rule")
+      self.room:addSkill("hanjin__jin_resources_rule")
+      self.room:addSkill("hanjin__jin_deck_rule")
+      self.room:addSkill("hanjin__jin_information_rule")
+      self.room:addSkill("hanjin__jin_adaptation_rule")
+      self.room:addSkill("hanjin__jin_sources_rule")
+      if baseStart then return baseStart(self) end
     end
     return logic
   end

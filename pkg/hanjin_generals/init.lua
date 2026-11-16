@@ -1,10 +1,15 @@
 -- 紫乔汉晋·标准武将包
 --
 -- 六势力各 15 张正式独立武将，另有 14 种翼从和 19 条统领来源。牌面数据全部
--- 来自 rules/standard-generals.md 的已确认表。大多数普通技能与全部翼从技能
--- 仍只登记名称、原文和标签，骨架不含 effect，因此没有游戏效果；已正式实装
--- 的例外集中登记在下方 implemented 白名单，并断言确有 effect。偏将的「限一」
--- 只在这里登记牌面标记，每局唯一取得与限一统领能力由公共规则实现。
+-- 来自 rules/standard-generals.md 的已确认表。魏区 25 个技能与并州狼骑/虎卫军/
+-- 牛金 3 个魏关联翼从技能已正式实装；汉区标准技能及 JIN001 等也已有实现；
+-- 蜀区 26 个技能及周仓/白马义从/西凉精骑/象兵四翼从、
+-- 吴区 27 个天生技能、涉猎及锦帆军/曲阿小将亦已实装。
+-- 群区 27 条技能记录（马术复用蜀马超）及黄巾雷使均已实装。
+-- 晋区29条技能记录及腹心死士/文虎亦已实装，应期复用魏司马懿的同一技能。
+-- 已实装条目通过骨架的 hanjinImplemented 或下方 implemented 白名单
+-- 登记，并在加载时断言确有 effect。偏将的「限一」只在这里登记牌面标记，每局
+-- 唯一取得与限一统领能力由公共规则实现。
 local extension = Package:new("hanjin_generals")
 extension.extensionName = "hanjin"
 extension.game_modes_whitelist = { "hanjin_heg_mode" }
@@ -36,7 +41,12 @@ Fk:loadTranslationTable(translations)
 
 -- Formal generals -----------------------------------------------------------
 for _, data in ipairs(Data.generals) do
-  local general = General:new(extension, data.id, data.kingdom, data.hp)
+  -- 第 6 个参数是 General.initialize 的 gender；缺省会令角色性别变为 nil，
+  -- 使离间/倾城等「男性」目标条件错误。数据侧必须给出显式的 female/male。
+  assert(data.gender == "female" or data.gender == "male",
+    "Missing gender metadata for " .. data.id)
+  local general = General:new(extension, data.id, data.kingdom, data.hp, nil,
+    data.gender == "female" and General.Female or General.Male)
   -- Two printed versions can share a Chinese name (司马懿, 诸葛亮); the engine
   -- groups same-name conversion by `trueName`. The unique card id stays the key.
   general.trueName = data.name
@@ -106,6 +116,11 @@ Fk:addPostLoadFunc(function()
     ["hanjin__skill_jin001_1"] = true,
     ["hanjin__skill_jin001_2"] = true,
   }
+  --- 新的正式技能在自身骨架上显式赋 `hanjinImplemented = true`；
+  --- 旧白名单继续保留，避免破坏既有实装登记。两者都必须确有 effect。
+  local function isImplemented(skel)
+    return implemented[skel.name] == true or skel.hanjinImplemented == true
+  end
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do
     local general = assert(Fk.generals[data.id], "Missing formal general: " .. data.id)
@@ -139,7 +154,7 @@ Fk:addPostLoadFunc(function()
     end
     for _, skill in ipairs(data.skills) do
       local skel = assert(Fk.skill_skels[skill.id], "Missing skill skeleton: " .. skill.id)
-      if implemented[skill.id] then
+      if isImplemented(skel) then
         assert(#skel.effects > 0, "Implemented skill must have an effect: " .. skill.id)
       else
         assert(#skel.effects == 0, "Formal display skill must have no effect: " .. skill.id)
@@ -153,7 +168,11 @@ Fk:addPostLoadFunc(function()
     local general = assert(Fk.generals[data.id], "Missing retinue general: " .. data.id)
     assert(general.hidden, "Retinue must be hidden: " .. data.id)
     local skill = assert(Fk.skill_skels[data.skill.id], "Missing retinue skill: " .. data.skill.id)
-    assert(#skill.effects == 0, "Retinue display skill must have no effect: " .. data.skill.id)
+    if skill.hanjinImplemented == true then
+      assert(#skill.effects > 0, "Implemented retinue skill must have an effect: " .. data.skill.id)
+    else
+      assert(#skill.effects == 0, "Retinue display skill must have no effect: " .. data.skill.id)
+    end
     retinues = retinues + 1
     retinue_skills = retinue_skills + 1
   end

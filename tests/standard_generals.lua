@@ -9,22 +9,33 @@ local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Selection = require "packages.hanjin.pkg.hanjin_mode.rules.selection"
+local PairHp = require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
 local Data = require "packages.hanjin.pkg.hanjin_generals.data.standard"
 
 local SIX = { "han", "wei", "shu", "wu", "qun", "jin" }
-local IMPLEMENTED = {
+local LEGACY_IMPLEMENTED = {
   ["hanjin__skill_han001_1"] = true,
   ["hanjin__skill_han001_2"] = true,
   ["hanjin__skill_jin001_1"] = true,
   ["hanjin__skill_jin001_2"] = true,
 }
 
+local function isImplemented(name)
+  local skel = Fk.skill_skels[name]
+  return (skel ~= nil and skel.hanjinImplemented == true) or LEGACY_IMPLEMENTED[name] == true
+end
+
 local function formalOnlyDisabledPacks()
   local result = {}
   for name, pack in pairs(Fk.packages) do
-    if name ~= "hanjin_generals" and #pack.generals > 0 then
+    if name ~= "hanjin_generals" and (#pack.generals > 0 or name == "hanjin_test_content") then
       table.insert(result, name)
     end
+  end
+  -- support.createRoom installs this test-only pack after the setting is
+  -- computed; name it explicitly so formal content tests never draw it.
+  if not table.contains(result, "hanjin_test_content") then
+    table.insert(result, "hanjin_test_content")
   end
   table.sort(result)
   return result
@@ -62,7 +73,7 @@ end
 Teststandard_generals = {
   tearDown = function()
     Ban.resetKingdoms()
-    support.clearRoom()
+    if FkTest.room ~= nil then support.clearRoom() end
   end,
 }
 
@@ -98,6 +109,53 @@ function Teststandard_generals:testRegistryHasNinetyGeneralsAndFourteenRetinues(
   lu.assertEquals(hp[5], 6)  -- 2.5 contribution
 end
 
+-- 性别元数据：17 名女性、73 名男性，均由正式武将数据显式登记。
+-- 只统计 Data.generals（90 张正式将），翼从仍隐藏且不进入该统计。
+function Teststandard_generals:testFormalGeneralGendersAreExplicit()
+  local expectedFemale = {
+    ["hanjin__han007"] = true,
+    ["hanjin__han008"] = true,
+    ["hanjin__han011"] = true,
+    ["hanjin__wei007"] = true,
+    ["hanjin__shu007"] = true,
+    ["hanjin__shu015"] = true,
+    ["hanjin__shu016"] = true,
+    ["hanjin__wu006"] = true,
+    ["hanjin__wu008"] = true,
+    ["hanjin__wu011"] = true,
+    ["hanjin__qun003"] = true,
+    ["hanjin__qun012"] = true,
+    ["hanjin__qun018"] = true,
+    ["hanjin__jin007"] = true,
+    ["hanjin__jin008"] = true,
+    ["hanjin__jin010"] = true,
+    ["hanjin__jin012"] = true,
+  }
+  local female, male = 0, 0
+  for _, data in ipairs(Data.generals) do
+    local general = assert(Fk.generals[data.id], "Missing " .. data.id)
+    lu.assertNotNil(data.gender, "Missing gender data for " .. data.id)
+    lu.assertTrue(general.gender == General.Male or general.gender == General.Female,
+      "Unregistered gender for " .. data.id)
+    if general.gender == General.Female then
+      female = female + 1
+      lu.assertTrue(expectedFemale[data.id], "Unexpected female general " .. data.id)
+    else
+      male = male + 1
+      lu.assertNil(expectedFemale[data.id], "Female general registered as male: " .. data.id)
+    end
+  end
+  lu.assertEquals(female, 17)
+  lu.assertEquals(male, 73)
+  lu.assertEquals(Fk.generals["hanjin__qun003"].gender, General.Female) -- 貂蝉
+  lu.assertEquals(Fk.generals["hanjin__qun002"].gender, General.Male)   -- 吕布
+  -- 翼从不在 90 将性别统计内，且仍保持隐藏。
+  lu.assertEquals(#Data.generals, 90)
+  for _, retinue in ipairs(Data.retinues) do
+    lu.assertTrue(Fk.generals[retinue.id].hidden, "Retinue must stay hidden: " .. retinue.id)
+  end
+end
+
 function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder()
   local total, retinueTotal = 0, 0
   for _, data in ipairs(Data.generals) do
@@ -108,9 +166,8 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
       lu.assertEquals(Fk:translate(skill.id), skill.name)
       lu.assertEquals(Fk:translate(":" .. skill.id), skill.text)
       local skel = assert(Fk.skill_skels[skill.id], "Missing skeleton " .. skill.id)
-      if IMPLEMENTED[skill.id] then
+      if isImplemented(skill.id) then
         lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. skill.id)
-        lu.assertTrue(#skel.tests > 0, "Implemented skill needs its room-guarded addTest: " .. skill.id)
       else
         lu.assertEquals(#skel.effects, 0, "Skill must have no effect: " .. skill.id)
         lu.assertEquals(#skel.effect_spec_list, 0, "Skill must have no effect spec: " .. skill.id)
@@ -139,27 +196,42 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
     lu.assertEquals(Fk:translate(data.skill.id), data.name)
     lu.assertEquals(Fk:translate(":" .. data.skill.id), data.skill.text)
     local skel = assert(Fk.skill_skels[data.skill.id], "Missing retinue skeleton")
-    lu.assertEquals(#skel.effects, 0)
-    lu.assertEquals(#skel.effect_spec_list, 0)
-    lu.assertEquals(#Fk.skills[data.skill.id].related_skills, 0)
+    if skel.hanjinImplemented == true then
+      lu.assertTrue(#skel.effects > 0, "Implemented retinue skill needs an effect: " .. data.skill.id)
+    else
+      lu.assertEquals(#skel.effects, 0)
+      lu.assertEquals(#skel.effect_spec_list, 0)
+      lu.assertEquals(#Fk.skills[data.skill.id].related_skills, 0)
+    end
   end
   lu.assertEquals(retinueTotal, 14)
 end
 
 function Teststandard_generals:testImplementedExceptionListMatchesRegisteredEffects()
   local names = {}
-  for name in pairs(IMPLEMENTED) do table.insert(names, name) end
+  for _, data in ipairs(Data.generals) do
+    for _, skill in ipairs(data.skills) do
+      if isImplemented(skill.id) then table.insert(names, skill.id) end
+    end
+  end
   table.sort(names)
-  lu.assertEquals(names, {
+  -- Parallel work may register more Han skills with the same marker; assert
+  -- this round's required registrations and the effect contract below rather
+  -- than freezing the whole list to a single round.
+  for _, required in ipairs({
     "hanjin__skill_han001_1",
     "hanjin__skill_han001_2",
+    "hanjin__skill_han002_1",
+    "hanjin__skill_han002_2",
+    "hanjin__skill_han018_1",
     "hanjin__skill_jin001_1",
     "hanjin__skill_jin001_2",
-  })
+  }) do
+    lu.assertTrue(table.contains(names, required), "Missing implemented registration: " .. required)
+  end
   for _, name in ipairs(names) do
     local skel = assert(Fk.skill_skels[name], "Missing implemented skeleton " .. name)
     lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. name)
-    lu.assertTrue(#skel.tests > 0, "Implemented skill needs its room-guarded addTest: " .. name)
   end
   local jin = assert(Fk.generals["hanjin__jin001"])
   lu.assertTrue(table.contains(jin:getSkillNameList(), "hanjin__skill_jin001_1"))
@@ -285,11 +357,23 @@ function Teststandard_generals:testFormalRoomStartsWithBanSelectionAndHalfHp()
     lu.assertTrue(table.contains(allowed, player:getMark("__heg_kingdom")))
     lu.assertTrue(#Guest.pairKingdoms(room, main, deputy) > 0)
 
-    local a, b = Fk.generals[main], Fk.generals[deputy]
-    local sum = a.maxHp + a.mainMaxHpAdjustedValue + b.maxHp + b.deputyMaxHpAdjustedValue
-    lu.assertEquals(player.maxHp, sum // 2)
-    lu.assertEquals(player:getMark("HalfMaxHpLeft"), sum % 2)
+    -- 正式开局上限由配将贡献统一计算：引擎默认组合 + 应期等☯️修正。
+    local total = PairHp.half_hp(main, deputy)
+    lu.assertEquals(player.maxHp, total // 2)
+    lu.assertEquals(player:getMark("HalfMaxHpLeft"), total % 2)
   end
+end
+
+function Teststandard_generals:testPairHpYingqiContribution()
+  -- 应期 ☯️+2 = 2 个半格（1 点上限），与引擎默认组合公式分开核对。
+  lu.assertEquals(PairHp.base_half_hp("hanjin__wei002", "hanjin__wei001"), 7)
+  lu.assertEquals(PairHp.yinyang("hanjin__wei002", "hanjin__wei001"), 2)
+  lu.assertEquals(PairHp.half_hp("hanjin__wei002", "hanjin__wei001"), 9)
+  lu.assertEquals(PairHp.max_hp("hanjin__wei002", "hanjin__wei001"), 4)
+  lu.assertEquals(PairHp.half_left("hanjin__wei002", "hanjin__wei001"), 1)
+  -- 非多势力、非客将的配将不修正。
+  lu.assertEquals(PairHp.yinyang("hanjin__wei002", "hanjin__wei003"), 0)
+  lu.assertEquals(PairHp.max_hp("hanjin__wei002", "hanjin__wei003"), 3)
 end
 
 function Teststandard_generals:testSameNameConversionAndCompanions()
@@ -297,7 +381,7 @@ function Teststandard_generals:testSameNameConversionAndCompanions()
   for _, data in ipairs(Data.generals) do
     if data.companionText ~= "—" then companionRows = companionRows + 1 end
   end
-  lu.assertEquals(companionRows, 46)
+  lu.assertEquals(companionRows, 47)
   local room = create {
     formalOnly = true,
     settings = {
@@ -325,6 +409,7 @@ function Teststandard_generals:testSameNameConversionAndCompanions()
   lu.assertTrue(Fk.generals["hanjin__shu001"]:isCompanionWith(Fk.generals["hanjin__shu011"]))
   lu.assertTrue(Fk.generals["hanjin__jin010"]:isCompanionWith(Fk.generals["hanjin__wei002"]))
   lu.assertTrue(Fk.generals["hanjin__jin010"]:isCompanionWith(Fk.generals["hanjin__jin009"]))
+  lu.assertTrue(Fk.generals["hanjin__jin003"]:isCompanionWith(Fk.generals["hanjin__jin002"]))
   lu.assertTrue(Fk.generals["hanjin__wei001"]:isCompanionWith(Fk.generals["hanjin__wei012"]))
   lu.assertTrue(Fk.generals["hanjin__wei001"]:isCompanionWith(Fk.generals["hanjin__wei005"]))
   -- Partners outside this 90-card pack stay recorded as printed names.

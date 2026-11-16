@@ -1,6 +1,6 @@
 -- HAN001 刘协：天命、密诏。默认国战套件用例。
 -- 规则依据：rules/generals/han001-liuxie.md 第 2、3 节。
--- 验收依据：docs/development/implementation/generals/han001-liuxie.md。
+-- 验收依据：docs/development/implementation/generals/support.md#han001-1、pindian.md#han001-2。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
 local TM = "hanjin__skill_han001_1"
@@ -1722,6 +1722,70 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
     end
     room.settings.gameMode = "hanjin_heg_mode"
   end)
+end
+
+function Testhanjin_han001:testCardFootnoteStripsRichTextOnlyInHanjinMode()
+  local room = FkTest.room
+  local me, to = p1(), FkTest.room.players[2]
+  local slashId = setHand(room, me, { { "hanjin__slash" } })[1]
+  local board = Fk:getBoardGame("hanjin_heg_mode")
+  -- ##UseCardTo 是真实的脚注日志类型（不含 card 字段），无需自造翻译。
+  local msg = { type = "##UseCardTo", from = me.id, to = { to.id } }
+  local oldGeneral, oldDeputy = me.general, me.deputyGeneral
+  local oldMode = room.settings.gameMode
+
+  local function restore()
+    me.general, me.deputyGeneral = oldGeneral, oldDeputy
+    room.settings.gameMode = oldMode
+  end
+
+  local ok, err = pcall(function()
+    me.general = "hanjin__jin011" -- 张虎&乐綝，正式将 ID
+    me.deputyGeneral = "hanjin_test__wei_1"
+    asClient(room, function(clients)
+      local client = board.client_klass:new(ClientInstance.client)
+      client.players = clients
+      local notified = {}
+      client.notifyUI = function(_, name, data)
+        table.insert(notified, { name = name, data = data })
+      end
+
+      -- 路径 1：SetCardFootnote（setCardNote → parseMsg(msg, true)）
+      room.settings.gameMode = "hanjin_heg_mode"
+      client:setCardNote({ slashId, -1 }, msg, false)
+      lu.assertEquals(1, #notified)
+      lu.assertEquals("SetCardFootnote", notified[1].name)
+      local text = notified[1].data[2]
+      lu.assertNil(text:find("<font", 1, true))
+      lu.assertNil(text:find("<b>", 1, true))
+      lu.assertStrContains(text, "张虎&乐綝")
+      lu.assertStrContains(text, "对")
+
+      -- 路径 2：ShowVirtualCard（showVirtualCard → parseMsg(msg, true)）
+      notified = {}
+      client:showVirtualCard({ slashId, me.id, msg, 7 })
+      lu.assertEquals(1, #notified)
+      lu.assertEquals("ShowVirtualCard", notified[1].name)
+      local virtualText = notified[1].data[3]
+      lu.assertNil(virtualText:find("<font", 1, true))
+      lu.assertNil(virtualText:find("<b>", 1, true))
+      lu.assertStrContains(virtualText, "张虎&乐綝")
+
+      -- 普通日志 nocolor=nil：保持富文本
+      local rich = client:parseMsg(msg, nil)
+      lu.assertNotNil(rich:find("<font", 1, true))
+      lu.assertNotNil(rich:find("<b>", 1, true))
+
+      -- 其他模式：委托原逻辑，脚注保持富文本
+      room.settings.gameMode = "new_heg_mode"
+      notified = {}
+      client:setCardNote({ slashId }, msg, false)
+      lu.assertEquals(1, #notified)
+      lu.assertNotNil(notified[1].data[2]:find("<font", 1, true))
+    end)
+  end)
+  restore()
+  if not ok then error(err) end
 end
 
 return { name = "hanjin_han001" }
