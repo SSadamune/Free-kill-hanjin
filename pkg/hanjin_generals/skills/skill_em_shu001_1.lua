@@ -5,7 +5,6 @@ local H = require "packages.hegemony.util"
 
 local skill = fk.CreateSkill {
   name = "hanjin__skill_em_shu001_1",
-  tags = { Skill.Lord },
 }
 skill.hanjinImplemented = true
 

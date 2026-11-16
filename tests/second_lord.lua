@@ -164,6 +164,72 @@ function Testsecond_lord:testAscensionRevealsMainAndSyncsKingdomAndSkills()
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
 
+function Testsecond_lord:testRealZhangjiaoAscensionClearsOldfakesAndKeepsIndependentSource()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "hanjin__qun010", "hanjin__qun002", "qun")
+    room():addFakeSkill(p, "hanjin__skill_qun010_1")
+    room():addFakeSkill(p, "hanjin__skill_qun010_2")
+    p:prelightSkill("hanjin__skill_qun010_1", true)
+    p:prelightSkill("hanjin__skill_qun010_2", true)
+    -- 鬼道另有独立实际来源：清理旧主将 fake 时不能删除它。
+    p:addSkill(Fk.skills["hanjin__skill_qun010_2"])
+    room():setBanner("all_kingdoms", { "qun" })
+    lu.assertTrue(p:hasSkill("hanjin__skill_qun010_2"))
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+
+  lu.assertEquals(p.general, "hanjin__em_qun010")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
+  lu.assertEquals(p.role, "qun")
+  lu.assertTrue(p:hasSkill("hanjin__skill_em_qun010_1"), "弘法应可获取")
+  lu.assertTrue(p:hasSkill("hanjin__em_qun010_banner"), "弘法应实际授予黄巾天兵符")
+  lu.assertTrue(p:hasSkill("hanjin__skill_em_qun010_2"), "悟心正常")
+  lu.assertTrue(p:hasSkill("hanjin__skill_em_qun010_3"), "问道正常")
+  lu.assertFalse(p:hasSkill("hanjin__skill_qun010_1"), "旧雷击 fake 应清理")
+  lu.assertFalse(p:isFakeSkill("hanjin__skill_qun010_1"))
+  lu.assertTrue(p:hasSkill("hanjin__skill_qun010_2"), "独立鬼道来源应保留")
+  lu.assertFalse(p:isFakeSkill("hanjin__skill_qun010_2"),
+    "旧主将的鬼道 fake 可清，但独立实际来源不可误删")
+end
+
+function Testsecond_lord:testHiddenDeputySameSkillFakeIsPreserved()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "hanjin__qun010", G.qun_deputy.name, "qun")
+    room():addFakeSkill(p, "hanjin__skill_qun010_1")
+    room():addFakeSkill(p, "hanjin__skill_qun010_2")
+    p:prelightSkill("hanjin__skill_qun010_1", true)
+    p:prelightSkill("hanjin__skill_qun010_2", true)
+    room():setBanner("all_kingdoms", { "qun" })
+    lu.assertTrue(p:isFakeSkill("hanjin__skill_qun010_1"))
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+
+  lu.assertEquals(p.general, "hanjin__em_qun010")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
+  lu.assertTrue(p:isFakeSkill("hanjin__skill_qun010_1"),
+    "暗副将仍印刷同名雷击，fake 不应被旧主将清理")
+  lu.assertTrue(p:isFakeSkill("hanjin__skill_qun010_2"),
+    "暗副将仍印刷同名鬼道，fake 不应被旧主将清理")
+  lu.assertTrue(table.contains(p.prelighted_skills, Fk.skills["hanjin__skill_qun010_1"]))
+  lu.assertTrue(p:hasSkill("hanjin__skill_qun010_1"))
+  lu.assertTrue(p:hasSkill("hanjin__skill_qun010_2"))
+end
+
+function Testsecond_lord:testRealLiubeiLordSkillIsInstalled()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "hanjin__shu001", "hanjin_test__shu_2", "shu")
+    room():setBanner("all_kingdoms", { "shu" })
+    A.ascend(room(), p, "hanjin__em_shu001", "shu", { kind = "lord" })
+  end)
+  lu.assertEquals(p.general, "hanjin__em_shu001")
+  lu.assertTrue(p:hasSkill("hanjin__skill_em_shu001_1"),
+    "章武应作为国战君主技能获取")
+  lu.assertFalse(p:hasSkill("hanjin__skill_shu001_1"), "旧仁德应移除")
+end
+
 function Testsecond_lord:testSuccessionOrderFirstAcceptorAndRevealSync()
   local lord, first, second, other = player(1), player(2), player(3), player(4)
   FkTest.runInRoom(function()

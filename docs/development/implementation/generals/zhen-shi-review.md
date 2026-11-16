@@ -103,7 +103,7 @@
 
 牵弘用例执行真实火杀，但目标选择数据由测试构造，勤边完整主流程与复杂助战边界尚未验收。屏御已验证真实杀闪请求与材料移入弃牌堆，尚未单独验收多闪及客户端交互。激昂按[汉晋转化牌定义](../../../../rulebook/terms/description-terms/transform.md)判断：`card:isVirtual()` 且 `subcards` 非空。无材料构造牌及直接使用的实体牌不进入摸两张并失效的分支；另行弃置的技能消耗不算材料。
 
-最终默认验收：Codex直接执行 `python scripts/test.py --timeout 480`，976/976通过、0失败、退出码0（313.227秒）；输出保存于 `.dev/logs/zhen_shi_full_final.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查513文件通过，`git diff --check`通过。安装包586文件已与工作区逐字节核对。
+最终默认验收：本轮执行 `python scripts/test.py --timeout 480`，979/979通过、0失败、退出码0（280.927秒）；输出保存于 `.dev/ascension-fix-full.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查513文件通过，`git diff --check`通过。安装包1028文件已与工作区逐字节核对。
 
 ## 未完成与边界
 
@@ -112,3 +112,5 @@
 修体、武库按逐将页暂行口径实施。具体规则见[阵势包索引](../../../../rules/zhen-shi-generals.md#实装约束)。
 
 2026-11-17 默认插画接入：按实际登记 ID 核对 26 将（24 普通、2 君主），全部存在 `image/generals/<程序ID>.jpg`，Pillow 真实解码 26/26 为 JPEG 250×292 RGB。两个君主图从合并素材旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际 ID，迁移前字节一致，旧路径已删除。`python scripts/build_release.py` 生成 1028 文件安装包；`python scripts/verify_image_assets.py --release` 核对 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，并确认不含测试、脚本或 `.dev/`。真实客户端逐图显示、人工目视、联网及重连验收尚未完成；本轮未加工药枫 CSV 图片。
+
+君主升变技能同步补充：公共 `ascension.lua` 按 `actual_main` 清理旧主将牌的 fake/prelight，保留副将与独立实际来源；弘法、章武改用国战君主来源获取，不再依赖身份模式 `Skill.Lord`。真实张角+暗貂蝉和刘备升变已加入 `tests/second_lord.lua`，该套 33/33，两个君主将套件各 4/4。

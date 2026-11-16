@@ -5,6 +5,7 @@
 -- HegUtil.lordGenerals。上游按名字识别的君主特例（有君无野、君主拉回
 -- 超员野心家、君主死亡转野）因此不会抢先执行；汉晋在显式登记表上统一实现。
 local H = require "packages.hegemony.util"
+local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
 local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
@@ -151,6 +152,34 @@ local function setPrivateRole(room, player, kingdom)
   room:notifyProperty(player, player, "role")
 end
 
+--- 升变前清理旧主将牌留下的 fake/预亮技能。
+--- 隐藏主将的 player.general 是 anjiang，changeHero 看不到旧普通将的 fake；
+--- 因此必须按 actual_main 显式清理。只动 fake/prelight，不删除实际
+--- player_skills 或副将/其他独立来源。
+local function clearOldMainCardState(player, oldMain)
+  local general = oldMain and Fk.generals[oldMain]
+  if general == nil or player == nil then return end
+  local room = player.room
+  local deputy = M.actual_deputy(player)
+  local deputyHidden = deputy ~= nil and deputy ~= oldMain
+    and not Exchange.isRevealed(player, true)
+  for _, skillName in ipairs(general:getSkillNameList(true)) do
+    local skill = Fk.skills[skillName]
+    if skill ~= nil and player:isFakeSkill(skill) then
+      -- _fake_skills 按同名技能合并；暗副将也印刷/附着同名技能时，其
+      -- fake/prelight 仍是合法来源，不能删除旧主将时一并清掉。
+      local otherFakeSource = deputyHidden
+        and Exchange.cardProvidesSkill(room, deputy, skillName)
+      if not otherFakeSource then
+        player:loseFakeSkill(skill)
+        -- 旧主将的 prelight 即使另有实际 player_skills/derivative 来源，
+        -- 也不应留下旧 fake 的预亮状态；有独立来源时技能本身仍在。
+        player:prelightSkill(skill, false)
+      end
+    end
+  end
+end
+
 --- 执行一次升变。所有升变共用此流程，调用者负责在调用前复核资格。
 function M.ascend(room, player, newMain, kingdom, options)
   options = options or {}
@@ -168,6 +197,8 @@ function M.ascend(room, player, newMain, kingdom, options)
   local oldBothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
     and player.deputyGeneral ~= ""
 
+  -- 暗置主将换将不会自动清掉旧普通将的 fake/prelight；在公共升变入口处理。
+  clearOldMainCardState(player, oldMain)
   room:changeHero(player, newMain, false, false, false, false, false)
   room:setPlayerMark(player, "__heg_general", newMain)
   room:setPlayerMark(player, "hasShownMainGeneral", 1)

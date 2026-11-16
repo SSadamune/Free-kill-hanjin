@@ -4,7 +4,6 @@ local P = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_lord_qun"
 
 local skill = fk.CreateSkill {
   name = "hanjin__skill_em_qun010_1",
-  tags = { Skill.Lord },
 }
 skill.hanjinImplemented = true
 
