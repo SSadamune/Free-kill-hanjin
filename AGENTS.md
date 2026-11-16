@@ -19,11 +19,14 @@
 - `tests/support/hanjin_content.lua` 为测试专用内容，不得发布。实装与验证进度集中记录在 `docs/development/status.md`，接口及验收依据另见开发实现文档，对外说明须与当前实现一致。
 - `rules/` 与 `rulebook/` 的规则类内容由负责规则判断与审阅的角色维护。委派执行者默认只读；需要修改时，须先说明具体文件、理由和拟议改动，经负责人审阅并明确允许后再修改。
 - 需要 UI 素材时，先向用户说明需求并索取原材料，再按指示加工。从零生图或绘制素材须事先得到用户明确批准。
+- 图片目录、命名及导入遵循 `docs/development/assets.md`；默认图片按引擎固定目录及程序 ID 原样保存，不另建全量路径映射或构建改名。客将默认插画放在 `image/generals/guest/`，与普通插画同名，通过统一状态判断调用引擎附加图片入口。`docs/heroes.json` 仅为外部参考，不作为正式编号、分包或构建的规范来源。
 - 用户安装包使用 `python scripts/build_release.py` 构建，仅包含 `init.lua`、`pkg/`、`image/`、`audio/`。本体适配仅由开发脚本应用于本地运行环境，不得从扩展入口执行或打入用户安装包；仅开发环境生效的功能须在 README 中注明。
 - 面向玩家的功能及交互默认须随正式扩展发布，不得用仅开发环境有效的补丁代替交付。涉及客户端注册或加载路径时，应验证安装包包含实现及接线，并检查不依赖开发环境改动。
 - 提交前核对项目规范、正式规则底稿及开发状态的一致性；创建或更新 PR 时先读取 `.github/pull_request_template.md`，按最终范围填写。优先围绕可独立验收的目标拆分 PR，参考数据导入与临时诊断工具避免无关混入。
 
 - 新增、修复或审阅汉晋武将技能、卡牌效果及相关交互时，使用项目 skill `.agents/skills/hanjin-content-development/SKILL.md`，按需查阅相关资料；不支持 skill 加载的 agent 直接读取该文件。短指令中的“审阅”“实装”“安排 DSH 实装”按 skill 的默认流程执行，无须用户重复交代步骤；未指定委派时由当前 agent 完成，已有明确协作配置则遵循配置。纯格式或无关文档修改不必加载。规范描述编写见 `docs/development/normalized-descriptions.md`，保持卡面描述、规则抽象和引擎代码的职责区别。
+
+- 配置、替换或导入项目图片与音效素材时，使用项目 skill `.agents/skills/hanjin-asset-development/SKILL.md`，并按 `docs/development/assets.md` 核对实际程序 ID、保存目录、命名与发布接线。
 
 ## 提交格式
 
