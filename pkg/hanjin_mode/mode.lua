@@ -193,6 +193,13 @@ function M.create(base)
       self.room:addSkill("hanjin__jin_information_rule")
       self.room:addSkill("hanjin__jin_adaptation_rule")
       self.room:addSkill("hanjin__jin_sources_rule")
+      self.room:addSkill("hanjin__zhen_shi_history_rule")
+      self.room:addSkill("hanjin__general_card_skills_rule")
+      -- 晋将公开用牌历史：仅汉晋模式安装，供武库及客户端公开读取。
+      local JinHistory = Fk.skills["#hanjin_zhen_shi_jin_history"]
+      if JinHistory ~= nil then self.room:addSkill(JinHistory) end
+      local RetinueSources = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instance_sources"
+      RetinueSources.ensureRule(self.room)
       if baseStart then return baseStart(self) end
     end
     return logic
@@ -286,7 +293,13 @@ function M.create(base)
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,
-    is_counted = base.countInFunc, reward_punish = base.deathRewardAndPunish,
+    is_counted = base.countInFunc,
+    reward_punish = function(self, victim, killer)
+      local Counts=require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_lord_qun"
+      return Counts.withPhysicalCount(victim.room,function()
+        return base.deathRewardAndPunish(self,victim,killer)
+      end)
+    end,
     friend_enemy_judge = base.friendEnemyJudge,
     feasible = function(self, settings)
       if not GameMode.feasible(self, settings) then return false end

@@ -14,11 +14,79 @@ local extension = Package:new("hanjin_generals")
 extension.extensionName = "hanjin"
 extension.game_modes_whitelist = { "hanjin_heg_mode" }
 
+-- 阵/势包使用独立 Package，避免把新卡混入标准 90 将的包与计数；两种内容
+-- 共用本目录的技能骨架、卡面数据和国战模式。独立包在模式创建后补登记白名单。
+local zhenshi = Package:new("hanjin_zhenshi")
+zhenshi.extensionName = "hanjin"
+zhenshi.game_modes_whitelist = { "hanjin_heg_mode" }
+
 extension:loadSkillSkelsByPath("./packages/hanjin/pkg/hanjin_generals/skills")
 
-local Data = require "packages.hanjin.pkg.hanjin_generals.data.standard"
+local Standard = require "packages.hanjin.pkg.hanjin_generals.data.standard"
+local ZhenShi = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+
+local Formation = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_formation"
+local Jin = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_jin"
+local Jin2 = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_jin2"
+local Wei = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_wei"
+local Shu = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_shu"
+local Qun = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_qun"
+local Wu = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_wu"
+local Retinues = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_retinues"
+
+local Qun2 = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_qun2"
+
+local LordShu = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_lord_shu"
+local LordQun = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_lord_qun"
+
+local sources = {
+  { package = zhenshi, data = LordShu },
+  { package = zhenshi, data = LordQun },
+  { package = zhenshi, data = Qun2 },
+  { package = extension, data = Standard },
+  { package = zhenshi, data = ZhenShi },
+  -- 阵/势包同包 fragment：仍按一个正式包统计，不进入标准90将数据。
+  { package = zhenshi, data = Formation },
+  { package = zhenshi, data = Jin },
+  { package = zhenshi, data = Jin2 },
+  { package = zhenshi, data = Wei },
+  { package = zhenshi, data = Shu },
+  { package = zhenshi, data = Qun },
+  { package = zhenshi, data = Wu },
+  { package = zhenshi, data = Retinues },
+}
+local packagesById, retinuePackages, Data = {}, {}, {
+  generals = {},
+  retinues = {},
+  commanders = {},
+  kingdoms = {},
+  generalCount = 0,
+  retinueCount = 0,
+  commanderCount = 0,
+  skillCount = 0,
+  retinueSkillCount = 0,
+}
+for _, source in ipairs(sources) do
+  for _, data in ipairs(source.data.generals) do
+    packagesById[data.id] = source.package
+    table.insert(Data.generals, data)
+  end
+  for _, data in ipairs(source.data.retinues) do
+    retinuePackages[data.id] = source.package
+    table.insert(Data.retinues, data)
+  end
+  for _, data in ipairs(source.data.commanders) do table.insert(Data.commanders, data) end
+  for _, kingdom in ipairs(source.data.kingdoms or {}) do
+    table.insertIfNeed(Data.kingdoms, kingdom)
+  end
+  Data.generalCount = Data.generalCount + source.data.generalCount
+  Data.retinueCount = Data.retinueCount + source.data.retinueCount
+  Data.commanderCount = Data.commanderCount + source.data.commanderCount
+  Data.skillCount = Data.skillCount + source.data.skillCount
+  Data.retinueSkillCount = Data.retinueSkillCount + source.data.retinueSkillCount
+end
 
 local translations = {
   ["hanjin_generals"] = "紫乔汉晋·武将",
@@ -45,7 +113,8 @@ for _, data in ipairs(Data.generals) do
   -- 使离间/倾城等「男性」目标条件错误。数据侧必须给出显式的 female/male。
   assert(data.gender == "female" or data.gender == "male",
     "Missing gender metadata for " .. data.id)
-  local general = General:new(extension, data.id, data.kingdom, data.hp, nil,
+  local owner = assert(packagesById[data.id], "Missing data package for " .. data.id)
+  local general = General:new(owner, data.id, data.kingdom, data.hp, nil,
     data.gender == "female" and General.Female or General.Male)
   -- Two printed versions can share a Chinese name (司马懿, 诸葛亮); the engine
   -- groups same-name conversion by `trueName`. The unique card id stays the key.
@@ -71,22 +140,39 @@ end
 -- A retinue is granted only by the commander rules. `registerRetinue` hides it
 -- from the normal pool and registers it with the exchange module as a soldier.
 for _, data in ipairs(Data.retinues) do
-  local general = General:new(extension, data.id, "unknown", 4)
+  -- 翼从武将归其数据来源包；标准翼从仍属标准扩展，新阵势翼从归 zhenshi。
+  local general = General:new(retinuePackages[data.id] or extension, data.id, "unknown", 4)
   general.trueName = data.name
   general:addSkill(data.skill.id)
 end
 
-extension.standard = Data
+extension.standard = Standard
+zhenshi.standard = ZhenShi
+extension.zhen_shi = ZhenShi
+
+-- 扩展根 init.lua 把本文件作为一个 Package 返回，无法同时返回第二个 Package；
+-- 由本文件安装独立阵/势包，postLoad 时再补进 hanjin 扩展的包列表。
+zhenshi:install(Fk)
 
 -- Registration needs the installed engine (Fk.generals / Fk.all_card_types), so
 -- it runs after all packages are installed but before the mode package creates
 -- the game mode (see init.lua require order).
 Fk:addPostLoadFunc(function()
+  local group = Fk.extensions["hanjin"]
+  if group ~= nil and not table.contains(group, zhenshi.name) then
+    table.insert(group, zhenshi.name)
+  end
+  local Sources = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instance_sources"
   for _, retinue in ipairs(Data.retinues) do
     Commander.registerRetinue(retinue.id, {
       name = retinue.name,
       limited = retinue.limited,
     })
+    Sources.registerRetinue(retinue.id, retinue.skill.id)
+  end
+  local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
+  for _, source in ipairs(sources) do
+    for _, version in ipairs(source.data.versions or {}) do Versions.register(version) end
   end
   local limitedCommanders = {}
   for _, data in ipairs(Data.generals) do
@@ -124,7 +210,7 @@ Fk:addPostLoadFunc(function()
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do
     local general = assert(Fk.generals[data.id], "Missing formal general: " .. data.id)
-    assert(general.package == extension, "Wrong package for " .. data.id)
+    assert(general.package == packagesById[data.id], "Wrong package for " .. data.id)
     assert(general.maxHp == data.hp, "Wrong hp for " .. data.id)
     assert(general.mainMaxHpAdjustedValue == (data.mainHpAdjust or 0),
       "Wrong main hp adjustment for " .. data.id)
@@ -189,6 +275,18 @@ Fk:addPostLoadFunc(function()
   assert(retinue_skills == Data.retinueSkillCount, "Retinue skill count mismatch")
   assert(commanders == Data.commanderCount, "Commander source count mismatch")
   assert(skills == Data.skillCount, "Formal skill count mismatch")
+
+  -- hanjin_heg_mode 由 hanjin_mode 的 postLoad 函数在本函数之后创建，早于本
+  -- 函数执行的白名单映射合并看不到它。这里追加一个后置函数，在模式创建后把
+  -- 独立包加入白名单并重算禁用包，避免正式包在国战中被整体禁用。
+  Fk:addPostLoadFunc(function()
+    local mode = assert(Fk.game_modes.hanjin_heg_mode,
+      "Missing hanjin_heg_mode after postLoad")
+    if type(mode.whitelist) == "table" then
+      table.insertIfNeed(mode.whitelist, zhenshi.name)
+      Fk:loadDisabled()
+    end
+  end)
 end)
 
 return extension

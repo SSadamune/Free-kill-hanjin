@@ -17,4 +17,4 @@
 
 ## 实装与验证
 
-尚未登记为正式武将，未新增技能实现或自动化验证。已核对的接口、复用方向及验收边界见[开发审阅记录](../../docs/development/implementation/generals/zhen-shi-review.md)。
+已接入正式阵势包并有技能定向验证；关联统领、翼从与公共机制的覆盖范围另见开发记录。已核对的接口、复用方向及验收边界见[开发审阅记录](../../docs/development/implementation/generals/zhen-shi-review.md)。

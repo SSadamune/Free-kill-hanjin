@@ -7,11 +7,32 @@ local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_jinfanjun",
 }
 skill.hanjinImplemented = true
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
 
 local RED_USED = "hanjin__retinue_skill_jinfanjun_red-turn"
 local BLACK_USED = "hanjin__retinue_skill_jinfanjun_black-turn"
 local OPT_RED = "#hanjin__retinue_skill_jinfanjun-red"
 local OPT_BLACK = "#hanjin__retinue_skill_jinfanjun-black"
+
+local function usedColors(player, instance)
+  if instance ~= nil then
+    instance.jinfanUsed = instance.jinfanUsed or {}
+    return instance.jinfanUsed
+  end
+  return {
+    [Card.Red] = player:getMark(RED_USED) > 0,
+    [Card.Black] = player:getMark(BLACK_USED) > 0,
+  }
+end
+
+local function markUsed(player, color, instance)
+  if instance ~= nil then
+    instance.jinfanUsed = instance.jinfanUsed or {}
+    instance.jinfanUsed[color] = true
+  else
+    player.room:addPlayerMark(player, color == Card.Red and RED_USED or BLACK_USED, 1)
+  end
+end
 
 local function markFor(color)
   return color == Card.Red and RED_USED or BLACK_USED
@@ -41,39 +62,65 @@ local function discardedColors(player, data)
   return colors
 end
 
-local function availableColors(player, data)
+local function availableColors(player, data, instance)
   local colors = discardedColors(player, data)
+  local used = usedColors(player, instance)
   local available = {}
   for _, color in ipairs({ Card.Red, Card.Black }) do
-    if colors[color] and player:getMark(markFor(color)) == 0
-      and #discardableOfColor(player, color) > 0 then
+    if colors[color] and not used[color] and #discardableOfColor(player, color) > 0 then
       table.insert(available, color)
     end
   end
   return available
 end
 
+local function triggerEach(self, event, target, player, data)
+  if #R.instancesForSkill(player, skill.name) == 0 then
+    return self:doCost(event, target, player, data)
+  end
+  return R.triggerEach(self, event, target, player, data)
+end
+
+skill:addEffect(fk.TurnStart, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target ~= nil and target.room ~= nil
+  end,
+  on_refresh = function(self, event, target, player)
+    for _, owner in ipairs(player.room.players) do
+      for _, instance in ipairs(R.instancesForSkill(owner, skill.name)) do
+        instance.jinfanUsed = {}
+      end
+    end
+  end,
+})
+
 skill:addEffect(fk.AfterCardsMove, {
   anim_type = "drawcard",
   global = true,
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
-    return player ~= nil and not player.dead and player:hasSkill(skill.name)
-      and #availableColors(player, data) > 0
+    if player == nil or player.dead then return false end
+    if not player:hasSkill(skill.name) then return false end
+    if #R.instancesForSkill(player, skill.name) == 0 then
+      return #availableColors(player, data, nil) > 0
+    end
+    for _, instance in ipairs(R.instancesForSkill(player, skill.name)) do
+      if #availableColors(player, data, instance) > 0 then return true end
+    end
+    return false
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local instance = R.currentForEvent(self, event)
+    local colors = availableColors(player, data, instance)
+    if #colors == 0 then return false end
+    if not player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
       prompt = "#hanjin__retinue_skill_jinfanjun-invoke",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    local colors = availableColors(player, data)
-    if #colors == 0 then return end
-
+    }) then return false end
     local color = colors[1]
     if #colors > 1 then
-      local option = room:askToChoice(player, {
+      local option = player.room:askToChoice(player, {
         choices = { OPT_RED, OPT_BLACK },
         skill_name = skill.name,
         prompt = "#hanjin__retinue_skill_jinfanjun-color",
@@ -81,8 +128,16 @@ skill:addEffect(fk.AfterCardsMove, {
       })
       color = option == OPT_RED and Card.Red or Card.Black
     end
-    if #discardableOfColor(player, color) == 0 then return end
-
+    if not table.contains(colors, color) then return false end
+    event:setCostData(self, { color = color, instance = instance })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local cost = event:getCostData(self) or {}
+    local color = cost.color
+    local instance = cost.instance
+    if color == nil or #discardableOfColor(player, color) == 0 then return end
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
@@ -93,7 +148,7 @@ skill:addEffect(fk.AfterCardsMove, {
       cancelable = false,
     })
     if cards == nil or #cards ~= 1 then return end
-    room:addPlayerMark(player, markFor(color), 1)
+    markUsed(player, color, instance)
     player:drawCards(2, skill.name)
   end,
 })

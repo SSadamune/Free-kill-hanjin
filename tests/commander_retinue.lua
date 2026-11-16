@@ -9,10 +9,6 @@ local function setup()
   -- "play phase" look like a response window.
   Fk.currentResponsePattern = nil
   local room = support.initHanjinRoom()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  -- The exchange suite clears global listeners in its tearDown; re-install ours
-  -- for each commander test.  The listener itself is idempotent.
-  Exchange.addCompletionListener(C.onExchangeCompleted)
   FkTest.runInRoom(function()
     C.reset(room)
     for _, player in ipairs(room.players) do C.grantAbility(player) end
@@ -21,8 +17,6 @@ local function setup()
 end
 
 local function teardown()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  Exchange.removeCompletionListener(C.onExchangeCompleted)
   support.clearRoom()
 end
 

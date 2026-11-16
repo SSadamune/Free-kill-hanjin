@@ -4,7 +4,7 @@
 
 ## 武将与翼从
 
-- [六势力阵包、势包规则与实现路径审阅](generals/zhen-shi-review.md)（尚未实装，结算与边界见逐将规则）
+- [六势力阵包、势包规则与实现路径审阅](generals/zhen-shi-review.md)（24普通武将、两君主及三新翼从，验证边界见记录）
 
 - [汉势力标准包](generals/han-standard.md)
 - [魏势力标准包](generals/wei-standard.md)

@@ -4,6 +4,14 @@ local skill = fk.CreateSkill {
 skill.hanjinImplemented = true
 
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+
+local function triggerEach(self, event, target, player, data)
+  if #R.instancesForSkill(player, skill.name) == 0 then
+    return self:doCost(event, target, player, data)
+  end
+  return R.triggerEach(self, event, target, player, data)
+end
 
 Fk:loadTranslationTable {
   ["hanjin__retinue_skill_xiliang_jingqi"] = "西凉精骑",
@@ -14,6 +22,7 @@ Fk:loadTranslationTable {
 
 skill:addEffect(fk.EventPhaseStart, {
   anim_type = "offensive",
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return target == player and player:hasSkill(skill.name) and player.phase == Player.Finish
   end,
@@ -41,6 +50,7 @@ skill:addEffect(fk.EventPhaseStart, {
 })
 
 skill:addEffect(fk.TargetSpecified, {
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return target == player and player:hasSkill(skill.name)
       and data.card ~= nil and data.card.trueName == "slash"

@@ -1,7 +1,17 @@
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+
 local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_baima_yicong",
 }
 skill.hanjinImplemented = true
+
+local function triggerEach(self, event, target, player, data)
+  if #R.instancesForSkill(player, skill.name) == 0 then
+    -- 非翼从来源直接授予技能时，保留“本身一份”语义；真实多实例应同时持有实例。
+    return self:doCost(event, target, player, data)
+  end
+  return R.triggerEach(self, event, target, player, data)
+end
 
 Fk:loadTranslationTable {
   ["hanjin__retinue_skill_baima_yicong"] = "白马义从",
@@ -12,6 +22,7 @@ Fk:loadTranslationTable {
 
 skill:addEffect(fk.CardUsing, {
   anim_type = "support",
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     if data.card == nil or data.card.trueName ~= "jink" then return false end
@@ -48,6 +59,7 @@ skill:addEffect(fk.CardUsing, {
 
 skill:addEffect(fk.CardResponding, {
   anim_type = "support",
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     if data.card == nil or data.card.trueName ~= "jink" then return false end

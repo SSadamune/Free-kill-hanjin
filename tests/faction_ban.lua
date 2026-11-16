@@ -28,7 +28,7 @@ function Testhanjin_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUp
   lu.assertEquals(#Fk.packages.hanjin_generals.generals, 104) -- 90 generals + 14 retinues
   for _, general in ipairs(Fk.packages.hanjin_generals.generals) do
     lu.assertTrue(general.name:startsWith("hanjin__"))
-    lu.assertEquals(general.package, Fk.packages.hanjin_generals)
+    lu.assertIs(general.package, Fk.packages.hanjin_generals)
     lu.assertEquals(general.package.extensionName, "hanjin")
   end
   local thunder = table.filter(Fk.packages.hanjin_cards.cards, function(card)

@@ -26,6 +26,7 @@ skill:addEffect(fk.EventPhaseStart, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     local n = #room.alive_players < 4 and 3 or 5
+    if player:getMark("hanjin__skill_shu012_3-guanxing-bonus") > 0 then n = n + 2 end
     local result = room:askToGuanxing(player, {
       cards = room:getNCards(n),
       skill_name = skill.name,

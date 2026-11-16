@@ -20,6 +20,7 @@
 -- rule that relaxes the default same-kingdom requirement.
 
 local M = {}
+local GeneralCardSkills = require "packages.hanjin.pkg.hanjin_mode.rules.general_card_skills"
 
 local LEDGER_TAG = "hanjin_skill_ledger_v1"
 local HISTORY_SCOPES = { Player.HistoryPhase, Player.HistoryTurn, Player.HistoryRound, Player.HistoryGame }
@@ -73,6 +74,14 @@ local function cardProvides(room, generalName, skillName)
     if filter(room, generalName, skillName) == false then return false end
   end
   return true
+end
+
+--- 查询武将牌实际保有的技能，含已登记的失去技能过滤，不要求将牌明置。
+function M.cardProvidesSkill(room,generalName,skillName)
+  local general=Fk.generals[generalName]
+  local printed=general~=nil and table.contains(general:getSkillNameList(true),skillName)
+  return (printed or GeneralCardSkills.provides(room, generalName, skillName))
+    and cardProvides(room,generalName,skillName)
 end
 
 local function heg()
@@ -257,16 +266,25 @@ end
 ---@param isLord boolean
 ---@param includeRelated boolean
 ---@return string[]
-function M.positionSkills(generalName, isDeputy, isLord, includeRelated)
+function M.positionSkills(generalName, isDeputy, isLord, includeRelated, room)
   local general = Fk.generals[generalName]
   if not general then return {} end
+  room = room or Fk:currentRoom()
   local result = {}
-  for _, skillName in ipairs(general:getSkillNameList(isLord, includeRelated)) do
+  local function add(skillName)
     local skill = Fk.skills[skillName]
     if skill then
       local wrongPlace = (isDeputy and skill:hasTag(Skill.MainPlace))
         or (not isDeputy and skill:hasTag(Skill.DeputyPlace))
       if not wrongPlace then table.insertIfNeed(result, skillName) end
+    end
+  end
+  for _, skillName in ipairs(general:getSkillNameList(isLord, includeRelated)) do
+    add(skillName)
+  end
+  if room ~= nil then
+    for _, skillName in ipairs(GeneralCardSkills.skills(room, generalName)) do
+      add(skillName)
     end
   end
   return result
@@ -407,7 +425,7 @@ function M.skillOwner(player, skillName)
       local active = M.isRevealed(player, isDeputy)
         or player:isFakeSkill(skillName)
       if active and cardProvides(room, name, skillName)
-        and table.contains(M.positionSkills(name, isDeputy, isLord, true), skillName) then
+        and table.contains(M.positionSkills(name, isDeputy, isLord, true, room), skillName) then
         table.insert(candidates, {
           name = name,
           revealed = M.isRevealed(player, isDeputy),
@@ -737,7 +755,11 @@ local function syncSkills(room, player, departingSkills, postProvided, attachabl
 
   for _, skillName in ipairs(attachable) do
     local skill = Fk.skills[skillName]
-    if skill and not table.contains(player.player_skills, skill) then
+    if skill and not table.contains(player.player_skills, skill)
+      and not (GeneralCardSkills.manages(player,skillName)
+        and not table.find({player.general,player.deputyGeneral},function(name)
+          return Fk.generals[name] and table.contains(Fk.generals[name]:getSkillNameList(true),skillName)
+        end)) then
       local got = player:addSkill(skill)
       for _, gotSkill in ipairs(got) do
         room:doBroadcastNotify("AddSkill", { player.id, gotSkill.name })
@@ -976,6 +998,7 @@ function M.exchange(room, first, second, options)
   local bPostAttachable = postAttachableSkills(room, b.player, positions[b.player])
   syncSkills(room, a.player, aSide.attachable, aPostProvided, aPostAttachable)
   syncSkills(room, b.player, bSide.attachable, bPostProvided, bPostAttachable)
+  GeneralCardSkills.sync(room)
 
   -- 4. Named private piles move with the card after the new skills are in
   -- place (never for a same-player swap).

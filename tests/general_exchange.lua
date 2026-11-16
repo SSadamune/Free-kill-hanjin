@@ -22,7 +22,6 @@ end
 Testgeneral_exchange = {
   setup = support.initHanjinRoom,
   tearDown = function()
-    Exchange.clearCompletionListeners()
     support.clearRoom()
   end,
 }

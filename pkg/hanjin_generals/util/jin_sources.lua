@@ -68,7 +68,8 @@ function M.choices(player)
     end
   end
   for sourceSkill, skills in pairs(player.derivative_skills or {}) do
-    for _, skill in ipairs(skills) do
+    local CardSkills=require "packages.hanjin.pkg.hanjin_mode.rules.general_card_skills"
+    for _, skill in ipairs(sourceSkill.name~=CardSkills.SOURCE and skills or {}) do
       if player:hasSkill(skill.name, true, true) then
         addChoice(result, seen, skill.name, nil, nil, sourceSkill)
       end

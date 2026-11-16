@@ -29,7 +29,10 @@ def run_locked(args, exe, suite):
         command = [str(exe), '--testfile', suite.as_posix()]
     try:
         result = subprocess.run(command, cwd=RUNTIME, capture_output=True, timeout=args.timeout)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as error:
+        partial = (error.stdout or b'') + (error.stderr or b'')
+        if partial:
+            print(partial.decode('utf-8', errors='replace'), end='')
         print(f'FAIL: tests exceeded {args.timeout}s', file=sys.stderr)
         return 1
     output = (result.stdout + result.stderr).decode('utf-8', errors='replace')

@@ -164,7 +164,10 @@ function Testhanjin_wei_retinues:testBingzhouDuelByTargetFixedDistanceAndOncePer
   lu.assertEquals(p1():distanceTo(p2()), 1)
   lu.assertEquals(p2():distanceTo(p1()), 1)
   local pairs = p1():getMark("@[hanjin_bingzhou_pairs]")
-  lu.assertTrue(type(pairs) == "table" and table.contains(pairs, p2().id))
+  lu.assertEquals(type(pairs), "table")
+  lu.assertNotNil(table.find(pairs, function(entry)
+    return type(entry) == "table" and entry.other == p2().id
+  end), "距离关系按翼从实例及对手记录")
   -- 阶段次数限制。
   lu.assertEquals(p1():usedSkillTimes(BZ, Player.HistoryPhase), 1)
   inRoom(function()
