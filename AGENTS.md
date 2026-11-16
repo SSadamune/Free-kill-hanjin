@@ -26,6 +26,8 @@
 
 - 新增、修复或审阅汉晋武将技能、卡牌效果及相关交互时，使用项目 skill `.agents/skills/hanjin-content-development/SKILL.md`，按需查阅相关资料；不支持 skill 加载的 agent 直接读取该文件。短指令中的“审阅”“实装”“安排 DSH 实装”按 skill 的默认流程执行，无须用户重复交代步骤；未指定委派时由当前 agent 完成，已有明确协作配置则遵循配置。纯格式或无关文档修改不必加载。规范描述编写见 `docs/development/normalized-descriptions.md`，保持卡面描述、规则抽象和引擎代码的职责区别。
 
+- 配置、替换或导入项目图片与音效素材时，使用项目 skill `.agents/skills/hanjin-asset-development/SKILL.md`，并按 `docs/development/assets.md` 核对实际程序 ID、保存目录、命名与发布接线。
+
 ## 提交格式
 
 - 使用规范式提交，格式为 `类型: 中文标题`，标题简洁说明改动。功能使用 `feature`，修复使用 `fix`，文档使用 `docs`；其他改动可使用 `refactor`、`test`、`chore` 等对应类型。

@@ -124,6 +124,18 @@ VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同�
 
 将示例范围替换为本轮目标。默认由当前 agent 执行，委派遵循明确指定或已有协作配置；提交、推送及 PR 操作需有用户授权。不支持 skill 加载的工具可直接读取上述 `SKILL.md`。资料查找、裁定和协作要求见[新会话入口](docs/development/README.md#新会话入口)。
 
+图片、音效及素材配置使用项目 [hanjin-asset-development skill](.agents/skills/hanjin-asset-development/SKILL.md)。给出动作、范围和已提供的素材即可，例如：
+
+```text
+按照 hanjin-asset-development 替换刘协默认插画，素材在 assets-source/
+```
+
+```text
+按照 hanjin-asset-development 接入技能语音，素材已放在 assets-source/，目标技能见本轮说明
+```
+
+缺少原材料时先说明需求并索取；从零生图或绘制素材须用户明确批准；新音效依用户目标与现有接口处理，缺少影响成品的关键需求再澄清。素材技术规范见[图片与音效资源保存规范](docs/development/assets.md)，实际素材、接线与验证结果分别落在 `image/`、`audio/`、`pkg/` 和 `docs/development/`。默认由当前 agent 执行，不自动提交。
+
 ## 文件结构
 
 ```text

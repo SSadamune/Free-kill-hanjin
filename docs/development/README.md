@@ -12,12 +12,14 @@
 | [汉晋规则集工作底稿](../../rulebook/README.md) | 已复制的基础条文及未来汉晋修订；日常具体条文引用入口 |
 | [实现导航](implementation/README.md) | 引擎接口、代码位置、接线及验收依据 |
 | [测试规范](testing.md) | 分层测试、夹具、失败诊断与发布验证方法 |
-| [图片资源保存规范](assets.md) | 默认图片与客将附加插画的路径、独立武将版本及资源验收 |
+| [图片与音效资源保存规范](assets.md) | 默认图片、客将附加插画、音效查找路径及资源发布验收 |
 | [客将默认插画功能设计](guest-illustrations.md) | 待实装的统一插画选择、选将展示、重连与可见性要求 |
 | [开发状态](status.md) | 当前实装、自动化／人工验证、待办与验证基线 |
 | [故障案例](lessons.md) | 可复用的触发条件、根因、修复与回归入口 |
 
 规则确认、代码完成和验证完成是独立事实。实现文档中的历史覆盖记录不替代当前状态表；规则中尚待裁定的内容不因实现存在而获批。
+
+工作流入口与事实记录分开：[hanjin-content-development](../../.agents/skills/hanjin-content-development/SKILL.md) 和 [hanjin-asset-development](../../.agents/skills/hanjin-asset-development/SKILL.md) 是任务入口，分别规定技能内容与图片／音效素材的操作顺序和资料导航；稳定规则见 `rules/`、`rulebook/` 及本目录规范，功能设计见 `guest-illustrations.md`，具体接线见 `implementation/`，实际结果见 `status.md`。`image/`、`audio/`、`pkg/`、`scripts/` 是实际交付与工具；不要用 skill 或状态记录替代规范。
 
 ## 一次内容开发
 
