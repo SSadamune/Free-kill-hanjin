@@ -10,6 +10,9 @@
 | 药枫桑大合集337.csv | [assets/docs/药枫桑大合集337.csv](docs/药枫桑大合集337.csv) | 用户提供的外部内容参考；CSV 原样保留 |
 | 规则向FAQ文件.md | [assets/docs/规则向FAQ文件.md](docs/规则向FAQ文件.md) | 用户提供的外部汉晋规则参考，由同名 DOCX 转换 |
 | 《三国杀规则集》来源副本 | [assets/docs/rules/README.md](docs/rules/README.md) | 外部规则参考资料；项目日常条文引用以 `rulebook/` 为准 |
+| 势备应变牌堆差异 | [assets/bilibili articles/opus-1189996246484385815-势备应变牌堆差异.md](bilibili%20articles/opus-1189996246484385815-势备应变牌堆差异.md) | 紫髯的小乔公开图文《图鉴#22》的差异整理，不是原文全页，也不是项目裁定 |
+| 图鉴#22 锦囊与装备图 | [assets/bilibili articles/opus-1189996246484385815-cards](bilibili%20articles/opus-1189996246484385815-cards/) | 同一篇图文里的牌面和花色点数表，按牌名保存；不进入安装包 |
+| 图鉴#22 锦囊装备文本 | [assets/bilibili articles/opus-1189996246484385815-锦囊装备.json](bilibili%20articles/opus-1189996246484385815-锦囊装备.json) | 由上述牌面和点数表整理的描述、花色与点数；不是项目裁定 |
 
 ## 素材原稿
 
@@ -19,7 +22,7 @@
 
 ## 来源与不回写边界
 
-- 外部资料保持原始内容，JSON、CSV 与图片原稿按字节原样保存；不为标记来源向 JSON／CSV 插入注释或额外记录。
+- 外部资料保持原始内容，JSON、CSV 与图片原稿按字节原样保存；不为标记来源向 JSON／CSV 插入注释或额外记录。公开图文的差异整理单独放在 `bilibili articles/`，只收录正文里写明的差异，不把整理稿当成原文或项目裁定。
 - 图片原稿只读保存，迁移与加工不改原字节；需要格式转换时另行记录来源与参数。
 - 项目采用的规则、与外部资料的差异及用户裁定记入 `docs/rules/` 和 `rulebook/`，再据此维护实现与测试。
 - 本目录不进入用户安装包；构建只包含 `init.lua`、`pkg/`、`image/`、`audio/`。
