@@ -10,7 +10,7 @@
 | 药枫桑大合集337.csv | [assets/docs/药枫桑大合集337.csv](docs/药枫桑大合集337.csv) | 用户提供的外部内容参考；CSV 原样保留 |
 | 规则向FAQ文件.md | [assets/docs/规则向FAQ文件.md](docs/规则向FAQ文件.md) | 用户提供的外部汉晋规则参考，由同名 DOCX 转换 |
 | 《三国杀规则集》来源副本 | [assets/docs/rules/README.md](docs/rules/README.md) | 外部规则参考资料；项目日常条文引用以 `rulebook/` 为准 |
-| 势备应变牌堆与君主装备 | [assets/bilibili articles/cards](bilibili%20articles/cards/) | 图鉴公开图文的牌面、花色点数、牌堆差异和君主装备结算；不是项目裁定 |
+| 势备应变牌堆与君主装备 | [assets/bilibili articles/cards](bilibili%20articles/cards/) | 图鉴公开图文的牌面、花色点数、牌堆差异、君主装备结算，以及诏书和势力锦囊；不是项目裁定 |
 
 ## 素材原稿
 
