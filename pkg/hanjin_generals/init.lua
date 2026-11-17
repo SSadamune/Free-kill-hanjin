@@ -90,7 +90,7 @@ end
 
 local translations = {
   ["hanjin_generals"] = "标准包",
-  ["hanjin_zhenshi"] = "君临天下·阵势变权",
+  ["hanjin_zhenshi"] = "君临天下",
   ["hanjin_prefix_std"] = "标",
   ["hanjin_prefix_zhen"] = "阵",
   ["hanjin_prefix_shi"] = "势",
@@ -122,7 +122,7 @@ local prefixByRetinue = {
   ["hanjin__retinue_lujiang_shangjia"] = "hanjin_prefix_shi",
 }
 for _, general in ipairs(Data.generals) do
-  translations[general.id] = general.name
+  translations[general.id] = general.displayName or general.name
   translations["#" .. general.id] = general.title
   for _, skill in ipairs(general.skills) do
     translations[skill.id] = skill.name
@@ -209,7 +209,16 @@ zhenshi:install(Fk)
 Fk:addPostLoadFunc(function()
   local group = Fk.extensions["hanjin"]
   if group ~= nil and not table.contains(group, zhenshi.name) then
-    table.insert(group, zhenshi.name)
+    -- GeneralsOverview reads the group order directly; keep the merged
+    -- 阵/势 package immediately after the standard package, not appended last.
+    local index = #group + 1
+    for i, name in ipairs(group) do
+      if name == extension.name then
+        index = i + 1
+        break
+      end
+    end
+    table.insert(group, index, zhenshi.name)
   end
   local Sources = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instance_sources"
   for _, retinue in ipairs(Data.retinues) do

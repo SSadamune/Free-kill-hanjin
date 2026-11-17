@@ -103,7 +103,7 @@
 
 牵弘用例执行真实火杀，但目标选择数据由测试构造，勤边完整主流程与复杂助战边界尚未验收。屏御已验证真实杀闪请求与材料移入弃牌堆，尚未单独验收多闪及客户端交互。激昂按[汉晋转化牌定义](../../../../rulebook/terms/description-terms/transform.md)判断：`card:isVirtual()` 且 `subcards` 非空。无材料构造牌及直接使用的实体牌不进入摸两张并失效的分支；另行弃置的技能消耗不算材料。
 
-最终默认验收：本轮执行 `python scripts/test.py --timeout 480`，979/979通过、0失败、退出码0（280.927秒）；输出保存于 `.dev/ascension-fix-full.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查513文件通过，`git diff --check`通过。安装包1028文件已与工作区逐字节核对。
+最终默认验收：本轮执行 `python scripts/test.py --timeout 480`，979/979通过、0失败、退出码0（280.927秒）；输出保存于 `.dev/ascension-fix-full.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查通过，`git diff --check`通过。
 
 ## 未完成与边界
 
@@ -111,10 +111,6 @@
 
 修体、武库按逐将页暂行口径实施。具体规则见[阵势包索引](../../../../rules/zhen-shi-generals.md#实装约束)。
 
-2026-11-17 默认插画接入：按实际登记 ID 核对 26 将（24 普通、2 君主），全部存在 `image/generals/<程序ID>.jpg`，Pillow 真实解码 26/26 为 JPEG 250×292 RGB。两个君主图从合并素材旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际 ID，迁移前字节一致，旧路径已删除。`python scripts/build_release.py` 生成 1028 文件安装包；`python scripts/verify_image_assets.py --release` 核对 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，并确认不含测试、脚本或 `.dev/`。真实客户端逐图显示、人工目视、联网及重连验收尚未完成；本轮未加工药枫 CSV 图片。
-
 君主升变技能同步补充：公共 `GeneralCardState.clearLeavingCardState` 只清理指定离牌位置的 fake/prelight，升变与穿心共用；保留另一暗将同名合法来源和角色独立实际来源。弘法、章武改用国战君主来源获取，不再依赖身份模式 `Skill.Lord`。真实张角+暗貂蝉、暗副将同名来源和刘备升变已加入 `tests/second_lord.lua`，该套 33/33；`qun024_zhangren` 4/4，两个君主将套件各 4/4。
 
 挑衅 AI 请求修复：`C.askToUseCard` 的 `names/card_name/name` 是策略白名单，不再作为引擎 pattern 直接删除；公共转发从卡名派生 `trueName` pattern（`hanjin__slash` → `slash`）。挑衅真实走 `Room:askToUseCard` 请求，AI 不再收到 nil pattern；选择端用锁定引擎的 `extra_data.exclusive_targets` 限定姜维，服务端保留 `fixed_targets` 复核。`tests/card_use_targets.lua` 36/36（含 `card_name` 别名、固定目标拒绝和 exclusive_targets 观察）、`tests/shu012_jiangwei.lua` 6/6（含取消后实际弃牌）。全库扫描中已有显式 pattern 或由上层生成请求参数的分支保留；未发现其他无证据需改的直接调用。首次全量982项981成功，唯一失败为 `shu021_mifuren`；该套记录初始珠联标记（样本 before=0/after=1）并按 before+1 修正断言，单跑4/4。两项修复后最终全量982/982通过。
-
-2026-11-17 命名与角标：正式 `General` 构建时写入独立 `prefix` 翻译键，不再沿用 ID 的 `hanjin__` 前缀显示总扩展名。标准 90 将及 14 翼从为 `hanjin_prefix_std`（标）；阵包 12 将、君刘备及八阵兵为 `hanjin_prefix_zhen`（阵）；势包 12 将、君张角、青州精锐、庐江上甲为 `hanjin_prefix_shi`（势）。阵／势名单逐项取自[来源索引](../../../../rules/zhen-shi-generals.md)的两张表，翼从随其统领来源；未修改 `hanjin__*` ID、`hanjin_zhenshi` 包身份或计数。`tests/standard_generals.lua` 12/12、`tests/zhen_shi_registration.lua` 4/4、`tests/smoke.lua` 2/2；两套代表用例经客户端 `ltk.client.util:getGeneralData` 断言 `prefix` 与翻译，两君主及三种新翼从均在覆盖内。默认全量 982/982（292.934 秒，退出码 0），`check_lua` 全量 OK；1029 文件安装包已构建并核对 ZIP 内 `prefix` 键、阵势显示名及无测试／脚本／`.dev/`。客户端逐图与人工界面验收未完成。

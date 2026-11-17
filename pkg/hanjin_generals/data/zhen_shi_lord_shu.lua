@@ -19,6 +19,7 @@ M.generals = {
     number = [==[EM(SHU001)]==],
     id = [==[hanjin__em_shu001]==],
     name = [==[刘备]==],
+    displayName = [==[<font color="#FFFF00">君</font>刘备]==],
     kingdom = [==[shu]==],
     title = [==[龙横蜀汉]==],
     halfHp = 2.0,

@@ -18,6 +18,7 @@ M.generals = {
     number = [==[EM(QUN010)]==],
     id = [==[hanjin__em_qun010]==],
     name = [==[张角]==],
+    displayName = [==[<font color="#FFFF00">君</font>张角]==],
     kingdom = [==[qun]==],
     title = [==[时代的先驱]==],
     halfHp = 2.0,

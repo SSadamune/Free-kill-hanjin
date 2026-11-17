@@ -147,7 +147,7 @@ python scripts/test.py --timeout 180
 608 项通过，0 失败，退出码 0
 
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (446 files)，退出码 0
+Built .dev/dist/hanjin.zip，退出码 0
 ```
 
 ## 吴区
@@ -195,7 +195,7 @@ Ran 657 tests in 107.552 seconds, 657 successes, 0 failures
 退出码 0
 
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (452 files)
+Built .dev/dist/hanjin.zip
 退出码 0
 ```
 
@@ -213,10 +213,10 @@ exit 0
 python scripts/check_lua.py
 366 Lua files OK, exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (477 files)
+Built .dev/dist/hanjin.zip
 ```
 
-八套新增晋专项共65项纳入默认套件，公共转换额外加入暗卧龙回归。默认全量输出 `.dev/logs/jin_full_final.log`；保留原生 Distance malfunction 警告，无critical Lua错误或失败断言。安装包全部477文件与工作区 `init.lua`、`pkg/`、`image/`、`audio/` 精确逐字节一致，包含五个新增正式模式规则、共享辅助及技能接线，无测试、脚本或本体开发补丁。文档本地链接和差异格式检查通过。
+八套新增晋专项共65项纳入默认套件，公共转换额外加入暗卧龙回归。默认全量输出 `.dev/logs/jin_full_final.log`；保留原生 Distance malfunction 警告，无critical Lua错误或失败断言。安装包包含五个新增正式模式规则、共享辅助及技能接线，无测试、脚本或本体开发补丁。文档本地链接和差异格式检查通过。
 
 真实客户端点击、多人联网／重连及干净本体安装人工验收未执行；自动化通过不扩展为这些结论。以下保留各专项证据及整合期间发现的问题。
 
@@ -328,7 +328,7 @@ DSH 分批实现，Codex 审阅并接手收尾修复与验收。规则资料提�
 
 最终 `python scripts/test.py --timeout 180`：`Ran 713 tests in 120.582 seconds, 713 successes, 0 failures`，退出码 0；六套蜀包专项共 50 项均已纳入默认套件。`python scripts/check_lua.py` 退出码 0。共享目标机制定向历史：`card_use_targets` 34/34、`extra_targets` 37/37，由 DSH 工具原生检查确认，最终默认套件亦包含这些回归。
 
-`python scripts/build_release.py` 构建 `.dev/dist/hanjin.zip` 成功，共 459 文件。Codex 对 41 个本批修改／新增正式文件逐字节核对，包含全部技能、重铸辅助、模式接线和共享目标条件；包内仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含开发补丁、脚本或测试。15 个蜀区主称号及 26 条卡面技能原文与 JSON 标准版逐项一致。
+`python scripts/build_release.py` 构建 `.dev/dist/hanjin.zip` 成功。Codex 核对本批修改／新增正式文件，包含全部技能、重铸辅助、模式接线和共享目标条件；包内仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含开发补丁、脚本或测试。15 个蜀区主称号及 26 条卡面技能原文与 JSON 标准版逐项一致。
 
 本批闭合的实质问题：仁德选择窗口的次数参数须进入执行复核；咆哮不能只累计得技后的计次杀；享乐保留使用者自行弃牌；突阵不能读取响应牌当前持有者猜抵消者；烈勇的本次杀加成失技后仍生效；祸首／巨象的免疫须检查技能归属；祸首不改变用牌者；周仓执行时必须沿用显式目标策略；象兵火伤生成的杀不豁免其杀后南蛮条款；周仓与巨象处理对应的全部实体牌。
 
@@ -349,10 +349,10 @@ Ran 764 tests in 140.766 seconds, 764 successes, 0 failures
 python scripts/check_lua.py
 exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (466 files)
+Built .dev/dist/hanjin.zip
 ```
 
-24 个群技能文件与包内逐字节一致，包内路径仅限正式发布目录。日志为本地 `.dev/logs/qun_client_fixed.log`、`.dev/logs/qun_client_full.log`；全量仍有原生 Distance malfunction 警告，未出现 critical Lua 错误或失败断言。客户端点击、联网／重连与干净本体安装未人工验收。故障预防与夹具说明补在 [lessons.md](../../lessons.md) 及 [testing.md](../../testing.md)，不重复增加原则性警告。以下保留首次集成的历史结果与有复用价值的经验。
+群技能文件已核对在包内，包内路径仅限正式发布目录。日志为本地 `.dev/logs/qun_client_fixed.log`、`.dev/logs/qun_client_full.log`；全量仍有原生 Distance malfunction 警告，未出现 critical Lua 错误或失败断言。客户端点击、联网／重连与干净本体安装未人工验收。故障预防与夹具说明补在 [lessons.md](../../lessons.md) 及 [testing.md](../../testing.md)，不重复增加原则性警告。以下保留首次集成的历史结果与有复用价值的经验。
 
 DSH 分批实现，Codex 审阅、集中串行运行。范围为 15 将、27 条技能记录及黄巾雷使；马术共用蜀马超实现，并州狼骑／西凉精骑沿用现有实现。
 
@@ -388,9 +388,9 @@ Ran 761 tests in 129.619 seconds, 761 successes, 0 failures
 python scripts/check_lua.py
 exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (466 files)
+Built .dev/dist/hanjin.zip
 ```
 
-受影响的汉区拼点、司马炎、吴区伤害与群包十套件共同执行 98 项全部通过（22.964 秒）；使用的是原套件断言，临时组合入口随后删除。安装包内 40 个新增／修改正式文件与工作区逐字节一致，三个旧群马术骨架不在包内，且排除测试、脚本与开发本体适配。正式将性别登记为 17 女／73 男，离间／倾城针对真实双将的性别过滤已有回归。默认全量完整输出保存在本地 `.dev/logs/qun_full_final.log`。
+受影响的汉区拼点、司马炎、吴区伤害与群包十套件共同执行 98 项全部通过（22.964 秒）；使用的是原套件断言，临时组合入口随后删除。安装包内新增／修改正式文件已核对，三个旧群马术骨架不在包内，且排除测试、脚本与开发本体适配。正式将性别登记为 17 女／73 男，离间／倾城针对真实双将的性别过滤已有回归。默认全量完整输出保存在本地 `.dev/logs/qun_full_final.log`。
 
 自动记账即使写为 `on_trigger`，无条件加入触发池仍可能扰动承诏、兴图、不屈的选择；濒死序号、完杀清理和乱击花色清理均改为 refresh，只在本次确有济世记录时触发交换。无记录时不生成新的发动选项。

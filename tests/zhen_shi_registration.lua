@@ -110,6 +110,19 @@ function Testhanjin_zhen_shi_registration:testAllReviewedGeneralsRegistered()
   lu.assertTrue(Fk.generals["hanjin__em_qun010"].hidden)
   lu.assertNotNil(Versions.lords["hanjin__em_shu001"])
   lu.assertNotNil(Versions.lords["hanjin__em_qun010"])
+
+  local lords = {
+    { lord = "hanjin__em_shu001", normal = "hanjin__shu001", display = "君刘备", name = "刘备" },
+    { lord = "hanjin__em_qun010", normal = "hanjin__qun010", display = "君张角", name = "张角" },
+  }
+  for _, entry in ipairs(lords) do
+    local text = Fk:translate(entry.lord)
+    local visible = text:gsub("<[^>]+>", "")
+    lu.assertEquals(Fk.generals[entry.lord].trueName, entry.name)
+    lu.assertEquals(text, '<font color="#FFFF00">君</font>' .. entry.name)
+    lu.assertEquals(visible, entry.display)
+    lu.assertEquals(Fk:translate(entry.normal), entry.name)
+  end
 end
 
 return { name = "hanjin_zhen_shi_registration" }

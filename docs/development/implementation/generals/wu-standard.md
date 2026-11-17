@@ -65,11 +65,11 @@ Ran 657 tests in 107.552 seconds, 657 successes, 0 failures
 退出码 0
 
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip (452 files)
+Built .dev/dist/hanjin.zip
 退出码 0
 ```
 
-Codex 核对安装包：本批 39 个实现／数据／接线文件与工作区逐字节一致，包含吴区技能、两翼从、共享工具、公开历史与静态辅助；无 `tests/`、`scripts/`、`.dev/`。无需开发本体补丁提供上述效果。逐文件记录见[共享验证证据](verification-evidence.md#吴区)。
+Codex 核对安装包：包含吴区技能、两翼从、共享工具、公开历史与静态辅助；无 `tests/`、`scripts/`、`.dev/`。无需开发本体补丁提供上述效果。逐文件记录见[共享验证证据](verification-evidence.md#吴区)。
 
 <a id="wu-standard-boundary"></a>
 

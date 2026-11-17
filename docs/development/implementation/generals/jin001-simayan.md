@@ -97,7 +97,7 @@
 
 ## 4. 验证
 
-2026-11-16 新增八套定向共65项通过（basic19、resources15、deck3、information2、reactive6、adaptation5、chain6、sources9）。资源及反制最终修复由 Codex 执行，其余由 DSH 执行；具体命令、时间与复用回归见[晋共享证据](verification-evidence.md#jin-standard)。最终默认831/831（158.697秒）通过，安装包477文件逐字节一致；不得以本段定向结果推定客户端点击、联网／重连或干净本体安装人工验收。
+2026-11-16 新增八套定向共65项通过（basic19、resources15、deck3、information2、reactive6、adaptation5、chain6、sources9）。资源及反制最终修复由 Codex 执行，其余由 DSH 执行；具体命令、时间与复用回归见[晋共享证据](verification-evidence.md#jin-standard)。最终默认831/831（158.697秒）通过；不得以本段定向结果推定客户端点击、联网／重连或干净本体安装人工验收。
 
 ### 司马炎既有专项与历史验证
 

@@ -54,7 +54,7 @@ Ran 567 tests in 83.184 seconds, 567 successes, 0 failures
 
 各文件输出与日期见[共享验证证据](verification-evidence.md#汉区)。
 - 滔乱专项最近一次定向验证为 4 项全部通过，包含同回合两次发动仅一次后续结算及候选合并；`han005_hejin.lua` 3/3。其余武将测试入口见上表，均由默认全量覆盖。
-- 安装包：`python scripts/build_release.py` → `Built .dev/dist/hanjin.zip (440 files)`；已检查 zip 包含 `hanjin/pkg/hanjin_generals/skills/`、`util/`、`data/standard.lua`、`pkg/hanjin_mode/client.lua` 与根 `hanjin/init.lua`，不包含 `tests/` 或 `scripts/`。
+- 安装包已检查包含 `hanjin/pkg/hanjin_generals/skills/`、`util/`、`data/standard.lua`、`pkg/hanjin_mode/client.lua` 与根 `hanjin/init.lua`，不包含 `tests/` 或 `scripts/`。
 - 不以服务端自动化通过等同于客户端人工验收完成。
 
 <a id="han-standard-boundary"></a>

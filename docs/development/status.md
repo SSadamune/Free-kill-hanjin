@@ -4,9 +4,7 @@
 
 ## 规则资料编纂
 
-六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。最新默认982/982通过，安装包1029文件已构建并逐字节核对；各轮失败、修复和验证边界见下方记录。客户端、联网、重连及干净安装人工验收未完成。
-
-2026-11-17 命名落地：按实际界面位置区分显示名——房间模式选项及大厅／等待房间为“大合集”，模式选择分组为“国战平行时空”，规则设置分组为“平行时空规则”，扩展总名为“平行时空”，标准分包为“标准包”，阵势合并包为“君临天下·阵势变权”，卡牌分包为“国战平行时空”。武将小卡角标改由 `General.prefix` 独立翻译键显示：标准 90 将及 14 翼从为“标”；阵包 12 将、君刘备、八阵兵为“阵”；势包 12 将、君张角、青州精锐、庐江上甲为“势”。来源按[阵势索引](../../rules/zhen-shi-generals.md)与 `docs/石激桑武将列表.json`，未按合并包猜测。技术 ID、包身份、将池计数及 `packages/hanjin` 路径未改；旧名只保留在[命名盘点](naming-audit.md)的历史基线。定向 `smoke` 2/2、`standard_generals` 12/12、`zhen_shi_registration` 4/4；默认全量 982/982 通过（292.934 秒，退出码 0），`check_lua` 全量 OK；安装包 1029 文件，ZIP 内已核对角标翻译键及模式／阵势显示名，未含测试、脚本或 `.dev/`。客户端逐图、联网／重连及干净安装人工验收未完成。
+六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。最近一次默认全量982/982通过；各轮失败、修复和验证边界见下方记录。客户端、联网、重连及干净安装人工验收未完成。
 
 2026-11-13 魏包规则确认：外部《规则向FAQ文件.docx》已转换为同目录 Markdown，保留来源内容并声明不随项目维护；采用其中多势力判断基准与定向叠置／平置定义。应期确认为开局确定的配将体力贡献修正，普通交换、移除或替换不重算体力上限，升变依公共流程；骁果须实际弃置至少一张基本牌支付发动消耗。底稿同步修订叠置、复原及弃置消耗说明，逐将约定见 WEI002、WEI014、WEI016、JIN009。实现与验证结果见下方魏势力标准包记录。
 
@@ -42,10 +40,10 @@
 | [客将](implementation/guest-factions.md) | 房间势力解析、自愿逐张重抽、服务端配将及正式登记已接入 | 登记 51 张武将客将势力；显示、动画、重连待人工验收 |
 | 卡牌内容与[方天画戟适配](implementation/card-deck.md) | 162 个基础牌位、12 张替换牌、7 张游戏外势力锦囊已登记；67 个牌型复用或适配 | 17 个牌型仍为空壳：10 个君主装备相关牌型及 7 个势力锦囊；临筱玉舆双坐骑交互待实现。逐牌状态见 `pkg/hanjin_cards/data/reuse.lua` |
 | [汉势力标准包](implementation/generals/han-standard.md) | 15 将 25 技能均已实装，新增 23 技能及穆顺、西园军两翼从；汉区卡面原文同步，技能及共享工具随扩展发布 | 汉包该轮默认套件 567 项全部通过（含鏖战修复及滔乱每回合一次裁定）；逐项客户端、多人联网／重连及干净本体安装人工验收未完成。滔乱回合末后续效果已确认每回合一次；刘协既有未决规则及君主预测独立用例仍保留 |
-| [魏势力标准包](implementation/generals/wei-standard.md) | 15 将 25 技能及并州狼骑、虎卫军、牛金三翼从已实装；晋司马懿直接引用同一应期技能 ID；魏区卡面原文对齐来源，技能与模式接线随扩展发布 | 7 个专项共 40 项纳入默认套件；最终默认 608/608 通过，安装包 446 文件构建成功并核对接线；真实客户端、联网／重连及干净本体安装人工验收未完成 |
-| [蜀势力标准包](implementation/generals/shu-standard.md) | 15 将 26 技能及周仓、白马义从、西凉精骑、象兵四翼从已实装；蜀区主称号、卡面原文同步，持续效果与客户端公开目标条件随扩展发布 | 六套专项共 50 项纳入默认套件；最终 713/713 通过，安装包 459 文件构建并逐字节核对 41 个正式文件；客户端、联网／重连及干净本体安装人工验收未完成 |
-| [吴势力标准包](implementation/generals/wu-standard.md) | 15 将 27 个天生技能、后天涉猎及锦帆军／曲阿小将已实装；吴区卡面数据同步；公开历史、持续效果和整理界面随扩展发布 | 三套专项共 49 项纳入默认套件；最终 657/657 通过，安装包 452 文件构建并核对；真实客户端、联网／重连与干净本体安装人工验收未完成 |
-| [群势力标准包](implementation/generals/qun-standard.md) | 15 将、27 条技能记录及黄巾雷使已实装，三马术共用现有技能；补齐正式 90 将性别登记，维护男性目标条件；修复六个主动技能的客户端房间读取 | 原群包定向 47 项通过；修复后 qun_basic 15/15、默认全量 764/764；安装包 466 文件、24 个群技能文件逐字节一致；客户端点击、联网／重连和干净本体安装人工验收未完成 |
+| [魏势力标准包](implementation/generals/wei-standard.md) | 15 将 25 技能及并州狼骑、虎卫军、牛金三翼从已实装；晋司马懿直接引用同一应期技能 ID；魏区卡面原文对齐来源，技能与模式接线随扩展发布 | 7 个专项共 40 项纳入默认套件；最终默认 608/608 通过；真实客户端、联网／重连及干净本体安装人工验收未完成 |
+| [蜀势力标准包](implementation/generals/shu-standard.md) | 15 将 26 技能及周仓、白马义从、西凉精骑、象兵四翼从已实装；蜀区主称号、卡面原文同步，持续效果与客户端公开目标条件随扩展发布 | 六套专项共 50 项纳入默认套件；最终 713/713 通过；客户端、联网／重连及干净本体安装人工验收未完成 |
+| [吴势力标准包](implementation/generals/wu-standard.md) | 15 将 27 个天生技能、后天涉猎及锦帆军／曲阿小将已实装；吴区卡面数据同步；公开历史、持续效果和整理界面随扩展发布 | 三套专项共 49 项纳入默认套件；最终 657/657 通过；真实客户端、联网／重连与干净本体安装人工验收未完成 |
+| [群势力标准包](implementation/generals/qun-standard.md) | 15 将、27 条技能记录及黄巾雷使已实装，三马术共用现有技能；补齐正式 90 将性别登记，维护男性目标条件；修复六个主动技能的客户端房间读取 | 原群包定向 47 项通过；修复后 qun_basic 15/15、默认全量 764/764；客户端点击、联网／重连和干净本体安装人工验收未完成 |
 | [晋势力标准包](implementation/generals/jin001-simayan.md) | 15将29条天生技能记录、腹心死士及文虎均已实装；应期共用魏技能；来源、持续后续、应变与公开信息规则随正式扩展发布 | 新增八套专项65项通过；泰然后续暂按回合结束时逐次结算，时机尚未定案；最终集成结果见下方。客户端、联网／重连与干净本体安装人工验收未完成 |
 | [多次结算](implementation/card-resolution.md) | 普通牌结算循环与使用方法保持已有接线 | 有酒、杀及目标／使用事件次数回归；未实装技能不能因此视为完成 |
 | [额外目标](implementation/extra-targets.md)及[初次用牌目标](implementation/card-use-targets.md) | 默认／无距离／显式策略、借刀副目标、群体上下文及公共入口已接入 | 有选择／宣告复核和真实入口回归；新牌、新技能须各自接入，联网与客户端待人工验收 |
@@ -54,11 +52,11 @@
 
 ## 最近验证记录
 
-2026-11-17 阵、势包君主升变修复及集成验收：24张普通武将、两张君主、57条将牌技能、三种新翼从及五条统领来源均已接入独立正式包；同名翼从独立实例、共享授技、武将牌后天技能随明暗置／交换／移除生效已接入。DSH执行 `python scripts/test.py --timeout 480`：979/979、0失败，退出码0（280.927秒），原始输出见 `.dev/ascension-fix-full.log`；未发现critical或Lua回溯，沿用的原生Distance malfunction警告仍出现。`python scripts/check_lua.py`通过513个文件；安装包1028文件与工作区逐字节一致，只含正式入口及资源。激昂按[汉晋转化牌定义](../../rulebook/terms/description-terms/transform.md)判定另行构造且含实体材料的牌。26张武将默认插画已接入，见下方图片专项复核；客户端、联网、重连和干净安装人工验收未完成。
+2026-11-17 阵、势包君主升变修复及集成验收：24张普通武将、两张君主、57条将牌技能、三种新翼从及五条统领来源均已接入独立正式包；同名翼从独立实例、共享授技、武将牌后天技能随明暗置／交换／移除生效已接入。DSH执行 `python scripts/test.py --timeout 480`：979/979、0失败，退出码0（280.927秒），原始输出见 `.dev/ascension-fix-full.log`；未发现critical或Lua回溯，沿用的原生Distance malfunction警告仍出现。`python scripts/check_lua.py`通过513个文件。激昂按[汉晋转化牌定义](../../rulebook/terms/description-terms/transform.md)判定另行构造且含实体材料的牌。26张武将默认插画已接入，见下方图片专项复核；客户端、联网、重连和干净安装人工验收未完成。
 
-2026-11-17 公共离牌状态接口：新增 `GeneralCardState.clearLeavingCardState(player, leavingGeneral, leavingIsDeputy)`，升变与穿心共用；只撤指定离牌位置的 fake/prelight，保留另一暗将同名合法来源与实际独立来源。接口不负责换将、体力、回将池、日志、次数或牌堆，其他职责仍由各自操作入口承担。定向 `second_lord` 33/33、`qun024_zhangren` 4/4、`general_card_skills` 7/7；`check_lua` 退出0。首次全量为978/979（`han019_jiping`断言失败，具体状态未捕获）；带诊断全量与最终全量均979/979，失败未能复现。`han019` 的 `blank_` 期望已修正为“JIPING 来源牌离开且当前为合法士兵”：新增确定性 HAN009 统领来源，经真实 `GeneralRemoved -> queueConversion` 转为翼从，定向6/6。构建为1029文件，`verify_image_assets.py --release` 路径/字节1029/1029，包内确认含 `general_card_state.lua`、升变与穿心调用文件。该修正是断言语义修正，不把首次偶发状态写成已证实根因。
+2026-11-17 公共离牌状态接口：新增 `GeneralCardState.clearLeavingCardState(player, leavingGeneral, leavingIsDeputy)`，升变与穿心共用；只撤指定离牌位置的 fake/prelight，保留另一暗将同名合法来源与实际独立来源。接口不负责换将、体力、回将池、日志、次数或牌堆，其他职责仍由各自操作入口承担。定向 `second_lord` 33/33、`qun024_zhangren` 4/4、`general_card_skills` 7/7；`check_lua` 退出0。首次全量为978/979（`han019_jiping`断言失败，具体状态未捕获）；带诊断全量与最终全量均979/979，失败未能复现。`han019` 的 `blank_` 期望已修正为“JIPING 来源牌离开且当前为合法士兵”：新增确定性 HAN009 统领来源，经真实 `GeneralRemoved -> queueConversion` 转为翼从，定向6/6。该修正是断言语义修正，不把首次偶发状态写成已证实根因。
 
-2026-11-17 挑衅 AI 请求修复：`C.askToUseCard` 之前把 `names` 清除后未生成引擎 `pattern`，AI 在 `smart_ai.lua` 对 nil pattern 调用 `startsWith` 崩溃。公共 `forwardParams` 现从 names/card_name/name 的实际 `trueName` 派生 pattern；挑衅显式传 `pattern="slash"` 和 `extra_data.exclusive_targets={姜维}`，并走真实 `Room:askToUseCard` 请求；服务端 `fixed_targets` 仍复核。定向 `card_use_targets` 36/36、`shu012_jiangwei` 6/6；全库调用扫描未发现其他需改的同根调用，已有显式 pattern 或上层生成的分支保留。首次全量982项981成功，唯一失败为 `shu021_mifuren`（实际样本珠联 before=0/after=1，来源牌已移除）；记录真实初始标记后按 before+1 修正断言，该套单跑4/4。两项修复后最终全量982/982通过；`check_lua`退出0，安装包1029及`verify_image_assets.py --release` 1029/1029通过。官方测试后端未实例化原生 SmartAI，本轮以真实 Room 请求、pattern 派生/exclusive_targets/fixed 目标断言及源码行证据验证，不宣称 AI 实机路径已人工验收。
+2026-11-17 挑衅 AI 请求修复：`C.askToUseCard` 之前把 `names` 清除后未生成引擎 `pattern`，AI 在 `smart_ai.lua` 对 nil pattern 调用 `startsWith` 崩溃。公共 `forwardParams` 现从 names/card_name/name 的实际 `trueName` 派生 pattern；挑衅显式传 `pattern="slash"` 和 `extra_data.exclusive_targets={姜维}`，并走真实 `Room:askToUseCard` 请求；服务端 `fixed_targets` 仍复核。定向 `card_use_targets` 36/36、`shu012_jiangwei` 6/6；全库调用扫描未发现其他需改的同根调用，已有显式 pattern 或上层生成的分支保留。首次全量982项981成功，唯一失败为 `shu021_mifuren`（实际样本珠联 before=0/after=1，来源牌已移除）；记录真实初始标记后按 before+1 修正断言，该套单跑4/4。两项修复后最终全量982/982通过；`check_lua`退出0。官方测试后端未实例化原生 SmartAI，本轮以真实 Room 请求、pattern 派生/exclusive_targets/fixed 目标断言及源码行证据验证，不宣称 AI 实机路径已人工验收。
 
 2026-11-16 阵、势包第五批：HAN014朱儁、HAN015卢植接入，标准90将数据及计数不变；摧破、虎翼、用良、备寇、修体实装。翼从实例模块只读定向`retinue_instances`5项（1.426秒）通过。朱儁定向3项（0.910秒）、卢植定向4项（1.137秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收；庐江上甲及翼从未注册。
 
@@ -66,25 +64,25 @@
 
 2026-11-16 阵、势包首批至第三批：独立`hanjin_zhenshi`正式包已登记WEI017李典、SHU018B费祎、SHU019马岱、WU010孙策、WU023陈武&董袭，标准90将数据及计数不变；恂恂、忘隙、生息、守成、马术复用、潜袭、激昂、鹰扬、魂殇、奋命、断绁均已实装并补入汉晋模式白名单，其余阵、势包武将未登记，庐江上甲及翼从未注册。审阅修正：守成限次按发动者来源、受益角色和当前回合分别记录；费祎注册测试按ID查找；潜袭改为先摸弃再按当时距离选目标，并在实际弃牌前保存持有者过滤后的颜色（红颜回归）。定向`shu019_madai`4项（1.263秒）、`wu010_sunce`4项（1.155秒）、`wu023_chenwu_dongxi`3项（0.841秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收。接口与边界见[阵势包审阅记录](implementation/generals/zhen-shi-review.md)。
 
-2026-11-16 晋标准包实装：规则审阅已提交 `b28ad21`；15将29条天生技能记录、两翼从全部接入。晋区称号、司马昭／司马师珠联及技能来源文本同步；泰然后续时机仍未定案，暂按回合结束时逐次结算。八套新增专项共65项通过；复用应变、次数、断肠、交换及其他势力回归。整合时修复昭然可见性覆盖其他公开效果，公共转换套件改确定性白板夹具并加入暗卧龙回归，挟征罚则明确验证先获得再返牌。接口与真实测试证据见[晋包验证记录](implementation/generals/verification-evidence.md#jin-standard)。最终 `python scripts/test.py --timeout 240` 为831/831（158.697秒），退出码0；Lua语法检查通过。安装包477文件已与工作区逐字节核对，排除测试、脚本及本体开发补丁。完整输出保存在 `.dev/logs/jin_full_final.log`，原生 Distance malfunction 警告仍在，无 critical Lua 错误或失败断言。未执行真实客户端、多人联网／重连及干净本体安装人工验收。
+2026-11-16 晋标准包实装：规则审阅已提交 `b28ad21`；15将29条天生技能记录、两翼从全部接入。晋区称号、司马昭／司马师珠联及技能来源文本同步；泰然后续时机仍未定案，暂按回合结束时逐次结算。八套新增专项共65项通过；复用应变、次数、断肠、交换及其他势力回归。整合时修复昭然可见性覆盖其他公开效果，公共转换套件改确定性白板夹具并加入暗卧龙回归，挟征罚则明确验证先获得再返牌。接口与真实测试证据见[晋包验证记录](implementation/generals/verification-evidence.md#jin-standard)。最终 `python scripts/test.py --timeout 240` 为831/831（158.697秒），退出码0；Lua语法检查通过。完整输出保存在 `.dev/logs/jin_full_final.log`，原生 Distance malfunction 警告仍在，无 critical Lua 错误或失败断言。未执行真实客户端、多人联网／重连及干净本体安装人工验收。
 
-2026-11-15 结算牌脚注：`pkg/hanjin_mode/client.lua` 在汉晋模式的 `parseMsg(msg, true)` 输出中去除玩家名 `font/b` 标签，覆盖实体牌及虚拟牌通知，普通日志与其他模式保持原样。`python scripts/test.py --file tests/han001_liuxie.lua --timeout 120`：59/59（14.888 秒），含正式双将名张虎&乐綝、真实脚注消息、两条通知及模式隔离。Lua 语法检查通过；安装包 466 文件，客户端实现逐字节一致。脚注实际界面渲染仍待人工验收，故障路径见[案例记录](lessons.md#卡牌脚注泄漏富文本标签)。
+2026-11-15 结算牌脚注：`pkg/hanjin_mode/client.lua` 在汉晋模式的 `parseMsg(msg, true)` 输出中去除玩家名 `font/b` 标签，覆盖实体牌及虚拟牌通知，普通日志与其他模式保持原样。`python scripts/test.py --file tests/han001_liuxie.lua --timeout 120`：59/59（14.888 秒），含正式双将名张虎&乐綝、真实脚注消息、两条通知及模式隔离。Lua 语法检查通过。脚注实际界面渲染仍待人工验收，故障路径见[案例记录](lessons.md#卡牌脚注泄漏富文本标签)。
 
 2026-11-15 纯打出闪回归已闭合：此前全量 764/765 的失败由测试回复错位引起。随机暗将张让使目标先收到无懈询问，预排的闪被测试后端当作使用牌回复消费；固定隐张让组合重现相同失败。卡牌套件改为固定白板双将，本用例显式装入隐张让，先取消无懈，再打出闪；观察真实无懈候选与事件，断言打出一次、使用零次、应变零次。`python scripts/test.py --file tests/card_reuse.lua --timeout 120`：35/35（8.550 秒）；临时定向入口的 60 个独立房间验证全部通过（17.520 秒），入口随后删除。`python scripts/test.py --timeout 240`：765/765（139.997 秒），退出码 0；仍有原生 Distance malfunction 警告，无 critical Lua 错误或失败断言。日志 `.dev/logs/jink_deterministic_before.log`、`jink_deterministic_after.log`、`jink_repro_after.log`、`jink_fixed_full.log`；经验见[案例记录](lessons.md#预排的闪回复被无懈询问提前消费)。
 
-2026-11-15 群包客户端按钮修复：张角／华佗进入出牌阶段时，除疠读取 `ClientPlayer.room` 为 nil。除疠、乱武、狂斧、祸水、倾城、骁逆改用当前公开房间；狂斧、骁逆同时保留客户端可用的禁止目标及势力判断，服务端执行仍复核。`python scripts/test.py --file tests/qun_basic.lua --timeout 90`：15/15（3.697 秒）；`python scripts/test.py --timeout 240`：764/764（140.766 秒）。Lua 语法检查通过；安装包重建为 466 文件，24 个群技能文件与源码逐字节一致。记录见[群包验证](implementation/generals/verification-evidence.md#qun-standard)。以下 761 项等为此前集成结果；本次仍未进行客户端点击或联网人工验收。
+2026-11-15 群包客户端按钮修复：张角／华佗进入出牌阶段时，除疠读取 `ClientPlayer.room` 为 nil。除疠、乱武、狂斧、祸水、倾城、骁逆改用当前公开房间；狂斧、骁逆同时保留客户端可用的禁止目标及势力判断，服务端执行仍复核。`python scripts/test.py --file tests/qun_basic.lua --timeout 90`：15/15（3.697 秒）；`python scripts/test.py --timeout 240`：764/764（140.766 秒）。Lua 语法检查通过。记录见[群包验证](implementation/generals/verification-evidence.md#qun-standard)。以下 761 项等为此前集成结果；本次仍未进行客户端点击或联网人工验收。
 
 2026-11-15 群势力标准包：DSH 分批实装，Codex 完成规则与接口审阅并集中验收。独立房间规则承接济世／完杀、用牌后续、黄巾伤害事实、祸水状态和断肠来源；事实维护不进入玩家触发选择。正式武将补齐 17 女／73 男的性别资料，离间、倾城按真实角色性别筛选。
 
 - `python scripts/test.py --timeout 240`：761 项通过、0 失败，退出码 0（129.619 秒）。
 - 群包定向 47 项、模式 10 项、武将登记 12 项、武将交换 17 项均通过；最终受影响三套旧回归与群包共同执行 98 项通过。
-- `python scripts/check_lua.py` 通过；`python scripts/build_release.py` 成功（466 文件）；40 个新增／修改正式文件与包内逐字节一致，三个旧群马术空壳不在包内，开发环境旧同步副本亦已清理。
+- `python scripts/check_lua.py` 通过，开发环境旧同步副本亦已清理。
 - 未进行真实客户端、联网／重连或干净本体安装人工验收；“客将替换”房间设置仍未提供，当前按用户裁定默认开启。具体覆盖和可复用故障原因见[群包验证记录](implementation/generals/verification-evidence.md#qun-standard)。
 
 
-2026-11-15 应期技能身份合并：WEI002 与 JIN009 司马懿改为引用同一个 `hanjin__skill_wei002_3`，删除 `skill_jin009_3.lua` 重复骨架；`pair_hp.YINGQI_SKILLS` 只保留规范 ID；两处卡面文本统一为魏文本“☯️+2”，避免同 ID 翻译覆盖。DSH 定向 `python scripts/test.py --file tests/wei_pair_hp.lua --timeout 180`：4 项通过、0 失败（含两版共用技能身份及各自主／副位置四组合的真实开局接线）；`python scripts/check_lua.py` 通过。Codex 审阅后执行 `python scripts/test.py --timeout 180`：713 项通过、0 失败，退出码 0（122.505 秒）；`python scripts/build_release.py` 成功（458 文件），3 个修改后的正式文件与包内逐字节一致，旧晋技能文件不在包内。当前开发运行时的旧同步副本已清理；同步不自动删除旧文件，其他旧安装升级时也须清除该旧副本。客户端、联网／重连人工验收未进行。
+2026-11-15 应期技能身份合并：WEI002 与 JIN009 司马懿改为引用同一个 `hanjin__skill_wei002_3`，删除 `skill_jin009_3.lua` 重复骨架；`pair_hp.YINGQI_SKILLS` 只保留规范 ID；两处卡面文本统一为魏文本“☯️+2”，避免同 ID 翻译覆盖。DSH 定向 `python scripts/test.py --file tests/wei_pair_hp.lua --timeout 180`：4 项通过、0 失败（含两版共用技能身份及各自主／副位置四组合的真实开局接线）；`python scripts/check_lua.py` 通过。Codex 审阅后执行 `python scripts/test.py --timeout 180`：713 项通过、0 失败，退出码 0（122.505 秒）。当前开发运行时的旧同步副本已清理；同步不自动删除旧文件，其他旧安装升级时也须清除该旧副本。客户端、联网／重连人工验收未进行。
 
-2026-11-15 蜀势力标准包完成本批实装：集智与描述层次规则已提交（`5628dce`）；15 将、26 技能及四关联翼从均加入正式效果。仁德真实用杀已确认不受通常次数限制且不占次数；观星、空城、铁骑、放权及烈勇持续效果、八阵暗将入口、周仓显式范围与象兵两条用牌链路均已接线。最终 `python scripts/test.py --timeout 180`：713 项通过、0 失败，退出码 0（120.582 秒）；`python scripts/check_lua.py` 通过；`python scripts/build_release.py` 成功（459 文件），41 个修改／新增正式文件与包内逐字节一致。武将与回归提交为 `5e9711b`，翼从与目标策略提交为 `0d8adcd`；真实客户端、联网／重连、干净本体安装人工验收未完成。证据与已修复问题见[蜀包验证记录](implementation/generals/verification-evidence.md#shu-standard)。
+2026-11-15 蜀势力标准包完成本批实装：集智与描述层次规则已提交（`5628dce`）；15 将、26 技能及四关联翼从均加入正式效果。仁德真实用杀已确认不受通常次数限制且不占次数；观星、空城、铁骑、放权及烈勇持续效果、八阵暗将入口、周仓显式范围与象兵两条用牌链路均已接线。最终 `python scripts/test.py --timeout 180`：713 项通过、0 失败，退出码 0（120.582 秒）；`python scripts/check_lua.py` 通过。武将与回归提交为 `5e9711b`，翼从与目标策略提交为 `0d8adcd`；真实客户端、联网／重连、干净本体安装人工验收未完成。证据与已修复问题见[蜀包验证记录](implementation/generals/verification-evidence.md#shu-standard)。
 
 2026-11-14 短指令入口（仅文档）：`hanjin-content-development` 集成规则审阅、直接实装及指定委派三种默认路径，自动查找已有资料并记录用户裁定；仓库协作职责改为通用角色，支持单 agent。开发指南保留简短指令示例，未新增对特定模型或工具的依赖。
 
@@ -100,14 +98,13 @@
 吴势力标准包（2026-11-14）：先整理已确认语义、实装方向及核心验收交给 DSH，分批实现并审阅修正客户端私有字段、国色分支限次、流离取消消耗、短兵双闪、诈降／天义统计范围与失技持续、好施承诺、曲阿小将真实用牌历史等实质问题。实现说明并入跨势力机制专项。
 
 - DSH 原生检查：`python scripts/check_lua.py` 通过；`python scripts/test.py --timeout 180` 为 657 项通过、0 失败，退出码 0（107.552 秒）。
-- DSH 原生检查：`python scripts/build_release.py` 构建成功，452 文件，退出码 0；Codex 对本轮 39 个正式实现／数据／接线文件逐字节核对，无差异；不含测试、脚本或开发本体补丁。
+
 - 三套定向分别为辅助 15、阶段 12、伤害及翼从 22 项。未完成真实客户端点击、联网／重连、干净本体安装人工验收；少见组合边界见[吴包入口](implementation/generals/wu-standard.md#wu-standard-boundary)。
 
 
 魏势力标准包实现（2026-11-14）：DSH 分批完成全部 15 将 25 技能及三关联翼从，Codex 审阅并交回修正神速时机、轻辎跨回合来源、洛神统一获得、行殇牌区、持重选牌、放逐原生叠／平置、长驱客户端事实、伪溃私看、牛金击杀奖励去重等实质问题。已加入七个专项；魏区 25 条卡面原文与外部武将表一致。
 
 - `python scripts/test.py --timeout 180`：DSH 工具原生检查确认 608 项通过、0 失败，退出码 0。
-- `python scripts/build_release.py`：DSH 工具原生检查确认 `.dev/dist/hanjin.zip` 构建成功，446 个文件；Codex 核对包内全部魏技能、三翼从、辅助骨架和共享模块与工作区一致，不含 `tests/`、`scripts/` 或开发本体补丁。
 - 未进行本轮实际 GUI 点击、多人联网／重连或干净本体安装人工验收；不将自动化通过扩展为这些人工结论。各组接口、核心验证与已修复故障见[魏包总览](implementation/generals/wei-standard.md)。
 
 
@@ -115,18 +112,15 @@
 
 - `python scripts/test.py --file tests/han004_zhangrang.lua --timeout 120`：DSH 定向执行 4 项通过、0 失败。
 - `python scripts/test.py --timeout 120`：DSH 工具原生检查确认 567 项通过、0 失败（退出码 0）。
-- `python scripts/build_release.py`：DSH 工具原生检查确认 `.dev/dist/hanjin.zip` 构建成功，440 个文件。未进行本轮客户端人工复测。
 
 鏖战杀／闪窗口修复（2026-11-13，修复提交 `394764b`）：修正 `ReqUseCard(jink)` 被错误按主动用牌条件过滤的问题；当前请求仅显示合法用途，并默认选中首个合法项，唯一合法项不沿用上一请求的选择。真实客户端处理器回归覆盖主动出牌、使用闪、打出闪和打出杀；服务端真实用牌回归确认桃当闪抵消杀。
 
 - `python scripts/test.py --file tests/only_as.lua --timeout 120`：DSH 定向执行 24 项通过、0 失败。
 - `python scripts/test.py --timeout 120`：DSH 工具原生检查确认 566 项通过、0 失败（退出码 0）。
-- `python scripts/build_release.py`：DSH 工具原生检查确认 `.dev/dist/hanjin.zip` 构建成功，440 个文件；包内公共转换实现与工作区一致。实际 GUI 点击与视觉布局未人工复测，运行中的客户端需重载扩展后使用修复。
 
 汉势力标准包开发（2026-11-13，开发提交 `660232a`，规则资料提交 `ff0cd6b`）：DSH 完成实现与定向验证，最终由 DSH 工具原生检查再次确认以下结果。
 
 - `python scripts/test.py --timeout 120`：564 项通过、0 失败（原生检查退出码 0）。
-- `python scripts/build_release.py`：`.dev/dist/hanjin.zip` 构建成功，440 个文件（原生检查退出码 0）。Codex 复核包中包含全部 25 个汉技能文件、2 个汉关联翼从、共享工具和客户端注册，排除 `tests/` 与 `scripts/`；汉区 25 条卡面技能原文与 `docs/石激桑武将列表.json` 一致。
 - 未进行逐项真实客户端交互、多人联网／重连或干净本体安装人工验收。自动化和包内容核对不代替这些人工结论。逐将接口与定向结果见[汉势力实现总览](implementation/generals/han-standard.md)。
 
 以下保留此前司马炎批次的验证记录，不作为本次汉区新代码的验证依据。
@@ -137,11 +131,10 @@
 - `python scripts/test.py --file tests/mode_rules.lua --timeout 120`：10 项通过。
 - `python scripts/test.py --file tests/jin001_simayan.lua --timeout 120`：14 项通过。
 - `python scripts/test.py --timeout 120`：503 项通过、0 失败。
-- `python scripts/build_release.py`：安装包构建成功（438 个文件），已检查包含司马炎两项技能及客户端注册文件，且排除开发脚本与测试。不代表已完成未应用开发适配的本体人工交互验收。
 
 测试方法、稳定性验证及故障证据的处理见[测试规范](testing.md)。后续代码变更应记录对应的新验证基线，不能沿用本段宣称新代码已通过。
 
-随后一轮修复了内部“牌用途规则”选择入口，并合并兴图选项询问。该轮工具原生检查确认默认套件通过 506/506；再补八卦阵虚拟闪回归后，DSH 报告直接运行同一 runtime 的 `FreeKill.exe --testfile`：用途规则 22/22、司马炎 17/17、默认套件 507/507。后一结果为 DSH 执行记录，不冒称再次运行了 `scripts/test.py`；当时用户正在运行游戏，未关闭其客户端。最终内容已重新构建安装包（438 个文件）。
+随后一轮修复了内部“牌用途规则”选择入口，并合并兴图选项询问。该轮工具原生检查确认默认套件通过 506/506；再补八卦阵虚拟闪回归后，DSH 报告直接运行同一 runtime 的 `FreeKill.exe --testfile`：用途规则 22/22、司马炎 17/17、默认套件 507/507。后一结果为 DSH 执行记录，不冒称再次运行了 `scripts/test.py`；当时用户正在运行游戏，未关闭其客户端。
 
 人工复测：2026-11-13 用户确认本轮问题已无异常，包括此前反馈的兴图触发及两项界面调整。兴图误触发反馈据此关闭；自动化未复现其原始异常，不追认未经证实的根因。此确认不扩展为多人联网、重连或未应用开发适配的独立本体完整验收。
 
@@ -149,22 +142,7 @@
 
 ## 图片资源保存
 
-2026-11-13 重新核对锁定引擎：默认图片按程序 ID 在固定目录查找。因此撤销源码图片去前缀、武将分包子目录及构建映射方案，删除全量映射清单、转换脚本和转换专用测试。78 张武将图、96 张卡牌图均恢复原生路径，与本分支基线 `3bd93c7` 的 174 张原图逐文件哈希一致；程序 ID 和游戏逻辑不变。维护约定见[图片资源保存规范](assets.md)。
-
-2026-11-16 本分支按同一规范更新默认图：524 张（`image/generals` 377 张、`image/generals/guest` 147 张），覆盖 90 名正式武将、51 个已登记客将势力和 14 种正式翼从；未注册设计、君主/野心家版本与额外翼从暂用临时程序 ID。此前“sRGB／内嵌 sRGB”声明缺乏当前证据；本轮实测均无嵌入 ICC，不能据此确认颜色空间。
-
-此前 434 文件的构建／同步结果不覆盖本批资源，以以下复核结果为准。
-
-2026-11-17 本批资源与构建／同步复核（工作区基于 `3d5f288`，Python 3.12.0，锁定引擎 v0.5.25）：
-
-- `python scripts/build_release.py`：`.dev/dist/hanjin.zip` 构建成功，实际 919 个文件；ZIP 顶层为 `init.lua`、`pkg/`、`image/`，`audio/` 当前只有 2 个 `.gitkeep`，按排除规则包内无音频文件。
-- `python scripts/verify_image_assets.py --release`：源码发布集合与 ZIP 路径一一对应 919/919，逐文件 SHA-256 一致 919/919；ZIP 内 `image/` 632 个文件，其中本批 JPEG 524 个（普通 377、客将 147）；排除源码 4 个 `.gitkeep`，不含 `tests/`、`scripts/` 或 `.dev/`。
-- `python scripts/verify_image_assets.py`：本批 524 张均为 JPEG 250×292、3 分量；路径覆盖 90/90 正式武将、51/51 登记客将、14/14 正式翼从；ICC 仅汇总有无，本批均无嵌入 ICC。
-- 隔离临时目录执行真实 `scripts/dev.ps1` 复制段（`.dev/image-batch-verify/dev-sync/`）：首次与重复同步均为 919/919 个文件、相对路径一致、SHA-256 一致，无 `pkg/pkg` 嵌套，`.gitkeep` 未复制。验证使用源码副本、引擎补丁目标副本和占位 `FreeKill.exe`；未同步真实 `.dev/runtime`，9 个引擎补丁目标文件测试前后哈希一致。
-
-本轮未重跑默认 Lua 全量套件，未关闭用户游戏，未实际同步正在使用的开发环境，未逐图目视或做客户端显示验收。静态检查不代替实际显示验收。客将默认插画将按 `image/generals/guest/<程序ID>.jpg` 由通用入口读取，选将与局内显示接线尚未实现；设计见[客将默认插画](guest-illustrations.md)。外部 `docs/heroes.json` 不作为正式编号、分包或构建规范。
-
-2026-11-17 阵势包武将图专项复核：从 `pkg/hanjin_generals/init.lua` 与 `data/zhen_shi*.lua` 实际登记取到 26 个正式将（24 普通、2 君主），全部按完整程序 ID 路径存在。24 普通图沿用合并素材；两个君主插画从合并素材的旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际登记 ID `hanjin__em_qun010.jpg`、`hanjin__em_shu001.jpg`，迁移前字节一致，旧路径已删除。Pillow 真实解码 26/26 成功，格式均为 JPEG、250×292、RGB，无缺图。`scripts/build_release.py` 生成 1028 文件 ZIP；`scripts/verify_image_assets.py --release` 核对源码发布集合与 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，ZIP 顶层仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含 `tests/`、`scripts/`、`.dev/`。仅完成静态路径、格式、构建与字节核对，尚未在真实客户端逐图显示或人工目视验收。
+默认插画按程序 ID 固定目录保存。当前正式武将（标准 90 将、阵势 26 将含两君主）、已登记客将势力及正式翼从均有默认图；客将附加图位于 `image/generals/guest/`。构建包包含 `image/`；未做真实客户端逐图显示、人工目视、联网／重连验收。客将附加插画的选将与局内显示接线尚未实现，设计见[客将默认插画](guest-illustrations.md)，保存规范见[图片资源保存规范](assets.md)。
 
 ## 范围边界
 
