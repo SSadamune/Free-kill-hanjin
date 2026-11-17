@@ -6,7 +6,7 @@
 
 ## 项目规范索引
 
-- 四位君主技能审阅：[君孙权](generals/em-wu001-sunquan.md)、[君曹操](generals/em-wei001-caocao.md)、[君司马炎](generals/em-jin001-simayan.md)、[君刘协](generals/em-han001-liuxie.md)。以石激桑 JSON 为基准；“赐”由旗拥有者持有，变更分支每名角色整局限一次且消耗标记；诏书是特殊标记，始终不进入玩家区域。尚未实装。
+- 四位君主技能审阅：[君孙权](generals/em-wu001-sunquan.md)、[君曹操](generals/em-wei001-caocao.md)、[君司马炎](generals/em-jin001-simayan.md)、[君刘协](generals/em-han001-liuxie.md)。以石激桑 JSON 为基准；“赐”由旗拥有者持有，变更分支每名角色整局限一次且消耗标记；诏书是特殊标记，始终不进入玩家区域。实现与验收见[开发状态](../development/status.md)。
 
 - [六势力阵包、势包审阅](zhen-shi-generals.md)：24张普通武将与两张君主的来源、逐将结算及待明确边界；尚未实装。
 

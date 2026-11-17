@@ -9,6 +9,8 @@
 | 石激桑武将列表.json | [assets/docs/石激桑武将列表.json](docs/石激桑武将列表.json) | 外部武将与技能原文资料；JSON 原样保留 |
 | 药枫桑大合集337.csv | [assets/docs/药枫桑大合集337.csv](docs/药枫桑大合集337.csv) | 用户提供的外部内容参考；CSV 原样保留 |
 | 规则向FAQ文件.md | [assets/docs/规则向FAQ文件.md](docs/规则向FAQ文件.md) | 用户提供的外部汉晋规则参考，由同名 DOCX 转换 |
+| 《缘江烽火图》完整牌面 | [用户提供图片](docs/缘江烽火图-用户牌面.png) | 用户于 2026-11-17 提供；包含烽火置牌／范围、准备阶段授技、受伤后移去烽火与后续减伤；补充 JSON 仅有第一段的记录，图片原字节保留 |
+| 《攻心》技能牌面 | [用户提供图片](docs/攻心-用户牌面.png) | 用户于 2026-11-17 提供；《缘江烽火图》所授攻心的版本依据，图片原字节保留 |
 | 《三国杀规则集》来源副本 | [assets/docs/rules/README.md](docs/rules/README.md) | 外部规则参考资料；项目日常条文引用以 `rulebook/` 为准 |
 | 势备应变牌堆与君主装备 | [assets/bilibili articles/cards](bilibili%20articles/cards/) | 图鉴公开图文的牌面、花色点数、牌堆差异、君主装备结算，以及诏书和势力锦囊；不是项目裁定 |
 
