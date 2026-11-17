@@ -1,6 +1,7 @@
 -- HAN019 吉平：烈医、蛊毒定向验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 
 local JIPING = "hanjin__han019"
 local LIEYI = "hanjin__skill_han019_1"
@@ -35,7 +36,8 @@ local function prepare()
     settings = { hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, hanjin_kingdom_limit = 6 },
   }
   inRoom(function()
-    skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "han", "han", "han", "han" })
+    skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "wei", "wei", "wei", "wei" })
+    Commander.saveSources(room, {})
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], { main = JIPING, deputy = "hanjin_test__han_2", kingdom = "han" })
   end)
@@ -135,6 +137,16 @@ function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
   local room, source, other, target = FkTest.room, p(1), p(2), p(3)
   local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
   inRoom(function()
+    -- 确定性合法统领来源：HAN009 伏完提供穆顺；p4 明置后，蛊毒移除
+    -- 留下的空士兵可沿公共 GeneralRemoved -> queueConversion 链转翼从。
+    local commander = p(4)
+    room:changeHero(commander, "hanjin__han009", false, false, false, false, false)
+    room:setPlayerMark(commander, "__heg_general", "hanjin__han009")
+    commander:revealGeneral(false)
+    local commanderSource = Commander.ensureSource(room, "hanjin__han009")
+    commanderSource.factions.han = true
+    commanderSource.revealed = true
+    commanderSource.holder_id = commander.id
     target.hp = 2
     local ok = Exchange.exchange(room,
       { player = source, isDeputy = false },
@@ -159,7 +171,15 @@ function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
 
   lu.assertEquals(target.hp, 1)
   local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  lu.assertTrue((Exchange.actualGeneral(other, false) or ""):startsWith("blank_"))
+  local actual = Exchange.actualGeneral(other, false)
+  lu.assertNotEquals(actual, JIPING, "蛊毒应移除来源牌 JIPING")
+  lu.assertTrue(Commander.isRetinue(actual),
+    "确定性统领来源下，蛊毒移除后的空士兵应转翼从；other.general=" .. tostring(other.general)
+    .. " actual=" .. tostring(actual)
+    .. " mark=" .. tostring(other:getMark("__heg_general"))
+    .. " deputy=" .. tostring(other.deputyGeneral)
+    .. " source=" .. tostring(source.general)
+    .. " gameover=" .. tostring(room.game_finished))
   lu.assertEquals(source.general, "hanjin_test__han_3")
 end
 
