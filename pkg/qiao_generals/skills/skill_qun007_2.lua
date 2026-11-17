@@ -1,6 +1,6 @@
 -- QUN007 贾诩 · 乱武
 --
--- 规则基线：rules/standard-generals.md 群区 QUN007、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN007、群包审阅
 -- docs/development/implementation/generals/qun-standard.md、
 -- rulebook/topics/legal-use-card.md。
 -- 限定技，出牌阶段：从当前回合角色起按逆时针逐人处理所有其他角色。每人

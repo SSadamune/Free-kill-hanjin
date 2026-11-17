@@ -1,7 +1,7 @@
 -- WEI014 曹丕 · 行殇
 --
 -- 其他角色死亡时，你可以获得其所有牌；若其没有牌，则改为回复1点体力。
--- 时机为 fk.Death（弃置其牌之前）。“某人的牌”依 rules/general-principles.md
+-- 时机为 fk.Death（弃置其牌之前）。“某人的牌”依 docs/rules/general-principles.md
 -- 仅指手牌区与装备区的牌，不含判定区；因此只有判定区有牌的死亡角色视为没有牌，
 -- 改为回复1点体力，其判定区牌不因本技能移动。
 local skill = fk.CreateSkill {

@@ -1,5 +1,5 @@
 -- WU010 孙策：激昂、鹰扬、魂殇定向验收。
--- 规则依据：rules/generals/wu010-sunce.md。
+-- 规则依据：docs/rules/generals/wu010-sunce.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 

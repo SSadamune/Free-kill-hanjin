@@ -1,6 +1,6 @@
 -- WEI 翼从 · 虎卫军
 --
--- 规则基线：rules/standard-generals.md 翼从虎卫军。
+-- 规则基线：docs/rules/standard-generals.md 翼从虎卫军。
 -- 每个回合结束时（不限于自己的回合），若虎卫军持有者在该回合共计造成和
 -- 受到过的伤害点数大于1，可以移动场上一张牌。使用 getActualDamageEvents
 -- 读取实际伤害（排除被防止的伤害）；一次自己对自己的伤害同时计为造成与

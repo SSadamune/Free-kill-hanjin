@@ -1,6 +1,6 @@
 -- JIN008 夏侯徽 · 宜室
 --
--- 规则基线：rules/generals/jin008-xiahouhui.md。
+-- 规则基线：docs/rules/generals/jin008-xiahouhui.md。
 -- 每回合限一次：与夏侯徽势力相同的角色作为弃置操作者（proposer，不是牌的原
 -- 拥有者 from）弃置任意角色的牌后，从本批仍在弃牌堆的牌中选一张交给该操作者，
 -- 然后从剩余牌中再获得一张。只取一张，不收取全部剩余；只有一张时不获得第二张。

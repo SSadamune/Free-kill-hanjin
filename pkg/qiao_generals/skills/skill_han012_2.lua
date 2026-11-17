@@ -1,6 +1,6 @@
 -- HAN012 蔡邕 · 博通
 --
--- 规则基线：rules/standard-generals.md 汉区、rulebook/events/use-card.md、
+-- 规则基线：docs/rules/standard-generals.md 汉区、rulebook/events/use-card.md、
 -- rulebook/terms/card-op-terms/give.md、rulebook/terms/card-terms/GameCard.md。
 -- 可以将四种花色各一张牌，或基本牌/锦囊牌/装备牌各一张牌（共 4 或 3 张
 -- 自己的手牌或装备牌）当任意一种基本牌使用。

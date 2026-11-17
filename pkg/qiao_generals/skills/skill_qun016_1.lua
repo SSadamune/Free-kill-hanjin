@@ -1,6 +1,6 @@
 -- QUN016 田丰 · 死谏
 --
--- 规则基线：rules/standard-generals.md 群区 QUN016、rules/generals/qun016-tianfeng.md。
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN016、docs/rules/generals/qun016-tianfeng.md。
 -- 两个独立时机：
 --   1. 失去最后的手牌后：必须在本次移动批次里确实有手牌离开，并且移动结束后
 --      自己没有手牌。不能因为「已经是空手」就在别的移动批次重复触发。

@@ -1,5 +1,5 @@
 -- WU 标准包：伤害、拼点与翼从定向验收文件。
--- 规则依据：rules/standard-generals.md 吴区与翼从表、rules/generals/wu013-zhoutai.md、
+-- 规则依据：docs/rules/standard-generals.md 吴区与翼从表、docs/rules/generals/wu013-zhoutai.md、
 -- rulebook 相关事件条文；本文件只覆盖本轮核心行为，未接入 tests/all.lua。
 --   python scripts/test.py --file tests/wu_damage.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")

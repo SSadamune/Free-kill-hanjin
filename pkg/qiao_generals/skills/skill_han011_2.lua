@@ -1,6 +1,6 @@
 -- HAN011 唐姬 · 诀别
 --
--- 规则基线：rules/standard-generals.md 汉区 HAN011、rulebook/events/death.md。
+-- 规则基线：docs/rules/standard-generals.md 汉区 HAN011、rulebook/events/death.md。
 -- 与你势力相同的角色死亡时，其可以令另一名与你势力相同的角色获得其所有牌，
 -- 或令该角色摸三张牌。死亡时结算，位于清牌之前；自己死亡也按同一势力定义
 -- 适用（比较对象包含死者自身）。

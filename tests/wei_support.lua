@@ -1,5 +1,5 @@
 -- 魏标准包：持重、突袭、放逐定向验收文件。
--- 规则依据：rules/standard-generals.md 魏区、rules/generals/wei014-caopi.md、
+-- 规则依据：docs/rules/standard-generals.md 魏区、docs/rules/generals/wei014-caopi.md、
 -- rulebook/terms/general-op-terms/stack.md、docs/development/implementation/only-as.md。
 -- 本轮已定向运行本文件（真实伤害/翻面/请求入口，无 mock）：
 --   python scripts/test.py --file tests/wei_support.lua --timeout 180

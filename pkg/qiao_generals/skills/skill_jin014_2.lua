@@ -1,6 +1,6 @@
 -- JIN014 文鸯 · 夺气
 --
--- 规则基线：rules/generals/jin014-wenyang.md。
+-- 规则基线：docs/rules/generals/jin014-wenyang.md。
 -- 限定技：每个回合结束时（fk.TurnEnd，不是结束阶段），若当前回合角色没有
 -- 手牌，文鸯可以获得一个额外的回合。额外回合通过正式的 gainAnExtraTurn
 -- 延迟队列调度，不手工递归调用阶段流程；每个回合结束时都按当时的手牌重新

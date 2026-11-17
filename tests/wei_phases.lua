@@ -1,6 +1,6 @@
 -- 魏 标准包：阶段与转换组 8 技能定向验收文件（洛神、神速、设变、巧变、
 -- 断粮、励战、倾国、轻辎）。
--- 规则依据：rules/standard-generals.md 魏区原文、
+-- 规则依据：docs/rules/standard-generals.md 魏区原文、
 -- rulebook/terms/game-flow-terms/phase.md；接口核对锁定 0.5.25 与 hegemony。
 -- 定向运行：
 --   python scripts/test.py --file tests/wei_phases.lua --timeout 120

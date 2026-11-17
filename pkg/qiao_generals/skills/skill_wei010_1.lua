@@ -1,6 +1,6 @@
 -- WEI010 徐晃 · 断粮
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI010。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI010。
 -- 一张黑色非锦囊牌当【兵粮寸断】使用；只授权手牌。
 -- 其他角色跳过摸牌阶段后，可以令一名角色摸一张牌。这里监听真实的
 -- fk.EventPhaseSkipped（阶段已被跳过之后），不依赖兵粮寸断这一具体来源：

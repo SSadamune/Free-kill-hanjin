@@ -1,5 +1,5 @@
 -- HAN016A 刘宠：劲弩、威屯。定向验收文件。
--- 规则依据：rules/generals/han016a-liuchong.md。
+-- 规则依据：docs/rules/generals/han016a-liuchong.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han016_liuchong.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")

@@ -1,5 +1,5 @@
 -- HAN017 刘繇：戡难、逆拒。定向验收文件。
--- 规则依据：rules/generals/han017-liuyao.md、rulebook/events/pindian.md、
+-- 规则依据：docs/rules/generals/han017-liuyao.md、rulebook/events/pindian.md、
 -- rulebook/terms/description-terms/and.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han017_liuyao.lua --timeout 120

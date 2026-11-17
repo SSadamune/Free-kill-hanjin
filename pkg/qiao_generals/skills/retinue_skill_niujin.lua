@@ -1,6 +1,6 @@
 -- WEI 翼从 · 牛金（限一）
 --
--- 规则基线：rules/standard-generals.md 翼从牛金、rules/general-principles.md。
+-- 规则基线：docs/rules/standard-generals.md 翼从牛金、docs/rules/general-principles.md。
 -- 同势力角色回合结束时，牛金持有者可以使用基本/锦囊/装备每类至多一张。
 -- 原文没有固定顺序：每次由玩家选择一个尚未使用的类别；每类可放弃，逐次
 -- 进入正常用牌窗口。效果内用牌 bypass_times=true + extraUse=true（不占

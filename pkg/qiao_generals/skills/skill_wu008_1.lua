@@ -1,7 +1,7 @@
 -- WU008 孙尚香 · 结姻
 --
--- 规则基线：rules/standard-generals.md 吴区 WU008、
--- rules/equipment-movement.md。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU008、
+-- docs/rules/equipment-movement.md。
 -- 出牌阶段限一次：选择一名其他男性角色，弃置一张手牌，或将一张装备牌
 -- 置于其空置的对应装备栏；然后二人中体力值较大者摸一张牌，较小者回复
 -- 1 点体力。装备牌可来自手牌或装备区；置入不是使用装备牌，不替换原装备。

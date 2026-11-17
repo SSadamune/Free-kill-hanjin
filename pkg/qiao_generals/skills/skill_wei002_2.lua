@@ -1,6 +1,6 @@
 -- WEI002 司马懿 · 鹰视
 --
--- 规则基线：rules/standard-generals.md WEI002。当一名角色的判定牌生效前，你
+-- 规则基线：docs/rules/standard-generals.md WEI002。当一名角色的判定牌生效前，你
 -- 可以打出一张自己的手牌或装备牌代替之。
 -- 与普通“鬼才”不同，可用牌包含装备区的牌，不限于手牌。改判必须先真实完成
 -- “打出”：现有 changeJudge{response=true} 只移牌、不产生 CardRespond 事件，

@@ -1,6 +1,6 @@
 -- HAN 翼从 · 西园军
 --
--- 规则基线：rules/standard-generals.md 翼从西园军、rulebook/events/phase.md、
+-- 规则基线：docs/rules/standard-generals.md 翼从西园军、rulebook/events/phase.md、
 -- rulebook/terms/card-op-terms/showCards.md。同势力角色出牌阶段开始时（含
 -- 自己），可以选择一名角色的一张手牌；本回合该牌对所有角色可见且持有者
 -- 不能使用/打出，其受到伤害后来源获得之。牌离开手牌即清理禁用约束；回合末

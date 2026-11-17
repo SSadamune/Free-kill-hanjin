@@ -1,7 +1,7 @@
 -- SHU007 黄月英 · 集智
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU007；牌范围已由用户确认，见
--- rules/generals/shu007-huangyueying.md。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU007；牌范围已由用户确认，见
+-- docs/rules/generals/shu007-huangyueying.md。
 -- 当你使用有对应实体牌且未经转化的锦囊牌时，可以摸一张牌：
 --   * 包含普通锦囊与延时锦囊（Card.TypeTrick 覆盖两者）；
 --   * 排除转化牌（isConverted：虚拟牌 id=0 且带子卡）；

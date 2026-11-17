@@ -1,6 +1,6 @@
 -- QUN017 潘凤 · 狂斧
 --
--- 规则基线：rules/standard-generals.md 群区 QUN017、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN017、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 出牌阶段限一次：弃置场上一张装备牌，视为使用一张无距离限制的【杀】。
 -- 记录被弃装备的原所有者，由模式级 qun_cards_rule 在整次用牌结束后按本次

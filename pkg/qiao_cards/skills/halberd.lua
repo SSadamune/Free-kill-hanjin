@@ -1,6 +1,6 @@
 -- HANJIN 方天画戟（国战势备版本，沿用用户已选的 `sa__halberd` 效果）
 --
--- 规则依据：rules/card-deck.md 第 6 节指定方天画戟使用国战势备版本；
+-- 规则依据：docs/rules/card-deck.md 第 6 节指定方天画戟使用国战势备版本；
 -- rulebook/events/use-card.md 规定“对当前目标生效前”若被【闪】抵消，
 -- 后续目标先判断“此牌对当前目标无效”，无效则不生成响应与效果时机。
 --

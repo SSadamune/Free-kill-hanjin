@@ -1,5 +1,5 @@
 -- QUN081 徐荣：剽戮、杀绝定向验收。
--- 规则依据：rules/generals/qun081-xurong.md。
+-- 规则依据：docs/rules/generals/qun081-xurong.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 

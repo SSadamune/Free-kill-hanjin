@@ -1,5 +1,5 @@
 -- WEI 标准包：受伤／伤害类 8 技能定向验收文件。
--- 规则依据：rules/standard-generals.md 魏区原文、rules/generals/wei016-yuejin.md、
+-- 规则依据：docs/rules/standard-generals.md 魏区原文、docs/rules/generals/wei016-yuejin.md、
 -- rulebook/events/damage.md、rulebook/topics/skill-effect-classification.md。
 -- 由 Codex 统一并入默认国战套件前，可先定向运行：
 --   python scripts/test.py --file tests/wei_damage.lua --timeout 120

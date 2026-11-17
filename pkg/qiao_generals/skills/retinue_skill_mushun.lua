@@ -1,6 +1,6 @@
 -- HAN 翼从 · 穆顺
 --
--- 规则基线：rules/standard-generals.md 翼从穆顺、rulebook/events/move-card.md、
+-- 规则基线：docs/rules/standard-generals.md 翼从穆顺、rulebook/events/move-card.md、
 -- rulebook/terms/card-op-terms/discard.md。每回合限一次：自己弃置任意角色的
 -- 牌，或被其他角色弃置牌后，可以获得其中一张；取得后才建立本回合下一次
 -- 同条件弃牌事件失去1点体力。重铸/给牌不是弃置，不触发。

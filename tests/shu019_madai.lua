@@ -1,5 +1,5 @@
 -- SHU019 马岱：马术复用、潜袭保留材料颜色与失技后回合限制。
--- 规则依据：rules/generals/shu019-madai.md。
+-- 规则依据：docs/rules/generals/shu019-madai.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 

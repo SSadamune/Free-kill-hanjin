@@ -1,7 +1,7 @@
 -- WU005 周瑜 · 反间
 --
--- 规则基线：rules/standard-generals.md 吴区 WU005、
--- rules/generals/wu005-zhouyu.md。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU005、
+-- docs/rules/generals/wu005-zhouyu.md。
 -- 主将技。出牌阶段限一次：展示一张手牌并交给一名其他角色；该角色可以
 -- 展示手牌并弃置其手牌区和装备区中与展示牌花色相同的所有牌（至少两张），
 -- 否则失去 1 点体力。展示手牌不等于展示装备区，弃牌范围则包含装备区。

@@ -41,21 +41,21 @@
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| JIN001 | 司马炎 | [垂统、兴图既有约定](../../../../rules/generals/jin001-simayan.md) |
-| JIN002 | 司马师 | [泰然、夷灭；腹心死士](../../../../rules/generals/jin002-simashi.md) |
-| JIN003 | 司马昭 | [昭然、挟征](../../../../rules/generals/jin003-simazhao.md) |
-| JIN004 | 贾充 | [通法、悖弑](../../../../rules/generals/jin004-jiachong.md) |
-| JIN005 | 羊祜 | [柔克、顺流](../../../../rules/generals/jin005-yanghu.md) |
-| JIN007 | 王元姬 | [识人、恤下](../../../../rules/generals/jin007-wangyuanji.md) |
-| JIN008 | 夏侯徽 | [宜室、识度](../../../../rules/generals/jin008-xiahouhui.md) |
-| JIN009 | 司马懿 | [权变、骤霆、应期](../../../../rules/generals/jin009-simayi.md) |
-| JIN010 | 张春华 | [伤逝、扼绝](../../../../rules/generals/jin010-zhangchunhua.md) |
-| JIN011 | 张虎&乐綝 | [果毅](../../../../rules/generals/jin011-zhanghu-yuechen.md) |
-| JIN012 | 羊徽瑜 | [慈威、弘训](../../../../rules/generals/jin012-yanghuiyu.md) |
-| JIN013 | 王濬 | [乘流、克清](../../../../rules/generals/jin013-wangjun.md) |
-| JIN014 | 文鸯 | [膂力、夺气；文虎](../../../../rules/generals/jin014-wenyang.md) |
-| JIN015 | 石苞 | [前驱](../../../../rules/generals/jin015-shibao.md) |
-| JIN016 | 张华 | [复礼、风物](../../../../rules/generals/jin016-zhanghua.md) |
+| JIN001 | 司马炎 | [垂统、兴图既有约定](../../../rules/generals/jin001-simayan.md) |
+| JIN002 | 司马师 | [泰然、夷灭；腹心死士](../../../rules/generals/jin002-simashi.md) |
+| JIN003 | 司马昭 | [昭然、挟征](../../../rules/generals/jin003-simazhao.md) |
+| JIN004 | 贾充 | [通法、悖弑](../../../rules/generals/jin004-jiachong.md) |
+| JIN005 | 羊祜 | [柔克、顺流](../../../rules/generals/jin005-yanghu.md) |
+| JIN007 | 王元姬 | [识人、恤下](../../../rules/generals/jin007-wangyuanji.md) |
+| JIN008 | 夏侯徽 | [宜室、识度](../../../rules/generals/jin008-xiahouhui.md) |
+| JIN009 | 司马懿 | [权变、骤霆、应期](../../../rules/generals/jin009-simayi.md) |
+| JIN010 | 张春华 | [伤逝、扼绝](../../../rules/generals/jin010-zhangchunhua.md) |
+| JIN011 | 张虎&乐綝 | [果毅](../../../rules/generals/jin011-zhanghu-yuechen.md) |
+| JIN012 | 羊徽瑜 | [慈威、弘训](../../../rules/generals/jin012-yanghuiyu.md) |
+| JIN013 | 王濬 | [乘流、克清](../../../rules/generals/jin013-wangjun.md) |
+| JIN014 | 文鸯 | [膂力、夺气；文虎](../../../rules/generals/jin014-wenyang.md) |
+| JIN015 | 石苞 | [前驱](../../../rules/generals/jin015-shibao.md) |
+| JIN016 | 张华 | [复礼、风物](../../../rules/generals/jin016-zhanghua.md) |
 
 ### 实质发现与来源边界
 
@@ -63,7 +63,7 @@
 - **需修正的文本**：JIN007 恤下运行时写“交给其两张牌并摸两张牌”，来源是“交给其两张牌，然后摸两张牌”。不应将顺序和连接关系改写。JIN003 昭然亦有“此阶段内／省略你”的非逐字改写，应恢复来源；JIN005 顺流体力括注是旧解释，采用现有已确认配将修正规则，保持 `deputyHpAdjust = -1`。尖括号样式差异另与语义差异区分，不作为新增效果。
 - **次要展示差异**：JIN002、003、008、009、010、011、014 的运行时称号均只保留来源首项，漏第二项；另有繁简字差异。标准表已保留完整来源，不应从 CSV 的其他称号补写替换。属于数据展示待修正，不与技能效果缺失混为一项故障。
 - **版本差异**：泰然 JSON 写结束阶段、CSV 写回合结束时；用户于 2026-11-15 明确时机尚未定案，**暂按回合结束时**（对应规则集回合结束前），标准表及逐将约定已标明暂行性质，不能把暂行口径写成最终裁定。当前运行时 `data/standard.lua` 仍显示旧“结束阶段”，后续实装须同步修正。骤霆仍采用标准表／JSON 的亮出与角色数上限，不采用 CSV 无该上限的版本；外部资料保留原样。
-- **三项已回复**：泰然后续在回合结束时暂按每次发动记录分别结算；柔克必须实际改为冰杀才有未造成伤害后的横置／重置机会；顺流受伤者通常已在扣减体力流程中重置，若造成属性伤害后仍横置，则在受伤者部分与横置角色部分各弃一张。具体依据见对应逐将页；前两项涉及的时机映射与“然后”依赖关系已写入[公共约定](../../../../rules/general-principles.md#易读描述的时机与然后)，柔克与顺流的问题已闭合，泰然的具体后续时机仍待定，暂行执行方式已有明确指示。
+- **三项已回复**：泰然后续在回合结束时暂按每次发动记录分别结算；柔克必须实际改为冰杀才有未造成伤害后的横置／重置机会；顺流受伤者通常已在扣减体力流程中重置，若造成属性伤害后仍横置，则在受伤者部分与横置角色部分各弃一张。具体依据见对应逐将页；前两项涉及的时机映射与“然后”依赖关系已写入[公共约定](../../../rules/general-principles.md#易读描述的时机与然后)，柔克与顺流的问题已闭合，泰然的具体后续时机仍待定，暂行执行方式已有明确指示。
 
 ### 已核对的实现接口与复用路径
 
@@ -118,4 +118,4 @@ python scripts/test.py --file tests/jin001_simayan.lua --timeout 120
 <a id="jin001-todo"></a>
 
 - [ ] 编写垂统、兴图各自的规范化描述，使用规则集定义的术语与结构，精确表达时机、条件、消耗和效果，并核对项目已确认裁定与实际代码。
-- [ ] 将审定后的规范化描述纳入《汉晋规则集》对应武将资料；保留面向玩家的卡面描述。本页的实现说明及 `rules/generals/jin001-simayan.md` 的结算约定均不替代规范化描述，未决裁定须明确标注。
+- [ ] 将审定后的规范化描述纳入《汉晋规则集》对应武将资料；保留面向玩家的卡面描述。本页的实现说明及 `docs/rules/generals/jin001-simayan.md` 的结算约定均不替代规范化描述，未决裁定须明确标注。

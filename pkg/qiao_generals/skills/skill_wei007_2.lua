@@ -1,6 +1,6 @@
 -- WEI007 甄姬 · 洛神
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI007、rulebook/events/judge.md。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI007、rulebook/events/judge.md。
 -- 准备阶段判定；若为黑色可以重复，全部判定结束后统一获得所有黑色判定牌。
 -- 一次性获得：先收集仍在可被取得区域（处理区/弃牌堆）的黑色判定牌，最后用
 -- 一次 obtainCard 移动，避免逐张入手产生多次得到事件。

@@ -1,6 +1,6 @@
 -- WU009 孙坚 · 英魂
 --
--- 规则基线：rules/standard-generals.md 吴区 WU009。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU009。
 -- 准备阶段：选择一名其他角色并选择一项：
 -- 1. 令其摸 X 张牌，然后弃置一张牌；
 -- 2. 令其摸一张牌，然后弃置 X 张牌（X 为孙坚已损失的体力值）。

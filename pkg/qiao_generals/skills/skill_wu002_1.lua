@@ -1,6 +1,6 @@
 -- WU002 甘宁 · 奇袭
 --
--- 规则基线：rules/standard-generals.md 吴区 WU002。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU002。
 -- 将一张黑色牌当【过河拆桥】使用；牌可来自手牌或装备区。颜色与牌面由
 -- 公共 ViewAs 选牌规则按当前房间的有效信息判断，不在技能内改写牌名。
 local skill = fk.CreateSkill {

@@ -1,6 +1,6 @@
 -- SHU016 甘夫人 · 淑慎
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU016。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU016。
 -- 当你回复1点体力后，你可以选择一名其他角色，令其回复1点体力，或与其各摸一张牌。
 -- 每实际回复1点提供一次独立机会；目标已满体力时不能选择回复分支。
 local skill = fk.CreateSkill {

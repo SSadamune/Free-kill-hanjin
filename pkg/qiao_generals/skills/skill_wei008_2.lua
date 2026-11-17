@@ -1,6 +1,6 @@
 -- WEI008 夏侯渊 · 设变
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI008。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI008。
 -- 触发时机是“失去体力后”，因此监听真实的 fk.HpLost；受到伤害不是失去体力
 -- 的同义词，不以 fk.Damaged 触发。移动场上一张牌复用公共的两步接口。
 local W = require "packages.qiao.pkg.qiao_generals.util.wei_phases"

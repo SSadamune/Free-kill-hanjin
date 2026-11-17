@@ -1,6 +1,6 @@
 -- JIN004/JIN013/JIN015 晋应变批次定向用例。
--- 规则依据：rules/generals/jin004-jiachong.md、jin013-wangjun.md、
--- jin015-shibao.md 及 rules/adaptation.md。测试只使用正式晋武将、真实请求与
+-- 规则依据：docs/rules/generals/jin004-jiachong.md、jin013-wangjun.md、
+-- jin015-shibao.md 及 docs/rules/adaptation.md。测试只使用正式晋武将、真实请求与
 -- 正式汉晋牌；不另建测试专用技能内容。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

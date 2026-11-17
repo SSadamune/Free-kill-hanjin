@@ -1,6 +1,6 @@
 -- QUN027 韩遂 · 骁逆
 --
--- 规则基线：rules/standard-generals.md 群区 QUN027、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN027、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 限定技，出牌阶段：视为对任意名其他势力角色使用一张【杀】。目标采用显式
 -- 策略（不套通常攻击距离，数量由所选目标决定），并走公共 card_use_targets。

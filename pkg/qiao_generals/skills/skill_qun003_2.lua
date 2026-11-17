@@ -1,6 +1,6 @@
 -- QUN003 貂蝉 · 闭月
 --
--- 规则基线：rules/standard-generals.md 群区 QUN003、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN003、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 结束阶段入口按「发动时是否空手」决定摸 1 张还是 2 张，不能先摸一张再判断。
 -- 不限制结束阶段已跳过等公共流程：与其他结束阶段技能按公共时机排队。

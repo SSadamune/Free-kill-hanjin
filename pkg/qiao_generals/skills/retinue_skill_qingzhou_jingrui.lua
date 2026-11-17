@@ -1,6 +1,6 @@
 -- WEI023 臧霸关联翼从「青州精锐」
 --
--- 规则依据：rules/generals/wei023-zangba.md、rules/commander-retinue.md。
+-- 规则依据：docs/rules/generals/wei023-zangba.md、docs/rules/commander-retinue.md。
 -- 出牌阶段限一次：令一名手牌数最小（允许并列及自己）的角色选择一项：
 -- 1. 弃置一张手牌；2. 你对其造成1点伤害。
 -- 同名多份实例各自有一次：逐实例计数由 zhen_shi_retinues 维护，每份实例

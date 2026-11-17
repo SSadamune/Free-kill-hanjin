@@ -1,6 +1,6 @@
 -- HAN008 伏皇后：惴恐、求援。定向验收文件。
--- 规则依据：rules/generals/han008-fuhuanghou.md、rulebook/events/use-card.md、
--- rulebook/events/damage.md、rules/extra-targets.md。
+-- 规则依据：docs/rules/generals/han008-fuhuanghou.md、rulebook/events/use-card.md、
+-- rulebook/events/damage.md、docs/rules/extra-targets.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han008_fuhuanghou.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")

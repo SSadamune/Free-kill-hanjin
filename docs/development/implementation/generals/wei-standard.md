@@ -1,6 +1,6 @@
 # 魏势力标准包：逐将检索与验证入口
 
-本页是魏势力标准包 15 将 25 技能与并州狼骑、虎卫军、牛金 3 张魏关联翼从的逐将检索入口，统一列出编号、运行时 ID、源码、逐技能实现详情与验证依据；技能正文只在机制页维护一份，本页不重复。规则表见[标准武将表](../../../../rules/standard-generals.md)，牌面数据来源为 `docs/石激桑武将列表.json`（外部资料只读），逐将裁定以 `rules/generals/` 的已确认文件为准，不替代规则条文。当前完成度见[开发状态](../../status.md)。
+本页是魏势力标准包 15 将 25 技能与并州狼骑、虎卫军、牛金 3 张魏关联翼从的逐将检索入口，统一列出编号、运行时 ID、源码、逐技能实现详情与验证依据；技能正文只在机制页维护一份，本页不重复。规则表见[标准武将表](../../../rules/standard-generals.md)，牌面数据来源为 `assets/docs/石激桑武将列表.json`（外部资料只读），逐将裁定以 `docs/rules/generals/` 的已确认文件为准，不替代规则条文。当前完成度见[开发状态](../../status.md)。
 
 ## 1. 逐将表
 
@@ -34,8 +34,8 @@
 
 ## 3. 接线
 
-- [skills/](../../../../pkg/qiao_generals/skills/)：25 个魏技能与 3 个翼从技能均 `qiaoImplemented = true`，骨架含 effect；`init.lua` 的加载断言会检查已实装条目确有 effect。应期只保留 `qiao__skill_wei002_3` 一份骨架，晋司马懿直接引用同一 ID，不另设薄包装；两处卡面文本统一为魏文本“☯️+2”。
-- [standard.lua](../../../../pkg/qiao_generals/data/standard.lua)：魏区 15 主称号与 25 技能原文已与 `rules/standard-generals.md` 魏区及 `docs/石激桑武将列表.json` 卡面核对，逐项差异为 0；其他势力数据未改。
+- [skills/](../../../../pkg/qiao_generals/skills)：25 个魏技能与 3 个翼从技能均 `qiaoImplemented = true`，骨架含 effect；`init.lua` 的加载断言会检查已实装条目确有 effect。应期只保留 `qiao__skill_wei002_3` 一份骨架，晋司马懿直接引用同一 ID，不另设薄包装；两处卡面文本统一为魏文本“☯️+2”。
+- [standard.lua](../../../../pkg/qiao_generals/data/standard.lua)：魏区 15 主称号与 25 技能原文已与 `docs/rules/standard-generals.md` 魏区及 `assets/docs/石激桑武将列表.json` 卡面核对，逐项差异为 0；其他势力数据未改。
 - [all.lua](../../../../tests/all.lua)：已追加 `wei_damage`、`wei_support`、`wei_phases`、`wei_pair_hp`、`wei_active`、`wei_retrial`、`wei_retinues` 7 个专项。
 - 本批实质修正：伪溃私看由全体展示 `room:showCards(hand, player)` 改为真实私看 `room:viewCards(player, { cards = hand, skill_name = ..., prompt = ... })`，测试记录收件角色与牌集；长驱不再使用私有 `room:getTag`，新增公开事实层（`qiao_wei_damage_targets`）与模式级 `fk.Damage` 记录器，客户端与服务端读同一公开数据；伪溃 `can_use` 要求 `player.hp >= 1`，强袭要求体力至少 1 或拥有可弃武器牌（失去体力消耗不得超过当前体力，不把有可弃武器的强袭一并限制为体力至少 1）；驱虎 `winner ~= player`（含平局／空结果）走真实视为【杀】分支；鹰视新增 `skill_wei002_2.lua`。
 - 共享模块与发布接线：

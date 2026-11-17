@@ -1,7 +1,7 @@
 -- QUN018 邹氏 · 祸水
 --
 -- 规则基线：docs/development/implementation/generals/qun-standard.md 的 QUN018
--- 条目、rules/only-as.md 同类来源写法；卡面文本见 data/standard.lua。
+-- 条目、docs/rules/only-as.md 同类来源写法；卡面文本见 data/standard.lua。
 --
 -- 本技能只负责主动段：
 --   出牌阶段，弃置一张黑色牌并暗置一名“双将均明置”的其他角色一张武将牌，

@@ -1,7 +1,7 @@
 -- QUN015 纪灵 · 双刃
 --
--- 规则基线：rules/generals/qun015-jiling.md（用户 2026-11-15 确认没赢后的限制
--- 持续至本回合结束）、rules/only-as.md、rules/card-use-targets.md。
+-- 规则基线：docs/rules/generals/qun015-jiling.md（用户 2026-11-15 确认没赢后的限制
+-- 持续至本回合结束）、docs/rules/only-as.md、docs/rules/card-use-targets.md。
 --
 -- 出牌阶段开始时，你可以与一名角色真实拼点：
 --   * 赢：视为对包含拼点对手在内的至多两名角色使用一张【杀】。目标按显式

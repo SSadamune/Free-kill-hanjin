@@ -1,6 +1,6 @@
 -- WU023 陈武&董袭关联翼从「庐江上甲」
 --
--- 规则依据：rules/generals/wu023-chenwu-dongxi.md、rules/commander-retinue.md。
+-- 规则依据：docs/rules/generals/wu023-chenwu-dongxi.md、docs/rules/commander-retinue.md。
 -- 出牌阶段限X次：X为实际拥有庐江上甲的角色数（含共享来源，不按实例总数），
 -- 调整手牌至装备区牌数；若实际弃牌，则本阶段使用【杀】的次数+1。
 -- 多份同名实例各自有X次：逐实例次数由 zhen_shi_retinues 维护；X按角色数

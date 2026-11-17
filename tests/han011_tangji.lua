@@ -1,5 +1,5 @@
 -- HAN011 唐姬：哀舞、诀别。默认国战套件用例（加入 tests/all.lua 后生效）。
--- 规则依据：rules/standard-generals.md 汉区 HAN011、rulebook/events/death.md。
+-- 规则依据：docs/rules/standard-generals.md 汉区 HAN011、rulebook/events/death.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
 local AY = "qiao__skill_han011_1"

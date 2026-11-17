@@ -1,6 +1,6 @@
 -- QUN001 华佗 · 济世
 --
--- 规则基线：rules/generals/qun001-huatuo.md、rules/general-exchange.md。
+-- 规则基线：docs/rules/generals/qun001-huatuo.md、docs/rules/general-exchange.md。
 -- 将自己的红色牌（手牌或装备牌）当【桃】对濒死角色使用，没有回合外限制；
 -- 濒死结算结束后的客将交换段由模式级 qun_dying_rule 读取本技能记录的救援
 -- 来源后处理，不在客户端预测事件字段。

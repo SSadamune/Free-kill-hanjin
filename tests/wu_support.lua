@@ -1,6 +1,6 @@
 -- 吴势力标准包：主动与支持组 9 技能定向验证。
--- 规则依据：rules/standard-generals.md 吴区、rules/generals/wu005-zhouyu.md、
--- rules/generals/wu015a-zhangzhao.md、rules/equipment-movement.md。
+-- 规则依据：docs/rules/standard-generals.md 吴区、docs/rules/generals/wu005-zhouyu.md、
+-- docs/rules/generals/wu015a-zhangzhao.md、docs/rules/equipment-movement.md。
 -- 夹具使用白板双将并重算 hp，避免随机初始双将的额外触发干扰。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

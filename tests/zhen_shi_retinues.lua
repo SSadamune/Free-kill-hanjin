@@ -1,6 +1,6 @@
 -- 阵/势包翼从：青州精锐、庐江上甲定向验收。
--- 规则依据：rules/generals/wei023-zangba.md、rules/generals/wu023-chenwu-dongxi.md、
--- rules/commander-retinue.md。数据注册与正式生命周期接线留给 Codex；本套件在
+-- 规则依据：docs/rules/generals/wei023-zangba.md、docs/rules/generals/wu023-chenwu-dongxi.md、
+-- docs/rules/commander-retinue.md。数据注册与正式生命周期接线留给 Codex；本套件在
 -- 房间内直接建立实例，只验证两种翼从技能的主流程与独立实例限次。
 --
 -- 尚未加入 tests/all.lua；由唯一测试执行者按

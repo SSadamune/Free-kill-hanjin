@@ -1,6 +1,6 @@
 -- QUN010 张角 · 鬼道
 --
--- 规则基线：rules/standard-generals.md 群区 QUN010、rules/generals/qun010-zhangjiao.md。
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN010、docs/rules/generals/qun010-zhangjiao.md。
 -- 判定牌生效前打出一张黑色牌替换之；「替换」意味着获得原判定牌，与鹰视的
 -- 「代替」不同。可用牌为手牌或装备牌。
 -- 顺序：先真实完成打出（responseCard 进入处理区，skipDrop 避免被默认弃置），

@@ -1,6 +1,6 @@
 -- JIN004 贾充 · 通法
 --
--- 规则基线：rules/generals/jin004-jiachong.md、rules/adaptation.md。
+-- 规则基线：docs/rules/generals/jin004-jiachong.md、docs/rules/adaptation.md。
 -- 同势力角色实际使用应变牌时，由使用者选择交给你一张自己的牌（使用者即你时
 -- 改为弃置），随后本次使用获得一个无视条件令牌。令牌属于本次使用，只让一个
 -- 尚未满足的条目成立，不把整张牌的所有条目视为成功，也不等待某个条目触发。

@@ -1,6 +1,6 @@
 # 吴势力标准包：逐将检索与验证入口
 
-本页是吴包 15 将、27 个天生技能、后天技能涉猎及锦帆军／曲阿小将两翼从的逐将检索入口，统一列出编号、运行时 ID、源码、逐技能实现详情与验证依据；技能正文只在机制页维护一份，本页不重复。规则依据见[标准武将表](../../../../rules/standard-generals.md)与逐将规范，规则确认、实现与人工验收分别记录，当前完成度见[开发状态](../../status.md)。
+本页是吴包 15 将、27 个天生技能、后天技能涉猎及锦帆军／曲阿小将两翼从的逐将检索入口，统一列出编号、运行时 ID、源码、逐技能实现详情与验证依据；技能正文只在机制页维护一份，本页不重复。规则依据见[标准武将表](../../../rules/standard-generals.md)与逐将规范，规则确认、实现与人工验收分别记录，当前完成度见[开发状态](../../status.md)。
 
 ## 1. 逐将表
 
@@ -31,14 +31,14 @@
 | 锦帆军 | `qiao_heg__retinue_jinfanjun` | [翼从专属技能](retinues.md#jinfanjun) | [wu_damage](../../../../tests/wu_damage.lua) |
 | 曲阿小将 | `qiao_heg__retinue_quaxiaojiang` | [翼从专属技能](retinues.md#quaxiaojiang) | [wu_damage](../../../../tests/wu_damage.lua) |
 
-统领能力和翼从效果由[公共机制](../commander-retinue.md)与[规则](../../../../rules/commander-retinue.md)提供，不在翼从专属技能中重写。
+统领能力和翼从效果由[公共机制](../commander-retinue.md)与[规则](../../../rules/commander-retinue.md)提供，不在翼从专属技能中重写。
 
 ## 3. 接线
 
-- [吕蒙](../../../../rules/generals/wu003-lvmeng.md)：谋断只获得涉猎，不额外发动；涉猎定义沿用用户指定文本。
-- [周瑜](../../../../rules/generals/wu005-zhouyu.md)：反间响应有选择权，只展示手牌，弃置同花色手牌及装备牌；主将体力贡献 −1，按半格公共表示处理。
-- [周泰](../../../../rules/generals/wu013-zhoutai.md)：不屈删去病句，摸 X 张、置一张“创”。
-- [张昭](../../../../rules/generals/wu015a-zhangzhao.md)：直谏“手牌区→你摸牌、装备区→其摸牌”顺序对应；装备置入要求空置对应栏。
+- [吕蒙](../../../rules/generals/wu003-lvmeng.md)：谋断只获得涉猎，不额外发动；涉猎定义沿用用户指定文本。
+- [周瑜](../../../rules/generals/wu005-zhouyu.md)：反间响应有选择权，只展示手牌，弃置同花色手牌及装备牌；主将体力贡献 −1，按半格公共表示处理。
+- [周泰](../../../rules/generals/wu013-zhoutai.md)：不屈删去病句，摸 X 张、置一张“创”。
+- [张昭](../../../rules/generals/wu015a-zhangzhao.md)：直谏“手牌区→你摸牌、装备区→其摸牌”顺序对应；装备置入要求空置对应栏。
 - [standard.lua](../../../../pkg/qiao_generals/data/standard.lua)：吴区 15 个主称号、27 条天生技能原文与标准表核对一致；多称号只取首项。涉猎仍为后天相关技能，`M.skillCount = 160` 原口径不变；其他 75 张武将数据块未改。
 - 技能骨架均显式 `qiaoImplemented = true`；[init.lua](../../../../pkg/qiao_generals/init.lua) 既有加载断言确认有实际 effect。技能独立注册，仅用于汉晋模式。
 - [mode.lua](../../../../pkg/qiao_mode/mode.lua) 在启动时安装公开历史、奋迅距离、诈降／天义／好施持续效果及缔盟到期辅助；对应文件在 `pkg/qiao_mode/skills/wu_*.lua`，公开事实层在 `rules/wu_history.lua`。客户端读取同步状态，不读取服务端事件树；涉猎整理规则随共享工具在正式扩展注册。

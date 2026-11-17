@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
--- QUN012 断肠：死亡时令来源失去一张武将牌的技能（rules/standard-generals.md、
+-- QUN012 断肠：死亡时令来源失去一张武将牌的技能（docs/rules/standard-generals.md、
 -- rulebook/topics/skill-effect-classification.md）。
 --
 -- 本模块记录“某张武将牌不再提供其技能”并执行移除，不修改引擎：

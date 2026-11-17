@@ -1,6 +1,6 @@
 -- SHU007 黄月英 · 藏机
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU007。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU007。
 -- 每回合限一次，当你因弃置而失去装备区的牌时，你可以防止其中一张非坐骑牌的移动。
 -- 只处理 moveReason == 弃置、来源为本人装备区、且牌不是进攻/防御坐骑的移动；
 -- 取消移动后不补回手牌或其他区域（不是取回）。

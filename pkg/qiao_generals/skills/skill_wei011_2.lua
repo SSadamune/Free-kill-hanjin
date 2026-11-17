@@ -1,6 +1,6 @@
 -- WEI011 曹仁 · 励战
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI011。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI011。
 -- 结束阶段，令任意名已受伤的角色各摸一张牌。目标包含自己；至少选择一名
 -- 已受伤角色。全部摸牌在同一效果结算内完成。
 local skill = fk.CreateSkill {

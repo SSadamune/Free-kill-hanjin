@@ -1,7 +1,7 @@
 -- 平行时空·卡牌
 --
 -- This package owns the formal, independent HanJin card identities. It defines
--- all 162 physical base positions from rules/card-deck.md, the twelve lord-
+-- all 162 physical base positions from docs/rules/card-deck.md, the twelve lord-
 -- equipment replacement materials, and the seven faction tricks that stay
 -- outside the default deck. Only the existing Thunder Slash positions (spade 9
 -- and spade 10) keep a usable effect; every other card is an explicitly inert

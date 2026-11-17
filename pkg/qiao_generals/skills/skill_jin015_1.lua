@@ -1,6 +1,6 @@
 -- JIN015 石苞 · 前驱
 --
--- 规则基线：rules/generals/jin015-shibao.md、rules/adaptation.md、
+-- 规则基线：docs/rules/generals/jin015-shibao.md、docs/rules/adaptation.md、
 -- rulebook/terms/description-terms/and.md。
 -- 与你势力相同的角色（含自己）准备阶段，你可以使用一张无距离限制的【杀】。
 -- 真实发动走 TriggerSkill 的 on_cost/on_use 与 room:useSkill；取消选择不产生

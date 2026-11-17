@@ -1,4 +1,4 @@
--- Physical card positions from rules/card-deck.md (162 base slots).
+-- Physical card positions from docs/rules/card-deck.md (162 base slots).
 -- Suit letters: S=spade, H=heart, C=club, D=diamond. Ranks use printed A/J/Q/K.
 -- This file is package data, not a runtime policy table: it names the exact
 -- independent HanJin card that occupies each physical slot.

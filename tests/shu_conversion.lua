@@ -1,6 +1,6 @@
 -- 蜀势力标准包第一批：仁德、武圣、咆哮、龙胆、马术、集智、连环、八阵、火计、享乐。
--- 规则依据：rules/standard-generals.md 蜀区；集智见 rules/generals/shu007-huangyueying.md；
--- 龙胆与鏖战见 rules/battle-royal.md。
+-- 规则依据：docs/rules/standard-generals.md 蜀区；集智见 docs/rules/generals/shu007-huangyueying.md；
+-- 龙胆与鏖战见 docs/rules/battle-royal.md。
 -- 夹具复用白板双将与公共请求辅助；只用真实房间流程，不替换 useCard/damage。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

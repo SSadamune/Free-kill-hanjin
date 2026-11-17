@@ -1,6 +1,6 @@
 -- WU005 周瑜 · 英姿
 --
--- 规则基线：rules/standard-generals.md 吴区 WU005。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU005。
 -- 锁定技：摸牌阶段多摸一张；手牌上限等于体力上限（覆盖基础的手牌上限）。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu005_1",

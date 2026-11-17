@@ -1,6 +1,6 @@
 -- HAN017 刘繇 · 戡难
 --
--- 规则基线：rules/generals/han017-liuyao.md 与
+-- 规则基线：docs/rules/generals/han017-liuyao.md 与
 -- rulebook/terms/description-terms/and.md。
 -- 出牌阶段每名角色限一次：与一名角色拼点；赢的角色“可以获得没赢的拼点牌
 -- 并令你本回合使用下张【杀】伤害+1”。按“并”的语义，只有实际取得没赢的

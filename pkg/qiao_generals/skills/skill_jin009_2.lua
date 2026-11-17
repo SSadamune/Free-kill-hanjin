@@ -1,6 +1,6 @@
 -- JIN009 司马懿 · 骤霆
 --
--- 规则基线：rules/generals/jin009-simayi.md。
+-- 规则基线：docs/rules/generals/jin009-simayi.md。
 -- 限定技，出牌阶段发动。每次只从牌堆顶亮出一张，移入处理区后用正式
 -- askToUseRealCard（默认已执行，且 extraUse 不占空闲杀次数）实际使用；
 -- 完整结算后重新取下一张。无法使用或亮出数达到当前角色数即止；不能任意取消。

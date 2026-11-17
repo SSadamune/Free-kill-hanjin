@@ -1,6 +1,6 @@
 -- WU017 蒋钦 · 鸟翔
 --
--- 规则依据：rules/generals/wu017-jiangqin.md。阵法技：自己是围攻角色时，
+-- 规则依据：docs/rules/generals/wu017-jiangqin.md。阵法技：自己是围攻角色时，
 -- 本围攻关系中的围攻角色（可为自己或另一围攻者）使用【杀】指定被围攻角色后，
 -- 该角色的响应需求在原有基础上 +1 张【闪】；不固定为2，不限红色【杀】。
 -- 围攻关系只经 hegemony public relation 判断。

@@ -1,8 +1,8 @@
 -- QUN015 纪灵·双刃、QUN018 邹氏·祸水的核心行为定向验收。
 --
--- 规则依据：rules/generals/qun015-jiling.md、
+-- 规则依据：docs/rules/generals/qun015-jiling.md、
 -- docs/development/implementation/generals/qun-standard.md、
--- rules/only-as.md、rules/card-use-targets.md。
+-- docs/rules/only-as.md、docs/rules/card-use-targets.md。
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
 --
 -- 验收重点：双刃真实拼点两分支、借刀杀人的真实主/副目标、本回合结束清理；

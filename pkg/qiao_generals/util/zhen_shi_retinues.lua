@@ -1,7 +1,7 @@
 -- 阵/势包翼从的公共判次辅助：按实例独立计次，并同步客户端可读的公开摘要。
 --
--- 规则依据 rules/commander-retinue.md「拥有数量与独立实例」及
--- rules/zhen-shi-generals.md「实装约束」：
+-- 规则依据 docs/rules/commander-retinue.md「拥有数量与独立实例」及
+-- docs/rules/zhen-shi-generals.md「实装约束」：
 --   * 每份同名翼从技能独立限次，不能用 player:usedSkillTimes(skillName) 这种
 --     按技能名合并的历史代替；
 --   * 庐江上甲的 X 是“当前存活且未移出游戏、实际拥有该翼从的角色数”，

@@ -1,6 +1,6 @@
 -- JIN012 羊徽瑜 · 慈威
 --
--- 规则基线：rules/generals/jin012-yanghuiyu.md。
+-- 规则基线：docs/rules/generals/jin012-yanghuiyu.md。
 -- 其他角色在其自己回合内使用第二张牌时触发。“第二张”按本回合真实的
 -- UseCard 事件计数，包含响应中的实际使用与装备，纯“打出”的 RespondCard
 -- 不计入。弃置一张牌后：基本牌或普通锦囊只令所选目标无效（不是取消目标，

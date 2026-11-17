@@ -118,7 +118,7 @@ M.registerTrick("qiao__restore_heartland", "shu")
 M.registerTrick("qiao__strengthen_state", "wu")
 M.registerTrick("qiao__luanwu_chaos", "qun")
 
--- Declarative table from rules/card-deck.md and BAN-004. pkg/qiao_cards owns the
+-- Declarative table from docs/rules/card-deck.md and BAN-004. pkg/qiao_cards owns the
 -- internal identities; resolving by the required display name keeps this side
 -- independent of those identifiers. Explicit registrations above win, and a
 -- package may provide its own metadata without being overwritten here.

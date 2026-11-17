@@ -1,6 +1,6 @@
 -- 吴 标准包：阶段与用牌历史组定向验收（克己、谋断、涉猎、国色、流离、
 -- 谦逊、度势、短兵、奋迅）。
--- 规则依据：rules/standard-generals.md 吴区、rules/generals/wu003-lvmeng.md。
+-- 规则依据：docs/rules/standard-generals.md 吴区、docs/rules/generals/wu003-lvmeng.md。
 -- 接口核对锁定 0.5.25 与 hegemony。
 -- 定向运行：
 --   python scripts/test.py --file tests/wu_phases.lua --timeout 180

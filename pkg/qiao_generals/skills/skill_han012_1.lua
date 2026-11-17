@@ -1,6 +1,6 @@
 -- HAN012 蔡邕 · 铸典
 --
--- 规则基线：rules/standard-generals.md 汉区、rulebook/terms/card-op-terms/recast.md、
+-- 规则基线：docs/rules/standard-generals.md 汉区、rulebook/terms/card-op-terms/recast.md、
 -- rulebook/terms/card-op-terms/showCards.md。你成为其他角色使用黑色牌的目标后，
 -- 可以重铸一张自己的牌；随后若因重铸摸到的牌为黑色，可以展示之并摸一张牌。
 --

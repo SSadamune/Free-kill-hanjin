@@ -1,6 +1,6 @@
 -- WEI006 郭嘉 · 轻辎
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI006。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI006。
 -- 准备阶段，弃置一名同势力其他角色装备区的一张牌，令其获得“神速”直到其
 -- 回合结束。同势力判断复用 hegemony 公共的明置后势力预测，客户端与服务端
 -- 使用同一份公开信息。

@@ -1,6 +1,6 @@
 -- HAN007 王荣 · 敏思
 --
--- 规则基线：rules/generals/han007-wangrong.md、rules/general-principles.md。
+-- 规则基线：docs/rules/generals/han007-wangrong.md、docs/rules/general-principles.md。
 -- 出牌阶段限一次：弃置任意张点数之和为 13 的牌（手牌或装备牌均可），
 -- 摸两倍的牌并展示之；只有本次摸到的红桃牌本回合不计入手牌上限。
 --

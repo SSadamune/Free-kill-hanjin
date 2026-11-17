@@ -1,5 +1,5 @@
 -- HAN009 伏完：谋溃。定向验收文件。
--- 规则依据：rules/standard-generals.md 的 HAN009 原文、
+-- 规则依据：docs/rules/standard-generals.md 的 HAN009 原文、
 -- rulebook/events/use-card.md、rulebook/terms/resolution-terms/cancel.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han009_fuwan.lua --timeout 120

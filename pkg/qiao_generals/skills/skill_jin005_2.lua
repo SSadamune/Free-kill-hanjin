@@ -1,6 +1,6 @@
 -- JIN005 羊祜 · 顺流
 --
--- 规则基线：rules/generals/jin005-yanghu.md（含 2026-11-15 用户裁定）。
+-- 规则基线：docs/rules/generals/jin005-yanghu.md（含 2026-11-15 用户裁定）。
 -- 副将技；体力贡献 -1 已由 data/standard.lua 的 deputyHpAdjust 提供，本技能
 -- 不另发标记。造成属性伤害后，先弃受伤角色一张，再弃所有当时横置角色各一张：
 -- 受伤者通常已在 ChangeHp 的连环重置中解除横置，但若仍横置，后一部分仍会再次

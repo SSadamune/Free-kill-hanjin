@@ -1,5 +1,5 @@
 -- 翼从同名独立实例：最小机制定向验收。
--- 规则依据：rules/commander-retinue.md「拥有数量与独立实例」。
+-- 规则依据：docs/rules/commander-retinue.md「拥有数量与独立实例」。
 --
 -- 生产目录只有通用实例模块；探测技能与外部来源标记在
 -- tests/support/retinue_instances.lua 中注册，使用 qiao_test__ 前缀，不发布。

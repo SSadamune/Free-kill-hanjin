@@ -1,7 +1,7 @@
 -- WU015A 张昭 · 直谏
 --
--- 规则基线：rules/standard-generals.md 吴区 WU015A、
--- rules/generals/wu015a-zhangzhao.md、rules/equipment-movement.md。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU015A、
+-- docs/rules/generals/wu015a-zhangzhao.md、docs/rules/equipment-movement.md。
 -- 出牌阶段：将一张装备牌置入一名其他角色空置的对应装备栏；装备牌来自
 -- 张昭手牌时张昭摸一张，来自张昭装备区时该角色摸一张。不是使用装备牌，
 -- 不替换目标已有装备。

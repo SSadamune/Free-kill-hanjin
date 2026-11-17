@@ -1,6 +1,6 @@
 -- WU008 孙尚香 · 枭姬
 --
--- 规则基线：rules/standard-generals.md 吴区 WU008。
+-- 规则基线：docs/rules/standard-generals.md 吴区 WU008。
 -- 每失去一张装备区里的牌后可以摸一张；若失去时不在自己的回合内，改为
 -- 摸两张。按实际离开装备区的牌逐张触发，与引擎 AfterCardsMove 的 moveInfo
 -- 一致；“回合外”按当前回合角色判断。

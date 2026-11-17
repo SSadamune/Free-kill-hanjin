@@ -1,6 +1,6 @@
 -- QUN010 张角 · 雷击
 --
--- 规则基线：rules/standard-generals.md 群区 QUN010、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN010、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 「使用或打出【闪】」是两个不同的引擎入口，分别接 fk.CardUsing（使用，
 -- 包括响应【杀】时使用【闪】）与 fk.CardResponding（纯打出），不以一个

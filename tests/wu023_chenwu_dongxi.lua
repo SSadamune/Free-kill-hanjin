@@ -1,5 +1,5 @@
 -- WU023 陈武&董袭：奋命、断绁定向验收。
--- 规则依据：rules/generals/wu023-chenwu-dongxi.md。
+-- 规则依据：docs/rules/generals/wu023-chenwu-dongxi.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"

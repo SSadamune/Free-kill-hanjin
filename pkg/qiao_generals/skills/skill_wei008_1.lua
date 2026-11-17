@@ -1,6 +1,6 @@
 -- WEI008 夏侯渊 · 神速
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI008、
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI008、
 -- rulebook/terms/game-flow-terms/phase.md。原文没有“准备阶段”时机：三项分别
 -- 在对应阶段开始前（EventPhaseChanging）询问，而不是准备阶段一次选完：
 --   ① 判定阶段开始前：跳过此阶段和摸牌阶段；

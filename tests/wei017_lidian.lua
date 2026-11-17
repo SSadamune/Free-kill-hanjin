@@ -1,5 +1,5 @@
 -- WEI017 李典：恂恂、忘隙定向验收。
--- 规则依据：rules/generals/wei017-lidian.md。
+-- 规则依据：docs/rules/generals/wei017-lidian.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 

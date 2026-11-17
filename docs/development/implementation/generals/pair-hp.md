@@ -1,6 +1,6 @@
 # 配将体力：跨势力技能实现与验证
 
-本页是“配将体力”机制的主记录页：配将体力贡献修正及其在开局、升变时的复用。不替代规则条文，规则冲突时以 `rules/` 与 `rulebook/` 为准。范围边界：只实现应期的配将体力贡献修正（☯️+2）；魏司马懿的[狼顾](damage.md#wei002-1)、[鹰视](retrial.md#wei002-2)与晋司马懿的权变、骤霆不在本页。晋 JIN009 的同文应期共享本页正文，不重复记录。共享命令输出见[共享验证证据](verification-evidence.md)。
+本页是“配将体力”机制的主记录页：配将体力贡献修正及其在开局、升变时的复用。不替代规则条文，规则冲突时以 `docs/rules/` 与 `rulebook/` 为准。范围边界：只实现应期的配将体力贡献修正（☯️+2）；魏司马懿的[狼顾](damage.md#wei002-1)、[鹰视](retrial.md#wei002-2)与晋司马懿的权变、骤霆不在本页。晋 JIN009 的同文应期共享本页正文，不重复记录。共享命令输出见[共享验证证据](verification-evidence.md)。
 
 ## 技能索引
 
@@ -18,7 +18,7 @@
 
 - **标识与依据**：
   - 运行时 ID：唯一规范 ID 为 `qiao__skill_wei002_3`，源码 [skill_wei002_3.lua](../../../../pkg/qiao_generals/skills/skill_wei002_3.lua)；晋 JIN009 直接引用同一 ID，不再另设骨架。两处卡面文本统一为魏文本（“☯️+2”），避免同 ID 翻译相互覆盖。晋应期在本页只记录来源，不另写正文。
-  - 规则见[应期裁定](../../../../rules/generals/wei002-simayi.md)、[JIN009 同文引用](../../../../rules/generals/jin009-simayi.md)与[配将体力贡献通则](../../../../rules/general-principles.md#配将体力贡献与武将状态)。业务文件：[pair_hp.lua](../../../../pkg/qiao_mode/rules/pair_hp.lua)、`mode.lua`、`rules/ascension.lua`、应期骨架（两版共用一份）。
+  - 规则见[应期裁定](../../../rules/generals/wei002-simayi.md)、[JIN009 同文引用](../../../rules/generals/jin009-simayi.md)与[配将体力贡献通则](../../../rules/general-principles.md#配将体力贡献与武将状态)。业务文件：[pair_hp.lua](../../../../pkg/qiao_mode/rules/pair_hp.lua)、`mode.lua`、`rules/ascension.lua`、应期骨架（两版共用一份）。
 - **实现与接口**：
   - 数值表示：引擎以**半格**保存体力贡献（1.5 体力记作 `3`，2.0 记作 `4`，2.5 记作 `5`）。国战双将体力上限为 `((主将贡献 + 主将调整) + (副将贡献 + 副将调整) + 应期半格修正) // 2`；半格合计为奇数时 `HalfMaxHpLeft` 标记为 `1`，表示 1 个“半个阴阳鱼”。应期的“☯️+2”是 **2 个半格**（1 点体力上限），不是两枚可消耗的阴阳鱼标记，因此不发放 `@!!yinyangfish` 或 `qiao_ascension_yinyang` 等标记，只在开局把组合上限补 1 点，并沿用引擎写入的奇偶余数标记。
   - 身份判定：`pair_hp.lua` 的 `qualifies(name)` 表示“配将”是否为多势力或客将——多势力看牌面 `kingdom + subkingdom` 的已知势力数大于 1（`faction_ban.affiliations`），不看本局禁选过滤后的结果；客将看 `guest_factions.guestKingdoms(name)` 非空。应期技能归属按技能名识别（`qiao__skill_wei002_3`），两版司马懿引用同一 ID，不按武将来源另设识别项；君主版／效忠版若沿用同名技能也会被识别；计算按每名角色的配将独立进行，同一配将组合由 `yinyang` 返回一次修正。

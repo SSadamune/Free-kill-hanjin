@@ -1,6 +1,6 @@
 -- QUN005 颜良&文丑 · 双雄
 --
--- 规则基线：rules/standard-generals.md 群区 QUN005、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN005、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 摸牌阶段结束：弃置自己一张牌（手牌或装备），本回合可将一张与其颜色不同的
 -- 牌当【决斗】使用。权限由随包加载的独立状态骨架 qun_cards_state 提供，故失去

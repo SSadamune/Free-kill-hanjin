@@ -8,7 +8,7 @@
 项目仍在开发中。六势力标准包共 90 张武将及 14 种翼从已有正式技能实现；阵、势包另接入 24 张普通武将、两张君主及三种新翼从，君主经升变／继位取得。阵、势包26张武将的默认插画已接入，真实客户端逐图显示尚待人工验收。各批自动化验证范围见开发状态。晋司马懿的应期与魏司马懿共用技能，泰然后续时机尚未定案，暂按回合结束时逐次结算。大部分卡牌已复用或适配新月杀实装，部分特殊装备和势力锦囊仍待实现。客户端交互、多人联网／重连及干净本体安装的完整人工验收尚未完成。
 
 - [项目愿景](docs/vision.md)与[文档入口](docs/README.md)
-- [规则集工作底稿](rulebook/README.md)与[项目设计、裁定](rules/README.md)
+- [规则集工作底稿](rulebook/README.md)与[项目设计、裁定](docs/rules/README.md)
 - [开发状态与待办](docs/development/status.md)及[实现导航](docs/development/implementation/README.md)
 
 标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md) · [群](docs/development/implementation/generals/qun-standard.md) · [晋](docs/development/implementation/generals/jin001-simayan.md)。另见[阵、势包实现与验证](docs/development/implementation/generals/zhen-shi-review.md)。具体技能与验证范围以对应文档为准。
@@ -63,7 +63,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 
 ### 测试用自由选将
 
-在房间的公共游戏规则设置中开启“自由选将”，然后右键或长按候选武将打开替换窗口。该测试功能允许候选外武将和规则外配对，仍须选择两张不同的有效武将牌；关闭后恢复正常选将限制。初始势力的处理见[自由选将例外](rules/faction-ban.md#测试用自由选将例外)。
+在房间的公共游戏规则设置中开启“自由选将”，然后右键或长按候选武将打开替换窗口。该测试功能允许候选外武将和规则外配对，仍须选择两张不同的有效武将牌；关闭后恢复正常选将限制。初始势力的处理见[自由选将例外](docs/rules/faction-ban.md#测试用自由选将例外)。
 
 ### 仅开发环境生效的本体适配
 
@@ -134,11 +134,11 @@ VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同�
 图片、音效及素材配置使用项目 [hanjin-asset-development skill](.agents/skills/hanjin-asset-development/SKILL.md)。给出动作、范围和已提供的素材即可，例如：
 
 ```text
-按照 hanjin-asset-development 替换刘协默认插画，素材在 assets-source/
+按照 hanjin-asset-development 替换刘协默认插画，素材在 assets/
 ```
 
 ```text
-按照 hanjin-asset-development 接入技能语音，素材已放在 assets-source/，目标技能见本轮说明
+按照 hanjin-asset-development 接入技能语音，素材已放在 assets/，目标技能见本轮说明
 ```
 
 缺少原材料时先说明需求并索取；从零生图或绘制素材须用户明确批准；新音效依用户目标与现有接口处理，缺少影响成品的关键需求再澄清。素材技术规范见[图片与音效资源保存规范](docs/development/assets.md)，实际素材、接线与验证结果分别落在 `image/`、`audio/`、`pkg/` 和 `docs/development/`。默认由当前 agent 执行，不自动提交。
@@ -154,10 +154,10 @@ Free-kill-hanjin/
 │  └─ qiao_cards/         牌表、卡牌与技能
 ├─ image/                   游戏使用的图片
 ├─ audio/                   技能与阵亡语音
-├─ assets-source/           用户提供的原始素材
-├─ rules/                   项目设计、机制约定与逐将裁定
+├─ assets/                  外部参考资料与素材原稿（只读）
+├─ docs/rules/              项目设计、机制约定与逐将裁定
 ├─ rulebook/                汉晋规则集工作底稿与后续正式改编
-├─ docs/                    项目愿景、外部规则来源与开发资料
+├─ docs/                    项目愿景、规则导航与开发资料
 ├─ tests/                   自动化测试
 ├─ scripts/                 环境安装、同步与测试脚本
 ├─ .dev/                    本地游戏与依赖，不纳入 Git

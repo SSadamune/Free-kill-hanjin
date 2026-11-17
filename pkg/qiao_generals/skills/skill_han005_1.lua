@@ -1,6 +1,6 @@
 -- HAN005 何进 · 谋诛
 --
--- 规则基线：rules/standard-generals.md 汉区 HAN005、rules/general-principles.md、
+-- 规则基线：docs/rules/standard-generals.md 汉区 HAN005、docs/rules/general-principles.md、
 -- docs/development/implementation/card-use-targets.md。出牌阶段限一次：令一名
 -- 其他角色交给你一张手牌；交牌后若其手牌数小于你，其视为使用一张【杀】或
 -- 【决斗】。此牌按其正常牌面目标条件选择目标，不设技能指定的目标例外。

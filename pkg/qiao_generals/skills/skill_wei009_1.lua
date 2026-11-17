@@ -1,6 +1,6 @@
 -- WEI009 张郃 · 巧变
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI009。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI009。
 -- 在准备与结束阶段以外的阶段即将开始时，可以弃置一张牌并跳过该阶段；
 -- 若跳过摸牌阶段，可以获得至多两名其他角色各一张手牌；若跳过出牌阶段，
 -- 可以移动场上一张牌。已经跳过的阶段不会再触发 EventPhaseChanging，

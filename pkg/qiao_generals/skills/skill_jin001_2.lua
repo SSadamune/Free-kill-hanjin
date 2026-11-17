@@ -1,7 +1,7 @@
 -- JIN001 司马炎 · 兴图
 --
--- 规则基线：rules/generals/jin001-simayan.md 第 3 节、rules/adaptation.md 与
--- rules/card-use-targets.md。回合内任意角色实际使用过应变牌即满足条件；以
+-- 规则基线：docs/rules/generals/jin001-simayan.md 第 3 节、docs/rules/adaptation.md 与
+-- docs/rules/card-use-targets.md。回合内任意角色实际使用过应变牌即满足条件；以
 -- 汉晋 A.isAdaptationCard(card, use) 判断“使用级”应变事实，不把实体材料牌
 -- 的应变条目或 Triggered 成功事件当作条件。条件事实由全局监听记录，因此
 -- 暗置、尚未获得技能或后来才获得技能都不抹去本回合已经发生的用牌。

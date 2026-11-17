@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
--- HanJin independent general exchange rule (rules/general-exchange.md).
+-- HanJin independent general exchange rule (docs/rules/general-exchange.md).
 --
 -- This module only reads the engine API and room-scoped state.  It does not
 -- patch upstream `HegUtil.swapDeputy`, the engine, or any upstream package.
@@ -28,7 +28,7 @@ local HISTORY_SCOPES = { Player.HistoryPhase, Player.HistoryTurn, Player.History
 -- Exchanged white soldiers count as "obtained" by the receiving position.  The
 -- commander/retinue module registers its own independent retinue generals here;
 -- do not infer registered retinues from the `blank_` prefix (see
--- rules/commander-retinue.md).
+-- docs/rules/commander-retinue.md).
 M.soldier_generals = {
   blank_shibing = "white",
   blank_nvshibing = "white",

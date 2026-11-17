@@ -1,6 +1,6 @@
 -- QUN003 貂蝉 · 离间
 --
--- 规则基线：rules/standard-generals.md 群区 QUN003、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN003、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 弃置一张自己的牌，选择两名其他男性角色：由后选者视为对先选者使用一张
 -- 【决斗】。决斗的使用者是被选中的男性，不是貂蝉本人；决斗使用本包的正式

@@ -1,6 +1,6 @@
 -- WEI002/JIN009 司马懿 · 应期：配将体力贡献接线。
--- 规则依据：rules/generals/wei002-simayi.md、rules/generals/jin009-simayi.md
--- 与 rules/general-principles.md“配将体力贡献与武将状态”。
+-- 规则依据：docs/rules/generals/wei002-simayi.md、docs/rules/generals/jin009-simayi.md
+-- 与 docs/rules/general-principles.md“配将体力贡献与武将状态”。
 --
 -- 引擎以半格表示体力（1.5 → 3、2.0 → 4），双将上限为两贡献之和 // 2。
 -- 应期的“☯️+2”是 2 个半格（1 点体力上限），不是两枚可消耗阴阳鱼标记；

@@ -1,6 +1,6 @@
 -- JIN005 羊祜 · 柔克
 --
--- 规则基线：rules/generals/jin005-yanghu.md、rules/general-principles.md
+-- 规则基线：docs/rules/generals/jin005-yanghu.md、docs/rules/general-principles.md
 -- “易读描述的时机与然后”。
 -- 每名同势力角色每回合真实使用的首张【杀】可改为冰【杀】；首张事实读取本回合
 -- UseCard 历史，因此技能尚未取得/明置时发生的使用仍然保留。改牌通过

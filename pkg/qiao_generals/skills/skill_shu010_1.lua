@@ -1,6 +1,6 @@
 -- SHU010 庞统 · 连环
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU010。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU010。
 -- 你可以将一张梅花手牌当【铁索连环】使用或重铸。
 -- 使用走正式 ViewAs 入口：其他效果要求使用【铁索连环】时也能用梅花手牌转化。
 -- 引擎同一技能只允许一个 active/viewas 效果，重铸由独立辅助技能

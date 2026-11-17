@@ -1,6 +1,6 @@
 -- JIN014 文鸯 · 翼从「文虎」（限一）
 --
--- 规则基线：rules/generals/jin014-wenyang.md、rules/standard-generals.md。
+-- 规则基线：docs/rules/generals/jin014-wenyang.md、docs/rules/standard-generals.md。
 -- 出牌阶段限一次：弃置自己手牌/装备/判定三个区域中任意个非空且可全弃区域的
 -- 所有牌，然后视为使用一张【决斗】，目标上限 X 为实际完整弃置的区域数。
 -- 区域不能以空区充数，也不把装备栏分别算区域；只弃部分牌不构成该区域。

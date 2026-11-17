@@ -1,7 +1,7 @@
 -- QUN002 吕布 · 虓猛
 --
--- 规则基线：rules/standard-generals.md 群区 QUN002、
--- rules/generals/qun002-lvbu.md、rules/extra-targets.md。
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN002、
+-- docs/rules/generals/qun002-lvbu.md、docs/rules/extra-targets.md。
 -- 每回合限一次：吕布使用【决斗】时，由当前回合角色（不一定是吕布）为该牌
 -- 追加至多两个「与吕布势力不同」的目标。转化【决斗】同样适用；额外目标在
 -- 目标声明后加入，不重新使用此牌。候选条件走公共 extra_targets 结构化入口。

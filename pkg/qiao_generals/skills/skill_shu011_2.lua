@@ -1,6 +1,6 @@
 -- SHU011 诸葛亮（卧龙） · 火计
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU011。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU011。
 -- 你可以将一张红色手牌当【火攻】使用；只授权手牌，不开放装备区。
 -- 目标条件与结算全部交给正式汉晋【火攻】牌技能，技能内不复制牌面流程。
 local skill = fk.CreateSkill {

@@ -1,7 +1,7 @@
 -- HAN001 刘协 · 密诏
 --
--- 规则基线：rules/generals/han001-liuxie.md 第 3 节，以及
--- rules/card-use-targets.md。主动技的选择阶段只完成“自己的牌”和收牌者
+-- 规则基线：docs/rules/generals/han001-liuxie.md 第 3 节，以及
+-- docs/rules/card-use-targets.md。主动技的选择阶段只完成“自己的牌”和收牌者
 -- B 的选择；交牌移动完成后再选择第三人 C 并发起拼点。
 local skill = fk.CreateSkill {
   name = "qiao__skill_han001_2",

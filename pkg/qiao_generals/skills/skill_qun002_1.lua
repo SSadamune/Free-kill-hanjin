@@ -1,7 +1,7 @@
 -- QUN002 吕布 · 无双
 --
--- 规则基线：rules/standard-generals.md 群区 QUN002、
--- rules/generals/qun002-lvbu.md。
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN002、
+-- docs/rules/generals/qun002-lvbu.md。
 -- 「多一张」按当前响应张数累加，不写死为 2；短兵等其他增量先写入时仍在
 -- 其基础上 +1。已写入某次用牌的数量不因随后暗置、失技而撤销（AimData 保存）。
 local skill = fk.CreateSkill {

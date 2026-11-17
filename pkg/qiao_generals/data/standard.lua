@@ -1,4 +1,4 @@
--- Formal six-kingdom standard content, generated from rules/standard-generals.md.
+-- Formal six-kingdom standard content, generated from docs/rules/standard-generals.md.
 -- This file holds card-face data only. Ordinary and retinue skills are
 -- display-only shells: the skill skeletons have no effects. The `limited`
 -- flag on a retinue records the printed 限一 mark; the common commander rules

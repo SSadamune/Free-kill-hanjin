@@ -1,6 +1,6 @@
 -- HAN007 王荣 · 追德
 --
--- 规则基线：rules/generals/han007-wangrong.md。你死亡时，可以展示任意张
+-- 规则基线：docs/rules/generals/han007-wangrong.md。你死亡时，可以展示任意张
 -- 红桃牌并交给一名其他角色，令其摸等量的牌，然后其可以发动一次「敏思」。
 --
 -- 时机：fk.Death 位于 GameOverJudge 之后、BuryVictim 清理死亡角色牌之前；

@@ -1,7 +1,7 @@
 -- WEI018 曹洪 · 鹤翼
 --
--- 规则依据：rules/generals/wei018-caohong.md、rules/commander-retinue.md 及
--- rules/zhen-shi-generals.md。阵法技：真实队列存在时，队列全体（含自己）
+-- 规则依据：docs/rules/generals/wei018-caohong.md、docs/rules/commander-retinue.md 及
+-- docs/rules/zhen-shi-generals.md。阵法技：真实队列存在时，队列全体（含自己）
 -- 拥有飞影；没有队列时不因自己与自己同势力而获得。来源按每个鹤翼持有者
 -- 独立登记，多个来源可叠加存在、互不删除；明置、失技、死亡、改势力、
 -- 移出游戏及队列变化都即时重算。

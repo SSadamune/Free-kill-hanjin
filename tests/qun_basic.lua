@@ -1,6 +1,6 @@
 -- 群势力标准包第一批（本批 A）：除疠、离间、闭月、猛撼、雷击、雄异、死谏、随势。
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
--- 规则依据：rules/standard-generals.md 群区、rules/generals/qun016-tianfeng.md、
+-- 规则依据：docs/rules/standard-generals.md 群区、docs/rules/generals/qun016-tianfeng.md、
 -- docs/development/implementation/generals/qun-standard.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

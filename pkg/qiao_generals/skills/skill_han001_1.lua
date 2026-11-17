@@ -1,6 +1,6 @@
 -- HAN001 刘协 · 天命
 --
--- 规则基线：rules/generals/han001-liuxie.md 第 2 节。
+-- 规则基线：docs/rules/generals/han001-liuxie.md 第 2 节。
 -- 时机是“成为【杀】的目标后”、响应之前；弃牌是发动消耗，先弃后摸。
 -- 可弃手牌不足两张时弃尽，零张时不发生弃牌移动但仍可摸两张；装备牌
 -- 不能用于补足。所有【杀】类别由 trueName == "slash" 识别。

@@ -1,7 +1,7 @@
 -- SHU005 赵云 · 龙胆
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU005；鏖战兼容见
--- rules/battle-royal.md。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU005；鏖战兼容见
+-- docs/rules/battle-royal.md。
 -- 四组互转，均可使用或打出：
 --   【杀】→【闪】、【闪】→【杀】、【桃】→【酒】、【酒】→【桃】。
 -- 属性【杀】（火/雷/冰）按 trueName 视为【杀】。

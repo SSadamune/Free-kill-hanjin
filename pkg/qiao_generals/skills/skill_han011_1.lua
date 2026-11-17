@@ -1,6 +1,6 @@
 -- HAN011 唐姬 · 哀舞
 --
--- 规则基线：rules/standard-generals.md 汉区 HAN011、rulebook/events/damage.md、
+-- 规则基线：docs/rules/standard-generals.md 汉区 HAN011、rulebook/events/damage.md、
 -- rulebook/terms/card-op-terms/discard.md。每回合限一次，当其他角色受到伤害
 -- 后（按伤害事件一次，不按伤害点数多次），你可以弃置至少一张牌；然后其可以
 -- 弃置至少一张牌。若你与其共计弃置至少三张，你与其各回复1点体力。

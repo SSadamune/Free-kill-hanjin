@@ -1,7 +1,7 @@
 -- 阵包 WEI018 曹洪、WU017 蒋钦的独立数据片段。
 -- 由 pkg/qiao_generals/init.lua 作为同一 zhenshi 包的 fragment 合并计数与将池；
 -- 不再单独注册包。
--- 牌面资料取自 docs/石激桑武将列表.json；效果实现在 pkg/qiao_generals/skills。
+-- 牌面资料取自 assets/docs/石激桑武将列表.json；效果实现在 pkg/qiao_generals/skills。
 local M = {}
 
 M.version = 1

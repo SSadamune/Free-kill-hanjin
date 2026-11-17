@@ -1,6 +1,6 @@
 -- QUN013 马腾 · 雄异
 --
--- 规则基线：rules/standard-generals.md 群区 QUN013、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN013、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 限定技，出牌阶段：先令所有与自己势力相同的角色（含自己）各摸三张，
 -- 然后检查「与自己势力相同的角色数是否全场最少（含并列）」，符合才回复 1 点。

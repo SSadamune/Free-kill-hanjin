@@ -1,7 +1,7 @@
 -- SHU003 张飞 · 咆哮
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU003；状态型无次数限制的接口见
--- rules/adaptation.md ADAPT-006。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU003；状态型无次数限制的接口见
+-- docs/rules/adaptation.md ADAPT-006。
 -- 锁定技：
 --   1. 使用【杀】无次数限制：属 TargetModSkill.bypass_times，只绕过上限，
 --      本次使用仍按普通用牌计数；

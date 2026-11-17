@@ -1,6 +1,6 @@
 -- JIN002 司马师 · 夷灭
 --
--- 规则基线：rules/generals/jin002-simashi.md。
+-- 规则基线：docs/rules/generals/jin002-simashi.md。
 -- 限定技：当你对体力值大于等于你的角色造成伤害时，可以令当前伤害值翻倍。
 -- 比较在伤害事件确定时进行；取消不消耗限定机会，发动后才记入 HistoryGame。
 local skill = fk.CreateSkill {

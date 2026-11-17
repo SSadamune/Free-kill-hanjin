@@ -1,6 +1,6 @@
 -- WU017 蒋钦 · 尚义
 --
--- 规则依据：rules/generals/wu017-jiangqin.md。
+-- 规则依据：docs/rules/generals/wu017-jiangqin.md。
 -- 两个入口：
 --   * 出牌阶段限一次：令一名其他角色观看你的手牌，然后你观看其所有暗置武将牌
 --     和手牌，可弃其黑桃、梅花手牌至多各一张；

@@ -1,7 +1,7 @@
 -- QUN012 蔡文姬 · 断肠
 --
 -- 锁定技，你死亡时，你令来源失去一张武将牌的技能。
--- 规则基线：rules/standard-generals.md QUN012、
+-- 规则基线：docs/rules/standard-generals.md QUN012、
 -- rulebook/topics/skill-effect-classification.md（已建立的延时效果不撤销）。
 -- 来源选择、按牌失技与永久记录见 packages.qiao.pkg.qiao_mode.rules.qun_duanchang；
 -- 该模块还向 general_exchange 注册来源过滤器，交换不会复原技能。

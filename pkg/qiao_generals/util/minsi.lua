@@ -5,7 +5,7 @@
 -- 也不永久授予技能：额外发动只是通过辅助主动技让受赠者完成一次同效果的
 -- 选牌与结算。
 --
--- 规则依据：rules/generals/han007-wangrong.md、rules/general-principles.md。
+-- 规则依据：docs/rules/generals/han007-wangrong.md、docs/rules/general-principles.md。
 -- 弃置的牌可以是自己的手牌或装备区里的牌；点数之和必须正好为 13。
 -- 只有此次摸到的红桃牌本回合不计入手牌上限，其他来源的红桃牌不受影响。
 local M = {}

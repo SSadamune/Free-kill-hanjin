@@ -1,6 +1,6 @@
 -- JIN001 司马炎：垂统、兴图。默认国战套件用例。
--- 规则依据：rules/generals/jin001-simayan.md 第 2、3 节、
--- rules/equipment-movement.md、rules/adaptation.md、rules/card-use-targets.md。
+-- 规则依据：docs/rules/generals/jin001-simayan.md 第 2、3 节、
+-- docs/rules/equipment-movement.md、docs/rules/adaptation.md、docs/rules/card-use-targets.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
 local CT = "qiao__skill_jin001_1"

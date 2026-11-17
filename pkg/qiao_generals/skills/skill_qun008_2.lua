@@ -1,6 +1,6 @@
 -- QUN008 庞德 · 猛撼
 --
--- 规则基线：rules/standard-generals.md 群区 QUN008、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN008、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 使用【杀】指定一个目标后，弃置该目标一张手牌或装备牌：
 --   * 弃置的是基本牌：该目标获得本次【杀】可获得的实体牌。只移动真实

@@ -1,7 +1,7 @@
 -- JIN013 王濬 · 乘流
 --
--- 规则基线：rules/generals/jin013-wangjun.md、rules/adaptation.md、
--- docs/规则向FAQ文件.md 的“伤害牌”定义。
+-- 规则基线：docs/rules/generals/jin013-wangjun.md、docs/rules/adaptation.md、
+-- assets/docs/规则向FAQ文件.md 的“伤害牌”定义。
 -- 王濬使用伤害牌时，本次使用获得〈富甲→改为雷电伤害〉。已明置时这是状态效果，
 -- 自动赋条目；暗置时由玩家选择明置该武将后发动，走真实 TriggerSkill 流程，
 -- 不能仅凭 hasSkill 给未明置技能效果。雷伤标记写在本次 use 上，由独立房间规则

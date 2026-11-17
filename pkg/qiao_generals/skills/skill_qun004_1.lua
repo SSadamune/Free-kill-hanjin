@@ -1,6 +1,6 @@
 -- QUN004 袁绍 · 乱击
 --
--- 规则基线：rules/standard-generals.md 群区 QUN004、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN004、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 两张手牌当【万箭齐发】，不要求两素材同花色；仅排除「本回合此前发动乱击
 -- 时已经选择过」的花色，因此同一次选择的两张可以同花色。响应摸牌由实际

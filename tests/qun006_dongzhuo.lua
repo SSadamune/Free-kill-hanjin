@@ -1,5 +1,5 @@
 -- QUN006 董卓：横征、暴凌及所授崩坏定向验收。
--- 规则依据：rules/generals/qun006-dongzhuo.md。
+-- 规则依据：docs/rules/generals/qun006-dongzhuo.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"

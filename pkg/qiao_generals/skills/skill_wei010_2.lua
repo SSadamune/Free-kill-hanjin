@@ -1,6 +1,6 @@
 -- WEI010 徐晃 · 长驱
 --
--- 规则基线：rules/standard-generals.md WEI010。锁定技：你对本回合未受到过你
+-- 规则基线：docs/rules/standard-generals.md WEI010。锁定技：你对本回合未受到过你
 -- 伤害的角色使用牌无距离限制。
 -- “本回合受到过你伤害”由模式级全局记录器写入同步玩家标记（见
 -- rules/wei_history.lua 与 skills/wei_damage_history.lua），客户端与服务器

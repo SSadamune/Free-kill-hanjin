@@ -1,8 +1,8 @@
 -- 群势力标准包：QUN018 邹氏·祸水的“回合内其他角色不能明置”来源维护。
 --
 -- 规则基线：docs/development/implementation/generals/qun-standard.md 的 QUN018
--- 条目、rules/generals/qun015-jiling.md 的同类来源写法，以及
--- rules/card-use-targets.md。上游 huoshui 只在 TurnStart 往其他角色写
+-- 条目、docs/rules/generals/qun015-jiling.md 的同类来源写法，以及
+-- docs/rules/card-use-targets.md。上游 huoshui 只在 TurnStart 往其他角色写
 -- `RevealProhibited-turn` 临时标记，没有“按来源撤销”的能力：祸水在回合中途
 -- 明置、随后又被暗置/失去技能时，上游标记会一直留到下一回合开始。
 --

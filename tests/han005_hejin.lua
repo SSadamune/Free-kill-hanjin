@@ -1,5 +1,5 @@
 -- HAN005 何进：谋诛、构难。默认国战套件用例（加入 tests/all.lua 后生效）。
--- 规则依据：rules/standard-generals.md 汉区 HAN005、
+-- 规则依据：docs/rules/standard-generals.md 汉区 HAN005、
 -- docs/development/implementation/card-use-targets.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 

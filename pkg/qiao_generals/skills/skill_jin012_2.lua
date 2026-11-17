@@ -1,6 +1,6 @@
 -- JIN012 羊徽瑜 · 弘训
 --
--- 规则基线：rules/generals/jin012-yanghuiyu.md。
+-- 规则基线：docs/rules/generals/jin012-yanghuiyu.md。
 -- 锁定技：与你势力相同的角色的结束阶段，已受伤则摸一张，已横置则重置并
 -- 摸一张。两项分别检查，可都执行；重置是定向操作，不调用翻面/连环翻转。
 -- 势力相同复用 hegemony 公共比较，合法情况下包含自己。

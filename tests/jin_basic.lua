@@ -1,6 +1,6 @@
 -- JIN011/JIN012/JIN014 晋标准包首批：果毅、慈威、弘训、膂力、夺气。
--- 规则依据：rules/generals/jin011-zhanghu-yuechen.md、
--- rules/generals/jin012-yanghuiyu.md、rules/generals/jin014-wenyang.md。
+-- 规则依据：docs/rules/generals/jin011-zhanghu-yuechen.md、
+-- docs/rules/generals/jin012-yanghuiyu.md、docs/rules/generals/jin014-wenyang.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 

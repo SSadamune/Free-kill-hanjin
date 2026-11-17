@@ -1,6 +1,6 @@
 -- JIN008 夏侯徽 · 识度
 --
--- 规则基线：rules/generals/jin008-xiahouhui.md。
+-- 规则基线：docs/rules/generals/jin008-xiahouhui.md。
 -- 出牌阶段限一次，与一名合法其他角色真实拼点；赢才获得其所有手牌，然后按
 -- 此时自己全部手牌数向下取半交还，不是只分刚获得的牌，也不使用拼点前快照。
 -- 平局为没赢，不进入获得与交还分支。客户端可用性不读取 player.room。

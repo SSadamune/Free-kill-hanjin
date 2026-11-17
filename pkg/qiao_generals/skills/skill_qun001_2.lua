@@ -1,6 +1,6 @@
 -- QUN001 华佗 · 除疠
 --
--- 规则基线：rules/standard-generals.md 群区 QUN001、群包审阅
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN001、群包审阅
 -- docs/development/implementation/generals/qun-standard.md。
 -- 选择至多三名其他角色，候选彼此不为同势力（不要求与华佗不同）；随后华佗
 -- 与这些角色各弃置一张牌。按实际失去的牌判定：失去黑桃牌的角色各摸一张，

@@ -1,6 +1,6 @@
 -- QUN016 田丰 · 随势
 --
--- 规则基线：rules/standard-generals.md 群区 QUN016、rules/generals/qun016-tianfeng.md。
+-- 规则基线：docs/rules/standard-generals.md 群区 QUN016、docs/rules/generals/qun016-tianfeng.md。
 -- 锁定技，两个分支：
 --   1. 其他角色进入濒死时，若造成此次濒死的来源与自己势力相同，自己摸一张牌；
 --      未造成伤害的体力流失（来源为 nil）不摸牌。来源与濒死角色是两个不同的

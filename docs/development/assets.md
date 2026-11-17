@@ -68,7 +68,7 @@ SkinBank.getGeneralExtraPic("qiao_heg__han001", "guest/")
 
 ## 资料来源与维护
 
-正式武将列表、编号、版本与分包由本项目维护的数据和已确认设计决定，当前标准包见 `pkg/qiao_generals/data/standard.lua` 与[标准武将资料](../../rules/standard-generals.md)。`docs/heroes.json` 只是外部参考，不是正式编号、分包或构建的规范来源。
+正式武将列表、编号、版本与分包由本项目维护的数据和已确认设计决定，当前标准包见 `pkg/qiao_generals/data/standard.lua` 与[标准武将资料](../rules/standard-generals.md)。外部参考的 `heroes.json`（本仓库未收录）不是正式编号、分包或构建的规范来源。
 
 新增图片或音效先确认实际程序 ID、用途和引擎入口；缺少素材时索取原材料，不自行生成或复制占位。图片格式应符合对应入口，不能直接改扩展名冒充格式转换；迁移原稿时保持文件字节不变，按目标要求转换时另行记录来源与参数，并核对安装包路径。
 

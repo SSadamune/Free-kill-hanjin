@@ -1,6 +1,6 @@
 -- WEI007 甄姬 · 倾国
 --
--- 规则基线：rules/standard-generals.md 魏区 WEI007。
+-- 规则基线：docs/rules/standard-generals.md 魏区 WEI007。
 -- 一张黑色手牌当【闪】使用或打出；只授权手牌，不额外开放装备区。
 -- 使用与响应共用 ViewAs 入口，由引擎按当前请求决定是使用还是打出。
 local skill = fk.CreateSkill {

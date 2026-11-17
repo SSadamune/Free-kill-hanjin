@@ -1,6 +1,6 @@
 -- SHU011 诸葛亮（卧龙） · 八阵
 --
--- 规则基线：rules/standard-generals.md 蜀区 SHU011。
+-- 规则基线：docs/rules/standard-generals.md 蜀区 SHU011。
 -- 锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。
 --
 -- 实际效果直接调用正式汉晋【八卦阵】的装备技能（qiao__eight_diagram_skill），

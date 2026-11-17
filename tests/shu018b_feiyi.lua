@@ -1,5 +1,5 @@
 -- SHU018B 费祎：生息、守成定向验收。
--- 规则依据：rules/generals/shu018b-feiyi.md。
+-- 规则依据：docs/rules/generals/shu018b-feiyi.md。
 -- 本轮只覆盖正式登记、真实结束阶段的生息、守成的摸2弃1与逐目标限次。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

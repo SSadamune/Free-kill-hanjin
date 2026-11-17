@@ -1,5 +1,5 @@
 -- JIN002/JIN007/JIN008 资源类技能与腹心死士：泰然、夷灭、恤下、宜室、识度。
--- 规则依据：rules/generals/jin002-simashi.md、jin007-wangyuanji.md、
+-- 规则依据：docs/rules/generals/jin002-simashi.md、jin007-wangyuanji.md、
 -- jin008-xiahouhui.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")

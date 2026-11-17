@@ -1,6 +1,6 @@
 -- HAN005 何进 · 构难
 --
--- 规则基线：rules/standard-generals.md 汉区 HAN005、rulebook/events/death.md、
+-- 规则基线：docs/rules/standard-generals.md 汉区 HAN005、rulebook/events/death.md、
 -- rulebook/events/damage.md。锁定技：你死亡后，来源本局因普通【杀】造成或
 -- 受到伤害时，此伤害+1。
 --
