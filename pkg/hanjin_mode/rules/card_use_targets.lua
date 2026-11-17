@@ -43,6 +43,7 @@ local function compact(rec)
     kind = rec.kind,
     names = clone(rec.names),
     condition = clone(rec.condition),
+    fixed_targets = clone(rec.fixed_targets),
     min_targets = rec.min_targets,
     max_targets = rec.max_targets,
     context = clone(rec.context),
@@ -59,6 +60,9 @@ local function normalize(policy)
     kind = kind,
     names = policy.names and table.simpleClone(policy.names) or nil,
     condition = policy.condition and table.simpleClone(policy.condition) or nil,
+    fixed_targets = policy.fixed_targets and table.map(policy.fixed_targets, function(target)
+      return type(target) == "table" and target.id or target
+    end) or nil,
     min_targets = policy.min_targets,
     max_targets = policy.max_targets,
     context = policy.context and table.simpleClone(policy.context) or nil,
@@ -110,6 +114,7 @@ function M.explicit(condition, opts)
     kind = M.KIND_EXPLICIT,
     names = opts.names,
     condition = condition,
+    fixed_targets = opts.fixed_targets,
     min_targets = opts.min_targets or 1,
     max_targets = opts.max_targets or 1,
     context = opts.context,
@@ -738,6 +743,16 @@ function M.validateTargets(room, player, use, rec, stage, opts)
     policy = normalize(M.default { names = { use.card.name } })
   end
   if policy.names == nil then policy.names = { use.card.name } end
+  if policy.fixed_targets ~= nil then
+    local targets = use.tos or {}
+    if #targets ~= #policy.fixed_targets then return false, "fixed-target-count" end
+    for index, target in ipairs(targets) do
+      local targetId = type(target) == "table" and target.id or target
+      if tostring(targetId) ~= tostring(policy.fixed_targets[index]) then
+        return false, "fixed-target"
+      end
+    end
+  end
   local extra_data = opts.extra_data or use.extra_data
   local ok, result, reason = pcall(function()
     return withPushedPolicy(room, player, policy.names, policy, function()
@@ -784,11 +799,31 @@ function M.validateUse(room, player, use, policy, context, opts)
   return M.validateTargets(room, player, use, rec, opts.stage or "selection", opts)
 end
 
+local function patternForNames(params)
+  if params.pattern ~= nil then return params.pattern end
+  local names = params.names
+  if names == nil and params.card_name ~= nil then names = { params.card_name } end
+  if names == nil and params.name ~= nil then
+    names = type(params.name) == "table" and table.simpleClone(params.name)
+      or { params.name }
+  end
+  if type(names) ~= "table" or #names == 0 then return nil end
+  local patterns = {}
+  for _, name in ipairs(names) do
+    local card = Fk:cloneCard(name)
+    table.insertIfNeed(patterns, card and card.trueName or name)
+  end
+  return #patterns > 0 and table.concat(patterns, ",") or nil
+end
+
 local function forwardParams(room, player, params, rec)
   local ret = table.simpleClone(params)
   ret.policy = nil
   ret.names = nil
   ret.context = nil
+  -- Room:askToUseCard and AI consume `pattern`; names are only the C policy
+  -- whitelist. Derive the engine-visible pattern before dropping names.
+  ret.pattern = patternForNames(params)
   ret.extra_data = ret.extra_data and table.simpleClone(ret.extra_data) or {}
   ret.extra_data.hanjin_use_targets = compact(rec)
   return ret

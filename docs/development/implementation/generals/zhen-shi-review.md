@@ -113,4 +113,6 @@
 
 2026-11-17 默认插画接入：按实际登记 ID 核对 26 将（24 普通、2 君主），全部存在 `image/generals/<程序ID>.jpg`，Pillow 真实解码 26/26 为 JPEG 250×292 RGB。两个君主图从合并素材旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际 ID，迁移前字节一致，旧路径已删除。`python scripts/build_release.py` 生成 1028 文件安装包；`python scripts/verify_image_assets.py --release` 核对 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，并确认不含测试、脚本或 `.dev/`。真实客户端逐图显示、人工目视、联网及重连验收尚未完成；本轮未加工药枫 CSV 图片。
 
-君主升变技能同步补充：公共 `ascension.lua` 按 `actual_main` 清理旧主将牌的 fake/prelight，保留副将与独立实际来源；弘法、章武改用国战君主来源获取，不再依赖身份模式 `Skill.Lord`。真实张角+暗貂蝉和刘备升变已加入 `tests/second_lord.lua`，该套 33/33，两个君主将套件各 4/4。
+君主升变技能同步补充：公共 `GeneralCardState.clearLeavingCardState` 只清理指定离牌位置的 fake/prelight，升变与穿心共用；保留另一暗将同名合法来源和角色独立实际来源。弘法、章武改用国战君主来源获取，不再依赖身份模式 `Skill.Lord`。真实张角+暗貂蝉、暗副将同名来源和刘备升变已加入 `tests/second_lord.lua`，该套 33/33；`qun024_zhangren` 4/4，两个君主将套件各 4/4。
+
+挑衅 AI 请求修复：`C.askToUseCard` 的 `names/card_name/name` 是策略白名单，不再作为引擎 pattern 直接删除；公共转发从卡名派生 `trueName` pattern（`hanjin__slash` → `slash`）。挑衅真实走 `Room:askToUseCard` 请求，AI 不再收到 nil pattern；选择端用锁定引擎的 `extra_data.exclusive_targets` 限定姜维，服务端保留 `fixed_targets` 复核。`tests/card_use_targets.lua` 36/36（含 `card_name` 别名、固定目标拒绝和 exclusive_targets 观察）、`tests/shu012_jiangwei.lua` 6/6（含取消后实际弃牌）。全库扫描中已有显式 pattern 或由上层生成请求参数的分支保留；未发现其他无证据需改的直接调用。首次全量982项981成功，唯一失败为 `shu021_mifuren`；该套记录初始珠联标记（样本 before=0/after=1）并按 before+1 修正断言，单跑4/4。两项修复后最终全量982/982通过。

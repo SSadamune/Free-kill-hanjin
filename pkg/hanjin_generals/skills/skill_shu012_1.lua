@@ -37,11 +37,14 @@ skill:addEffect("active", {
       if to:isAlive() and not to:isRemoved() then
         local use = C.askToUseCard(room, to, {
           names = { SLASH },
+          pattern = "slash",
           skill_name = skill.name,
           prompt = "#hanjin__skill_shu012_1-use:" .. player.id,
           cancelable = true,
+          extra_data = { exclusive_targets = { player.id } },
           policy = C.explicit({ other_roles = true }, {
-            names = { SLASH }, min_targets = 1, max_targets = 1,
+            names = { SLASH }, fixed_targets = { player },
+            min_targets = 1, max_targets = 1,
           }),
         })
         -- 显式策略保证唯一目标数；再固定必须是姜维。选择其他目标时不使用。

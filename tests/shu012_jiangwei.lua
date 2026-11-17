@@ -98,21 +98,35 @@ function Testhanjin_shu012_jiangwei:testTiaoxinRealSlashOnJiangwei()
     room.current = player
     player.phase = Player.Play
   end)
-  skill_test.withSkillRequests(room, TIAOXIN, {
-    askToUseCard = function(self, who, params, original)
-      if params.skill_name ~= TIAOXIN then return original(self, who, params) end
-      return {
-        from = who, tos = { player },
-        card = Fk:getCardById(slash), extra_data = {},
-      }
-    end,
-  }, function()
+  -- 走真实 C.askToUseCard / Room:askToUseCard 请求；只提供目标的
+  -- AskForUseCard 回复，不替换请求方法。
+  FkTest.setNextReplies(target, { { card = slash, targets = { player.id } } })
+  inRoom(function()
+    Fk.skills[TIAOXIN]:onUse(room, { from = player, tos = { target } })
+  end)
+  lu.assertEquals(player.hp, player.maxHp - 1, "目标实际对姜维使用杀并造成伤害")
+  lu.assertTrue(table.contains(target:getCardIds("he"), slash) == false)
+end
+
+function Testhanjin_shu012_jiangwei:testTiaoxinCancelDiscardsTargetCard()
+  local room, player, target = FkTest.room, p(1), p(2)
+  local jink = give(target, "hanjin__jink", Card.Heart, 3)
+  inRoom(function()
+    room.current = player
+    player.phase = Player.Play
+  end)
+  FkTest.setNextReplies(target, { "" })
+  local original = room.askToChooseCard
+  local ok, err = pcall(function()
+    room.askToChooseCard = function() return jink end
     inRoom(function()
       Fk.skills[TIAOXIN]:onUse(room, { from = player, tos = { target } })
     end)
   end)
-  lu.assertEquals(player.hp, player.maxHp - 1, "目标实际对姜维使用杀并造成伤害")
-  lu.assertTrue(table.contains(target:getCardIds("he"), slash) == false)
+  room.askToChooseCard = original
+  if not ok then error(err, 0) end
+  lu.assertFalse(table.contains(target:getCardIds("he"), jink),
+    "挑衅取消使用杀后应实际弃置目标一张牌")
 end
 
 function Testhanjin_shu012_jiangwei:testChengzhiReallyAddsTwoGuanxingCards()

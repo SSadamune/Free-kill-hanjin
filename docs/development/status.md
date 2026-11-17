@@ -4,7 +4,7 @@
 
 ## 规则资料编纂
 
-六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。最终默认979/979通过，安装包1028文件构建并逐字节核对；客户端、联网、重连及干净安装人工验收未完成。
+六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。最新默认982/982通过，安装包1029文件已构建并逐字节核对；各轮失败、修复和验证边界见下方记录。客户端、联网、重连及干净安装人工验收未完成。
 
 2026-11-13 魏包规则确认：外部《规则向FAQ文件.docx》已转换为同目录 Markdown，保留来源内容并声明不随项目维护；采用其中多势力判断基准与定向叠置／平置定义。应期确认为开局确定的配将体力贡献修正，普通交换、移除或替换不重算体力上限，升变依公共流程；骁果须实际弃置至少一张基本牌支付发动消耗。底稿同步修订叠置、复原及弃置消耗说明，逐将约定见 WEI002、WEI014、WEI016、JIN009。实现与验证结果见下方魏势力标准包记录。
 
@@ -53,6 +53,10 @@
 ## 最近验证记录
 
 2026-11-17 阵、势包君主升变修复及集成验收：24张普通武将、两张君主、57条将牌技能、三种新翼从及五条统领来源均已接入独立正式包；同名翼从独立实例、共享授技、武将牌后天技能随明暗置／交换／移除生效已接入。DSH执行 `python scripts/test.py --timeout 480`：979/979、0失败，退出码0（280.927秒），原始输出见 `.dev/ascension-fix-full.log`；未发现critical或Lua回溯，沿用的原生Distance malfunction警告仍出现。`python scripts/check_lua.py`通过513个文件；安装包1028文件与工作区逐字节一致，只含正式入口及资源。激昂按[汉晋转化牌定义](../../rulebook/terms/description-terms/transform.md)判定另行构造且含实体材料的牌。26张武将默认插画已接入，见下方图片专项复核；客户端、联网、重连和干净安装人工验收未完成。
+
+2026-11-17 公共离牌状态接口：新增 `GeneralCardState.clearLeavingCardState(player, leavingGeneral, leavingIsDeputy)`，升变与穿心共用；只撤指定离牌位置的 fake/prelight，保留另一暗将同名合法来源与实际独立来源。接口不负责换将、体力、回将池、日志、次数或牌堆，其他职责仍由各自操作入口承担。定向 `second_lord` 33/33、`qun024_zhangren` 4/4、`general_card_skills` 7/7；`check_lua` 退出0。首次全量为978/979（`han019_jiping`断言失败，具体状态未捕获）；带诊断全量与最终全量均979/979，失败未能复现。`han019` 的 `blank_` 期望已修正为“JIPING 来源牌离开且当前为合法士兵”：新增确定性 HAN009 统领来源，经真实 `GeneralRemoved -> queueConversion` 转为翼从，定向6/6。构建为1029文件，`verify_image_assets.py --release` 路径/字节1029/1029，包内确认含 `general_card_state.lua`、升变与穿心调用文件。该修正是断言语义修正，不把首次偶发状态写成已证实根因。
+
+2026-11-17 挑衅 AI 请求修复：`C.askToUseCard` 之前把 `names` 清除后未生成引擎 `pattern`，AI 在 `smart_ai.lua` 对 nil pattern 调用 `startsWith` 崩溃。公共 `forwardParams` 现从 names/card_name/name 的实际 `trueName` 派生 pattern；挑衅显式传 `pattern="slash"` 和 `extra_data.exclusive_targets={姜维}`，并走真实 `Room:askToUseCard` 请求；服务端 `fixed_targets` 仍复核。定向 `card_use_targets` 36/36、`shu012_jiangwei` 6/6；全库调用扫描未发现其他需改的同根调用，已有显式 pattern 或上层生成的分支保留。首次全量982项981成功，唯一失败为 `shu021_mifuren`（实际样本珠联 before=0/after=1，来源牌已移除）；记录真实初始标记后按 before+1 修正断言，该套单跑4/4。两项修复后最终全量982/982通过；`check_lua`退出0，安装包1029及`verify_image_assets.py --release` 1029/1029通过。官方测试后端未实例化原生 SmartAI，本轮以真实 Room 请求、pattern 派生/exclusive_targets/fixed 目标断言及源码行证据验证，不宣称 AI 实机路径已人工验收。
 
 2026-11-16 阵、势包第五批：HAN014朱儁、HAN015卢植接入，标准90将数据及计数不变；摧破、虎翼、用良、备寇、修体实装。翼从实例模块只读定向`retinue_instances`5项（1.426秒）通过。朱儁定向3项（0.910秒）、卢植定向4项（1.137秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收；庐江上甲及翼从未注册。
 
