@@ -130,7 +130,8 @@ function M.shouldEnter(room)
   local H = require "packages.hegemony.util"
   local threshold = #room.players > 6 and 5 or 4
   if #room.alive_players >= threshold then return false end
-  for _, count in pairs(H.getKingdomPlayersNum(room)) do
+  local Counts=require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_lord_qun"
+  for _, count in pairs(Counts.physicalCounts(room)) do
     if count and count > 1 then return false end
   end
   return true

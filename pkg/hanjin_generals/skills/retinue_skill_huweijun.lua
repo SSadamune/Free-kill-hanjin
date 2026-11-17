@@ -6,6 +6,7 @@
 -- 读取实际伤害（排除被防止的伤害）；一次自己对自己的伤害同时计为造成与
 -- 受到两份。移牌复用 B 组公共接口。
 local W = require "packages.hanjin.pkg.hanjin_generals.util.wei_phases"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
 
 local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_huweijun",
@@ -37,8 +38,16 @@ skill:addEffect(fk.TurnEnd, {
   anim_type = "support",
   can_trigger = function(self, event, target, player, data)
     return target ~= nil and player ~= nil and player:hasSkill(skill.name)
-      and not player.dead and damageTotal(player.room, player) > 1
+      and not player.dead
+      and (#R.instancesForSkill(player, skill.name) > 0 or player:hasSkill(skill.name))
+      and damageTotal(player.room, player) > 1
       and W.hasMovableBoardCard(player.room)
+  end,
+  on_trigger = function(self, event, target, player, data)
+    if #R.instancesForSkill(player, skill.name) == 0 then
+      return self:doCost(event, target, player, data)
+    end
+    return R.triggerEach(self, event, target, player, data)
   end,
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {

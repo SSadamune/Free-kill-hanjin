@@ -2,6 +2,20 @@
 
 游戏语义见[对应规则](../../../rules/general-exchange.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
+## 公共武将来源职责
+
+角色技能状态不会在每次查询时从当前武将牌重新推导。调用方须选用符合操作语义的公共入口，并在操作完成时满足“旧牌来源撤回、新牌合法来源安装、其他来源保留”。不能把只改公开牌名或直接操作角色技能列表当成完整武将牌变动。
+
+| 层与入口 | 负责内容 | 边界 |
+| --- | --- | --- |
+| 操作入口：`Ascension.ascend`、`Exchange.exchange`、穿心 `replaceDeputy` 等 | 校验、取得实际旧牌身份、安排换牌及来源同步，完成各自标记与事件 | 升变体力、交换次数／牌堆迁移、变更回将池等按各自操作语义处理 |
+| `GeneralCardState.clearLeavingCardState` | 属性变更前撤销离牌位置的印刷暗将 fake／预亮状态，保护另一暗将合法同名来源 | 不换将、不删角色实际或派生技能、不撤后天附将台账；当前由升变和穿心复用 |
+| `GeneralCardSkills.grant/revoke/sync` | 后天附将技能台账及随明暗置、换牌、移除、交换变化的实际／暗将来源 | 不代替印刷技能清理，不重算体力或迁移牌堆 |
+| `Exchange.actualGeneral/cardProvidesSkill/positionSkills` | 查询实际牌身份及未失去、符合位置的技能来源 | 查询不执行换将或来源同步；具体位置限制使用 `positionSkills` |
+| `Exchange.exchange` 的技能与状态迁移 | 两侧交换后的实技能集合、随牌次数、标记、牌堆及完成通知 | 保留其他来源；不走移除／重新明置流程，不重算体力 |
+
+明置、暗置、移除继续使用既有国战接口和项目同步监听。新增操作若绕开已有入口，须核对它省略了哪些来源同步，并在公共层适配；业务技能不重复实现底层清理循环。新状态接口只是已出现重复逻辑的收拢，不是通用换将、移除或交换的替代接口。
+
 ## 扩展内实现方案
 
 公共操作位于 `pkg/hanjin_mode/rules/general_exchange.lua`。锁定版本 hegemony 的 `util.lua` 中，`H.swapDeputy` 已示范如何识别技能的 `derived_piles`、避免失去技能时清掉牌堆，以及迁移各时间范围的技能次数。它只处理两个不同角色的副将，而且允许处理暗置副将，不能直接作为本规则的入口；本模块不修改也不复用该流程。
@@ -21,6 +35,7 @@
 - `Exchange.registerLordGeneral(name)` 允许未来使用不含 `lord` 字样的独立君主武将 ID 参与类别校验；默认会识别牌名/真名含 `lord`、显式 `general.is_lord`、上游 `HegUtil.lordGenerals` 映射及带主公技标签的武将。
 - `Exchange.registerSkillMarks(skillName, marks)` 登记需要随牌移动的自定义技能标记。引擎转换技/使命技标记和 `<skill>-<suffix>` 形式的标记自动识别，不整批迁移角色标记。
 - `Exchange.addCompletionListener(fn)` / `removeCompletionListener` / `clearCompletionListeners`：交换完成入口，见下节。
+- `GeneralCardState.clearLeavingCardState(player, leavingGeneral, leavingIsDeputy)`：调用前须已校验操作、旧牌身份仍可取得且属性变更尚未发生；参数为实际旧牌 ID 和离开位置。本接口只遍历该牌印刷技能并撤其暗将 fake/prelight。另一暗置武将位仍通过 `Exchange.cardProvidesSkill` 提供同名印刷或后天附将技能时，保留该来源；否则撤销旧 fake 并撤 prelight。实际 `player_skills`/`derivative_skills` 不在本接口内删除；旧牌的后天附着技能由 `GeneralCardSkills/G.sync` 管理，不由本接口撤回。该接口不负责换将、标记、体力、回将池、日志、技能次数、牌堆或事件顺序；升变与穿心的操作入口各自完成其余职责。
 - 校验失败原因包括 `invalid_position`、`invalid_player`、`missing_position`、`not_revealed`、`unknown_general`、`stale_selection`、`same_position`、`different_kingdom`、`restricted_lord`、`restricted_wild`、`restricted_wild_deputy`。
 - 即使显式放宽君主/野心家限制，野心家专属武将仍不得被交换到副将位（势力禁选规则要求其为唯一主将）；该情况返回 `restricted_wild_deputy`。
 
@@ -104,3 +119,12 @@
 - 让体力贡献不同的主副将跨位交换，核对双方体力上限及当前体力。普通士兵和带技能的翼从分别参与交换，检查位置、卡面及士兵身份。
 - 在发动限定技与轮次技后交换，再换回原处，确认不会重置或重复扣次；进入下一轮，仅按原技能规则重置。另覆盖主副将技暂时失效、与其他来源同名的情况。
 - 双方分别携带具名牌堆时交换，按实体牌 ID 核对归属、数量、顺序和可见性，同时检查其他武将的牌堆不受影响。
+
+
+## 将牌后天技能
+
+明确以武将为获得／拥有技能主体时，调用 `pkg/hanjin_mode/rules/general_card_skills.lua` 的 `grant(room, generalName, skillName)`；撤回对应后天授予用 `revoke`。台账按房间及将牌身份保存，不修改 `Fk.generals`。角色获得技能仍使用正常角色技能来源，不调用此接口。
+
+`Exchange.cardProvidesSkill` 合并印刷技能、后天将牌技能及已失去技能的过滤；`positionSkills` 再施加主副将限制，`skillOwner` 供使用历史归属。暗置保留台账，发动资格按暗将及预亮处理；原生 `ServerPlayer:revealBySkillName` 的汉晋适配在服务器同步时安装，发动后天牌技时明置实际所属位置。技能与适配随正式扩展发布，其他模式调用原始实现。
+
+独立来源的差分同步避免撤回将牌技能时删除角色原有技能。交换后由新持有者接收来源，移除该牌停止该牌提供的来源。代表验收见 `tests/general_card_skills.lua`；承志的主将观星包含该台账，并由公共查询判断。

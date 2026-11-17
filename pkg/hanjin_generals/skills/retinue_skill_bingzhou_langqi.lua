@@ -6,6 +6,8 @@
 -- 的次数限制）。距离关系使用表标记记录所有对手，支持多来源/多持有者，
 -- 状态技为随包加载的独立骨架，客户端同样注册；关系不因失去翼从技能消失。
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local Z = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_retinues"
 
 local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_bingzhou_langqi",
@@ -49,23 +51,33 @@ end
 
 ---@param player ServerPlayer
 ---@param other ServerPlayer
-local function addPair(player, other)
+---@param instanceId integer
+local function addPair(player, other, instanceId)
   local room = player.room
   local mine = player:getMark(PAIR_MARK)
   mine = type(mine) == "table" and table.simpleClone(mine) or {}
   local theirs = other:getMark(PAIR_MARK)
   theirs = type(theirs) == "table" and table.simpleClone(theirs) or {}
-  table.insertIfNeed(mine, other.id)
-  table.insertIfNeed(theirs, player.id)
+  local function add(list, otherId)
+    for _, entry in ipairs(list) do
+      if type(entry) == "table" and entry.instance == instanceId
+        and entry.other == otherId then return end
+    end
+    table.insert(list, { instance = instanceId, other = otherId })
+  end
+  add(mine, other.id)
+  add(theirs, player.id)
   room:setPlayerMark(player, PAIR_MARK, mine)
   room:setPlayerMark(other, PAIR_MARK, theirs)
 end
 
---- 其他存活角色。
----@param player ServerPlayer
----@return ServerPlayer[]
+--- 其他存活角色。客户端没有 player.room 时读当前房间的公开角色列表。
+---@param player Player
+---@return Player[]
 local function others(player)
-  return table.filter(player.room.alive_players, function(p)
+  local room = player.room or Fk:currentRoom()
+  if room == nil then return {} end
+  return table.filter(room.alive_players, function(p)
     return p ~= player and not p:isRemoved()
   end)
 end
@@ -79,9 +91,11 @@ skill:addEffect("active", {
     return to_select ~= player and to_select:isAlive() and not to_select:isRemoved()
   end,
   can_use = function(self, player)
-    return player.phase == Player.Play
-      and player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
-      and #others(player) > 0
+    if player.phase ~= Player.Play or #others(player) == 0 then return false end
+    if R.countForSkill(player, skill.name) == 0 then
+      return player:getMark("hanjin_bingzhou_direct-phase") == 0
+    end
+    return Z.canUse(player, skill.name, 1)
   end,
   on_use = function(self, room, effect)
     local player = effect.from
@@ -89,13 +103,23 @@ skill:addEffect("active", {
     if player.dead or to == nil or to.dead or to:isRemoved() or to == player then return end
     if not player:hasSkill(skill.name) then return end
 
-    -- 记录双向关系并确保双方持有随包加载的距离状态技。
-    addPair(player, to)
+    local instances = R.instancesForSkill(player, skill.name)
+    local instance = nil
+    if #instances > 0 then
+      instance = Z.availableInstances(player, skill.name, 1)[1]
+      -- 有实例但本阶段全部用尽：不得落入 direct fallback 再多发动一次。
+      if instance == nil then return end
+      Z.spend(player, instance, skill.name)
+      addPair(player, to, instance.id)
+    else
+      if player:getMark("hanjin_bingzhou_direct-phase") ~= 0 then return end
+      room:addPlayerMark(player, "hanjin_bingzhou_direct-phase", 1)
+      addPair(player, to, 0)
+    end
     ensureCleanup(room)
     room:handleAddLoseSkills(player, DISTANCE_SKILL, DISTANCE_SKILL, false, true)
     room:handleAddLoseSkills(to, DISTANCE_SKILL, DISTANCE_SKILL, false, true)
 
-    -- 由目标角色对技能拥有者使用【决斗】；效果明确指定目标。
     local policy = C.explicit({ other_roles = true }, { names = { DUEL } })
     C.useVirtualCard(room, to, DUEL, nil, { player }, skill.name, true, nil, policy)
   end,

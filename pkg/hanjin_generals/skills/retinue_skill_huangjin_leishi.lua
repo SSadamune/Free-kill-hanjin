@@ -15,6 +15,14 @@ local skill = fk.CreateSkill {
 skill.hanjinImplemented = true
 
 local J = require "packages.hanjin.pkg.hanjin_generals.util.qun_judgement"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+
+local function triggerEach(self, event, target, player, data)
+  if #R.instancesForSkill(player, skill.name) == 0 then
+    return self:doCost(event, target, player, data)
+  end
+  return R.triggerEach(self, event, target, player, data)
+end
 
 -- 与 pkg/hanjin_mode/skills/qun_damage_history.lua 的 FIRST_DAMAGE_TAG 保持一致。
 local FIRST_DAMAGE_TAG = "hanjin_qun_damage_history_first"
@@ -22,6 +30,7 @@ local FIRST_DAMAGE_TAG = "hanjin_qun_damage_history_first"
 skill:addEffect(fk.DamageCaused, {
   global = true,
   anim_type = "offensive",
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return player:hasSkill(skill.name) and not player.dead
       and data ~= nil and data.from ~= nil

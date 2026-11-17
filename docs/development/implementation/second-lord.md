@@ -31,3 +31,9 @@
 - 珠联璧合与阴阳鱼只在“此次升变首次使两张武将牌均明置”时发放；已花费或升变前已双亮不重领。
 - 君主在场不豁免超员；有君主的势力仍会因超员转为野心家。
 - 有君主与无君主采用相同的唯一势力胜负判定；覆盖势力人数超过全场人数一半的情况，以及常规势力与野心家并存、多个野心家并存和仅剩一个野心家的情况。
+- 真实 `hanjin__qun010` + 暗貂蝉普通升变：按 `actual_main` 清理旧普通将 fake/prelight，保留暗副将；弘法可用并实际授予黄巾天兵符，悟心/问道正常；独立同名实际来源不被清理。
+- 真实 `hanjin__shu001` 升变：章武作为国战君主技能实际进入技能来源；旧的普通仁德移除。
+
+公共升变入口 [ascension.lua](../../../pkg/hanjin_mode/rules/ascension.lua) 在 `changeHero` 前按 `M.actual_main` 调用 `GeneralCardState.clearLeavingCardState(player, oldMain, false)`，只清旧主将牌**印刷技能**的 fake/prelight；暗副将同名合法来源、实际独立来源保留，旧牌后天附将仍由 `G.sync` 管理。换将、标记、体力、回将池等仍由升变入口负责。两个国战君主印刷技能 `弘法`、`章武` 不再使用身份模式 `Skill.Lord` 获取标签，君主资格仍由 `general_versions` 的君主版登记和国战牌来源判断。
+
+本轮 `tests/second_lord.lua` **33/33**、`em_qun010_zhangjiao` **4/4**、`em_shu001_liubei` **4/4** 均通过。

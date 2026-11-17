@@ -10,11 +10,21 @@
 local B = require "packages.hanjin.pkg.hanjin_generals.util.jin_basic"
 local R = require "packages.hanjin.pkg.hanjin_generals.util.jin_resources"
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
+local RI = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+
+
 
 local SLASH = "slash"
 local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_fuxin_sishi",
 }
+
+local function triggerEach(self, event, target, player, data)
+  if #RI.instancesForSkill(player, skill.name) == 0 then
+    return self:doCost(event, target, player, data)
+  end
+  return RI.triggerEach(self, event, target, player, data)
+end
 
 --- 当前回合角色攻击范围内、可作为【杀】目标的角色。
 ---@param anchor ServerPlayer
@@ -34,6 +44,7 @@ end
 skill:addEffect(fk.TurnEnd, {
   anim_type = "support",
   global = true,
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return target ~= nil and not target.dead and not player.dead
       and player:hasSkill(skill.name)
@@ -69,6 +80,7 @@ skill:addEffect(fk.TurnEnd, {
 skill:addEffect(fk.TurnEnd, {
   anim_type = "offensive",
   global = true,
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     if target == nil or target.dead or player.dead or not player:hasSkill(skill.name) then
       return false

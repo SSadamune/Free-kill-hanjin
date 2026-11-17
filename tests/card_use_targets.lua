@@ -1058,5 +1058,59 @@ function Testhanjin_card_use_targets:testJadeSealEventPhaseStartActualUse()
   lu.assertTrue(policySeen, "PreCardUse must see the trusted policy and target for 玉玺's use")
 end
 
--- 玉玺's public helper path, kept as the direct API regression.
+-- Direct public API regression: card_name is also a valid concrete-name alias.
+function Testhanjin_card_use_targets:testAskToUseCardDerivesPatternFromCardNameAlias()
+  local p1, p2 = room().players[1], room().players[2]
+  local slash = give(p1, "hanjin__slash", Card.Spade, 2)
+  FkTest.setNextReplies(p1, { { card = slash.id, targets = { p2.id } } })
+  local seen, seenExclusive, use
+  run(function()
+    local original = room().askToUseCard
+    local ok, err = pcall(function()
+      room().askToUseCard = function(self, who, params)
+        seen = params.pattern
+        seenExclusive = params.extra_data and params.extra_data.exclusive_targets
+        return original(self, who, params)
+      end
+      use = C.askToUseCard(room(), p1, {
+        card_name = "hanjin__slash",
+        extra_data = { exclusive_targets = { p2.id } },
+        policy = C.explicit({ other_roles = true }, {
+          names = { "hanjin__slash" }, fixed_targets = { p2 },
+          min_targets = 1, max_targets = 1,
+        }),
+        skill_name = "hanjin_test_pattern",
+        cancelable = true,
+      })
+    end)
+    room().askToUseCard = original
+    if not ok then error(err, 0) end
+  end)
+  lu.assertEquals(seen, "slash", "card_name/names 必须派生引擎可消费的 pattern")
+  lu.assertEquals(seenExclusive, { p2.id }, "exclusive_targets 必须进入真实请求 extra_data")
+  lu.assertNotNil(use)
+  lu.assertIs(use.tos[1], p2)
+  run(function() room():useCard(use) end)
+end
+
+function Testhanjin_card_use_targets:testExplicitFixedTargetRejectsOtherTarget()
+  local p1, p2 = room().players[1], room().players[2]
+  local slash = give(p1, "hanjin__slash", Card.Spade, 2)
+  FkTest.setNextReplies(p1, { { card = slash.id, targets = { p1.id } } })
+  local use
+  run(function()
+    use = C.askToUseCard(room(), p1, {
+      names = { "hanjin__slash" },
+      policy = C.explicit({}, {
+        names = { "hanjin__slash" }, fixed_targets = { p2 },
+        min_targets = 1, max_targets = 1,
+      }),
+      skill_name = "hanjin_test_fixed_target",
+      cancelable = true,
+    })
+  end)
+  lu.assertNil(use, "固定目标策略必须在返回前拒绝其他目标")
+  lu.assertTrue(table.contains(p1:getCardIds("h"), slash.id))
+end
+
 return { name = "hanjin_card_use_targets" }

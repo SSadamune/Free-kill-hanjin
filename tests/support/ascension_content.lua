@@ -46,6 +46,7 @@ local G = {
   wei_normal3 = general("wei_normal3", "wei", 4),
   wei_monarch3 = general("wei_monarch3", "wei", 4),
   wei_deputy = general("wei_deputy", "wei", 4),
+  qun_deputy = general("qun_deputy", "qun", 4),
   shu_plain = general("shu_plain", "shu", 4),
   qun_plain = general("qun_plain", "qun", 4),
   wild_simple = general("wild_simple", "wild", 3),
@@ -58,6 +59,9 @@ local G = {
 G.wei_normal:addSkills({ skills.normal })
 G.wei_monarch:addSkills({ skills.monarch })
 G.loyalty_simple:addSkills({ skills.loyalty })
+-- 同名暗副将来来源回归：副将印刷与暗张角相同的两项技能。
+G.qun_deputy:addSkills({ "hanjin__skill_qun010_1", "hanjin__skill_qun010_2" })
+G.qun_deputy.hidden = true -- 仅供定向夹具，不能进入其他套件的随机将池
 G.wei_normal:addCompanions(G.wei_deputy.name)
 G.wei_monarch:addCompanions(G.wei_deputy.name)
 

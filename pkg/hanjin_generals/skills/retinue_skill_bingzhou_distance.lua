@@ -10,13 +10,21 @@ local function pairsOf(player)
   return type(mark) == "table" and mark or {}
 end
 
+local function pairedWith(mark, id)
+  for _, entry in ipairs(mark) do
+    if type(entry) == "number" and entry == id then return true end
+    if type(entry) == "table" and entry.other == id then return true end
+  end
+  return false
+end
+
 local skill = fk.CreateSkill {
   name = "hanjin__retinue_skill_bingzhou_distance",
 }
 
 skill:addEffect("distance", {
   fixed_func = function(self, from, to)
-    if table.contains(pairsOf(from), to.id) or table.contains(pairsOf(to), from.id) then
+    if pairedWith(pairsOf(from), to.id) or pairedWith(pairsOf(to), from.id) then
       return 1
     end
     return nil

@@ -3,7 +3,7 @@
 -- QUN012 断肠：死亡时令来源失去一张武将牌的技能（rules/standard-generals.md、
 -- rulebook/topics/skill-effect-classification.md）。
 --
--- 本模块只记录“某张武将牌不再提供其印刷技能”并执行一次移除，不修改引擎：
+-- 本模块记录“某张武将牌不再提供其技能”并执行移除，不修改引擎：
 --   * 记录按武将牌名保存在房间标签中，因此交换该牌后仍然有效；
 --   * 只处理断肠选中的那张牌，另一张牌和后天独立来源的同名技能不动；
 --   * 已明置的牌移除真实技能；暗置的牌移除对应 fake skill，后续明置由引擎的
@@ -13,6 +13,7 @@
 -- 锁定技与已建立的持续效果不需要特殊分支：移除技能不撤销已经写入角色/回合的
 -- 延时效果（例如裸衣的回合标记），只由引擎清理技能自己的派生牌。
 local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local CardSkills = require "packages.hanjin.pkg.hanjin_mode.rules.general_card_skills"
 
 local M = {}
 
@@ -68,9 +69,10 @@ function M.markLost(room, generalName, skillNames)
     entry[skillName] = true
   end
   room:setTag(M.TAG, data)
+  CardSkills.sync(room)
 end
 
---- 一张将牌印刷的全部技能（含主将技/副将技/related），不按当前位置过滤。
+--- 一张将牌的全部印刷及后天附着技能（含主将技/副将技/related），不按当前位置过滤。
 --- 断肠失去的是这张牌的技能：今天在错误位置不可用，换到正确位置后仍不得恢复。
 ---@param player ServerPlayer
 ---@param generalName string
@@ -78,10 +80,12 @@ end
 local function printedSkills(player, generalName)
   local general = Fk.generals[generalName]
   if not general then return {} end
-  return general:getSkillNameList(isLord(player), true)
+  local result=general:getSkillNameList(isLord(player), true)
+  for _,name in ipairs(CardSkills.skills(player.room,generalName)) do table.insertIfNeed(result,name) end
+  return result
 end
 
---- 一张将牌的印刷基础技能（不含 related）。related 随所属技能派生，不能单独
+--- 一张将牌的印刷基础及后天附着技能（不含印刷 related）。related 随所属技能派生，不能单独
 --- 作为恢复/授予目标，否则正常明置也可能被额外授技。
 ---@param player ServerPlayer
 ---@param generalName string
@@ -89,7 +93,9 @@ end
 local function baseSkills(player, generalName)
   local general = Fk.generals[generalName]
   if not general then return {} end
-  return general:getSkillNameList(isLord(player), false)
+  local result=general:getSkillNameList(isLord(player), false)
+  for _,name in ipairs(CardSkills.skills(player.room,generalName)) do table.insertIfNeed(result,name) end
+  return result
 end
 
 --- 房间是否存在任意断肠失技记录。没有记录时规则完全旁路，不扫描正常明置。
@@ -201,8 +207,15 @@ local function otherProvided(room, player, isDeputy, cardName, printed)
   for _, skillName in ipairs(player:getTableMark("ExtraAttachedSkills")) do
     table.insertIfNeed(result, skillName)
   end
+  local printedGeneral=Fk.generals[cardName]
+  local innate=printedGeneral and printedGeneral:getSkillNameList(true) or {}
+  for _,name in ipairs(CardSkills.skills(room,cardName)) do
+    if not table.contains(innate,name) and table.contains(player.player_skills,Fk.skills[name]) then
+      table.insertIfNeed(result,name)
+    end
+  end
   for sourceSkill, skills in pairs(player.derivative_skills) do
-    if sourceSkill.name ~= cardName and not table.contains(printed, sourceSkill.name) then
+    if sourceSkill.name ~= CardSkills.SOURCE and sourceSkill.name ~= cardName and not table.contains(printed, sourceSkill.name) then
       for _, skill in ipairs(skills) do
         table.insertIfNeed(result, skill.name)
       end

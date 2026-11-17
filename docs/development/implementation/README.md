@@ -4,6 +4,8 @@
 
 ## 武将与翼从
 
+- [六势力阵包、势包规则与实现路径审阅](generals/zhen-shi-review.md)（24普通武将、两君主及三新翼从，验证边界见记录）
+
 - [汉势力标准包](generals/han-standard.md)
 - [魏势力标准包](generals/wei-standard.md)
 - [蜀势力标准包](generals/shu-standard.md)
@@ -19,7 +21,7 @@
 - [统领与翼从](commander-retinue.md)
 - [指定额外目标](extra-targets.md)
 - [势力禁选规范](faction-ban.md)
-- [交换武将](general-exchange.md)
+- [交换武将](general-exchange.md)；离牌 fake/prelight 接口见同页 `GeneralCardState`
 - [客将](guest-factions.md)
 - [“X 只能当 Y 使用／打出”](only-as.md)
 - [第二君主](second-lord.md)

@@ -4,6 +4,8 @@
 
 ## 规则资料编纂
 
+六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。最新默认982/982通过，安装包1029文件已构建并逐字节核对；各轮失败、修复和验证边界见下方记录。客户端、联网、重连及干净安装人工验收未完成。
+
 2026-11-13 魏包规则确认：外部《规则向FAQ文件.docx》已转换为同目录 Markdown，保留来源内容并声明不随项目维护；采用其中多势力判断基准与定向叠置／平置定义。应期确认为开局确定的配将体力贡献修正，普通交换、移除或替换不重算体力上限，升变依公共流程；骁果须实际弃置至少一张基本牌支付发动消耗。底稿同步修订叠置、复原及弃置消耗说明，逐将约定见 WEI002、WEI014、WEI016、JIN009。实现与验证结果见下方魏势力标准包记录。
 
 | 资料 | 当前角色与完成度 |
@@ -31,9 +33,9 @@
 | --- | --- | --- |
 | [势力禁选](implementation/faction-ban.md) | 候选／上限、配将、跨局记录与牌堆联动已接入正式内容 | 默认套件有基础及真实请求回归；完整人工交互待验收 |
 | [应变](implementation/adaptation.md) | 五种条件、多条目、一次忽略一项、助战、显示及正式牌条目已接入 | 有时点、响应及显示元数据回归；多人助战界面、取消展示待人工验收 |
-| [统领与翼从](implementation/commander-retinue.md) | 公共来源、兵种迁移、士兵转换和手动视为入口已实现；登记 19 条统领来源、14 种翼从；穆顺、西园军、并州狼骑、虎卫军、牛金、周仓、白马义从、西凉精骑、象兵、锦帆军、曲阿小将、黄巾雷使、腹心死士、文虎专属技能已实装 | 14种翼从均已实装并有默认回归；卡面／交互待人工验收 |
+| [统领与翼从](implementation/commander-retinue.md) | 公共来源、兵种迁移、士兵转换和手动视为入口已实现；标准包登记 19 条统领来源、14 种翼从，阵势包另增5条来源、3种翼从；穆顺、西园军、并州狼骑、虎卫军、牛金、周仓、白马义从、西凉精骑、象兵、锦帆军、曲阿小将、黄巾雷使、腹心死士、文虎专属技能已实装 | 17种翼从均已实装，标准及阵势包均有默认回归；卡面／交互待人工验收 |
 | [交换武将](implementation/general-exchange.md) | 明置位置交换、随将状态与牌堆、完成回调及统领接入已实现 | 有专项回归；具体技能仍需按来源语义接入 |
-| [第二君主](implementation/second-lord.md) | 普通升变、死亡继位、超员、体力及胜负公共流程已实现 | 用独立测试内容验证；正式君主武将待设计与接入 |
+| [第二君主](implementation/second-lord.md) | 普通升变、死亡继位、超员、体力及胜负公共流程已实现；暗置主将旧 fake/prelight 清理和国战君主技获取已修复 | `tests/second_lord.lua` 33/33；含真实君张角、君刘备升变；人工交互待验收 |
 | [野心家效忠](implementation/wild-allegiance.md) | 开局版本规划及准备阶段升变公共流程已实现 | 有效忠与客将组合回归；正式野心家及效忠版待设计与接入 |
 | [客将](implementation/guest-factions.md) | 房间势力解析、自愿逐张重抽、服务端配将及正式登记已接入 | 登记 51 张武将客将势力；显示、动画、重连待人工验收 |
 | 卡牌内容与[方天画戟适配](implementation/card-deck.md) | 162 个基础牌位、12 张替换牌、7 张游戏外势力锦囊已登记；67 个牌型复用或适配 | 17 个牌型仍为空壳：10 个君主装备相关牌型及 7 个势力锦囊；临筱玉舆双坐骑交互待实现。逐牌状态见 `pkg/hanjin_cards/data/reuse.lua` |
@@ -49,6 +51,18 @@
 | 测试用自由选将 | 右键／长按入口、候选外替换、规则外组合及正常客将解析已接入 | 有选将回复与配将回归；完整客户端人工验收待完成 |
 
 ## 最近验证记录
+
+2026-11-17 阵、势包君主升变修复及集成验收：24张普通武将、两张君主、57条将牌技能、三种新翼从及五条统领来源均已接入独立正式包；同名翼从独立实例、共享授技、武将牌后天技能随明暗置／交换／移除生效已接入。DSH执行 `python scripts/test.py --timeout 480`：979/979、0失败，退出码0（280.927秒），原始输出见 `.dev/ascension-fix-full.log`；未发现critical或Lua回溯，沿用的原生Distance malfunction警告仍出现。`python scripts/check_lua.py`通过513个文件；安装包1028文件与工作区逐字节一致，只含正式入口及资源。激昂按[汉晋转化牌定义](../../rulebook/terms/description-terms/transform.md)判定另行构造且含实体材料的牌。26张武将默认插画已接入，见下方图片专项复核；客户端、联网、重连和干净安装人工验收未完成。
+
+2026-11-17 公共离牌状态接口：新增 `GeneralCardState.clearLeavingCardState(player, leavingGeneral, leavingIsDeputy)`，升变与穿心共用；只撤指定离牌位置的 fake/prelight，保留另一暗将同名合法来源与实际独立来源。接口不负责换将、体力、回将池、日志、次数或牌堆，其他职责仍由各自操作入口承担。定向 `second_lord` 33/33、`qun024_zhangren` 4/4、`general_card_skills` 7/7；`check_lua` 退出0。首次全量为978/979（`han019_jiping`断言失败，具体状态未捕获）；带诊断全量与最终全量均979/979，失败未能复现。`han019` 的 `blank_` 期望已修正为“JIPING 来源牌离开且当前为合法士兵”：新增确定性 HAN009 统领来源，经真实 `GeneralRemoved -> queueConversion` 转为翼从，定向6/6。构建为1029文件，`verify_image_assets.py --release` 路径/字节1029/1029，包内确认含 `general_card_state.lua`、升变与穿心调用文件。该修正是断言语义修正，不把首次偶发状态写成已证实根因。
+
+2026-11-17 挑衅 AI 请求修复：`C.askToUseCard` 之前把 `names` 清除后未生成引擎 `pattern`，AI 在 `smart_ai.lua` 对 nil pattern 调用 `startsWith` 崩溃。公共 `forwardParams` 现从 names/card_name/name 的实际 `trueName` 派生 pattern；挑衅显式传 `pattern="slash"` 和 `extra_data.exclusive_targets={姜维}`，并走真实 `Room:askToUseCard` 请求；服务端 `fixed_targets` 仍复核。定向 `card_use_targets` 36/36、`shu012_jiangwei` 6/6；全库调用扫描未发现其他需改的同根调用，已有显式 pattern 或上层生成的分支保留。首次全量982项981成功，唯一失败为 `shu021_mifuren`（实际样本珠联 before=0/after=1，来源牌已移除）；记录真实初始标记后按 before+1 修正断言，该套单跑4/4。两项修复后最终全量982/982通过；`check_lua`退出0，安装包1029及`verify_image_assets.py --release` 1029/1029通过。官方测试后端未实例化原生 SmartAI，本轮以真实 Room 请求、pattern 派生/exclusive_targets/fixed 目标断言及源码行证据验证，不宣称 AI 实机路径已人工验收。
+
+2026-11-16 阵、势包第五批：HAN014朱儁、HAN015卢植接入，标准90将数据及计数不变；摧破、虎翼、用良、备寇、修体实装。翼从实例模块只读定向`retinue_instances`5项（1.426秒）通过。朱儁定向3项（0.910秒）、卢植定向4项（1.137秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收；庐江上甲及翼从未注册。
+
+2026-11-16 阵、势包第四批：QUN081徐荣、QUN006董卓接入，标准90将数据及计数不变；剽戮、杀绝、横征、暴凌及所授崩坏实装。审阅修正：奋命第二项改为技能持有者选牌，`can_use` 回退 `Fk:currentRoom` 并只读公开状态，真实 ClientPlayer 候选回归通过；潜袭改为先摸弃再按距离选目标，并在弃牌前保存持有者过滤颜色。定向`wu023_chenwu_dongxi`4项（1.098秒）、`qun081_xurong`3项（0.884秒）、`qun006_dongzhuo`4项（1.232秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。激昂采用另行构造且含实体材料的转化牌判定。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收。
+
+2026-11-16 阵、势包首批至第三批：独立`hanjin_zhenshi`正式包已登记WEI017李典、SHU018B费祎、SHU019马岱、WU010孙策、WU023陈武&董袭，标准90将数据及计数不变；恂恂、忘隙、生息、守成、马术复用、潜袭、激昂、鹰扬、魂殇、奋命、断绁均已实装并补入汉晋模式白名单，其余阵、势包武将未登记，庐江上甲及翼从未注册。审阅修正：守成限次按发动者来源、受益角色和当前回合分别记录；费祎注册测试按ID查找；潜袭改为先摸弃再按当时距离选目标，并在实际弃牌前保存持有者过滤后的颜色（红颜回归）。定向`shu019_madai`4项（1.263秒）、`wu010_sunce`4项（1.155秒）、`wu023_chenwu_dongxi`3项（0.841秒）通过；`standard_generals`12项、`mode_rules`10项回归通过，`check_lua`通过。未运行默认全量、未构建安装包、未进行客户端／联网／重连人工验收。接口与边界见[阵势包审阅记录](implementation/generals/zhen-shi-review.md)。
 
 2026-11-16 晋标准包实装：规则审阅已提交 `b28ad21`；15将29条天生技能记录、两翼从全部接入。晋区称号、司马昭／司马师珠联及技能来源文本同步；泰然后续时机仍未定案，暂按回合结束时逐次结算。八套新增专项共65项通过；复用应变、次数、断肠、交换及其他势力回归。整合时修复昭然可见性覆盖其他公开效果，公共转换套件改确定性白板夹具并加入暗卧龙回归，挟征罚则明确验证先获得再返牌。接口与真实测试证据见[晋包验证记录](implementation/generals/verification-evidence.md#jin-standard)。最终 `python scripts/test.py --timeout 240` 为831/831（158.697秒），退出码0；Lua语法检查通过。安装包477文件已与工作区逐字节核对，排除测试、脚本及本体开发补丁。完整输出保存在 `.dev/logs/jin_full_final.log`，原生 Distance malfunction 警告仍在，无 critical Lua 错误或失败断言。未执行真实客户端、多人联网／重连及干净本体安装人工验收。
 
@@ -147,6 +161,8 @@
 - 隔离临时目录执行真实 `scripts/dev.ps1` 复制段（`.dev/image-batch-verify/dev-sync/`）：首次与重复同步均为 919/919 个文件、相对路径一致、SHA-256 一致，无 `pkg/pkg` 嵌套，`.gitkeep` 未复制。验证使用源码副本、引擎补丁目标副本和占位 `FreeKill.exe`；未同步真实 `.dev/runtime`，9 个引擎补丁目标文件测试前后哈希一致。
 
 本轮未重跑默认 Lua 全量套件，未关闭用户游戏，未实际同步正在使用的开发环境，未逐图目视或做客户端显示验收。静态检查不代替实际显示验收。客将默认插画将按 `image/generals/guest/<程序ID>.jpg` 由通用入口读取，选将与局内显示接线尚未实现；设计见[客将默认插画](guest-illustrations.md)。外部 `docs/heroes.json` 不作为正式编号、分包或构建规范。
+
+2026-11-17 阵势包武将图专项复核：从 `pkg/hanjin_generals/init.lua` 与 `data/zhen_shi*.lua` 实际登记取到 26 个正式将（24 普通、2 君主），全部按完整程序 ID 路径存在。24 普通图沿用合并素材；两个君主插画从合并素材的旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际登记 ID `hanjin__em_qun010.jpg`、`hanjin__em_shu001.jpg`，迁移前字节一致，旧路径已删除。Pillow 真实解码 26/26 成功，格式均为 JPEG、250×292、RGB，无缺图。`scripts/build_release.py` 生成 1028 文件 ZIP；`scripts/verify_image_assets.py --release` 核对源码发布集合与 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，ZIP 顶层仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含 `tests/`、`scripts/`、`.dev/`。仅完成静态路径、格式、构建与字节核对，尚未在真实客户端逐图显示或人工目视验收。
 
 ## 范围边界
 

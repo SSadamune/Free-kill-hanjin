@@ -5,6 +5,14 @@ local skill = fk.CreateSkill {
 skill.hanjinImplemented = true
 
 local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+
+local function triggerEach(self, event, target, player, data)
+  if #R.instancesForSkill(player, skill.name) == 0 then
+    return self:doCost(event, target, player, data)
+  end
+  return R.triggerEach(self, event, target, player, data)
+end
 
 Fk:loadTranslationTable {
   ["hanjin__retinue_skill_xiangbing"] = "象兵",
@@ -13,6 +21,7 @@ Fk:loadTranslationTable {
 
 -- 使用【杀】后，按本次实际受到此杀伤害的目标集合，一次多目标视为南蛮。
 skill:addEffect(fk.CardUseFinished, {
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     return data.card ~= nil and data.card.trueName == "slash"
@@ -35,6 +44,7 @@ skill:addEffect(fk.CardUseFinished, {
 
 -- 受到火焰伤害后，按座次取相邻合法角色，一次多目标视为杀，不因攻击范围丢目标。
 skill:addEffect(fk.DamageFinished, {
+  on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return data.to == player and data.damageType == fk.FireDamage and player:hasSkill(skill.name)
   end,

@@ -5,6 +5,7 @@
 -- HegUtil.lordGenerals。上游按名字识别的君主特例（有君无野、君主拉回
 -- 超员野心家、君主死亡转野）因此不会抢先执行；汉晋在显式登记表上统一实现。
 local H = require "packages.hegemony.util"
+local CardState = require "packages.hanjin.pkg.hanjin_mode.rules.general_card_state"
 local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
 local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
 local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
@@ -168,6 +169,9 @@ function M.ascend(room, player, newMain, kingdom, options)
   local oldBothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
     and player.deputyGeneral ~= ""
 
+  -- 暗置主将换将不会自动清掉旧普通将的 fake/prelight；公共状态接口只清
+  -- 离牌位置的来源，换将/体力/回将池仍由本升变入口负责。
+  CardState.clearLeavingCardState(player, oldMain, false)
   room:changeHero(player, newMain, false, false, false, false, false)
   room:setPlayerMark(player, "__heg_general", newMain)
   room:setPlayerMark(player, "hasShownMainGeneral", 1)

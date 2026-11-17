@@ -11,6 +11,7 @@ local skill = fk.CreateSkill {
 skill.hanjinImplemented = true
 
 local H = require "packages.hegemony.util"
+local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
 
 local VISIBLE_MARK = "hanjin_retinue_xiyuanjun_visible-turn"
 -- 同时含 "-turn" 与 "-inhand"：回合末清理，牌离开手牌时立即清理。
@@ -66,12 +67,28 @@ skill:addEffect(fk.EventPhaseStart, {
       return false
     end
     if not sameKingdom(player, target) then return false end
+    if #R.instancesForSkill(player, skill.name) == 0 then
+      -- 直接来源授予技能时仍保留本身一份语义。
+      for _, p in ipairs(player.room.alive_players) do
+        if not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0 then
+          return true
+        end
+      end
+      return false
+    end
     for _, p in ipairs(player.room.alive_players) do
       if not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0 then
         return true
       end
     end
     return false
+  end,
+  -- 每一份同名实例各自询问一次，而不是按技能名合并为一次。
+  on_trigger = function(self, event, target, player, data)
+    if #R.instancesForSkill(player, skill.name) == 0 then
+      return self:doCost(event, target, player, data)
+    end
+    return R.triggerEach(self, event, target, player, data)
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
