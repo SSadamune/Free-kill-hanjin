@@ -8,7 +8,18 @@ Testhanjin_smoke = {
 function Testhanjin_smoke:testExtensionLoaded()
   lu.assertNotNil(Fk.packages.hanjin_generals)
   lu.assertEquals(Fk.packages.hanjin_generals.extensionName, "hanjin")
-  lu.assertEquals(Fk:translate("hanjin_generals"), "紫乔汉晋·武将")
+  local names = {
+    hanjin = "平行时空",
+    hanjin_mode = "国战平行时空",
+    hanjin_heg_mode = "大合集",
+    hanjin_rule_settings = "平行时空规则",
+    hanjin_generals = "标准包",
+    hanjin_zhenshi = "君临天下·阵势变权",
+    hanjin_cards = "国战平行时空",
+  }
+  for key, expected in pairs(names) do
+    lu.assertEquals(Fk:translate(key), expected)
+  end
 end
 
 function Testhanjin_smoke:testJianxiongObtainsDamageCard()

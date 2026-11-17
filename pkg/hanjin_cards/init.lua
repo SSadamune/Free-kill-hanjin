@@ -1,4 +1,4 @@
--- 紫乔汉晋·卡牌
+-- 平行时空·卡牌
 --
 -- This package owns the formal, independent HanJin card identities. It defines
 -- all 162 physical base positions from rules/card-deck.md, the twelve lord-
@@ -737,7 +737,7 @@ end
 -- Translations --------------------------------------------------------------
 
 local translations = {
-  ["hanjin_cards"] = "紫乔汉晋·卡牌",
+  ["hanjin_cards"] = "国战平行时空",
   ["hanjin__inert"] = "未实装牌",
   ["#hanjin__inert"] = "此牌为占位空壳；牌面效果尚未实装，不能使用",
   ["hanjin__inert_equip"] = "未实装装备",

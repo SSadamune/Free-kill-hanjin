@@ -88,6 +88,7 @@ function Teststandard_generals:testRegistryHasNinetyGeneralsAndFourteenRetinues(
 
   local byKingdom, seen = {}, {}
   local hp = { [3] = 0, [4] = 0, [5] = 0 }
+  local ClientUtil = require "ltk.client.util"
   for _, data in ipairs(Data.generals) do
     lu.assertNil(seen[data.number], "Duplicate number " .. data.number)
     seen[data.number] = true
@@ -98,6 +99,9 @@ function Teststandard_generals:testRegistryHasNinetyGeneralsAndFourteenRetinues(
     lu.assertEquals(general.package.name, "hanjin_generals")
     lu.assertEquals(general.kingdom, data.kingdom)
     lu.assertEquals(general.trueName, data.name)
+    lu.assertEquals(general.prefix, "hanjin_prefix_std")
+    lu.assertEquals(Fk:translate(general.prefix), "标")
+    lu.assertEquals(ClientUtil:getGeneralData(data.id).prefix, "hanjin_prefix_std")
     lu.assertEquals(general.maxHp, data.hp)
     lu.assertEquals(general.hp, data.hp)
     lu.assertEquals(Fk:translate(data.id), data.name)

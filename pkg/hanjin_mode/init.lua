@@ -23,9 +23,9 @@ Fk:loadTranslationTable {
   ["hanjin_wolves"] = "群狼环鼎",
   ["help: hanjin_wolves"] = "默认关闭。无论开关，鏖战均为【桃】只能当【杀】或【闪】使用或打出；"
     .. "开启后仅额外启用历史事件（含赋礼、不进则退等）及奇珍规则。",
-  ["hanjin_mode"] = "紫乔汉晋·规则",
+  ["hanjin_mode"] = "国战平行时空",
   ["han"] = "汉",
-  ["hanjin_heg_mode"] = "紫乔汉晋国战",
+  ["hanjin_heg_mode"] = "大合集",
   [":hanjin_heg_mode"] = "继承国战规则；房主预先选择本局候选势力及允许上限，候选外不可选，"
     .. "并遵守同房间上一局胜负及禁选记录。可设置野心家专属武将数量；客将候选可在最终选将前自愿重抽。",
   ["hanjin_candidate_kingdoms"] = "备选势力",
@@ -41,7 +41,7 @@ Fk:loadTranslationTable {
   ["help: hanjin_kingdom_limit"] = "正整数，且不超过已选候选数；默认4，候选少于4项时取候选数。"
     .. "候选多于上限时，按上一局必禁/必留规则随机禁到上限。",
   ["hanjin_offer_count"] = "每人备选武将数",
-  ["hanjin_rule_settings"] = "紫乔汉晋规则",
+  ["hanjin_rule_settings"] = "平行时空规则",
   ["hanjin_wild_count"] = "野心家专属武将数量",
   ["help: hanjin_wild_count"] = "随机保留至多此数量的野心家专属武将；未保留的原版按本局允许势力替换为效忠版。"
     .. "默认4；设为0时原版全部排除，其效忠版仍可入池。",

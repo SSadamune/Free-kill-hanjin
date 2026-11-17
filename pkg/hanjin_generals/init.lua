@@ -1,4 +1,4 @@
--- 紫乔汉晋·标准武将包
+-- 平行时空·武将
 --
 -- 六势力各 15 张正式独立武将，另有 14 种翼从和 19 条统领来源。牌面数据全部
 -- 来自 rules/standard-generals.md 的已确认表。魏区 25 个技能与并州狼骑/虎卫军/
@@ -89,7 +89,37 @@ for _, source in ipairs(sources) do
 end
 
 local translations = {
-  ["hanjin_generals"] = "紫乔汉晋·武将",
+  ["hanjin_generals"] = "标准包",
+  ["hanjin_zhenshi"] = "君临天下·阵势变权",
+  ["hanjin_prefix_std"] = "标",
+  ["hanjin_prefix_zhen"] = "阵",
+  ["hanjin_prefix_shi"] = "势",
+}
+
+-- 角标前缀。来源按 rules/zhen-shi-generals.md 的“普通武将”“君主”两表：
+-- 阵包 12 将 + 君刘备；势包 12 将 + 君张角。阵势包三种新翼从随其统领来源：
+-- 八阵兵（姜维/马隆，阵）、青州精锐（臧霸，势）、庐江上甲（陈武&董袭，势）。
+local prefixByGeneral = {}
+for _, id in ipairs({
+  "hanjin__han014", "hanjin__han015", "hanjin__wei018", "hanjin__wei032",
+  "hanjin__shu012", "hanjin__shu018b", "hanjin__wu017", "hanjin__wu020",
+  "hanjin__qun011", "hanjin__qun081", "hanjin__jin006", "hanjin__jin023",
+  "hanjin__em_shu001",
+}) do
+  prefixByGeneral[id] = "hanjin_prefix_zhen"
+end
+for _, id in ipairs({
+  "hanjin__han019", "hanjin__han022", "hanjin__wei017", "hanjin__wei023",
+  "hanjin__shu019", "hanjin__shu021", "hanjin__wu010", "hanjin__wu023",
+  "hanjin__qun006", "hanjin__qun024", "hanjin__jin017", "hanjin__jin022b",
+  "hanjin__em_qun010",
+}) do
+  prefixByGeneral[id] = "hanjin_prefix_shi"
+end
+local prefixByRetinue = {
+  ["hanjin__retinue_bazhenbing"] = "hanjin_prefix_zhen",
+  ["hanjin__retinue_qingzhou_jingrui"] = "hanjin_prefix_shi",
+  ["hanjin__retinue_lujiang_shangjia"] = "hanjin_prefix_shi",
 }
 for _, general in ipairs(Data.generals) do
   translations[general.id] = general.name
@@ -119,6 +149,15 @@ for _, data in ipairs(Data.generals) do
   -- Two printed versions can share a Chinese name (司马懿, 诸葛亮); the engine
   -- groups same-name conversion by `trueName`. The unique card id stays the key.
   general.trueName = data.name
+  local prefix = prefixByGeneral[data.id]
+  if prefix == nil then
+    if owner == extension then
+      prefix = "hanjin_prefix_std"
+    else
+      error("Missing badge prefix metadata for " .. data.id)
+    end
+  end
+  general.prefix = prefix
   general.mainMaxHpAdjustedValue = data.mainHpAdjust or 0
   general.deputyMaxHpAdjustedValue = data.deputyHpAdjust or 0
   for _, skill in ipairs(data.skills) do
@@ -141,8 +180,18 @@ end
 -- from the normal pool and registers it with the exchange module as a soldier.
 for _, data in ipairs(Data.retinues) do
   -- 翼从武将归其数据来源包；标准翼从仍属标准扩展，新阵势翼从归 zhenshi。
-  local general = General:new(retinuePackages[data.id] or extension, data.id, "unknown", 4)
+  local owner = retinuePackages[data.id] or extension
+  local general = General:new(owner, data.id, "unknown", 4)
   general.trueName = data.name
+  local prefix = prefixByRetinue[data.id]
+  if prefix == nil then
+    if owner == extension then
+      prefix = "hanjin_prefix_std"
+    else
+      error("Missing badge prefix metadata for " .. data.id)
+    end
+  end
+  general.prefix = prefix
   general:addSkill(data.skill.id)
 end
 

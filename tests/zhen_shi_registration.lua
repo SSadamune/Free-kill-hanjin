@@ -12,9 +12,16 @@ Testhanjin_zhen_shi_registration = {
 }
 
 function Testhanjin_zhen_shi_registration:testRetinuesAndPackages()
+  local prefix = {
+    [QINGZHOU] = "hanjin_prefix_shi",
+    [LUJIANG] = "hanjin_prefix_shi",
+    [BAZHEN] = "hanjin_prefix_zhen",
+  }
   for _, id in ipairs({ QINGZHOU, LUJIANG, BAZHEN }) do
     local general = assert(Fk.generals[id], "missing retinue general: " .. id)
     lu.assertEquals(general.package.name, "hanjin_zhenshi")
+    lu.assertEquals(general.prefix, prefix[id])
+    lu.assertEquals(Fk:translate(general.prefix), id == BAZHEN and "阵" or "势")
     lu.assertTrue(Commander.isRetinue(id))
     lu.assertNotNil(S.skillFor(id), "missing instance-source mapping: " .. id)
   end
@@ -73,9 +80,30 @@ function Testhanjin_zhen_shi_registration:testAllReviewedGeneralsRegistered()
     "hanjin__wu023",
   }
   lu.assertEquals(#expected,26)
+  local zhen = {
+    "hanjin__han014", "hanjin__han015", "hanjin__wei018", "hanjin__wei032",
+    "hanjin__shu012", "hanjin__shu018b", "hanjin__wu017", "hanjin__wu020",
+    "hanjin__qun011", "hanjin__qun081", "hanjin__jin006", "hanjin__jin023",
+    "hanjin__em_shu001",
+  }
+  local shi = {
+    "hanjin__han019", "hanjin__han022", "hanjin__wei017", "hanjin__wei023",
+    "hanjin__shu019", "hanjin__shu021", "hanjin__wu010", "hanjin__wu023",
+    "hanjin__qun006", "hanjin__qun024", "hanjin__jin017", "hanjin__jin022b",
+    "hanjin__em_qun010",
+  }
+  lu.assertEquals(#zhen + #shi, 26)
+  local prefix = {}
+  for _, id in ipairs(zhen) do prefix[id] = "hanjin_prefix_zhen" end
+  for _, id in ipairs(shi) do prefix[id] = "hanjin_prefix_shi" end
+  local ClientUtil = require "ltk.client.util"
   for _,id in ipairs(expected) do
     local general=assert(Fk.generals[id],"missing reviewed general: "..id)
+    local want=assert(prefix[id],"missing prefix expectation: "..id)
     lu.assertEquals(general.package.name,"hanjin_zhenshi")
+    lu.assertEquals(general.prefix, want)
+    lu.assertEquals(Fk:translate(general.prefix), want == "hanjin_prefix_zhen" and "阵" or "势")
+    lu.assertEquals(ClientUtil:getGeneralData(id).prefix, want)
   end
   local Versions=require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
   lu.assertTrue(Fk.generals["hanjin__em_shu001"].hidden)
