@@ -1,6 +1,6 @@
 # 交换武将：实现与验证
 
-游戏语义见[对应规则](../../../rules/general-exchange.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
+游戏语义见[对应规则](../../rules/general-exchange.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
 ## 公共武将来源职责
 
@@ -18,7 +18,7 @@
 
 ## 扩展内实现方案
 
-公共操作位于 `pkg/hanjin_mode/rules/general_exchange.lua`。锁定版本 hegemony 的 `util.lua` 中，`H.swapDeputy` 已示范如何识别技能的 `derived_piles`、避免失去技能时清掉牌堆，以及迁移各时间范围的技能次数。它只处理两个不同角色的副将，而且允许处理暗置副将，不能直接作为本规则的入口；本模块不修改也不复用该流程。
+公共操作位于 `pkg/qiao_mode/rules/general_exchange.lua`。锁定版本 hegemony 的 `util.lua` 中，`H.swapDeputy` 已示范如何识别技能的 `derived_piles`、避免失去技能时清掉牌堆，以及迁移各时间范围的技能次数。它只处理两个不同角色的副将，而且允许处理暗置副将，不能直接作为本规则的入口；本模块不修改也不复用该流程。
 
 1. 调用效果传入两个「角色、主副将位」及其明示例外。服务端在结算前复核位置、明置、势力和武将类别；条件失效则双方均不移动。明置只读公开的 `general` / `deputyGeneral`，服务端知道暗将的 `__heg_general` / `__heg_deputy` 也不能让暗置牌被选中。
 2. 在改动任一方前，同时记录两张牌的身份、技能来源、各范围及分支的使用记录、技能自定义状态、每个具名牌堆的实体牌 ID。引擎的使用历史按角色与技能名保存，汉晋技能若可能有同名来源，应在发动时就记录所属武将牌；交换时单靠总次数无法还原归属。同名牌堆也须事先区分来源。
@@ -43,7 +43,7 @@
 
 1. **校验**：位置存在、所选牌公开明置、牌名可解析、两个位置不同、跨角色时势力关系成立（或显式放宽）、武将类别允许（或显式放宽）。任一项失败立即返回，不写任何状态。
 2. **抓取快照**：两张牌的实际牌名、技能表（含相关技能）、各范围/分支使用记录、技能标记、每个具名牌堆的实体牌 ID。快照在任何写入之前完成。
-3. **技能次数**：引擎按角色和技能名聚合，模块通过隐藏模式技 `#hanjin_exchange_history` 在 `fk.SkillEffect` 时把每次发动镜像到房间级账本（tag `hanjin_skill_ledger_v1`，按武将牌记录）。交换只迁移该牌账本中的份额，源角色若仍有其他来源提供同名技能则保留其余次数。账本在阶段、回合、轮次重置时与 `Room:clearHistory` 同步清空对应范围，整局次数不重置；直接写在引擎历史里、账本中没有记录的次数只在“该牌是唯一来源”时保守回退迁移。换回原处不会重置或重复扣次。
+3. **技能次数**：引擎按角色和技能名聚合，模块通过隐藏模式技 `#qiao_exchange_history` 在 `fk.SkillEffect` 时把每次发动镜像到房间级账本（tag `qiao_skill_ledger_v1`，按武将牌记录）。交换只迁移该牌账本中的份额，源角色若仍有其他来源提供同名技能则保留其余次数。账本在阶段、回合、轮次重置时与 `Room:clearHistory` 同步清空对应范围，整局次数不重置；直接写在引擎历史里、账本中没有记录的次数只在“该牌是唯一来源”时保守回退迁移。换回原处不会重置或重复扣次。
 4. **公开位置**：用低层 `setPlayerGeneral` / `setDeputyGeneral` 更新两个所选位置并广播 `general` / `deputyGeneral`，同步 `__heg_general` / `__heg_deputy`。所选主将移动时更新 `__heg_wild`。不调用 `changeHero`、`revealGeneral`、`removeGeneral` 或回将池流程；不重算体力上限，不修改当前体力。
 5. **技能**：按新位置的主将技/副将技限制重新计算该角色应有的实技能集合，只增删由这两张牌提供的技能。跳过 `handleAddLoseSkills` 和技能骨架的普通 `onLose`/`onAcquire`（它们可能弃置具名牌堆或重置限定技状态），改为直接 `player:addSkill` / `player:loseSkill` 并手动广播 `AddSkill` / `LoseSkill`。其他位置、装备或衍生技能提供的同名技能保留；位置条件不满足的主将技/副将技不激活，但其次数与标记仍随牌保存。
 6. **牌堆**：在技能同步后，把每张牌所属的具名牌堆实体牌按原顺序移交到新持有者的同名牌堆。跨角色分别移交；同一角色的主副将交换不产生多余的移牌。牌的区域、拥有者和可见性由引擎移牌流程更新，其他武将的牌堆不受影响。
@@ -96,7 +96,7 @@
 3. 在所有来源更新后，把 `obtained_soldiers` 中的白板士兵按新势力逐位转换；全部新位置就绪前不处理。
 4. 不重复改写交换模块已经迁移的武将、技能、牌堆或体力上限。
 
-实现位于 `pkg/hanjin_mode/rules/commander_retinue.lua` 的 `onExchangeCompleted`；交换模块不得在监听器返回前再次移动位置。该监听器已在统领模块加载时通过 `Exchange.addCompletionListener` 注册，交换模块不直接依赖统领模块。
+实现位于 `pkg/qiao_mode/rules/commander_retinue.lua` 的 `onExchangeCompleted`；交换模块不得在监听器返回前再次移动位置。该监听器已在统领模块加载时通过 `Exchange.addCompletionListener` 注册，交换模块不直接依赖统领模块。
 
 ## 自动化验收
 
@@ -123,7 +123,7 @@
 
 ## 将牌后天技能
 
-明确以武将为获得／拥有技能主体时，调用 `pkg/hanjin_mode/rules/general_card_skills.lua` 的 `grant(room, generalName, skillName)`；撤回对应后天授予用 `revoke`。台账按房间及将牌身份保存，不修改 `Fk.generals`。角色获得技能仍使用正常角色技能来源，不调用此接口。
+明确以武将为获得／拥有技能主体时，调用 `pkg/qiao_mode/rules/general_card_skills.lua` 的 `grant(room, generalName, skillName)`；撤回对应后天授予用 `revoke`。台账按房间及将牌身份保存，不修改 `Fk.generals`。角色获得技能仍使用正常角色技能来源，不调用此接口。
 
 `Exchange.cardProvidesSkill` 合并印刷技能、后天将牌技能及已失去技能的过滤；`positionSkills` 再施加主副将限制，`skillOwner` 供使用历史归属。暗置保留台账，发动资格按暗将及预亮处理；原生 `ServerPlayer:revealBySkillName` 的汉晋适配在服务器同步时安装，发动后天牌技时明置实际所属位置。技能与适配随正式扩展发布，其他模式调用原始实现。
 

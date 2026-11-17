@@ -1,14 +1,14 @@
 -- QUN081 徐荣：剽戮、杀绝定向验收。
--- 规则依据：rules/generals/qun081-xurong.md。
+-- 规则依据：docs/rules/generals/qun081-xurong.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local XURONG = "hanjin__qun081"
-local PIAOLU = "hanjin__skill_qun081_1"
-local SHAJUE = "hanjin__skill_qun081_2"
-local SIDE_SELF = "hanjin__skill_qun081_1-self"
+local XURONG = "qiao_heg__qun081"
+local PIAOLU = "qiao__skill_qun081_1"
+local SHAJUE = "qiao__skill_qun081_2"
+local SIDE_SELF = "qiao__skill_qun081_1-self"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -39,11 +39,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -53,14 +53,14 @@ local function prepare()
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
       main = XURONG,
-      deputy = "hanjin_test__qun_2",
+      deputy = "qiao_test__qun_2",
       kingdom = "qun",
     })
   end)
   return room
 end
 
-Testhanjin_qun081_xurong = {
+Testqiao_qun081_xurong = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -68,8 +68,8 @@ Testhanjin_qun081_xurong = {
   end,
 }
 
-function Testhanjin_qun081_xurong:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_qun081_xurong:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == XURONG
   end), "missing Xu Rong data entry")
@@ -87,11 +87,11 @@ function Testhanjin_qun081_xurong:testFormalRegistration()
   end)
 end
 
-function Testhanjin_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
+function Testqiao_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
   local room, player, target = FkTest.room, p(1), p(2)
-  local mount = give(player, "hanjin__jueying", Card.Spade, 5)
-  local treasure = give(target, "hanjin__bronze_sparrow", Card.Heart, 6)
-  local slash = give(player, "hanjin__slash", Card.Spade, 7)
+  local mount = give(player, "qiao__jueying", Card.Spade, 5)
+  local treasure = give(target, "qiao__bronze_sparrow", Card.Heart, 6)
+  local slash = give(player, "qiao__slash", Card.Spade, 7)
   inRoom(function()
     room:moveCardIntoEquip(player, mount, "test", true, player)
     room:moveCardIntoEquip(target, treasure, "test", true, target)
@@ -132,15 +132,15 @@ function Testhanjin_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
   lu.assertTrue(table.contains(target:getCardIds(Player.Equip), treasure))
 end
 
-function Testhanjin_qun081_xurong:testShajueObtainsActualDyingDamageCard()
+function Testqiao_qun081_xurong:testShajueObtainsActualDyingDamageCard()
   local room, player, source = FkTest.room, p(1), p(2)
   inRoom(function()
     player.hp = 1
     room.current = source
   end)
-  local peach1 = give(player, "hanjin__peach", Card.Heart, 2)
-  local peach2 = give(player, "hanjin__peach", Card.Diamond, 4)
-  local slash = give(source, "hanjin__slash", Card.Spade, 3)
+  local peach1 = give(player, "qiao__peach", Card.Heart, 2)
+  local peach2 = give(player, "qiao__peach", Card.Diamond, 4)
+  local slash = give(source, "qiao__slash", Card.Spade, 3)
   inRoom(function()
     room:moveCardTo({ slash }, Card.Processing, nil, fk.ReasonUse,
       "test", nil, true)
@@ -169,4 +169,4 @@ function Testhanjin_qun081_xurong:testShajueObtainsActualDyingDamageCard()
     "dying damage card should be in Xu Rong's hand")
 end
 
-return { name = "hanjin_qun081_xurong" }
+return { name = "qiao_qun081_xurong" }

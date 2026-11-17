@@ -1,22 +1,22 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-Testhanjin_adaptation = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+Testqiao_adaptation = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 local function use(entries)
   local room = FkTest.room
-  local card = Fk:cloneCard("hanjin_test__blank_basic")
+  local card = Fk:cloneCard("qiao_test__blank_basic")
   A.setCardEntries(card, entries)
   return UseCardData:new { from = room.players[1], tos = { room.players[2] }, card = card, extra_data = {} }
 end
 
-function Testhanjin_adaptation:testVirtualCardWithExplicitConditionsIsAnAdaptationCard()
+function Testqiao_adaptation:testVirtualCardWithExplicitConditionsIsAnAdaptationCard()
   local data = use({ { condition = "zhuzhan", effect = "execute_both" } })
   lu.assertTrue(data.card:isVirtual())
   lu.assertTrue(A.isAdaptationCard(data.card, data))
-  lu.assertFalse(A.isAdaptationCard(Fk:cloneCard("hanjin_test__blank_basic")))
+  lu.assertFalse(A.isAdaptationCard(Fk:cloneCard("qiao_test__blank_basic")))
 end
 
-function Testhanjin_adaptation:testRichIncludesTiesAndCanquRequiresExactlyOneHp()
+function Testqiao_adaptation:testRichIncludesTiesAndCanquRequiresExactlyOneHp()
   local data = use({})
   lu.assertTrue(A.snapshot(FkTest.room, data).fujia)
   data.from.hp = 1
@@ -25,7 +25,7 @@ function Testhanjin_adaptation:testRichIncludesTiesAndCanquRequiresExactlyOneHp(
   lu.assertFalse(A.snapshot(FkTest.room, data).canqu)
 end
 
-function Testhanjin_adaptation:testGujunRequiresKnownKingdomAndNoOtherLivingMember()
+function Testqiao_adaptation:testGujunRequiresKnownKingdomAndNoOtherLivingMember()
   local data = use({})
   lu.assertFalse(A.snapshot(FkTest.room, data).gujun)
   data.from.kingdom = "han"
@@ -34,7 +34,7 @@ function Testhanjin_adaptation:testGujunRequiresKnownKingdomAndNoOtherLivingMemb
   lu.assertFalse(A.snapshot(FkTest.room, data).gujun)
 end
 
-function Testhanjin_adaptation:testSatisfiedNonTargetEffectsAreForcedAndIndependent()
+function Testqiao_adaptation:testSatisfiedNonTargetEffectsAreForcedAndIndependent()
   local data = use({ {condition="fujia",effect="damage"}, {condition="canqu",effect="damage"} })
   data.from.hp = 1
   FkTest.runInRoom(function() A.prepare(FkTest.room, data); A.resolve(FkTest.room, data) end)
@@ -42,7 +42,7 @@ function Testhanjin_adaptation:testSatisfiedNonTargetEffectsAreForcedAndIndepend
   lu.assertEquals(A.getResult(data).triggered_count, 2)
 end
 
-function Testhanjin_adaptation:testSingleIgnoreCannotEnableTwoFailedConditions()
+function Testqiao_adaptation:testSingleIgnoreCannotEnableTwoFailedConditions()
   local data = use({ {id="one",condition="canqu",effect="damage"}, {id="two",condition="kongchao",effect="damage"} })
   A.grantIgnore(data, "test_source", "one")
   FkTest.runInRoom(function() A.prepare(FkTest.room, data); A.resolve(FkTest.room, data) end)
@@ -50,7 +50,7 @@ function Testhanjin_adaptation:testSingleIgnoreCannotEnableTwoFailedConditions()
   lu.assertEquals(A.getResult(data).triggered_count, 1)
 end
 
-function Testhanjin_adaptation:testTwoIgnoreSourcesCanEnableTwoEntries()
+function Testqiao_adaptation:testTwoIgnoreSourcesCanEnableTwoEntries()
   local data = use({ {id="one",condition="canqu",effect="damage"}, {id="two",condition="kongchao",effect="damage"} })
   A.grantIgnore(data, "first_source", "one")
   A.grantIgnore(data, "second_source", "two")
@@ -58,7 +58,7 @@ function Testhanjin_adaptation:testTwoIgnoreSourcesCanEnableTwoEntries()
   lu.assertEquals(data.additionalDamage, 2)
 end
 
-function Testhanjin_adaptation:testUnspecifiedIgnoreMakesExactlyOneSelection()
+function Testqiao_adaptation:testUnspecifiedIgnoreMakesExactlyOneSelection()
   local room = FkTest.room
   local data = use({ {condition="canqu",effect="damage"}, {condition="kongchao",effect="damage"} })
   A.grantIgnore(data, "test_source")
@@ -78,7 +78,7 @@ function Testhanjin_adaptation:testUnspecifiedIgnoreMakesExactlyOneSelection()
   lu.assertTrue(A.getResult(data).entries[2].triggered)
 end
 
-function Testhanjin_adaptation:testIgnoresDoNotLeakToAnotherUseOfTheSameCard()
+function Testqiao_adaptation:testIgnoresDoNotLeakToAnotherUseOfTheSameCard()
   local room = FkTest.room
   local first = use({ {condition="canqu",effect="damage"} })
   A.grantIgnore(first, "only_this_use")
@@ -92,11 +92,11 @@ function Testhanjin_adaptation:testIgnoresDoNotLeakToAnotherUseOfTheSameCard()
   lu.assertFalse(A.getResult(second).triggered)
 end
 
-function Testhanjin_adaptation:testDeclinedTargetChangeIsNotTriggered()
+function Testqiao_adaptation:testDeclinedTargetChangeIsNotTriggered()
   local room = FkTest.room
   local data = use({ {condition="fujia",effect="remove_target"} })
   local events = 0
-  local skel = fk.CreateSkill { name = "#hanjin_test_adaptation_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_adaptation_observer" }
   skel:addEffect(A.Triggered, {
     global = true, can_refresh = function(self, event, target, player) return target == player end,
     on_refresh = function() events = events + 1 end,
@@ -110,11 +110,11 @@ function Testhanjin_adaptation:testDeclinedTargetChangeIsNotTriggered()
   lu.assertEquals(#data.tos, 1)
 end
 
-function Testhanjin_adaptation:testAcceptedTargetChangeTriggersExactlyOnce()
+function Testqiao_adaptation:testAcceptedTargetChangeTriggersExactlyOnce()
   local room = FkTest.room
   local data = use({ {condition="fujia",effect="remove_target"} })
   local events = 0
-  local skel = fk.CreateSkill { name = "#hanjin_test_adaptation_accepted_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_adaptation_accepted_observer" }
   skel:addEffect(A.Triggered, {
     global = true, can_refresh = function(self, event, target, player) return target == player end,
     on_refresh = function() events = events + 1 end,
@@ -131,7 +131,7 @@ function Testhanjin_adaptation:testAcceptedTargetChangeTriggersExactlyOnce()
   lu.assertEquals(#data.tos, 0)
 end
 
-function Testhanjin_adaptation:testSequentialConditionsSeeThePreviousDraw()
+function Testqiao_adaptation:testSequentialConditionsSeeThePreviousDraw()
   local room = FkTest.room
   local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
   FkTest.runInRoom(function()
@@ -144,8 +144,8 @@ function Testhanjin_adaptation:testSequentialConditionsSeeThePreviousDraw()
   lu.assertEquals(A.getResult(data).condition_timing, "sequential")
 end
 
-function Testhanjin_adaptation:testSnapshotPolicyCanStillBeEnabledForFutureRules()
-  local Config = require "packages.hanjin.pkg.hanjin_mode.rules.config"
+function Testqiao_adaptation:testSnapshotPolicyCanStillBeEnabledForFutureRules()
+  local Config = require "packages.qiao.pkg.qiao_mode.rules.config"
   local room = FkTest.room
   local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
   local previous = Config.adaptation_condition_timing
@@ -162,7 +162,7 @@ function Testhanjin_adaptation:testSnapshotPolicyCanStillBeEnabledForFutureRules
   lu.assertEquals(A.getResult(data).condition_timing, "snapshot")
 end
 
-function Testhanjin_adaptation:testIgnoreCanCoverAConditionThatOnlyFailsAfterAnEarlierEffect()
+function Testqiao_adaptation:testIgnoreCanCoverAConditionThatOnlyFailsAfterAnEarlierEffect()
   local room = FkTest.room
   local data = use({ {condition="kongchao",effect="draw"}, {condition="kongchao",effect="damage"} })
   A.grantIgnore(data, "late_failure")
@@ -174,7 +174,7 @@ function Testhanjin_adaptation:testIgnoreCanCoverAConditionThatOnlyFailsAfterAnE
   lu.assertEquals(A.getResult(data).entries[2].ignored_by, "late_failure")
 end
 
-function Testhanjin_adaptation:testLaterConditionCanBecomeSatisfiedAfterAnEarlierEffect()
+function Testqiao_adaptation:testLaterConditionCanBecomeSatisfiedAfterAnEarlierEffect()
   local room = FkTest.room
   local data = use({ {condition="canqu",effect="draw"}, {condition="fujia",effect="damage"} })
   data.from.hp = 1
@@ -188,11 +188,11 @@ function Testhanjin_adaptation:testLaterConditionCanBecomeSatisfiedAfterAnEarlie
   lu.assertEquals(A.getResult(data).triggered_count, 2)
 end
 
-function Testhanjin_adaptation:testReentrantListenersCannotResolveTheNextEntryTooEarly()
+function Testqiao_adaptation:testReentrantListenersCannotResolveTheNextEntryTooEarly()
   local room = FkTest.room
   local data = use({ {id="first",condition="canqu",effect="damage"}, {id="second",condition="canqu",effect="damage"} })
   data.from.hp = 1
-  local skel = fk.CreateSkill { name = "#hanjin_test_adaptation_reentrant_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_adaptation_reentrant_observer" }
   skel:addEffect(A.Triggered, {
     global = true, can_refresh = function(self, event, target, player, result)
       return target == player and result.entry.id == "first"
@@ -216,7 +216,7 @@ local function giveType(room, player, cardType)
   return id
 end
 
-function Testhanjin_adaptation:testSupportAsksSimultaneouslyAndOnlyOneHelperDiscards()
+function Testqiao_adaptation:testSupportAsksSimultaneouslyAndOnlyOneHelperDiscards()
   local room = FkTest.room
   local data = use({ {condition="zhuzhan",effect="execute_both"} })
   local first, second = room.players[3], room.players[4]
@@ -240,7 +240,7 @@ function Testhanjin_adaptation:testSupportAsksSimultaneouslyAndOnlyOneHelperDisc
   lu.assertNil(data.additionalEffect) -- Both options does not mean repeat the card.
 end
 
-function Testhanjin_adaptation:testInvalidSupportReplyCannotWinTheRace()
+function Testqiao_adaptation:testInvalidSupportReplyCannotWinTheRace()
   local room = FkTest.room
   local data = use({ {condition="zhuzhan",effect="damage"} })
   local helper, invalid = room.players[3], room.players[8]
@@ -256,14 +256,14 @@ function Testhanjin_adaptation:testInvalidSupportReplyCannotWinTheRace()
   lu.assertEquals(data.additionalDamage, 1)
 end
 
-function Testhanjin_adaptation:testNoSupportMeansNoEffect()
+function Testqiao_adaptation:testNoSupportMeansNoEffect()
   local data = use({ {condition="zhuzhan",effect="damage"} })
   FkTest.runInRoom(function() A.prepare(FkTest.room, data); A.resolve(FkTest.room, data) end)
   lu.assertNil(data.additionalDamage)
   lu.assertFalse(A.getResult(data).triggered)
 end
 
-function Testhanjin_adaptation:testEachSupportEntryRequiresItsOwnDiscard()
+function Testqiao_adaptation:testEachSupportEntryRequiresItsOwnDiscard()
   local room = FkTest.room
   local data = use({ {condition="zhuzhan",effect="damage"}, {condition="zhuzhan",effect="damage"} })
   local helper = room.players[3]
@@ -279,7 +279,7 @@ function Testhanjin_adaptation:testEachSupportEntryRequiresItsOwnDiscard()
   lu.assertFalse(table.contains(helper:getCardIds("h"), b))
 end
 
-function Testhanjin_adaptation:testIgnoringSupportDoesNotAskOrChargeAHelper()
+function Testqiao_adaptation:testIgnoringSupportDoesNotAskOrChargeAHelper()
   local room = FkTest.room
   local data = use({ {id="support",condition="zhuzhan",effect="damage"} })
   A.grantIgnore(data, "test_source", "support")
@@ -289,7 +289,7 @@ function Testhanjin_adaptation:testIgnoringSupportDoesNotAskOrChargeAHelper()
   lu.assertEquals(data.additionalDamage, 1)
 end
 
-function Testhanjin_adaptation:testDecliningTargetDoesNotSuppressAnotherMandatoryEntry()
+function Testqiao_adaptation:testDecliningTargetDoesNotSuppressAnotherMandatoryEntry()
   local room = FkTest.room
   local data = use({ {condition="fujia",effect="remove_target"}, {condition="fujia",effect="damage"} })
   local original = room.askToChoosePlayers
@@ -300,20 +300,20 @@ function Testhanjin_adaptation:testDecliningTargetDoesNotSuppressAnotherMandator
   lu.assertEquals(A.getResult(data).triggered_count, 1)
 end
 
-function Testhanjin_adaptation:testAConditionOnMaterialDoesNotImplicitlyTransferToAViewAsCard()
+function Testqiao_adaptation:testAConditionOnMaterialDoesNotImplicitlyTransferToAViewAsCard()
   local room = FkTest.room
   local material, virtual
   FkTest.runInRoom(function()
-    material = room:printCard("hanjin_test__blank_basic", Card.Heart, 5)
+    material = room:printCard("qiao_test__blank_basic", Card.Heart, 5)
     A.setCardEntries(material, {{condition="fujia",effect="damage"}})
-    virtual = Fk:cloneCard("hanjin_test__blank_basic")
+    virtual = Fk:cloneCard("qiao_test__blank_basic")
     virtual:addSubcard(material.id)
   end)
   lu.assertTrue(A.isAdaptationCard(material))
   lu.assertFalse(A.isAdaptationCard(virtual))
 end
 
-function Testhanjin_adaptation:testUseOnlyEntriesAreRecognizedWithoutChangingTheCard()
+function Testqiao_adaptation:testUseOnlyEntriesAreRecognizedWithoutChangingTheCard()
   local data = use({})
   A.addEntry(data, {condition="fujia",effect="damage"})
   lu.assertTrue(A.isAdaptationCard(data.card, data))
@@ -322,7 +322,7 @@ function Testhanjin_adaptation:testUseOnlyEntriesAreRecognizedWithoutChangingThe
   lu.assertEquals(data.additionalDamage, 1)
 end
 
-function Testhanjin_adaptation:testActualCardUseDetectsLastHandcardAfterItLeavesHand()
+function Testqiao_adaptation:testActualCardUseDetectsLastHandcardAfterItLeavesHand()
   local room = FkTest.room
   local data = use({ {condition="kongchao",effect="draw"} })
   FkTest.runInRoom(function()
@@ -336,7 +336,7 @@ function Testhanjin_adaptation:testActualCardUseDetectsLastHandcardAfterItLeaves
   lu.assertEquals(data.from:getHandcardNum(), 1)
 end
 
-function Testhanjin_adaptation:testRespondingWithoutUsingDoesNotTriggerAdaptation()
+function Testqiao_adaptation:testRespondingWithoutUsingDoesNotTriggerAdaptation()
   local room = FkTest.room
   local data = use({ {condition="fujia",effect="draw"} })
   local count = data.from:getHandcardNum()
@@ -345,4 +345,4 @@ function Testhanjin_adaptation:testRespondingWithoutUsingDoesNotTriggerAdaptatio
   lu.assertNil(A.getResult(data))
 end
 
-return { name = "hanjin_adaptation" }
+return { name = "qiao_adaptation" }

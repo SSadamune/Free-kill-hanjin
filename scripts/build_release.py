@@ -4,7 +4,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ENTRIES = ('init.lua', 'pkg', 'image', 'audio')
-OUTPUT = ROOT / '.dev/dist/hanjin.zip'
+OUTPUT = ROOT / '.dev/dist/qiao.zip'
 
 
 def build(output=OUTPUT):
@@ -23,7 +23,7 @@ def build(output=OUTPUT):
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         for path in files:
-            archive.write(path, 'hanjin/' + path.relative_to(ROOT).as_posix())
+            archive.write(path, 'qiao/' + path.relative_to(ROOT).as_posix())
     print(f'Built {output} ({len(files)} files)')
     return output
 

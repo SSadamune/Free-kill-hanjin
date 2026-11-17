@@ -2,9 +2,9 @@
 
 ## 标识与依据
 
-内容以[石激桑武将列表](../../../../docs/石激桑武将列表.json)为来源，阵、势包各13张，共24张普通武将及两张君主。将牌技能57条（普通51、君主6），关联三种新翼从、黄巾雷使、两旗及所授技能另列。[来源和逐将索引](../../../../rules/zhen-shi-generals.md)记录游戏语义，本页记录工程入口与验证边界。
+内容以[石激桑武将列表](../../../../assets/docs/石激桑武将列表.json)为来源，阵、势包各13张，共24张普通武将及两张君主。将牌技能57条（普通51、君主6），关联三种新翼从、黄巾雷使、两旗及所授技能另列。[来源和逐将索引](../../../rules/zhen-shi-generals.md)记录游戏语义，本页记录工程入口与验证边界。
 
-正式入口 `pkg/hanjin_generals/init.lua` 将标准包与阵势包各数据片段合并加载。标准90将数据及其包计数不变；阵、势包以独立正式 `Package` `hanjin_zhenshi` 接入。已验证内容与待完成项见下文；登记、代码存在和运行验证分别记录。
+正式入口 `pkg/qiao_generals/init.lua` 将标准包与阵势包各数据片段合并加载。标准90将数据及其包计数不变；阵、势包以独立正式 `Package` `qiao_zhenshi` 接入。已验证内容与待完成项见下文；登记、代码存在和运行验证分别记录。
 
 本地核对版本：runtime的`fk_ver`为0.5.25；hegemony提交为`e8d93acd34a357f96b0105aef7d661708c211626`，utility为`b14e45d9adf67b06bf150f71022e8f1dc0e26116`，均与`dependencies.lock.json`一致。以下上游路径相对`.dev/runtime/FreeKill-release/`，均为只读参考。
 
@@ -35,7 +35,7 @@
 
 已核对`ltk/server/room.lua`：`askToUseCard`返回待执行`UseCardDataSpec`，`askToResponse`返回待执行`RespondCardDataSpec`。`ltk/core/events/misc.lua`中的请求数据含`user`、`pattern`、`eventData`和`result`。屏御须保持原闪请求与多闪语境，完成郭淮打出、请求者使用的归属，不把普通虚拟闪结果当成已经执行。
 
-原始`Room:askToUseVirtualCard`可由skip控制执行；项目`pkg/hanjin_mode/rules/card_use_targets.lua`的封装契约为：`selectVirtualCard`只选择复核，`askToUseVirtualCard`选择并执行一次。交回引擎的数据用选择接口，不得重复使用已执行返回值，详见[公共入口](../card-use-targets.md)。
+原始`Room:askToUseVirtualCard`可由skip控制执行；项目`pkg/qiao_mode/rules/card_use_targets.lua`的封装契约为：`selectVirtualCard`只选择复核，`askToUseVirtualCard`选择并执行一次。交回引擎的数据用选择接口，不得重复使用已执行返回值，详见[公共入口](../card-use-targets.md)。
 
 用良按明示目标策略；挑衅最多两名角色分别追踪真实用杀伤害；虎翼是技能回合限一次；尚义含响应后入口，须同时考虑使用型响应与打出型响应。锋械按各一张确定牌交换经处理区入对方手牌，再按单人／队列目标组接杀，不只提高普通杀目标上限。
 
@@ -54,19 +54,19 @@
 - 穿心明确要求副将武将牌；其为士兵时仍可发动穿心，但直接执行否则分支：伤害+1，张任本局拥有所选翼从。不得调用宽泛的位置变更把士兵变更为翼从后判作成功。
 - 勇决、蛊毒锚定此武将牌，交换后不得误操作原位置的新牌；移除将牌和变更位置的事件分别走公共流程。
 
-详见[公共定义](../../../../rules/general-principles.md#武将位置武将牌与士兵牌)。客户端合法性须只读公开位置与类别，不依赖服务端私有暗将字段；服务端执行前复核。
+详见[公共定义](../../../rules/general-principles.md#武将位置武将牌与士兵牌)。客户端合法性须只读公开位置与类别，不依赖服务端私有暗将字段；服务端执行前复核。
 
-`pkg/hanjin_mode/rules/commander_retinue.lua`已有assignRetinue、convertPosition及来源登记，主要服务实体士兵转换。穿心额外拥有和龙飞共享不能冒充普通统领来源，接入时按独立实例计数和授技，普通翼从无限供应，不以同名技能ID合并来源。
+`pkg/qiao_mode/rules/commander_retinue.lua`已有assignRetinue、convertPosition及来源登记，主要服务实体士兵转换。穿心额外拥有和龙飞共享不能冒充普通统领来源，接入时按独立实例计数和授技，普通翼从无限供应，不以同名技能ID合并来源。
 
 ### 复用、应变与关联内容
 
-项目同文入口位于`pkg/hanjin_generals/skills/`：马术`skill_shu006_1.lua`、观星`skill_shu004_1.lua`、英魂`skill_wu009_1.lua`、英姿`skill_wu005_1.lua`、仁德`skill_shu001_1.lua`。观星正文与实现已读，其卜算数目前写在技能内，承志按主将印刷或后天观星来源接入数值；其他条目核对了文件和技能身份，未重审全部既有效果。
+项目同文入口位于`pkg/qiao_generals/skills/`：马术`skill_shu006_1.lua`、观星`skill_shu004_1.lua`、英魂`skill_wu009_1.lua`、英姿`skill_wu005_1.lua`、仁德`skill_shu001_1.lua`。观星正文与实现已读，其卜算数目前写在技能内，承志按主将印刷或后天观星来源接入数值；其他条目核对了文件和技能身份，未重审全部既有效果。
 
-已核对`pkg/hanjin_mode/rules/adaptation.lua`的setCardEntries、addEntry、isAdaptationCard。烈戎、勤边、献捷须赋完整应变条目；总戎是状态型无次数限制，正常计实际使用，不当成应变ignore_times。遄征为限定技，改本回合击杀奖惩而不只下一次，所获献捷未限本回合。
+已核对`pkg/qiao_mode/rules/adaptation.lua`的setCardEntries、addEntry、isAdaptationCard。烈戎、勤边、献捷须赋完整应变条目；总戎是状态型无次数限制，正常计实际使用，不当成应变ignore_times。遄征为限定技，改本回合击杀奖惩而不只下一次，所获献捷未限本回合。
 
 关联内容：八阵兵由姜维与马隆提供，轮次视为使用调虎离山并为该次结算提供杀当无懈；青州精锐由臧霸提供，统领牌为雷杀；庐江上甲由陈武董袭提供，实际弃牌才增加阶段杀次数；君张角提供黄巾雷使与铁索连环，复用现有同文翼从技能。各兵种技能正文见逐将页，统领能力不与翼从效果混用。
 
-六师率义旗按来源两牌换一项场上没有的指定技能；黄巾天兵符按来源补天兵与计算群人数修正，不引入上游附加能力。旗人数计算含天兵修正，技能候选只检查公开信息；飞龙夺凤、太平要术沿用[基础牌表已选国战君主版本](../../../../rules/card-deck.md#6-卡牌版本选择)，核对正式独立牌接线。
+六师率义旗按来源两牌换一项场上没有的指定技能；黄巾天兵符按来源补天兵与计算群人数修正，不引入上游附加能力。旗人数计算含天兵修正，技能候选只检查公开信息；飞龙夺凤、太平要术沿用[基础牌表已选国战君主版本](../../../rules/card-deck.md#6-卡牌版本选择)，核对正式独立牌接线。
 
 ### 已验证武将
 
@@ -103,16 +103,14 @@
 
 牵弘用例执行真实火杀，但目标选择数据由测试构造，勤边完整主流程与复杂助战边界尚未验收。屏御已验证真实杀闪请求与材料移入弃牌堆，尚未单独验收多闪及客户端交互。激昂按[汉晋转化牌定义](../../../../rulebook/terms/description-terms/transform.md)判断：`card:isVirtual()` 且 `subcards` 非空。无材料构造牌及直接使用的实体牌不进入摸两张并失效的分支；另行弃置的技能消耗不算材料。
 
-最终默认验收：本轮执行 `python scripts/test.py --timeout 480`，979/979通过、0失败、退出码0（280.927秒）；输出保存于 `.dev/ascension-fix-full.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查513文件通过，`git diff --check`通过。安装包1028文件已与工作区逐字节核对。
+最终默认验收：本轮执行 `python scripts/test.py --timeout 480`，979/979通过、0失败、退出码0（280.927秒）；输出保存于 `.dev/ascension-fix-full.log`。无critical或Lua回溯，原生Distance malfunction警告仍出现。Lua语法检查通过，`git diff --check`通过。
 
 ## 未完成与边界
 
 武将、君主、旗、新翼从及统领已接入，既有翼从已适配同名多实例。武将牌后天获得技能按汉晋原创规则记录在该牌上，承志按实际主将牌来源判断。`general_card_skills` 定向7/7通过，覆盖预亮发动明置、暗置停止生效、交换、移除、失去及外部独立来源保留；并州／锦帆复杂多实例4/4通过。
 
-修体、武库按逐将页暂行口径实施。具体规则见[阵势包索引](../../../../rules/zhen-shi-generals.md#实装约束)。
-
-2026-11-17 默认插画接入：按实际登记 ID 核对 26 将（24 普通、2 君主），全部存在 `image/generals/<程序ID>.jpg`，Pillow 真实解码 26/26 为 JPEG 250×292 RGB。两个君主图从合并素材旧名 `hanjin__qun010_em.jpg`、`hanjin__shu001_em.jpg` 重命名迁移为实际 ID，迁移前字节一致，旧路径已删除。`python scripts/build_release.py` 生成 1028 文件安装包；`python scripts/verify_image_assets.py --release` 核对 ZIP 路径 1028/1028、逐文件 SHA-256 1028/1028，并确认不含测试、脚本或 `.dev/`。真实客户端逐图显示、人工目视、联网及重连验收尚未完成；本轮未加工药枫 CSV 图片。
+修体、武库按逐将页暂行口径实施。具体规则见[阵势包索引](../../../rules/zhen-shi-generals.md#实装约束)。
 
 君主升变技能同步补充：公共 `GeneralCardState.clearLeavingCardState` 只清理指定离牌位置的 fake/prelight，升变与穿心共用；保留另一暗将同名合法来源和角色独立实际来源。弘法、章武改用国战君主来源获取，不再依赖身份模式 `Skill.Lord`。真实张角+暗貂蝉、暗副将同名来源和刘备升变已加入 `tests/second_lord.lua`，该套 33/33；`qun024_zhangren` 4/4，两个君主将套件各 4/4。
 
-挑衅 AI 请求修复：`C.askToUseCard` 的 `names/card_name/name` 是策略白名单，不再作为引擎 pattern 直接删除；公共转发从卡名派生 `trueName` pattern（`hanjin__slash` → `slash`）。挑衅真实走 `Room:askToUseCard` 请求，AI 不再收到 nil pattern；选择端用锁定引擎的 `extra_data.exclusive_targets` 限定姜维，服务端保留 `fixed_targets` 复核。`tests/card_use_targets.lua` 36/36（含 `card_name` 别名、固定目标拒绝和 exclusive_targets 观察）、`tests/shu012_jiangwei.lua` 6/6（含取消后实际弃牌）。全库扫描中已有显式 pattern 或由上层生成请求参数的分支保留；未发现其他无证据需改的直接调用。首次全量982项981成功，唯一失败为 `shu021_mifuren`；该套记录初始珠联标记（样本 before=0/after=1）并按 before+1 修正断言，单跑4/4。两项修复后最终全量982/982通过。
+挑衅 AI 请求修复：`C.askToUseCard` 的 `names/card_name/name` 是策略白名单，不再作为引擎 pattern 直接删除；公共转发从卡名派生 `trueName` pattern（`qiao__slash` → `slash`）。挑衅真实走 `Room:askToUseCard` 请求，AI 不再收到 nil pattern；选择端用锁定引擎的 `extra_data.exclusive_targets` 限定姜维，服务端保留 `fixed_targets` 复核。`tests/card_use_targets.lua` 36/36（含 `card_name` 别名、固定目标拒绝和 exclusive_targets 观察）、`tests/shu012_jiangwei.lua` 6/6（含取消后实际弃牌）。全库扫描中已有显式 pattern 或由上层生成请求参数的分支保留；未发现其他无证据需改的直接调用。首次全量982项981成功，唯一失败为 `shu021_mifuren`；该套记录初始珠联标记（样本 before=0/after=1）并按 before+1 修正断言，单跑4/4。两项修复后最终全量982/982通过。

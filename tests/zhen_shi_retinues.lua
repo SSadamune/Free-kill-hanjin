@@ -1,6 +1,6 @@
 -- 阵/势包翼从：青州精锐、庐江上甲定向验收。
--- 规则依据：rules/generals/wei023-zangba.md、rules/generals/wu023-chenwu-dongxi.md、
--- rules/commander-retinue.md。数据注册与正式生命周期接线留给 Codex；本套件在
+-- 规则依据：docs/rules/generals/wei023-zangba.md、docs/rules/generals/wu023-chenwu-dongxi.md、
+-- docs/rules/commander-retinue.md。数据注册与正式生命周期接线留给 Codex；本套件在
 -- 房间内直接建立实例，只验证两种翼从技能的主流程与独立实例限次。
 --
 -- 尚未加入 tests/all.lua；由唯一测试执行者按
@@ -8,16 +8,16 @@
 -- 定向串行运行。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
-local Z = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_retinues"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 
-local QINGZHOU = "hanjin__retinue_skill_qingzhou_jingrui"
-local LUJIANG = "hanjin__retinue_skill_lujiang_shangjia"
-local QINGZHOU_GENERAL = "hanjin_test__retinue_qingzhou_jingrui"
-local LUJIANG_GENERAL = "hanjin_test__retinue_lujiang_shangjia"
-local QINGZHOU_DISCARD = "#hanjin__retinue_skill_qingzhou_jingrui-option-discard"
-local QINGZHOU_DAMAGE = "#hanjin__retinue_skill_qingzhou_jingrui-option-damage"
-local SLASH_BONUS = "hanjin_lujiang_shangjia_slash_bonus-phase"
+local QINGZHOU = "qiao__retinue_skill_qingzhou_jingrui"
+local LUJIANG = "qiao__retinue_skill_lujiang_shangjia"
+local QINGZHOU_GENERAL = "qiao_test__retinue_qingzhou_jingrui"
+local LUJIANG_GENERAL = "qiao_test__retinue_lujiang_shangjia"
+local QINGZHOU_DISCARD = "#qiao__retinue_skill_qingzhou_jingrui-option-discard"
+local QINGZHOU_DAMAGE = "#qiao__retinue_skill_qingzhou_jingrui-option-damage"
+local SLASH_BONUS = "qiao_lujiang_shangjia_slash_bonus-phase"
 
 local function inRoom(fn)
   local result
@@ -104,7 +104,7 @@ end
 
 local function prepare()
   Fk.currentResponsePattern = nil
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, "han")
     for _, player in ipairs(room.players) do
@@ -114,7 +114,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_zhen_shi_retinues = {
+Testqiao_zhen_shi_retinues = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -122,18 +122,18 @@ Testhanjin_zhen_shi_retinues = {
   end,
 }
 
-function Testhanjin_zhen_shi_retinues:testQingzhouMinHandTargetsAndPerInstanceLimit()
+function Testqiao_zhen_shi_retinues:testQingzhouMinHandTargetsAndPerInstanceLimit()
   local player, second, third, fourth = p(1), p(2), p(3), p(4)
-  give(player, "hanjin__jink", Card.Heart, 2)
-  give(second, "hanjin__jink", Card.Heart, 3)
-  give(third, "hanjin__jink", Card.Heart, 4)
-  give(third, "hanjin__jink", Card.Heart, 5)
-  give(fourth, "hanjin__jink", Card.Heart, 6)
-  give(fourth, "hanjin__jink", Card.Heart, 7)
-  give(fourth, "hanjin__jink", Card.Heart, 8)
+  give(player, "qiao__jink", Card.Heart, 2)
+  give(second, "qiao__jink", Card.Heart, 3)
+  give(third, "qiao__jink", Card.Heart, 4)
+  give(third, "qiao__jink", Card.Heart, 5)
+  give(fourth, "qiao__jink", Card.Heart, 6)
+  give(fourth, "qiao__jink", Card.Heart, 7)
+  give(fourth, "qiao__jink", Card.Heart, 8)
   -- 全场最低必须真实为1：其余角色各留1张，不能留0张把设定目标挤出合法范围。
   for index = 5, 8 do
-    give(p(index), "hanjin__jink", Card.Heart, index + 2)
+    give(p(index), "qiao__jink", Card.Heart, index + 2)
   end
   enterPlay(player)
 
@@ -185,7 +185,7 @@ function Testhanjin_zhen_shi_retinues:testQingzhouMinHandTargetsAndPerInstanceLi
   end)
 end
 
-function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSlashBonus()
+function Testqiao_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSlashBonus()
   local player, sharedOwner = p(1), p(2)
   enterPlay(player)
   local skill = assert(Fk.skills[LUJIANG])
@@ -198,8 +198,8 @@ function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSla
     lu.assertEquals(#R.instancesForSkill(player, LUJIANG), 2)
   end)
 
-  give(player, "hanjin__jink", Card.Heart, 2)
-  give(player, "hanjin__jink", Card.Heart, 3)
+  give(player, "qiao__jink", Card.Heart, 2)
+  give(player, "qiao__jink", Card.Heart, 3)
 
   local function discardAllForSkill()
     skill_test.withSkillRequests(FkTest.room, LUJIANG, {
@@ -225,7 +225,7 @@ function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSla
     lu.assertEquals(#Z.availableInstances(player, LUJIANG, 2), 2) -- 两份实例都还有余额
   end)
 
-  give(player, "hanjin__jink", Card.Heart, 4)
+  give(player, "qiao__jink", Card.Heart, 4)
   discardAllForSkill()
   lu.assertEquals(player:getMark(SLASH_BONUS), 2)
   lu.assertEquals(slashMax(player), 3)
@@ -233,12 +233,12 @@ function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSla
     lu.assertEquals(#Z.availableInstances(player, LUJIANG, 2), 1) -- 第一份已用满，第二份仍有
   end)
 
-  give(player, "hanjin__jink", Card.Heart, 5)
+  give(player, "qiao__jink", Card.Heart, 5)
   discardAllForSkill()
   lu.assertEquals(player:getMark(SLASH_BONUS), 3)
   lu.assertEquals(slashMax(player), 4)
 
-  give(player, "hanjin__jink", Card.Heart, 6)
+  give(player, "qiao__jink", Card.Heart, 6)
   discardAllForSkill()
   lu.assertEquals(player:getMark(SLASH_BONUS), 4)
   lu.assertEquals(slashMax(player), 5)
@@ -249,21 +249,21 @@ function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountVersusInstancesAndSla
     lu.assertFalse(Z.canUse(player, LUJIANG, 2))
     lu.assertFalse(skill:canUse(player))
   end)
-  give(player, "hanjin__jink", Card.Heart, 7)
+  give(player, "qiao__jink", Card.Heart, 7)
   inRoom(function()
     lu.assertFalse(skill:canUse(player), "达到角色数×实例数上限后不能继续发动")
   end)
 end
 
-function Testhanjin_zhen_shi_retinues:testClientCanUseReadsPublicSummaryOnly()
+function Testqiao_zhen_shi_retinues:testClientCanUseReadsPublicSummaryOnly()
   local player, sharedOwner, third = p(1), p(2), p(3)
-  give(player, "hanjin__jink", Card.Heart, 2) -- 手牌数≠装备数
-  give(sharedOwner, "hanjin__jink", Card.Heart, 3)
-  give(sharedOwner, "hanjin__jink", Card.Heart, 4)
-  give(third, "hanjin__jink", Card.Heart, 5)
+  give(player, "qiao__jink", Card.Heart, 2) -- 手牌数≠装备数
+  give(sharedOwner, "qiao__jink", Card.Heart, 3)
+  give(sharedOwner, "qiao__jink", Card.Heart, 4)
+  give(third, "qiao__jink", Card.Heart, 5)
   -- 其余角色各1张，使全场最低真实为1，p2的2张才被排除。
   for index = 4, 8 do
-    give(p(index), "hanjin__jink", Card.Heart, index + 4)
+    give(p(index), "qiao__jink", Card.Heart, index + 4)
   end
   enterPlay(player)
   inRoom(function()
@@ -291,7 +291,7 @@ function Testhanjin_zhen_shi_retinues:testClientCanUseReadsPublicSummaryOnly()
   end)
 end
 
-function Testhanjin_zhen_shi_retinues:testLujiangSlashBonusPersistsAfterWingLoss()
+function Testqiao_zhen_shi_retinues:testLujiangSlashBonusPersistsAfterWingLoss()
   local player = p(1)
   enterPlay(player)
   local skill = assert(Fk.skills[LUJIANG])
@@ -299,8 +299,8 @@ function Testhanjin_zhen_shi_retinues:testLujiangSlashBonusPersistsAfterWingLoss
   inRoom(function()
     instance = R.grant(player, { general = LUJIANG_GENERAL, skill = LUJIANG })
   end)
-  give(player, "hanjin__jink", Card.Heart, 2)
-  give(player, "hanjin__jink", Card.Heart, 3)
+  give(player, "qiao__jink", Card.Heart, 2)
+  give(player, "qiao__jink", Card.Heart, 3)
 
   skill_test.withSkillRequests(FkTest.room, LUJIANG, {
     askToDiscard = function(self, who, params, original)
@@ -327,7 +327,7 @@ function Testhanjin_zhen_shi_retinues:testLujiangSlashBonusPersistsAfterWingLoss
   lu.assertEquals(slashMax(player), 2, "失去翼从后已建立的【杀】次数加成仍有效")
 end
 
-function Testhanjin_zhen_shi_retinues:testClientAvailabilityAfterUsedInstanceRemoval()
+function Testqiao_zhen_shi_retinues:testClientAvailabilityAfterUsedInstanceRemoval()
   local player = p(1)
   enterPlay(player)
   local skill = assert(Fk.skills[LUJIANG])
@@ -353,9 +353,9 @@ function Testhanjin_zhen_shi_retinues:testClientAvailabilityAfterUsedInstanceRem
   end
 
   -- 仅 p1 拥有（X=1），两份实例各一次。用掉第一份后其已用数为1、第二份为0。
-  give(player, "hanjin__jink", Card.Heart, 2)
+  give(player, "qiao__jink", Card.Heart, 2)
   discardOne()
-  give(player, "hanjin__jink", Card.Heart, 3)
+  give(player, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     lu.assertEquals(Z.publicUsedList(player, LUJIANG), { 1, 0 })
     lu.assertTrue(R.remove(player, first.id))
@@ -374,7 +374,7 @@ function Testhanjin_zhen_shi_retinues:testClientAvailabilityAfterUsedInstanceRem
   end)
 end
 
-function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountExcludesDeadCharacters()
+function Testqiao_zhen_shi_retinues:testLujiangOwnerCountExcludesDeadCharacters()
   local player, other = p(1), p(2)
   enterPlay(player)
   inRoom(function()
@@ -388,4 +388,4 @@ function Testhanjin_zhen_shi_retinues:testLujiangOwnerCountExcludesDeadCharacter
   end)
 end
 
-return { name = "hanjin_zhen_shi_retinues" }
+return { name = "qiao_zhen_shi_retinues" }

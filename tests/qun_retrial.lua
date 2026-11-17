@@ -3,7 +3,7 @@
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local SKILL = "hanjin__skill_qun010_2"
+local SKILL = "qiao__skill_qun010_2"
 local DEFAULT_KINGDOMS = { "qun", "qun", "wei", "wei", "shu", "shu", "wu", "wu" }
 
 local function room() return FkTest.room end
@@ -52,28 +52,28 @@ local function seedJudgeCard(name, suit, number)
 end
 
 local function runJudge(who)
-  local judge = { who = who, reason = "hanjin_test_judge", pattern = "." }
+  local judge = { who = who, reason = "qiao_test_judge", pattern = "." }
   local ok, err = pcall(function() inRoom(function() room():judge(judge) end) end)
   assert(ok, err)
   return judge
 end
 
-Testhanjin_qun_retrial = { tearDown = support.clearRoom }
+Testqiao_qun_retrial = { tearDown = support.clearRoom }
 
-Testhanjin_qun_retrial.setup = function()
-  local r = support.initHanjinRoom()
+Testqiao_qun_retrial.setup = function()
+  local r = support.initQiaoRoom()
   inRoom(function()
     local skill_test = __dofile("../../../tests/support/skill_test.lua")
     skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS)
   end)
 end
 
-function Testhanjin_qun_retrial:testGuidaoBlackCardReplacesAndObtainsOldJudge()
+function Testqiao_qun_retrial:testGuidaoBlackCardReplacesAndObtainsOldJudge()
   local p1, p2 = p(1), p(2)
   grant(p2, SKILL)
   clearHand(p2)
-  local chosen = give(p2, "hanjin__slash", Card.Spade, 2)
-  local original = seedJudgeCard("hanjin__jink", Card.Heart, 9)
+  local chosen = give(p2, "qiao__slash", Card.Spade, 2)
+  local original = seedJudgeCard("qiao__jink", Card.Heart, 9)
 
   local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToCards
   room().askToSkillInvoke = function() return true end
@@ -89,12 +89,12 @@ function Testhanjin_qun_retrial:testGuidaoBlackCardReplacesAndObtainsOldJudge()
   lu.assertTrue(table.contains(p2:getCardIds("h"), original))
 end
 
-function Testhanjin_qun_retrial:testGuidaoRedCardCannotReplace()
+function Testqiao_qun_retrial:testGuidaoRedCardCannotReplace()
   local p1, p2 = p(1), p(2)
   grant(p2, SKILL)
   clearHand(p2)
-  local chosen = give(p2, "hanjin__slash", Card.Heart, 2)
-  local original = seedJudgeCard("hanjin__jink", Card.Spade, 9)
+  local chosen = give(p2, "qiao__slash", Card.Heart, 2)
+  local original = seedJudgeCard("qiao__jink", Card.Spade, 9)
 
   local invoked = 0
   local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToCards
@@ -109,4 +109,4 @@ function Testhanjin_qun_retrial:testGuidaoRedCardCannotReplace()
   lu.assertTrue(table.contains(p2:getCardIds("h"), chosen))
 end
 
-return { name = "hanjin_qun_retrial" }
+return { name = "qiao_qun_retrial" }

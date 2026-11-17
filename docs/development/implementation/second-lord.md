@@ -1,6 +1,6 @@
 # 第二君主：实现与验证
 
-游戏语义见[对应规则](../../../rules/second-lord.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
+游戏语义见[对应规则](../../rules/second-lord.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
 ## 扩展内实现
 
@@ -8,11 +8,11 @@
 
 | 内容 | 文件/接口 |
 | --- | --- |
-| 显式版本登记 | `pkg/hanjin_mode/rules/general_versions.lua`：`Versions.register { normal, lord, loyalty }`、`lord_version`、`lord_kingdoms`、`is_lord`、`selectable` |
-| 升变通则 | `pkg/hanjin_mode/rules/ascension.lua`：`pair_max_hp`、`population_blocks`、`ascend`、`flip_lord_for_death`、`death_succession`、`convert_to_wild`、`get_winner` |
-| 配将体力贡献 | `pkg/hanjin_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](generals/pair-hp.md) |
-| 模式规则技能 | `pkg/hanjin_mode/skills/ascension_rule.lua`：`fk.TurnStart` 普通升变、`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
-| 模式接线 | `pkg/hanjin_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
+| 显式版本登记 | `pkg/qiao_mode/rules/general_versions.lua`：`Versions.register { normal, lord, loyalty }`、`lord_version`、`lord_kingdoms`、`is_lord`、`selectable` |
+| 升变通则 | `pkg/qiao_mode/rules/ascension.lua`：`pair_max_hp`、`population_blocks`、`ascend`、`flip_lord_for_death`、`death_succession`、`convert_to_wild`、`get_winner` |
+| 配将体力贡献 | `pkg/qiao_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](generals/pair-hp.md) |
+| 模式规则技能 | `pkg/qiao_mode/skills/ascension_rule.lua`：`fk.TurnStart` 普通升变、`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
+| 模式接线 | `pkg/qiao_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
 
 版本登记使用显式对应关系，不依赖同名替换或上游 `HegUtil.lordGenerals`。君主版程序名不得包含 `lord`，并且登记时设置 `general.is_lord`；这样可以避开上游 `new_hegemony_mode.lua` 死亡奖惩与 `hegemony_rule.lua` 明置处理中只按名字识别的君主特例，汉晋自己接管继位、转野和胜负。普通升变在角色首个回合的 `fk.TurnStart` 提供，先于上游同回合的亮将询问；死亡继位在 `fk.BeforeGameOverJudge` 执行，先于标准游戏结束判定，候选人按当前回合角色起逆时针询问并在提交时复核。涉及暗将时由服务端私下校验和询问，不向全场展示候选名单。
 
@@ -31,9 +31,9 @@
 - 珠联璧合与阴阳鱼只在“此次升变首次使两张武将牌均明置”时发放；已花费或升变前已双亮不重领。
 - 君主在场不豁免超员；有君主的势力仍会因超员转为野心家。
 - 有君主与无君主采用相同的唯一势力胜负判定；覆盖势力人数超过全场人数一半的情况，以及常规势力与野心家并存、多个野心家并存和仅剩一个野心家的情况。
-- 真实 `hanjin__qun010` + 暗貂蝉普通升变：按 `actual_main` 清理旧普通将 fake/prelight，保留暗副将；弘法可用并实际授予黄巾天兵符，悟心/问道正常；独立同名实际来源不被清理。
-- 真实 `hanjin__shu001` 升变：章武作为国战君主技能实际进入技能来源；旧的普通仁德移除。
+- 真实 `qiao_heg__qun010` + 暗貂蝉普通升变：按 `actual_main` 清理旧普通将 fake/prelight，保留暗副将；弘法可用并实际授予黄巾天兵符，悟心/问道正常；独立同名实际来源不被清理。
+- 真实 `qiao_heg__shu001` 升变：章武作为国战君主技能实际进入技能来源；旧的普通仁德移除。
 
-公共升变入口 [ascension.lua](../../../pkg/hanjin_mode/rules/ascension.lua) 在 `changeHero` 前按 `M.actual_main` 调用 `GeneralCardState.clearLeavingCardState(player, oldMain, false)`，只清旧主将牌**印刷技能**的 fake/prelight；暗副将同名合法来源、实际独立来源保留，旧牌后天附将仍由 `G.sync` 管理。换将、标记、体力、回将池等仍由升变入口负责。两个国战君主印刷技能 `弘法`、`章武` 不再使用身份模式 `Skill.Lord` 获取标签，君主资格仍由 `general_versions` 的君主版登记和国战牌来源判断。
+公共升变入口 [ascension.lua](../../../pkg/qiao_mode/rules/ascension.lua) 在 `changeHero` 前按 `M.actual_main` 调用 `GeneralCardState.clearLeavingCardState(player, oldMain, false)`，只清旧主将牌**印刷技能**的 fake/prelight；暗副将同名合法来源、实际独立来源保留，旧牌后天附将仍由 `G.sync` 管理。换将、标记、体力、回将池等仍由升变入口负责。两个国战君主印刷技能 `弘法`、`章武` 不再使用身份模式 `Skill.Lord` 获取标签，君主资格仍由 `general_versions` 的君主版登记和国战牌来源判断。
 
 本轮 `tests/second_lord.lua` **33/33**、`em_qun010_zhangjiao` **4/4**、`em_shu001_liubei` **4/4** 均通过。

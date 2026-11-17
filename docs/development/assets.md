@@ -8,13 +8,13 @@
 
 | 用途 | 路径示例 |
 | --- | --- |
-| 武将插画 | `image/generals/hanjin__han001.jpg` |
-| 翼从插画 | `image/generals/hanjin__retinue_niujin.jpg` |
-| 卡牌正面 | `image/card/hanjin__slash.png` |
-| 装备图标 | `image/card/equipIcon/hanjin__axe.png` |
-| 延时锦囊图标 | `image/card/delayedTrick/hanjin__indulgence.png` |
+| 武将插画 | `image/generals/qiao_heg__han001.jpg` |
+| 翼从插画 | `image/generals/qiao_heg__retinue_niujin.jpg` |
+| 卡牌正面 | `image/card/qiao__slash.png` |
+| 装备图标 | `image/card/equipIcon/qiao__axe.png` |
+| 延时锦囊图标 | `image/card/delayedTrick/qiao__indulgence.png` |
 
-依据是 `Fk/Base/SkinBank.qml` 的 `getGeneralPicture`、`getCardPicture`、`getEquipIcon` 和 `getDelayedTrickPicture`。这些入口按固定目录与程序 ID 查找文件，不递归搜索分包目录。`hanjin__` 是当前程序 ID 的一部分，应予保留。
+依据是 `Fk/Base/SkinBank.qml` 的 `getGeneralPicture`、`getCardPicture`、`getEquipIcon` 和 `getDelayedTrickPicture`。这些入口按固定目录与程序 ID 查找文件，不递归搜索分包目录。正式武将使用 `qiao_heg__` 前缀，其中 `heg__` 片段用于命中引擎的国战体力显示；技能、卡牌、标记、包名和模式 ID 均使用 qiao 命名空间（技能、卡牌为 `qiao__`），qiao 命名空间本身不参与该识别，不得混用。
 
 ## 独立武将版本
 
@@ -27,8 +27,8 @@
 客将是某张武将牌在本局的替换结果。普通与客将默认插画使用相同的程序 ID 文件名，通过目录区分：
 
 ```text
-image/generals/hanjin__han001.jpg
-image/generals/guest/hanjin__han001.jpg
+image/generals/qiao_heg__han001.jpg
+image/generals/guest/qiao_heg__han001.jpg
 ```
 
 所有客将插画统一放入 `image/generals/guest/`，格式为 `<程序ID>.jpg`。不另加 `_guest`、插画序号或分包层级，不创建新武将 ID，不维护逐将图片路径清单。
@@ -36,18 +36,18 @@ image/generals/guest/hanjin__han001.jpg
 引擎 `Fk/Base/SkinBank.qml:getGeneralExtraPic(name, extra)` 已支持在指定附加目录按程序 ID 读取 `.jpg`。例如：
 
 ```javascript
-SkinBank.getGeneralExtraPic("hanjin__han001", "guest/")
+SkinBank.getGeneralExtraPic("qiao_heg__han001", "guest/")
 ```
 
-会查找 `packages/hanjin/image/generals/guest/hanjin__han001.jpg`。调用中目录参数为 `guest/`，保留末尾斜杠。
+会查找 `packages/qiao/image/generals/guest/qiao_heg__han001.jpg`。调用中目录参数为 `guest/`，保留末尾斜杠。
 
 通用显示入口根据本局该武将的客将替换结果选择：实际发生替换且附加图存在时使用客将图，否则使用原有默认插画流程。无需逐将登记图片；新增客将插画只需按实际程序 ID 放置文件。引擎读取入口不会自行判断客将状态，选将和局内显示仍需统一接入。
 
-此保存方式已通过锁定源码核对，客将插画已加入资源目录；当前数量与验证结果见[开发状态](status.md#图片资源保存)。通用显示逻辑尚未实装，接入要求见[客将默认插画功能设计](guest-illustrations.md)。
+此保存方式已通过锁定源码核对，客将插画已加入资源目录；当前覆盖与未验收状态见[开发状态](status.md#图片资源保存)。通用显示逻辑尚未实装，接入要求见[客将默认插画功能设计](guest-illustrations.md)。
 
 ## 音效资源
 
-音效源码放在项目根 `audio/`，构建和开发同步按相对路径复制到 `packages/hanjin/audio/`。本页记录引擎接口约定，不代表已有音频或完成播放验收；资源与构建现状见[开发状态](status.md)。
+音效源码放在项目根 `audio/`，构建和开发同步按相对路径复制到 `packages/qiao/audio/`。本页记录引擎接口约定，不代表已有音频或完成播放验收；资源与构建现状见[开发状态](status.md)。
 
 锁定引擎的查找入口如下（`Fk/Base/SkinBank.qml` 与 `ltk/server/`）：
 
@@ -62,13 +62,13 @@ SkinBank.getGeneralExtraPic("hanjin__han001", "guest/")
 
 详情页 `GeneralDetailPage.qml` 从 i=0 开始枚举：i=0 缺失时不终止，继续查 1；i≥1 遇到首个缺失才停止。更高编号如何拼入实际播放路径由 `Backend.playSound(path, idx)` 交给原生端；当前源码检出未含 C++ 层，未核对编号后缀与跳号行为。
 
-非装备卡牌的使用语音由 `ltk/server/events/usecard.lua` 按 `packages/<扩展名>/audio/card/<male|female>/<牌名>.mp3` 查找；装备通用音使用引擎 `./audio/card/common/`。特殊牌技能可以直接调用 `room:broadcastPlaySound("./packages/hanjin/audio/card/<名称>")`，客户端 `SkinBank.getAudioByPath` 会补 `.mp3` 再播放；项目 `pkg/hanjin_cards/skills/halberd.lua` 目前复用 `standard_cards` 的方天画戟音效。
+非装备卡牌的使用语音由 `ltk/server/events/usecard.lua` 按 `packages/<扩展名>/audio/card/<male|female>/<牌名>.mp3` 查找；装备通用音使用引擎 `./audio/card/common/`。特殊牌技能可以直接调用 `room:broadcastPlaySound("./packages/qiao/audio/card/<名称>")`，客户端 `SkinBank.getAudioByPath` 会补 `.mp3` 再播放；项目 `pkg/qiao_cards/skills/halberd.lua` 目前复用 `standard_cards` 的方天画戟音效。
 
 新增语音前先确认技能骨架名、武将程序 ID 和真实触发入口，不要照搬或猜测文件名。音效格式、码率、音量、裁剪和编号数量按用户素材与目标要求处理，项目未规定通用参数。找不到对应引擎接口或原生实现时，明确记录未核对边界。
 
 ## 资料来源与维护
 
-正式武将列表、编号、版本与分包由本项目维护的数据和已确认设计决定，当前标准包见 `pkg/hanjin_generals/data/standard.lua` 与[标准武将资料](../../rules/standard-generals.md)。`docs/heroes.json` 只是外部参考，不是正式编号、分包或构建的规范来源。
+正式武将列表、编号、版本与分包由本项目维护的数据和已确认设计决定，当前标准包见 `pkg/qiao_generals/data/standard.lua` 与[标准武将资料](../rules/standard-generals.md)。外部参考的 `heroes.json`（本仓库未收录）不是正式编号、分包或构建的规范来源。
 
 新增图片或音效先确认实际程序 ID、用途和引擎入口；缺少素材时索取原材料，不自行生成或复制占位。图片格式应符合对应入口，不能直接改扩展名冒充格式转换；迁移原稿时保持文件字节不变，按目标要求转换时另行记录来源与参数，并核对安装包路径。
 

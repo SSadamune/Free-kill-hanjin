@@ -1,18 +1,18 @@
 -- WU023 陈武&董袭：奋命、断绁定向验收。
--- 规则依据：rules/generals/wu023-chenwu-dongxi.md。
+-- 规则依据：docs/rules/generals/wu023-chenwu-dongxi.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local CHEN = "hanjin__wu023"
-local FENGMING = "hanjin__skill_wu023_1"
-local DUANXIE = "hanjin__skill_wu023_2"
-local OPT_CHAIN = "hanjin__skill_wu023_1-chain"
-local OPT_DISCARD = "hanjin__skill_wu023_1-discard-all"
-local USED_CHAIN = "hanjin__skill_wu023_1-chain-phase"
-local USED_DISCARD = "hanjin__skill_wu023_1-discard-phase"
+local CHEN = "qiao_heg__wu023"
+local FENGMING = "qiao__skill_wu023_1"
+local DUANXIE = "qiao__skill_wu023_2"
+local OPT_CHAIN = "qiao__skill_wu023_1-chain"
+local OPT_DISCARD = "qiao__skill_wu023_1-discard-all"
+local USED_CHAIN = "qiao__skill_wu023_1-chain-phase"
+local USED_DISCARD = "qiao__skill_wu023_1-discard-phase"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -70,11 +70,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -84,14 +84,14 @@ local function prepare()
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
       main = CHEN,
-      deputy = "hanjin_test__wu_2",
+      deputy = "qiao_test__wu_2",
       kingdom = "wu",
     })
   end)
   return room
 end
 
-Testhanjin_wu023_chenwu_dongxi = {
+Testqiao_wu023_chenwu_dongxi = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -99,8 +99,8 @@ Testhanjin_wu023_chenwu_dongxi = {
   end,
 }
 
-function Testhanjin_wu023_chenwu_dongxi:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_wu023_chenwu_dongxi:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == CHEN
   end), "missing Chen Wu & Dong Xi data entry")
@@ -118,7 +118,7 @@ function Testhanjin_wu023_chenwu_dongxi:testFormalRegistration()
   end)
 end
 
-function Testhanjin_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
+function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
   local room, player, second, third = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
     player.hp = 2
@@ -126,9 +126,9 @@ function Testhanjin_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
     player.phase = Player.Play
     room:setBanner("RoundCount", 1)
   end)
-  local own = give(player, "hanjin__jink", Card.Heart, 2)
-  local secondCard = give(second, "hanjin__jink", Card.Heart, 3)
-  local thirdCard = give(third, "hanjin__jink", Card.Heart, 4)
+  local own = give(player, "qiao__jink", Card.Heart, 2)
+  local secondCard = give(second, "qiao__jink", Card.Heart, 3)
+  local thirdCard = give(third, "qiao__jink", Card.Heart, 4)
 
   local skill = assert(Fk.skills[FENGMING])
   local choiceCount, discards = 0, {}
@@ -188,7 +188,7 @@ function Testhanjin_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
   lu.assertEquals(FkTest.room:getCardArea(thirdCard), Card.PlayerHand)
 end
 
-function Testhanjin_wu023_chenwu_dongxi:testDuanxieDrawsOnActualReset()
+function Testqiao_wu023_chenwu_dongxi:testDuanxieDrawsOnActualReset()
   local room, player, other = FkTest.room, p(1), p(2)
   inRoom(function()
     room.current = player
@@ -214,7 +214,7 @@ function Testhanjin_wu023_chenwu_dongxi:testDuanxieDrawsOnActualReset()
   lu.assertEquals(#player:getCardIds(Player.Hand), 3)
 end
 
-function Testhanjin_wu023_chenwu_dongxi:testFengmingCanUseOnRealClientPlayer()
+function Testqiao_wu023_chenwu_dongxi:testFengmingCanUseOnRealClientPlayer()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     player.phase = Player.Play
@@ -234,4 +234,4 @@ function Testhanjin_wu023_chenwu_dongxi:testFengmingCanUseOnRealClientPlayer()
   end)
 end
 
-return { name = "hanjin_wu023_chenwu_dongxi" }
+return { name = "qiao_wu023_chenwu_dongxi" }

@@ -6,9 +6,9 @@
 
 | 资料 | 内容 |
 | --- | --- |
-| `docs/rules/` | 外部《三国杀规则集》来源副本，保留来源及参考边界 |
-| [外部参考资料登记](../README.md#外部参考资料) | 外部 JSON、CSV、FAQ 的来源属性与不随项目维护更新的约定 |
-| [项目规则规范](../../rules/README.md) | 汉晋设计、机制、内容登记及逐将裁定草案 |
+| `assets/docs/rules/` | 外部《三国杀规则集》来源副本，保留来源及参考边界 |
+| [外部参考资料登记](../../assets/README.md) | 外部 JSON、CSV、FAQ 及规则副本的来源属性与不随项目维护更新的约定 |
+| [项目规则规范](../rules/README.md) | 汉晋设计、机制、内容登记及逐将裁定草案 |
 | [汉晋规则集工作底稿](../../rulebook/README.md) | 已复制的基础条文及未来汉晋修订；日常具体条文引用入口 |
 | [实现导航](implementation/README.md) | 引擎接口、代码位置、接线及验收依据 |
 | [测试规范](testing.md) | 分层测试、夹具、失败诊断与发布验证方法 |
@@ -19,7 +19,7 @@
 
 规则确认、代码完成和验证完成是独立事实。实现文档中的历史覆盖记录不替代当前状态表；规则中尚待裁定的内容不因实现存在而获批。
 
-工作流入口与事实记录分开：[hanjin-content-development](../../.agents/skills/hanjin-content-development/SKILL.md) 和 [hanjin-asset-development](../../.agents/skills/hanjin-asset-development/SKILL.md) 是任务入口，分别规定技能内容与图片／音效素材的操作顺序和资料导航；稳定规则见 `rules/`、`rulebook/` 及本目录规范，功能设计见 `guest-illustrations.md`，具体接线见 `implementation/`，实际结果见 `status.md`。`image/`、`audio/`、`pkg/`、`scripts/` 是实际交付与工具；不要用 skill 或状态记录替代规范。
+工作流入口与事实记录分开：[hanjin-content-development](../../.agents/skills/hanjin-content-development/SKILL.md) 和 [hanjin-asset-development](../../.agents/skills/hanjin-asset-development/SKILL.md) 是任务入口，分别规定技能内容与图片／音效素材的操作顺序和资料导航；稳定规则见 `docs/rules/`、`rulebook/` 及本目录规范，功能设计见 `guest-illustrations.md`，具体接线见 `implementation/`，实际结果见 `status.md`。`image/`、`audio/`、`pkg/`、`scripts/` 是实际交付与工具；不要用 skill 或状态记录替代规范。
 
 ## 一次内容开发
 
@@ -77,6 +77,6 @@ skill 已规定上下文查找、规则核对、拆批、验证、审阅与收�
 
 ## 维护约定
 
-`rules/` 保留项目规范的角色及稳定引用，不能将其直接视为《汉晋规则集》。正式条文在 `rulebook/` 独立编纂，按外部基准的结构与精炼文风表达，并链接依据。编纂内容需要拆分时更新引用，旧引用确有兼容价值时保留入口，不复制两份正文。规范、API 文档和状态的变更各有依据；不要把状态过期误当规则变更。
+`docs/rules/` 保留项目规范的角色及稳定引用，不能将其直接视为《汉晋规则集》。正式条文在 `rulebook/` 独立编纂，按外部基准的结构与精炼文风表达，并链接依据。编纂内容需要拆分时更新引用，旧引用确有兼容价值时保留入口，不复制两份正文。规范、API 文档和状态的变更各有依据；不要把状态过期误当规则变更。
 
 本次整理把原规则文件的工程章节移到 `implementation/`，保留接线和验收细节，未逐一将历史卡面文本重写成规范描述。少量既有条款仍含与程序有关的解释，后续编纂时按语义核对逐步整理，不以机械删词改变已确认规则。

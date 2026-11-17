@@ -3,12 +3,12 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local LUZHI = "hanjin__han015"
-local YONGLIANG = "hanjin__skill_han015_1"
-local BEIKOU = "hanjin__skill_han015_2"
-local XIUTI = "hanjin__skill_han015_3"
-local DRAW = "hanjin__skill_han015_2-draw"
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local LUZHI = "qiao_heg__han015"
+local YONGLIANG = "qiao__skill_han015_1"
+local BEIKOU = "qiao__skill_han015_2"
+local XIUTI = "qiao__skill_han015_3"
+local DRAW = "qiao__skill_han015_2-draw"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -62,29 +62,29 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode", realSelection = true,
+    mode = "qiao_heg_mode", realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "qun", "han", "han", "han", "han", "han", "han" })
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
-      main = LUZHI, deputy = "hanjin_test__han_2", kingdom = "han",
+      main = LUZHI, deputy = "qiao_test__han_2", kingdom = "han",
     })
   end)
   return room
 end
 
-Testhanjin_han015_luzhi = {
+Testqiao_han015_luzhi = {
   setup = prepare,
   tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end,
 }
 
-function Testhanjin_han015_luzhi:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_han015_luzhi:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(d) return d.id == LUZHI end))
   lu.assertEquals(entry.number, "HAN015")
   local g = assert(Fk.generals[LUZHI])
@@ -94,17 +94,17 @@ function Testhanjin_han015_luzhi:testFormalRegistration()
   lu.assertEquals(g.maxHp, 4)
   lu.assertEquals(g.mainMaxHpAdjustedValue, -1)
   lu.assertEquals(g.gender, General.Male)
-  lu.assertTrue(g:isCompanionWith(Fk.generals["hanjin__han012"]))
-  lu.assertTrue(g:isCompanionWith(Fk.generals["hanjin__han013"]))
+  lu.assertTrue(g:isCompanionWith(Fk.generals["qiao_heg__han012"]))
+  lu.assertTrue(g:isCompanionWith(Fk.generals["qiao_heg__han013"]))
   for _, name in ipairs({ YONGLIANG, BEIKOU, XIUTI }) do
     lu.assertTrue(table.contains(g:getSkillNameList(), name))
   end
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(LUZHI)) end)
 end
 
-function Testhanjin_han015_luzhi:testYongliangUsesImperialOrderOnKnownKingdom()
+function Testqiao_han015_luzhi:testYongliangUsesImperialOrderOnKnownKingdom()
   local room, player, target = FkTest.room, p(1), p(2)
-  local cost = give(player, "hanjin__jink", Card.Heart, 2)
+  local cost = give(player, "qiao__jink", Card.Heart, 2)
   inRoom(function()
     room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1)
   end)
@@ -119,7 +119,7 @@ function Testhanjin_han015_luzhi:testYongliangUsesImperialOrderOnKnownKingdom()
       return original(self, who, params)
     end,
     askToChoice = function(self, who, params, original)
-      if params.skill_name == "hanjin__imperial_order_skill" then return "loseHp" end
+      if params.skill_name == "qiao__imperial_order_skill" then return "loseHp" end
       return original(self, who, params)
     end,
   }, function()
@@ -134,7 +134,7 @@ function Testhanjin_han015_luzhi:testYongliangUsesImperialOrderOnKnownKingdom()
   lu.assertEquals(target.hp, target.maxHp - 1)
 end
 
-function Testhanjin_han015_luzhi:testBeikouOncePerCharacterOnReveal()
+function Testqiao_han015_luzhi:testBeikouOncePerCharacterOnReveal()
   local room, player, target = FkTest.room, p(1), p(2)
   clearCards(target)
   local invoked = 0
@@ -161,36 +161,36 @@ function Testhanjin_han015_luzhi:testBeikouOncePerCharacterOnReveal()
   lu.assertEquals(#target:getCardIds(Player.Hand), 2)
 end
 
-function Testhanjin_han015_luzhi:testXiutiDistinctRevealedCardsAndDrawToMaxHp()
+function Testqiao_han015_luzhi:testXiutiDistinctRevealedCardsAndDrawToMaxHp()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     -- prepare 时 p1 主将已装卢植；先彻底换成白板，清掉旧主将同名技能，
     -- 再装真实卢植副将，避免后一次换主将把刚装上的副将修体一并卸载。
     skill_test.installDualGenerals(room, player, {
-      main = "hanjin_test__han_1", deputy = "hanjin_test__han_2", kingdom = "han",
+      main = "qiao_test__han_1", deputy = "qiao_test__han_2", kingdom = "han",
     })
     skill_test.installDualGenerals(room, player, {
-      main = "hanjin_test__han_1", deputy = LUZHI, kingdom = "han",
+      main = "qiao_test__han_1", deputy = LUZHI, kingdom = "han",
     })
     skill_test.installDualGenerals(room, p(2), {
-      main = "hanjin_test__han_1", deputy = "hanjin_test__han_2", kingdom = "han",
+      main = "qiao_test__han_1", deputy = "qiao_test__han_2", kingdom = "han",
     })
     skill_test.installDualGenerals(room, p(3), {
-      main = "hanjin_test__han_3", deputy = "hanjin_test__han_4", kingdom = "han",
+      main = "qiao_test__han_3", deputy = "qiao_test__han_4", kingdom = "han",
     })
     -- p2 原为唯一的群角色；改为汉后需保留另一势力，否则真实明置会
     -- 提前判定游戏结束，回合无法进入结束阶段。
     skill_test.installDualGenerals(room, p(4), {
-      main = "hanjin_test__qun_1", deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = "qiao_test__qun_1", deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     clearCards(player); clearCards(p(2)); clearCards(p(3))
     -- 副将卢植必须真实明置，修体才不是暗将假技能。
     player:revealGeneral(true, false)
   end)
 
-  local History = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_history"
+  local History = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_history"
   inRoom(function()
-    lu.assertTrue(room:hasSkill("hanjin__zhen_shi_history_rule"))
+    lu.assertTrue(room:hasSkill("qiao__zhen_shi_history_rule"))
     lu.assertTrue(player:hasSkill(XIUTI), "Lu Zhi should still have Xiuti")
   end)
 
@@ -238,9 +238,9 @@ function Testhanjin_han015_luzhi:testXiutiDistinctRevealedCardsAndDrawToMaxHp()
   lu.assertEquals(#p(2):getCardIds(Player.Hand), p(2).maxHp)
 end
 
-function Testhanjin_han015_luzhi:testYongliangCanUseOnRealClientPlayer()
+function Testqiao_han015_luzhi:testYongliangCanUseOnRealClientPlayer()
   local room, player = FkTest.room, p(1)
-  give(player, "hanjin__jink", Card.Heart, 2)
+  give(player, "qiao__jink", Card.Heart, 2)
   inRoom(function()
     player.phase = Player.Play
     room.current = player
@@ -261,4 +261,4 @@ function Testhanjin_han015_luzhi:testYongliangCanUseOnRealClientPlayer()
   end)
 end
 
-return { name = "hanjin_han015_luzhi" }
+return { name = "qiao_han015_luzhi" }

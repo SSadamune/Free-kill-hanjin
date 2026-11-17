@@ -1,22 +1,22 @@
 -- 翼从同名实例的测试专用内容（不得发布）。
 --
--- 生产目录只保留通用实例模块 pkg/hanjin_generals/util/retinue_instances.lua；
+-- 生产目录只保留通用实例模块 pkg/qiao_generals/util/retinue_instances.lua；
 -- 这里的探测技能与外部来源标记只在 tests/retinue_instances.lua 加载时注册，
--- 使用明显的 hanjin_test__ 前缀，不进入正式包、将池或开局流程。
+-- 使用明显的 qiao_test__ 前缀，不进入正式包、将池或开局流程。
 --
 -- 探测效果故意保持简单可观察：受到1点伤害后，每份同名实例各自可选发动一次
 -- 并摸一张牌。它验证的是实例机制（独立询问、独立计次、移除一份保留另一份），
 -- 不是任何正式翼从的效果。
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
 local M = {}
 
-M.SKILL = "hanjin_test__retinue_instance_probe"
-M.EXTERNAL_SOURCE = "hanjin_test__retinue_instance_external_source"
+M.SKILL = "qiao_test__retinue_instance_probe"
+M.EXTERNAL_SOURCE = "qiao_test__retinue_instance_external_source"
 -- 多效果代表技能：主技能 + 关联 targetmod。用于验证“外部来源仍在时，
 -- 移除实例来源不得连带删除关联效果”，观察点是【杀】次数加成。
-M.MULTI = "hanjin_test__retinue_instance_multi"
-M.MULTI_EXTERNAL = "hanjin_test__retinue_instance_multi_external"
+M.MULTI = "qiao_test__retinue_instance_multi"
+M.MULTI_EXTERNAL = "qiao_test__retinue_instance_multi_external"
 
 local function register(name, build)
   if Fk.skills[name] ~= nil then return Fk.skills[name] end

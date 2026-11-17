@@ -1,15 +1,15 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local H = require "packages.hegemony.util"
-Testhanjin_hegemony = { setup = support.initRoom, tearDown = support.clearRoom }
+Testqiao_hegemony = { setup = support.initRoom, tearDown = support.clearRoom }
 
-function Testhanjin_hegemony:testRegistrationAndPackageScope()
+function Testqiao_hegemony:testRegistrationAndPackageScope()
   lu.assertEquals(Fk.game_modes.new_heg_mode.rule, "heg_rule")
-  lu.assertTrue(table.contains(Fk.game_mode_disabled.new_heg_mode, "hanjin_generals"))
-  lu.assertTrue(table.contains(Fk.game_mode_disabled.aaa_role_mode, "hanjin_generals"))
+  lu.assertTrue(table.contains(Fk.game_mode_disabled.new_heg_mode, "qiao_generals"))
+  lu.assertTrue(table.contains(Fk.game_mode_disabled.aaa_role_mode, "qiao_generals"))
   lu.assertTrue(FkTest.room:isGameMode("heg_mode"))
 end
 
-function Testhanjin_hegemony:testHiddenGeneralsAndInitialCards()
+function Testqiao_hegemony:testHiddenGeneralsAndInitialCards()
   local room = FkTest.room
   lu.assertEquals(#room.players, 8)
   for _, p in ipairs(room.players) do
@@ -24,7 +24,7 @@ function Testhanjin_hegemony:testHiddenGeneralsAndInitialCards()
   end
 end
 
-function Testhanjin_hegemony:testNationalWarGeneralAndCardPools()
+function Testqiao_hegemony:testNationalWarGeneralAndCardPools()
   local room = FkTest.room
   lu.assertFalse(table.contains(room.general_pile, "caocao"))
   lu.assertTrue(#room.general_pile > 0)
@@ -37,7 +37,7 @@ function Testhanjin_hegemony:testNationalWarGeneralAndCardPools()
   end
 end
 
-function Testhanjin_hegemony:testRevealAndKingdomRelations()
+function Testqiao_hegemony:testRevealAndKingdomRelations()
   local room = FkTest.room
   local first, second = room.players[1], room.players[2]
   lu.assertFalse(H.compareKingdomWith(first, second))
@@ -52,7 +52,7 @@ function Testhanjin_hegemony:testRevealAndKingdomRelations()
   lu.assertFalse(H.compareKingdomWith(first, room.players[3]))
 end
 
-function Testhanjin_hegemony:testRemoveDeputyPreservesMaxHp()
+function Testqiao_hegemony:testRemoveDeputyPreservesMaxHp()
   local room = FkTest.room
   local me = room.players[1]
   local maxHp = me.maxHp
@@ -63,7 +63,7 @@ function Testhanjin_hegemony:testRemoveDeputyPreservesMaxHp()
   lu.assertFalse(me:hasSkill("hs__ganglie"))
 end
 
-function Testhanjin_hegemony:testHideAndRevealRestoresSkill()
+function Testqiao_hegemony:testHideAndRevealRestoresSkill()
   local me = FkTest.room.players[1]
   FkTest.runInRoom(function() me:revealGeneral(false) end)
   lu.assertTrue(me:hasSkill("hs__jianxiong"))
@@ -75,4 +75,4 @@ function Testhanjin_hegemony:testHideAndRevealRestoresSkill()
   lu.assertTrue(me:hasSkill("hs__jianxiong"))
 end
 
-return { name = "hanjin_hegemony" }
+return { name = "qiao_hegemony" }

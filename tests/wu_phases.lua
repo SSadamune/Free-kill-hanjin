@@ -1,22 +1,22 @@
 -- 吴 标准包：阶段与用牌历史组定向验收（克己、谋断、涉猎、国色、流离、
 -- 谦逊、度势、短兵、奋迅）。
--- 规则依据：rules/standard-generals.md 吴区、rules/generals/wu003-lvmeng.md。
+-- 规则依据：docs/rules/standard-generals.md 吴区、docs/rules/generals/wu003-lvmeng.md。
 -- 接口核对锁定 0.5.25 与 hegemony。
 -- 定向运行：
 --   python scripts/test.py --file tests/wu_phases.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local KEJI = "hanjin__skill_wu003_1"
-local MOUDUAN = "hanjin__skill_wu003_2"
-local SHELIE = "hanjin__skill_wu003_3"
-local GUOSE = "hanjin__skill_wu006_1"
-local LIULI = "hanjin__skill_wu006_2"
-local QIANXUN = "hanjin__skill_wu007_1"
-local DUSHI = "hanjin__skill_wu007_2"
-local DUANBING = "hanjin__skill_wu016_1"
-local FENXUN = "hanjin__skill_wu016_2"
-local H = require "packages.hanjin.pkg.hanjin_mode.rules.wu_history"
-local W = require "packages.hanjin.pkg.hanjin_generals.util.wu_phases"
+local KEJI = "qiao__skill_wu003_1"
+local MOUDUAN = "qiao__skill_wu003_2"
+local SHELIE = "qiao__skill_wu003_3"
+local GUOSE = "qiao__skill_wu006_1"
+local LIULI = "qiao__skill_wu006_2"
+local QIANXUN = "qiao__skill_wu007_1"
+local DUSHI = "qiao__skill_wu007_2"
+local DUANBING = "qiao__skill_wu016_1"
+local FENXUN = "qiao__skill_wu016_2"
+local H = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 
 local function room() return FkTest.room end
 local function p(n) return room().players[n] end
@@ -32,7 +32,7 @@ local function setGeneral(player, general)
     player:revealGeneral(false, true)
     player:revealGeneral(true, true)
     room():changeHero(player, general, true, false, false, false, false)
-    room():changeHero(player, "hanjin_test__wu_2", true, true, false, false, false)
+    room():changeHero(player, "qiao_test__wu_2", true, true, false, false, false)
     player.kingdom = "wu"
     room():setPlayerProperty(player, "kingdom", "wu")
     room():setPlayerMark(player, "__heg_general", general)
@@ -46,7 +46,7 @@ local function setGeneral(player, general)
 end
 
 local function whiteboard(player)
-  setGeneral(player, "hanjin_test__wu_1")
+  setGeneral(player, "qiao_test__wu_1")
 end
 
 local function grant(player, name)
@@ -135,21 +135,21 @@ local function triggerPhaseChanging(player, phase)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   for _, pl in ipairs(room.players) do whiteboard(pl) end
   return room
 end
 
-Testhanjin_wu_phases = { setup = prepare, tearDown = support.clearRoom }
+Testqiao_wu_phases = { setup = prepare, tearDown = support.clearRoom }
 
-function Testhanjin_wu_phases:testKejiUsesPlayPhaseColorsOnly()
+function Testqiao_wu_phases:testKejiUsesPlayPhaseColorsOnly()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu003")
+  setGeneral(p1, "qiao_heg__wu003")
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p2.hp = 20 end)
-  local black = give(p1, "hanjin__slash", Card.Spade)
-  local red = give(p1, "hanjin__slash", Card.Heart)
+  local black = give(p1, "qiao__slash", Card.Spade)
+  local red = give(p1, "qiao__slash", Card.Heart)
   inRoom(function() room().current = p1; p1.phase = Player.Play end)
 
   -- 两种颜色均使用：不加手牌上限。
@@ -168,19 +168,19 @@ function Testhanjin_wu_phases:testKejiUsesPlayPhaseColorsOnly()
   lu.assertEquals(p1:getMark(MarkEnum.AddMaxCardsInTurn), 4)
 end
 
-function Testhanjin_wu_phases:testMoudanCountsWholeTurnAndGrantsShelieWithoutUsingIt()
+function Testqiao_wu_phases:testMoudanCountsWholeTurnAndGrantsShelieWithoutUsingIt()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu003")
+  setGeneral(p1, "qiao_heg__wu003")
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p2.hp = 30; H.clear(room()); room().current = p1; p1.phase = Player.Play end)
   -- 四项条件：四种花色 + 三种类别，测试数据必须同时满足两项，谋断才会
   -- 授予涉猎（只满足花色时按规则不授予）。
   FkTest.setNextReplies(p2, { "", "" })
-  local spadeSlash = give(p1, "hanjin__slash", Card.Spade)
-  local diamondSlash = give(p1, "hanjin__slash", Card.Diamond)
-  local equip = give(p1, "hanjin__axe", Card.Heart)
-  local trick = give(p1, "hanjin__dismantlement", Card.Club)
+  local spadeSlash = give(p1, "qiao__slash", Card.Spade)
+  local diamondSlash = give(p1, "qiao__slash", Card.Diamond)
+  local equip = give(p1, "qiao__axe", Card.Heart)
+  local trick = give(p1, "qiao__dismantlement", Card.Club)
   use(p1, Fk:getCardById(spadeSlash), { p2 })
   use(p1, Fk:getCardById(diamondSlash), { p2 })
   use(p1, Fk:getCardById(equip), { p1 })
@@ -209,21 +209,21 @@ function Testhanjin_wu_phases:testMoudanCountsWholeTurnAndGrantsShelieWithoutUsi
   lu.assertEquals(p1.phase, Player.Finish)
 end
 
-function Testhanjin_wu_phases:testShelieRevealsFiveAndTakesDistinctSuits()
+function Testqiao_wu_phases:testShelieRevealsFiveAndTakesDistinctSuits()
   local p1 = p(1)
-  setGeneral(p1, "hanjin__wu003")
+  setGeneral(p1, "qiao_heg__wu003")
   grant(p1, SHELIE)
   lu.assertNotNil(Fk.skills[SHELIE])
   lu.assertTrue(p1:hasSkill(SHELIE))
   clearCards(p1)
   local ids = seedDrawPile {
-    { "hanjin_test__blank_basic", Card.Spade },
-    { "hanjin_test__blank_basic", Card.Heart },
-    { "hanjin_test__blank_basic", Card.Club },
-    { "hanjin_test__blank_basic", Card.Diamond },
-    { "hanjin_test__blank_basic", Card.Spade },
+    { "qiao_test__blank_basic", Card.Spade },
+    { "qiao_test__blank_basic", Card.Heart },
+    { "qiao_test__blank_basic", Card.Club },
+    { "qiao_test__blank_basic", Card.Diamond },
+    { "qiao_test__blank_basic", Card.Spade },
   }
-  lu.assertNotNil(Fk.poxi_methods["hanjin_shelie"])
+  lu.assertNotNil(Fk.poxi_methods["qiao_shelie"])
   FkTest.setNextReplies(p1, {
     "1",
     { { ids[5] }, { ids[1], ids[2], ids[3], ids[4] } },
@@ -245,9 +245,9 @@ function Testhanjin_wu_phases:testShelieRevealsFiveAndTakesDistinctSuits()
   end
 end
 
-function Testhanjin_wu_phases:testLiuliTransfersSlashToAnotherTarget()
+function Testqiao_wu_phases:testLiuliTransfersSlashToAnotherTarget()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu006")
+  setGeneral(p1, "qiao_heg__wu006")
   clearCards(p1)
   clearCards(p2)
   local near = table.find(room().alive_players, function(pl)
@@ -256,9 +256,9 @@ function Testhanjin_wu_phases:testLiuliTransfersSlashToAnotherTarget()
   lu.assertNotNil(near)
   clearCards(near)
   inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp; near.hp = near.maxHp end)
-  local cost = give(p1, "hanjin_test__blank_basic", Card.Spade)
-  give(p1, "hanjin_test__blank_basic", Card.Heart)
-  local slash = give(p2, "hanjin__slash", Card.Spade)
+  local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
+  give(p1, "qiao_test__blank_basic", Card.Heart)
+  local slash = give(p2, "qiao__slash", Card.Spade)
   FkTest.setNextReplies(p1, { "1", cost, FkTest.ReplyChoosePlayer({ near }) })
   inRoom(function()
     room().current = p2
@@ -275,9 +275,9 @@ function Testhanjin_wu_phases:testLiuliTransfersSlashToAnotherTarget()
   lu.assertFalse(table.contains(p1:getCardIds("he"), cost))
 end
 
-function Testhanjin_wu_phases:testLiuliCancelDoesNotDiscard()
+function Testqiao_wu_phases:testLiuliCancelDoesNotDiscard()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu006")
+  setGeneral(p1, "qiao_heg__wu006")
   clearCards(p1)
   clearCards(p2)
   local near = table.find(room().alive_players, function(pl)
@@ -285,8 +285,8 @@ function Testhanjin_wu_phases:testLiuliCancelDoesNotDiscard()
   end)
   lu.assertNotNil(near)
   inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp; near.hp = near.maxHp end)
-  local cost = give(p1, "hanjin_test__blank_basic", Card.Spade)
-  local slash = give(p2, "hanjin__slash", Card.Spade)
+  local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
+  local slash = give(p2, "qiao__slash", Card.Spade)
   -- 取消转移目标：不支付弃牌，原【杀】仍以大乔为目标。
   FkTest.setNextReplies(p1, { "1", cost, FkTest.ReplyChoosePlayer({}) })
   inRoom(function()
@@ -303,16 +303,16 @@ function Testhanjin_wu_phases:testLiuliCancelDoesNotDiscard()
   lu.assertEquals(p1.hp, p1.maxHp - 1)
 end
 
-function Testhanjin_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemains()
+function Testqiao_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemains()
   local p1, p2, p3 = p(1), p(2), p(3)
-  setGeneral(p1, "hanjin__wu007")
+  setGeneral(p1, "qiao_heg__wu007")
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
   inRoom(function() H.clear(room()) end)
 
   -- 单目标锦囊，p3 是尚未指定的合法目标：取消 p1 这个目标。
-  local indulgence = give(p2, "hanjin__indulgence", Card.Heart)
+  local indulgence = give(p2, "qiao__indulgence", Card.Heart)
   inRoom(function()
     room().current = p2
     p2.phase = Player.Play
@@ -324,10 +324,10 @@ function Testhanjin_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemain
     })
   end)
   lu.assertEquals(#p1:getCardIds(Player.Judge), 0)
-  lu.assertEquals(p1:getMark("hanjin__skill_wu007_1_used-turn"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_wu007_1_used-turn"), 1)
 
   -- 同回合第二次成为锦囊目标：机会已消耗，不再取消。
-  local second = give(p2, "hanjin__indulgence", Card.Heart)
+  local second = give(p2, "qiao__indulgence", Card.Heart)
   inRoom(function()
     room().current = p2
     p2.phase = Player.Play
@@ -344,9 +344,9 @@ end
 -- 条件“有未指定的合法目标”的否定分支（群体锦囊已指定所有目标）本轮不单独
 -- 构造：需要消费多名角色的响应请求，风险高于本轮核心验收；留待后续补测。
 
-function Testhanjin_wu_phases:testGuoseBothBranchesIndependentLimits()
+function Testqiao_wu_phases:testGuoseBothBranchesIndependentLimits()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu006")
+  setGeneral(p1, "qiao_heg__wu006")
   clearCards(p1)
   clearCards(p2)
   inRoom(function()
@@ -359,32 +359,32 @@ function Testhanjin_wu_phases:testGuoseBothBranchesIndependentLimits()
   lu.assertNotNil(guoseActive)
 
   -- 分支 1：方片当【乐不思蜀】，然后摸一张。
-  local diamond = give(p1, "hanjin_test__blank_basic", Card.Diamond)
+  local diamond = give(p1, "qiao_test__blank_basic", Card.Diamond)
   local before = p1:getHandcardNum()
-  activate(p1, guoseActive, { p2 }, { diamond }, "hanjin__skill_wu006_1-use")
+  activate(p1, guoseActive, { p2 }, { diamond }, "qiao__skill_wu006_1-use")
   lu.assertEquals(p2:getCardIds(Player.Judge)[1] ~= nil, true)
-  lu.assertEquals(p1:getMark("hanjin__skill_wu006_1_use-phase"), 1)
-  lu.assertEquals(p1:getMark("hanjin__skill_wu006_1_discard-phase"), 0)
+  lu.assertEquals(p1:getMark("qiao__skill_wu006_1_use-phase"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_wu006_1_discard-phase"), 0)
   lu.assertEquals(p1:getHandcardNum(), before)
 
   -- 已用分支不能再次发动：新方片不应再产生第二张【乐不思蜀】。
-  local extra = give(p1, "hanjin_test__blank_basic", Card.Diamond)
-  activate(p1, guoseActive, { p2 }, { extra }, "hanjin__skill_wu006_1-use")
+  local extra = give(p1, "qiao_test__blank_basic", Card.Diamond)
+  activate(p1, guoseActive, { p2 }, { extra }, "qiao__skill_wu006_1-use")
   lu.assertEquals(#p2:getCardIds(Player.Judge), 1)
-  lu.assertEquals(p1:getMark("hanjin__skill_wu006_1_use-phase"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_wu006_1_use-phase"), 1)
 
   -- 分支 2：弃方片 + 场上延时锦囊，然后摸一张；分支 1 已限次不影响本分支。
-  local second = give(p1, "hanjin_test__blank_basic", Card.Diamond)
+  local second = give(p1, "qiao_test__blank_basic", Card.Diamond)
   local before2 = p1:getHandcardNum()
-  activate(p1, guoseActive, { p2 }, { second }, "hanjin__skill_wu006_1-discard")
+  activate(p1, guoseActive, { p2 }, { second }, "qiao__skill_wu006_1-discard")
   lu.assertEquals(#p2:getCardIds(Player.Judge), 0)
-  lu.assertEquals(p1:getMark("hanjin__skill_wu006_1_discard-phase"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_wu006_1_discard-phase"), 1)
   lu.assertEquals(p1:getHandcardNum(), before2)
 end
 
-function Testhanjin_wu_phases:testDuanbingExtraTargetAndExtraJink()
+function Testqiao_wu_phases:testDuanbingExtraTargetAndExtraJink()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu016")
+  setGeneral(p1, "qiao_heg__wu016")
   clearCards(p1)
   clearCards(p2)
   local near = table.find(room().alive_players, function(pl)
@@ -399,7 +399,7 @@ function Testhanjin_wu_phases:testDuanbingExtraTargetAndExtraJink()
     p2.hp = p2.maxHp
     near.hp = near.maxHp
   end)
-  local slash = give(p1, "hanjin__slash", Card.Spade)
+  local slash = give(p1, "qiao__slash", Card.Spade)
   -- 第一段：原目标 p2 不在距离 1；短兵额外加入距离 1 的 near。两者都无【闪】。
   FkTest.setNextReplies(p1, { FkTest.ReplyChoosePlayer({ near }) })
   FkTest.setNextReplies(p2, { "" })
@@ -419,9 +419,9 @@ function Testhanjin_wu_phases:testDuanbingExtraTargetAndExtraJink()
   -- 仍抵消成功；怀疑 fixedResponseTimesList 未传播到 CardEffectData，待下轮核对。
 end
 
-function Testhanjin_wu_phases:testFenxunDistancePersistsAfterLosingSkill()
+function Testqiao_wu_phases:testFenxunDistancePersistsAfterLosingSkill()
   local p1, p3 = p(1), p(3)
-  setGeneral(p1, "hanjin__wu016")
+  setGeneral(p1, "qiao_heg__wu016")
   clearCards(p1)
   inRoom(function()
     room().current = p1
@@ -433,7 +433,7 @@ function Testhanjin_wu_phases:testFenxunDistancePersistsAfterLosingSkill()
   lu.assertNotNil(fenxunActive)
   local before = p1:distanceTo(p3)
   lu.assertTrue(before > 1)
-  local cost = give(p1, "hanjin_test__blank_basic", Card.Spade)
+  local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
   activate(p1, fenxunActive, { p3 }, { cost })
   lu.assertEquals(p1:getMark(H.FENXUN_MARK), p3.id)
   lu.assertEquals(p1:distanceTo(p3), 1)
@@ -448,12 +448,12 @@ function Testhanjin_wu_phases:testFenxunDistancePersistsAfterLosingSkill()
   lu.assertEquals(p3:distanceTo(p1), 1)
 end
 
-function Testhanjin_wu_phases:testDushiPublicDiscardSuitsAndClientFilter()
+function Testqiao_wu_phases:testDushiPublicDiscardSuitsAndClientFilter()
   local p1 = p(1)
-  setGeneral(p1, "hanjin__wu007")
+  setGeneral(p1, "qiao_heg__wu007")
   clearCards(p1)
   inRoom(function() H.clear(room()) end)
-  local heart = give(p1, "hanjin_test__blank_basic", Card.Heart)
+  local heart = give(p1, "qiao_test__blank_basic", Card.Heart)
   inRoom(function() room():throwCard({ heart }, "test", p1, p1) end)
   lu.assertTrue(H.hasSuit(p1, Card.Heart))
 
@@ -461,7 +461,7 @@ function Testhanjin_wu_phases:testDushiPublicDiscardSuitsAndClientFilter()
   local cp = ClientInstance:getPlayerById(p1.id)
   lu.assertNotNil(cp)
   lu.assertTrue(H.hasSuit(cp, Card.Heart))
-  local spade = give(p1, "hanjin_test__blank_basic", Card.Spade)
+  local spade = give(p1, "qiao_test__blank_basic", Card.Spade)
   local active = Fk.skills[activeName(DUSHI)]
   lu.assertNotNil(active)
   lu.assertFalse(active:cardFilter(cp, heart, {}, {}))
@@ -481,9 +481,9 @@ end
 
 -- 度势主效果真实用牌回归：不直接断言计算器，而是执行 after_use 的实际
 -- 【火烧连营】转化用牌。小势力角色选 p1；X 由火烧连营目标规则计算。
-function Testhanjin_wu_phases:testDushiBurningCampsRealUse()
+function Testqiao_wu_phases:testDushiBurningCampsRealUse()
   local p1 = p(1)
-  setGeneral(p1, "hanjin__wu007")
+  setGeneral(p1, "qiao_heg__wu007")
   for i = 2, #room().players do
     local pl = room().players[i]
     inRoom(function()
@@ -495,7 +495,7 @@ function Testhanjin_wu_phases:testDushiBurningCampsRealUse()
   clearCards(p1)
   inRoom(function() H.clear(room()) end)
   for _, suit in ipairs({ Card.Spade, Card.Heart, Card.Club, Card.Diamond }) do
-    local id = give(p1, "hanjin_test__blank_basic", suit)
+    local id = give(p1, "qiao_test__blank_basic", suit)
     inRoom(function() room():throwCard({ id }, "test", p1, p1) end)
   end
   lu.assertTrue(H.allSuits(p1))
@@ -506,7 +506,7 @@ function Testhanjin_wu_phases:testDushiBurningCampsRealUse()
   lu.assertTrue(#targets > 0)
   local red = {}
   for _ = 1, #targets do
-    table.insert(red, give(p1, "hanjin_test__blank_basic", Card.Heart))
+    table.insert(red, give(p1, "qiao_test__blank_basic", Card.Heart))
   end
   local active = Fk.skills[activeName(DUSHI)]
   lu.assertNotNil(active)
@@ -516,16 +516,16 @@ function Testhanjin_wu_phases:testDushiBurningCampsRealUse()
   })
   local before = targets[1].hp
   inRoom(function()
-    active:afterUse(p1, { card = Fk:cloneCard("hanjin__await_exhausted") })
+    active:afterUse(p1, { card = Fk:cloneCard("qiao__await_exhausted") })
   end)
   lu.assertTrue(targets[1].hp < before)
 end
 
 -- 失败回归：短兵应使距离 1 的目标需要两张【闪】。当前仅一张【闪】仍抵消成功，
 -- 保留此用例供整合轮定位，不删除、不以弱断言替代。
-function Testhanjin_wu_phases:testDuanbingDistanceOneTargetNeedsTwoJinks()
+function Testqiao_wu_phases:testDuanbingDistanceOneTargetNeedsTwoJinks()
   local p1, p2 = p(1), p(2)
-  setGeneral(p1, "hanjin__wu016")
+  setGeneral(p1, "qiao_heg__wu016")
   clearCards(p1)
   clearCards(p2)
   local near = table.find(room().alive_players, function(pl)
@@ -538,8 +538,8 @@ function Testhanjin_wu_phases:testDuanbingDistanceOneTargetNeedsTwoJinks()
     p1.phase = Player.Play
     near.hp = near.maxHp
   end)
-  local slash = give(p1, "hanjin__slash", Card.Spade)
-  local jink = give(near, "hanjin__jink", Card.Heart)
+  local slash = give(p1, "qiao__slash", Card.Spade)
+  local jink = give(near, "qiao__jink", Card.Heart)
   FkTest.setNextReplies(near, { { card = jink }, "" })
   inRoom(function()
     room():useCard(UseCardData:new {
@@ -552,4 +552,4 @@ function Testhanjin_wu_phases:testDuanbingDistanceOneTargetNeedsTwoJinks()
   lu.assertEquals(near.hp, near.maxHp - 1)
 end
 
-return { name = "hanjin_wu_phases" }
+return { name = "qiao_wu_phases" }

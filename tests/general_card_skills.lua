@@ -1,13 +1,13 @@
 -- 武将牌后天技能台账：授予、承志来源、暗置失效、交换随牌。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local G = require "packages.hanjin.pkg.hanjin_mode.rules.general_card_skills"
-local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local G = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
-local GUANXING = "hanjin__skill_shu004_1"
-local BONUS = "hanjin__skill_shu012_3-guanxing-bonus"
-local MAIN = "hanjin__shu001"
-local JIANGWEI = "hanjin__shu012"
+local GUANXING = "qiao__skill_shu004_1"
+local BONUS = "qiao__skill_shu012_3-guanxing-bonus"
+local MAIN = "qiao_heg__shu001"
+local JIANGWEI = "qiao_heg__shu012"
 
 local function inRoom(fn)
   local result
@@ -16,10 +16,10 @@ local function inRoom(fn)
 end
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_general_card_skills = {
+Testqiao_general_card_skills = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, {
         "shu", "shu", "shu", "shu", "qun", "qun", "qun", "qun",
@@ -28,7 +28,7 @@ Testhanjin_general_card_skills = {
         main = MAIN, deputy = JIANGWEI, kingdom = "shu",
       })
       skill_test.installDualGenerals(room, room.players[2], {
-        main = "hanjin__shu003", deputy = "hanjin_test__shu_2", kingdom = "shu",
+        main = "qiao_heg__shu003", deputy = "qiao_test__shu_2", kingdom = "shu",
       })
       room.players[1]:revealGeneral(false)
       room.players[1]:revealGeneral(true)
@@ -42,7 +42,7 @@ Testhanjin_general_card_skills = {
   end,
 }
 
-function Testhanjin_general_card_skills:testGrantToMainCardThenChengzhiBonus()
+function Testqiao_general_card_skills:testGrantToMainCardThenChengzhiBonus()
   local player = p(1)
   local main = player.general
   inRoom(function()
@@ -55,7 +55,7 @@ function Testhanjin_general_card_skills:testGrantToMainCardThenChengzhiBonus()
   end)
 end
 
-function Testhanjin_general_card_skills:testHideMainStopsCardSkillAndBonus()
+function Testqiao_general_card_skills:testHideMainStopsCardSkillAndBonus()
   local player = p(1)
   local main = player.general
   inRoom(function()
@@ -70,7 +70,7 @@ function Testhanjin_general_card_skills:testHideMainStopsCardSkillAndBonus()
   end)
 end
 
-function Testhanjin_general_card_skills:testSkillFollowsCardOnExchange()
+function Testqiao_general_card_skills:testSkillFollowsCardOnExchange()
   local first, second = p(1), p(2)
   local main = first.general
   inRoom(function()
@@ -88,7 +88,7 @@ function Testhanjin_general_card_skills:testSkillFollowsCardOnExchange()
   end)
 end
 
-function Testhanjin_general_card_skills:testHiddenAcquiredSkillRevealsItsOwnCard()
+function Testqiao_general_card_skills:testHiddenAcquiredSkillRevealsItsOwnCard()
  local room,player=FkTest.room,p(2)
  local main=player.general
  inRoom(function()
@@ -109,7 +109,7 @@ function Testhanjin_general_card_skills:testHiddenAcquiredSkillRevealsItsOwnCard
  lu.assertEquals(seen,5)
  lu.assertEquals(player.general,main,"发动后天牌技须明置实际所属将牌")
 end
-function Testhanjin_general_card_skills:testRemovalStopsCardSourceAndRevokeKeepsExternalSource()
+function Testqiao_general_card_skills:testRemovalStopsCardSourceAndRevokeKeepsExternalSource()
  local room,player=FkTest.room,p(2)
  local main=player.general
  inRoom(function()
@@ -123,7 +123,7 @@ function Testhanjin_general_card_skills:testRemovalStopsCardSourceAndRevokeKeeps
   lu.assertTrue(player:hasSkill(GUANXING),"撤回将牌来源不得删除角色独立来源")
  end)
 end
-function Testhanjin_general_card_skills:testGrantedSkillLeavesOldHolderWithoutChengzhi()
+function Testqiao_general_card_skills:testGrantedSkillLeavesOldHolderWithoutChengzhi()
  local room,first,second=FkTest.room,p(2),p(3)
  inRoom(function()
   local name=first.general
@@ -137,12 +137,12 @@ function Testhanjin_general_card_skills:testGrantedSkillLeavesOldHolderWithoutCh
  end)
 end
 
-function Testhanjin_general_card_skills:testAcquiredCardSkillCanBeLostAndStaysLostAfterReveal()
+function Testqiao_general_card_skills:testAcquiredCardSkillCanBeLostAndStaysLostAfterReveal()
  local room,player=FkTest.room,p(2)
  local main=player.general
  inRoom(function()
   G.grant(room,main,GUANXING)
-  local Choices=require "packages.hanjin.pkg.hanjin_generals.util.jin_sources"
+  local Choices=require "packages.qiao.pkg.qiao_generals.util.jin_sources"
   local offered=0
   for _,entry in ipairs(Choices.choices(player)) do
    if entry.skill==GUANXING then
@@ -151,7 +151,7 @@ function Testhanjin_general_card_skills:testAcquiredCardSkillCanBeLostAndStaysLo
    end
   end
   lu.assertEquals(offered,1,"将牌后天技能不重复列为角色派生来源")
-  local Lost=require "packages.hanjin.pkg.hanjin_mode.rules.qun_duanchang"
+  local Lost=require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
   lu.assertTrue(Lost.loseCardSkill(room,player,false,GUANXING))
   lu.assertFalse(player:hasSkill(GUANXING))
   player:hideGeneral(false)
@@ -161,4 +161,4 @@ function Testhanjin_general_card_skills:testAcquiredCardSkillCanBeLostAndStaysLo
  end)
 end
 
-return { name = "hanjin_general_card_skills" }
+return { name = "qiao_general_card_skills" }

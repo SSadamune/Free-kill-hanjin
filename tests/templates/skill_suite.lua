@@ -1,7 +1,7 @@
 -- Copy this file to tests/<general>_<skill>.lua, then:
---   1. rename Testhanjin_skill_template (including its setup/tearDown
+--   1. rename Testqiao_skill_template (including its setup/tearDown
 --      assignments) to a unique test class name;
---   2. rename the returned descriptor `name = "hanjin_skill_template"` too;
+--   2. rename the returned descriptor `name = "qiao_skill_template"` too;
 --   3. add the basename to the default national-war suite list in tests/all.lua.
 -- Reusing either name lets a later file overwrite this suite silently.
 -- The template itself is not loaded by all.lua and intentionally contains no
@@ -10,16 +10,16 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill = __dofile("../../../tests/support/skill_test.lua")
 
 -- TODO: replace with the generals and skill under test.
-local MAIN = "hanjin__han001"
-local DEPUTY = "hanjin_test__han_2"
-local SKILL = "hanjin__skill_han001_1"
+local MAIN = "qiao_heg__han001"
+local DEPUTY = "qiao_test__han_2"
+local SKILL = "qiao__skill_han001_1"
 
-Testhanjin_skill_template = {}
-Testhanjin_skill_template.tearDown = support.clearRoom
+Testqiao_skill_template = {}
+Testqiao_skill_template.tearDown = support.clearRoom
 
-Testhanjin_skill_template.setup = function()
+Testqiao_skill_template.setup = function()
   -- Explicit HanJin room with real request replies.
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   FkTest.runInRoom(function()
     -- Deterministic seats: clear the random opening pair first, then install
     -- the known main/deputy used by this example.
@@ -37,7 +37,7 @@ end
 -- as card movement, hp/maxHp, marks, used times or event data. Prefer the
 -- official FkTest reply queue so the real request handlers consume replies:
 --
--- function Testhanjin_skill_template:testMainFlow()
+-- function Testqiao_skill_template:testMainFlow()
 --   local room, p = FkTest.room, FkTest.room.players[1]
 --   FkTest.setNextReplies(p, { "1" })
 --   FkTest.runInRoom(function()
@@ -54,4 +54,4 @@ end
 --     FkTest.runInRoom(function() ... end)
 --   end)
 
-return { name = "hanjin_skill_template" }
+return { name = "qiao_skill_template" }

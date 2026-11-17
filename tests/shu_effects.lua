@@ -2,13 +2,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local TUDEN = "hanjin__skill_shu005_2"
-local CANGJI = "hanjin__skill_shu007_2"
-local LIEYONG = "hanjin__skill_shu008_1"
-local KUANGGU = "hanjin__skill_shu009_1"
-local KANPO = "hanjin__skill_shu011_3"
-local SHUSHEN = "hanjin__skill_shu016_1"
-local SHENZHI = "hanjin__skill_shu016_2"
+local TUDEN = "qiao__skill_shu005_2"
+local CANGJI = "qiao__skill_shu007_2"
+local LIEYONG = "qiao__skill_shu008_1"
+local KUANGGU = "qiao__skill_shu009_1"
+local KANPO = "qiao__skill_shu011_3"
+local SHUSHEN = "qiao__skill_shu016_1"
+local SHENZHI = "qiao__skill_shu016_2"
 
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
 
@@ -70,7 +70,7 @@ end
 
 local function prepare()
   Fk.currentResponsePattern = nil
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
   return r
 end
@@ -80,17 +80,17 @@ local function teardown()
   support.clearRoom()
 end
 
-Testhanjin_shu_effects = { setup = prepare, tearDown = teardown }
+Testqiao_shu_effects = { setup = prepare, tearDown = teardown }
 
-function Testhanjin_shu_effects:testTudenThirdPartyNullificationDoesNotTrigger()
+function Testqiao_shu_effects:testTudenThirdPartyNullificationDoesNotTrigger()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p1, TUDEN)
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
-  local trick = give(p1, "hanjin__dismantlement", Card.Diamond, 3)
-  give(p2, "hanjin__jink", Card.Spade, 4)
-  local null = give(p3, "hanjin__nullification", Card.Club, 5)
+  local trick = give(p1, "qiao__dismantlement", Card.Diamond, 3)
+  give(p2, "qiao__jink", Card.Spade, 4)
+  local null = give(p3, "qiao__nullification", Card.Club, 5)
   setPlayPhase(p1)
   FkTest.setNextReplies(p3, { FkTest.ReplyCard(Fk:getCardById(null)) })
   local invoked = false
@@ -103,14 +103,14 @@ function Testhanjin_shu_effects:testTudenThirdPartyNullificationDoesNotTrigger()
   lu.assertTrue(p2:getCardIds("h")[1] ~= nil) -- 无懈成功，拆牌未结算
 end
 
-function Testhanjin_shu_effects:testTudenRedCardCancelledByTargetDamagesAnother()
+function Testqiao_shu_effects:testTudenRedCardCancelledByTargetDamagesAnother()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p1, TUDEN)
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p2.hp = p2.maxHp; p3.hp = p3.maxHp end)
-  local slash = give(p1, "hanjin__slash", Card.Heart, 7)
-  local jink = give(p2, "hanjin__jink", Card.Diamond, 2)
+  local slash = give(p1, "qiao__slash", Card.Heart, 7)
+  local jink = give(p2, "qiao__jink", Card.Diamond, 2)
   setPlayPhase(p1)
 
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(jink)) })
@@ -128,13 +128,13 @@ function Testhanjin_shu_effects:testTudenRedCardCancelledByTargetDamagesAnother(
   lu.assertEquals(p2.hp, p2.maxHp)
 end
 
-function Testhanjin_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
+function Testqiao_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
   local p1 = p(1)
   grant(p1, CANGJI)
   clearCards(p1)
-  local sword = give(p1, "hanjin__qinggang_sword", Card.Spade, 5)
+  local sword = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
   equip(p1, sword)
-  local ride = give(p1, "hanjin__chitu", Card.Heart, 5)
+  local ride = give(p1, "qiao__chitu", Card.Heart, 5)
   equip(p1, ride)
 
   FkTest.setNextReplies(p1, { "1" })
@@ -142,7 +142,7 @@ function Testhanjin_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
   lu.assertEquals(room():getCardArea(sword), Card.PlayerEquip)
 
   -- 每回合一次：第二张非坐骑装备不再被阻止。
-  local sword2 = give(p1, "hanjin__qinggang_sword", Card.Spade, 6)
+  local sword2 = give(p1, "qiao__qinggang_sword", Card.Spade, 6)
   equip(p1, sword2)
   inRoom(function() room():throwCard({ sword2 }, "test", p1, p1) end)
   lu.assertEquals(room():getCardArea(sword2), Card.DiscardPile)
@@ -152,14 +152,14 @@ function Testhanjin_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
   lu.assertEquals(room():getCardArea(ride), Card.DiscardPile)
 end
 
-function Testhanjin_shu_effects:testLieyongRangeAndChooseDamage()
+function Testqiao_shu_effects:testLieyongRangeAndChooseDamage()
   local p1, p2 = p(1), p(2)
   grant(p1, LIEYONG)
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p1.hp = p1.maxHp - 2; p2.hp = p2.maxHp end)
   lu.assertEquals(inRoom(function() return p1:getAttackRange() end), 3) -- 基础1 + 已损失2
-  local slash = give(p1, "hanjin__slash", Card.Spade, 7)
+  local slash = give(p1, "qiao__slash", Card.Spade, 7)
   setPlayPhase(p1)
   FkTest.setNextReplies(p1, { "1" })
   skill_test.withSkillRequests(room(), LIEYONG, {
@@ -167,7 +167,7 @@ function Testhanjin_shu_effects:testLieyongRangeAndChooseDamage()
       lu.assertIs(player, p1)
       -- 在伤害结算前失去烈勇，已建立的本次【杀】+1 仍应由模式持续效果生效。
       room():handleAddLoseSkills(p1, "-" .. LIEYONG, nil, false, true)
-      return "#hanjin__skill_shu008_1-damage"
+      return "#qiao__skill_shu008_1-damage"
     end,
   }, function()
     use(p1, Fk:getCardById(slash), { p2 })
@@ -176,13 +176,13 @@ function Testhanjin_shu_effects:testLieyongRangeAndChooseDamage()
   lu.assertEquals(p2.hp, p2.maxHp - 2)
 end
 
-function Testhanjin_shu_effects:testKuanguPerDamageChoiceBonusSurvivesSkillLoss()
+function Testqiao_shu_effects:testKuanguPerDamageChoiceBonusSurvivesSkillLoss()
   local p1, p2 = p(1), p(2)
   grant(p1, KUANGGU)
   inRoom(function() p1.hp = 2; p2.hp = p2.maxHp end)
   local choices = {
-    "#hanjin__skill_shu009_1-draw",
-    "#hanjin__skill_shu009_1-recover",
+    "#qiao__skill_shu009_1-draw",
+    "#qiao__skill_shu009_1-recover",
   }
   local index = 0
   FkTest.setNextReplies(p1, { "1", "1" })
@@ -207,7 +207,7 @@ function Testhanjin_shu_effects:testKuanguPerDamageChoiceBonusSurvivesSkillLoss(
     room().current = p1
     p1.phase = Player.Play
     p1.cardUsedHistory["slash"] = { 1, 1, 1, 1 }
-    local card = room():printCard("hanjin__slash", Card.Spade, 9)
+    local card = room():printCard("qiao__slash", Card.Spade, 9)
     room():obtainCard(p1, card, false, fk.ReasonJustMove)
     probe = card.id
     -- 通常额度已用完，但狂骨的回合次数+1使【杀】仍可使用。
@@ -224,18 +224,18 @@ function Testhanjin_shu_effects:testKuanguPerDamageChoiceBonusSurvivesSkillLoss(
   end)
 end
 
-function Testhanjin_shu_effects:testKanpoRecordsJinkCancellation()
+function Testqiao_shu_effects:testKanpoRecordsJinkCancellation()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, KANPO)
   clearCards(p1)
   clearCards(p3)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 6)
-  local jink = give(p3, "hanjin__jink", Card.Heart, 7)
+  local slash = give(p1, "qiao__slash", Card.Spade, 6)
+  local jink = give(p3, "qiao__jink", Card.Heart, 7)
   setPlayPhase(p1)
   FkTest.setNextReplies(p3, { FkTest.ReplyCard(Fk:getCardById(jink)) })
   use(p1, Fk:getCardById(slash), { p3 })
   lu.assertEquals(p3.hp, p3.maxHp)
-  lu.assertTrue(p3:getMark("hanjin__skill_shu011_3-cancelled-turn") > 0)
+  lu.assertTrue(p3:getMark("qiao__skill_shu011_3-cancelled-turn") > 0)
 
   local viewed = false
   local oldView = room().viewCards
@@ -257,20 +257,20 @@ function Testhanjin_shu_effects:testKanpoRecordsJinkCancellation()
   lu.assertTrue(viewed)
 end
 
-function Testhanjin_shu_effects:testKanpoViewAsAndEndTurnViewAfterRealNullification()
+function Testqiao_shu_effects:testKanpoViewAsAndEndTurnViewAfterRealNullification()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, KANPO)
   clearCards(p2)
   clearCards(p3)
   inRoom(function() p2.hp = p2.maxHp end)
-  local dismantle = give(p1, "hanjin__dismantlement", Card.Club, 3)
-  give(p2, "hanjin__jink", Card.Heart, 4)
-  local black = give(p3, "hanjin__jink", Card.Spade, 5)
+  local dismantle = give(p1, "qiao__dismantlement", Card.Club, 3)
+  give(p2, "qiao__jink", Card.Heart, 4)
+  local black = give(p3, "qiao__jink", Card.Spade, 5)
   setPlayPhase(p1)
 
   local skill = Fk.skills[KANPO]
   local converted = skill:viewAs(p3, { black })
-  lu.assertEquals(converted.name, "hanjin__nullification")
+  lu.assertEquals(converted.name, "qiao__nullification")
   lu.assertFalse(skill:enabledAtResponse(p3, true))
   lu.assertTrue(skill:enabledAtResponse(p3, false))
 
@@ -284,7 +284,7 @@ function Testhanjin_shu_effects:testKanpoViewAsAndEndTurnViewAfterRealNullificat
     })
   end)
   lu.assertEquals(#p2:getCardIds("h"), 1) -- 无懈成功，过河拆桥未结算
-  lu.assertTrue(p3:getMark("hanjin__skill_shu011_3-cancelled-turn") > 0)
+  lu.assertTrue(p3:getMark("qiao__skill_shu011_3-cancelled-turn") > 0)
 
   local viewed
   local asked = false
@@ -313,13 +313,13 @@ function Testhanjin_shu_effects:testKanpoViewAsAndEndTurnViewAfterRealNullificat
   lu.assertEquals(viewed.cards, p1:getCardIds("h"))
 end
 
-function Testhanjin_shu_effects:testShushenEachPointAndFullHpNoRecoverOption()
+function Testqiao_shu_effects:testShushenEachPointAndFullHpNoRecoverOption()
   local p1, p2 = p(1), p(2)
   grant(p1, SHUSHEN)
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p1.hp = 1; p2.hp = p2.maxHp end)
-  local drawChoice = "#hanjin__skill_shu016_1-draw"
+  local drawChoice = "#qiao__skill_shu016_1-draw"
   local choiceCount = 0
   local sawRecover = false
   FkTest.setNextReplies(p1, { "1", "1" })
@@ -328,7 +328,7 @@ function Testhanjin_shu_effects:testShushenEachPointAndFullHpNoRecoverOption()
     askToChoice = function(self, player, params)
       choiceCount = choiceCount + 1
       for _, c in ipairs(params.choices) do
-        if c == "#hanjin__skill_shu016_1-recover" then sawRecover = true end
+        if c == "#qiao__skill_shu016_1-recover" then sawRecover = true end
       end
       return drawChoice
     end,
@@ -341,13 +341,13 @@ function Testhanjin_shu_effects:testShushenEachPointAndFullHpNoRecoverOption()
   lu.assertEquals(#p2:getCardIds("h"), 2)
 end
 
-function Testhanjin_shu_effects:testShenzhiDiscardsAllAndComparesWithHp()
+function Testqiao_shu_effects:testShenzhiDiscardsAllAndComparesWithHp()
   local p1 = p(1)
   grant(p1, SHENZHI)
   clearCards(p1)
   inRoom(function() p1.hp = 3; p1.maxHp = 4 end)
-  give(p1, "hanjin__jink", Card.Spade, 1)
-  give(p1, "hanjin__jink", Card.Spade, 2)
+  give(p1, "qiao__jink", Card.Spade, 1)
+  give(p1, "qiao__jink", Card.Spade, 2)
   FkTest.setNextReplies(p1, { "1" })
   inRoom(function()
     room().logic:trigger(fk.EventPhaseStart, p1, PhaseData:new {
@@ -359,9 +359,9 @@ function Testhanjin_shu_effects:testShenzhiDiscardsAllAndComparesWithHp()
 
   -- 3 张手牌、体力 2：弃 3 >= 2，回复 1。
   inRoom(function() p1.hp = 2 end)
-  give(p1, "hanjin__jink", Card.Spade, 3)
-  give(p1, "hanjin__jink", Card.Spade, 4)
-  give(p1, "hanjin__jink", Card.Spade, 5)
+  give(p1, "qiao__jink", Card.Spade, 3)
+  give(p1, "qiao__jink", Card.Spade, 4)
+  give(p1, "qiao__jink", Card.Spade, 5)
   FkTest.setNextReplies(p1, { "1" })
   inRoom(function()
     room().logic:trigger(fk.EventPhaseStart, p1, PhaseData:new {
@@ -372,14 +372,14 @@ function Testhanjin_shu_effects:testShenzhiDiscardsAllAndComparesWithHp()
 end
 
 
-function Testhanjin_shu_effects:testKuangguStillResolvesAfterKillingTarget()
+function Testqiao_shu_effects:testKuangguStillResolvesAfterKillingTarget()
   local from, victim = p(1), p(2)
   for _, player in ipairs(room().players) do clearCards(player) end
   grant(from, KUANGGU)
   inRoom(function()
     -- 保留敌对角色，避免击杀后先行结束整局而中断后续伤害结算。
     skill_test.installDualGenerals(room(), p(8), {
-      main = "hanjin_test__wei_1", deputy = "hanjin_test__wei_2", kingdom = "wei",
+      main = "qiao_test__wei_1", deputy = "qiao_test__wei_2", kingdom = "wei",
     })
     room().current = from
     victim.hp = 1
@@ -389,7 +389,7 @@ function Testhanjin_shu_effects:testKuangguStillResolvesAfterKillingTarget()
   room().askToPeach = function() return nil end
   skill_test.withSkillRequests(room(), KUANGGU, {
     askToSkillInvoke = function() invoked = invoked + 1; return true end,
-    askToChoice = function() return "#hanjin__skill_shu009_1-draw" end,
+    askToChoice = function() return "#qiao__skill_shu009_1-draw" end,
   }, function()
     inRoom(function() room():damage {from = from, to = victim, damage = 1, skillName = "test"} end)
   end)
@@ -399,4 +399,4 @@ function Testhanjin_shu_effects:testKuangguStillResolvesAfterKillingTarget()
   lu.assertEquals(#from:getCardIds("h"), 1)
 end
 
-return { name = "hanjin_shu_effects" }
+return { name = "qiao_shu_effects" }

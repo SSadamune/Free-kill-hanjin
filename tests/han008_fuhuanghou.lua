@@ -1,18 +1,18 @@
 -- HAN008 伏皇后：惴恐、求援。定向验收文件。
--- 规则依据：rules/generals/han008-fuhuanghou.md、rulebook/events/use-card.md、
--- rulebook/events/damage.md、rules/extra-targets.md。
+-- 规则依据：docs/rules/generals/han008-fuhuanghou.md、rulebook/events/use-card.md、
+-- rulebook/events/damage.md、docs/rules/extra-targets.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han008_fuhuanghou.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local CK = "hanjin__skill_han008_1"
-local QY = "hanjin__skill_han008_2"
-local OPTION_YES = "#hanjin__skill_han008_1-yes"
+local CK = "qiao__skill_han008_1"
+local QY = "qiao__skill_han008_2"
+local OPTION_YES = "#qiao__skill_han008_1-yes"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 local probeSerial = 0
 
-Testhanjin_han008 = {}
+Testqiao_han008 = {}
 
 local function inRoom(fn)
   local result
@@ -67,8 +67,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -86,12 +86,12 @@ local function setP1(room)
     local p = room.players[1]
     p:revealGeneral(false, true)
     p:revealGeneral(true, true)
-    room:changeHero(p, "hanjin__han008", true, false, false, false, false)
-    room:changeHero(p, "hanjin_test__han_2", true, true, false, false, false)
+    room:changeHero(p, "qiao_heg__han008", true, false, false, false, false)
+    room:changeHero(p, "qiao_test__han_2", true, true, false, false, false)
     p.kingdom = "han"
     room:setPlayerProperty(p, "kingdom", "han")
-    room:setPlayerMark(p, "__heg_general", "hanjin__han008")
-    room:setPlayerMark(p, "__heg_deputy", "hanjin_test__han_2")
+    room:setPlayerMark(p, "__heg_general", "qiao_heg__han008")
+    room:setPlayerMark(p, "__heg_deputy", "qiao_test__han_2")
     room:setPlayerMark(p, "__heg_kingdom", "han")
     room:setPlayerMark(p, "__heg_wild", 0)
     for _, q in ipairs(room.players) do q.hp = q.maxHp end
@@ -103,41 +103,41 @@ local function setQiuYuanSeats(room)
     local attacker, queen = room.players[1], room.players[2]
     attacker:revealGeneral(false, true)
     attacker:revealGeneral(true, true)
-    room:changeHero(attacker, "hanjin_test__han_1", true, false, false, false, false)
-    room:changeHero(attacker, "hanjin_test__han_2", true, true, false, false, false)
-    room:setPlayerMark(attacker, "__heg_general", "hanjin_test__han_1")
-    room:setPlayerMark(attacker, "__heg_deputy", "hanjin_test__han_2")
+    room:changeHero(attacker, "qiao_test__han_1", true, false, false, false, false)
+    room:changeHero(attacker, "qiao_test__han_2", true, true, false, false, false)
+    room:setPlayerMark(attacker, "__heg_general", "qiao_test__han_1")
+    room:setPlayerMark(attacker, "__heg_deputy", "qiao_test__han_2")
 
     queen:revealGeneral(false, true)
     queen:revealGeneral(true, true)
-    room:changeHero(queen, "hanjin__han008", true, false, false, false, false)
-    room:changeHero(queen, "hanjin_test__han_2", true, true, false, false, false)
+    room:changeHero(queen, "qiao_heg__han008", true, false, false, false, false)
+    room:changeHero(queen, "qiao_test__han_2", true, true, false, false, false)
     queen.kingdom = "han"
     room:setPlayerProperty(queen, "kingdom", "han")
-    room:setPlayerMark(queen, "__heg_general", "hanjin__han008")
-    room:setPlayerMark(queen, "__heg_deputy", "hanjin_test__han_2")
+    room:setPlayerMark(queen, "__heg_general", "qiao_heg__han008")
+    room:setPlayerMark(queen, "__heg_deputy", "qiao_test__han_2")
     room:setPlayerMark(queen, "__heg_kingdom", "han")
     for _, q in ipairs(room.players) do q.hp = q.maxHp end
   end)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   setP1(room)
   return room
 end
 
-Testhanjin_han008.setup = function() prepare() end
-Testhanjin_han008.tearDown = support.clearRoom
+Testqiao_han008.setup = function() prepare() end
+Testqiao_han008.tearDown = support.clearRoom
 
 -- 惴恐 ---------------------------------------------------------------------
 
-function Testhanjin_han008:testChuikongWinPreventsTargetDamage()
+function Testqiao_han008:testChuikongWinPreventsTargetDamage()
   local room = FkTest.room
   inRoom(function() p1().hp = p1().maxHp - 1 end)
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })[1]
   setHand(room, p3(), {})
   inRoom(function()
     p3().maxHp = 20
@@ -161,11 +161,11 @@ function Testhanjin_han008:testChuikongWinPreventsTargetDamage()
   lu.assertEquals(p3().hp, 20)
 end
 
-function Testhanjin_han008:testChuikongTieAllowsTargetVirtualSlash()
+function Testqiao_han008:testChuikongTieAllowsTargetVirtualSlash()
   local room = FkTest.room
   inRoom(function() p1().hp = p1().maxHp - 1 end)
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 7 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 7 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 7 } })[1]
 
   FkTest.setNextReplies(p1(), {
     "1",
@@ -186,12 +186,12 @@ end
 
 -- 求援 ---------------------------------------------------------------------
 
-function Testhanjin_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRest()
+function Testqiao_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRest()
   local room = FkTest.room
   setQiuYuanSeats(room)
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  local p3card = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 2 } })[1]
+  local p3card = setHand(room, p3(), { { "qiao__jink", Card.Heart, 2 } })[1]
   inRoom(function()
     p2().maxHp = 20
     p2().hp = 20
@@ -199,7 +199,7 @@ function Testhanjin_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRes
 
   local seenSpecified, seenConfirmed, firstAtEffect
   probeSerial = probeSerial + 1
-  installTestSkill(room, "#hanjin_han008_target_probe_" .. probeSerial, {
+  installTestSkill(room, "#qiao_han008_target_probe_" .. probeSerial, {
     { fk.TargetSpecified, {
       global = true,
       -- 指定目标后的 target 是使用者，当前目标在 data.to。
@@ -218,7 +218,7 @@ function Testhanjin_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRes
       can_refresh = function(self, event, target, player, data)
         return firstAtEffect == nil and data.card ~= nil and data.card.trueName == "slash"
           and data.use ~= nil
-          and data.use.hanjin_skill_han008_2_priority ~= nil
+          and data.use.qiao_skill_han008_2_priority ~= nil
       end,
       on_refresh = function(self, event, target, player, data)
         firstAtEffect = data.to
@@ -234,7 +234,7 @@ function Testhanjin_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRes
     FkTest.ReplyCard(Fk:getCardById(p3card)),
   })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
 
   lu.assertTrue(seenSpecified)
@@ -244,4 +244,4 @@ function Testhanjin_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRes
   lu.assertEquals(p2():usedSkillTimes(QY, Player.HistoryGame), 1)
 end
 
-return { name = "hanjin_han008" }
+return { name = "qiao_han008" }

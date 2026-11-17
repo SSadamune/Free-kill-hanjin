@@ -1,18 +1,18 @@
 # 势力禁选规范：实现与验证
 
-游戏语义见[对应规则](../../../rules/faction-ban.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
+游戏语义见[对应规则](../../rules/faction-ban.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
 ## 7. 实现位置与公开状态
 
 | 内容 | 文件/接口 |
 | --- | --- |
-| 模式注册与房间设置（候选势力开关、上限） | `pkg/hanjin_mode/init.lua`、`mode.lua` |
-| 纯势力筛选、候选/上限校验、未来势力登记 | `pkg/hanjin_mode/rules/faction_ban.lua` |
-| 版本池、效忠版开局计划 | `pkg/hanjin_mode/rules/general_versions.lua`、`general_pool.lua` |
-| 选将请求、格式检查 | `pkg/hanjin_mode/rules/selection.lua` |
-| 卡牌归属登记、牌堆策略 | `pkg/hanjin_mode/rules/cards.lua` |
-| 同房间跨局数据 | `pkg/hanjin_mode/rules/session.lua`、`skills/session_history.lua` |
-| 正式内容包 | `pkg/hanjin_generals`（90 张可选武将，另有 14 种翼从）、`pkg/hanjin_cards`（完整独立牌表，包含基础牌位、替换牌及游戏外势力锦囊） |
+| 模式注册与房间设置（候选势力开关、上限） | `pkg/qiao_mode/init.lua`、`mode.lua` |
+| 纯势力筛选、候选/上限校验、未来势力登记 | `pkg/qiao_mode/rules/faction_ban.lua` |
+| 版本池、效忠版开局计划 | `pkg/qiao_mode/rules/general_versions.lua`、`general_pool.lua` |
+| 选将请求、格式检查 | `pkg/qiao_mode/rules/selection.lua` |
+| 卡牌归属登记、牌堆策略 | `pkg/qiao_mode/rules/cards.lua` |
+| 同房间跨局数据 | `pkg/qiao_mode/rules/session.lua`、`skills/session_history.lua` |
+| 正式内容包 | `pkg/qiao_generals`（90 张可选武将，另有 14 种翼从）、`pkg/qiao_cards`（完整独立牌表，包含基础牌位、替换牌及游戏外势力锦囊） |
 
 当前模式注册完成，正式牌包已登记 162 个基础牌位、12 张替换牌及 7 张特殊加入的势力锦囊；67 个牌型已复用或适配，17 个牌型仍为空壳。正式将池已接入标准包，武将与翼从技能的当前完成度见[开发状态](../status.md)。房间可创建条件会拒绝内容不足的配置，不会自动使用上游将池或牌堆。
 
@@ -32,6 +32,6 @@
 - 君主装备成对替换、赤霄剑只增删、临筱玉舆与绝影互换、势力锦囊禁用。
 - 汉晋场景中的每张实体卡与每名可选武将都来自独立汉晋包，原版内容被白名单排除。
 
-测试数据位于 `tests/support/hanjin_content.lua`，仅在测试进程中登记独立无效果对象；不被 `init.lua` 引用、不进入发布同步内容，也不代表首批正式武将或卡牌设计。上游回归测试单独使用参考内容，不作为汉晋游戏内容。
+测试数据位于 `tests/support/qiao_content.lua`，仅在测试进程中登记独立无效果对象；不被 `init.lua` 引用、不进入发布同步内容，也不代表首批正式武将或卡牌设计。上游回归测试单独使用参考内容，不作为汉晋游戏内容。
 
 本轮未人工验收界面、联网和断线重连；装备具体效果及双坐骑栏位交互属于后续正式卡牌实现验收。

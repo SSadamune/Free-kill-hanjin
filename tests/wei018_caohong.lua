@@ -1,13 +1,13 @@
 -- WEI018 曹洪：护援、鹤翼定向验收。
--- 正式编号 hanjin__wei018；数据由阵包 fragment 经中央入口合并。
-local F = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_formation"
+-- 正式编号 qiao_heg__wei018；数据由阵包 fragment 经中央入口合并。
+local F = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local CAOHONG = "hanjin__wei018"
-local HUYUAN = "hanjin__skill_wei018_1"
-local HEYI = "hanjin__skill_wei018_2"
-local BLANK_DEPUTY = "hanjin_test__wei_2"
+local CAOHONG = "qiao_heg__wei018"
+local HUYUAN = "qiao__skill_wei018_1"
+local HEYI = "qiao__skill_wei018_2"
+local BLANK_DEPUTY = "qiao_test__wei_2"
 
 local function inRoom(fn)
   local result
@@ -38,11 +38,11 @@ end
 local function prepare(kingdoms)
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -56,7 +56,7 @@ local function prepare(kingdoms)
   return room
 end
 
-Testhanjin_wei018_caohong = {
+Testqiao_wei018_caohong = {
   setup = function() prepare({ "wei", "wei", "wei", "wu", "wu", "wu", "wu", "wu" }) end,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -64,23 +64,23 @@ Testhanjin_wei018_caohong = {
   end,
 }
 
-function Testhanjin_wei018_caohong:testFormalRegistration()
+function Testqiao_wei018_caohong:testFormalRegistration()
   local general = assert(Fk.generals[CAOHONG])
   lu.assertEquals(general.trueName, "曹洪")
   lu.assertEquals(general.maxHp, 4)
   lu.assertEquals(general.gender, General.Male)
   lu.assertEquals(general.kingdom, "wei")
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wei011"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wei011"]))
   lu.assertTrue(table.contains(general:getSkillNameList(), HUYUAN))
   lu.assertTrue(table.contains(general:getSkillNameList(), HEYI))
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(CAOHONG)) end)
 end
 
-function Testhanjin_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
+function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
   -- p2/p3 在曹洪队列中已有飞影，距离不再为1；p8为相邻异势力角色。
   local room, player, second, third = FkTest.room, p(1), p(8), p(3)
-  local victimCard = give(second, "hanjin__jink", Card.Heart, 2)
-  give(third, "hanjin__jink", Card.Heart, 3)
+  local victimCard = give(second, "qiao__jink", Card.Heart, 2)
+  give(third, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
@@ -88,7 +88,7 @@ function Testhanjin_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
     lu.assertTrue(player:hasShownSkill(HUYUAN), "护援来源应已明置")
     lu.assertEquals(player:distanceTo(second), 1, "被弃牌者须实际距被装备者1")
   end)
-  local equip = give(player, "hanjin__eight_diagram", Card.Spade, 2)
+  local equip = give(player, "qiao__eight_diagram", Card.Spade, 2)
 
   local chosenPlayer, chosenCard
   skill_test.withSkillRequests(room, HUYUAN, {
@@ -118,7 +118,7 @@ function Testhanjin_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
   lu.assertEquals(#player:getCardIds("e"), 1)
 end
 
-function Testhanjin_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()
+function Testqiao_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()
   local room, player, second, third, outsider = FkTest.room, p(1), p(2), p(3), p(4)
   inRoom(function()
     -- 先暂时移除鹤翼本身并刷新，取得“无飞影”基线；不能再逐张移除飞影，
@@ -171,7 +171,7 @@ function Testhanjin_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources
   end)
 end
 
-function Testhanjin_wei018_caohong:testFeiyingSourceSkillsArePreRegisteredAndClientLoadable()
+function Testqiao_wei018_caohong:testFeiyingSourceSkillsArePreRegisteredAndClientLoadable()
   local room, player, third = FkTest.room, p(1), p(3)
   inRoom(function()
     F.refreshFormationSources(room)
@@ -207,19 +207,19 @@ function Testhanjin_wei018_caohong:testFeiyingSourceSkillsArePreRegisteredAndCli
   if not ok then error(err, 0) end
 end
 
-function Testhanjin_wei018_caohong:testHeyiNoQueueGrantsNothing()
+function Testqiao_wei018_caohong:testHeyiNoQueueGrantsNothing()
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "wu", "wu", "wu", "wu", "wu", "wu", "wu", "wu" })
     skill_test.installDualGenerals(room, room.players[1], {
-      main = CAOHONG, deputy = "hanjin_test__wu_2", kingdom = "wei",
+      main = CAOHONG, deputy = "qiao_test__wu_2", kingdom = "wei",
     })
     F.refreshFormationSources(room)
     lu.assertFalse(F.hasFormationFeiying(room.players[1]),
@@ -228,4 +228,4 @@ function Testhanjin_wei018_caohong:testHeyiNoQueueGrantsNothing()
   support.clearRoom()
 end
 
-return { name = "hanjin_wei018_caohong" }
+return { name = "qiao_wei018_caohong" }

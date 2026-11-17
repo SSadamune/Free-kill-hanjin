@@ -1,10 +1,10 @@
 local support=__dofile("../../../tests/support/hegemony.lua")
 local fixture=__dofile("../../../tests/support/skill_test.lua")
-local SKILL="hanjin__skill_wei023_1"
+local SKILL="qiao__skill_wei023_1"
 local function inRoom(fn) FkTest.runInRoom(fn) end
-Testhanjin_zangba={
+Testqiao_zangba={
  setup=function()
-  local room=support.initHanjinRoom()
+  local room=support.initQiaoRoom()
   inRoom(function()
    fixture.installBlankGenerals(room,{"wei","wei","wei","wei","qun","qun","qun","qun"})
    room:handleAddLoseSkills(room.players[1],SKILL,nil,false,true)
@@ -17,7 +17,7 @@ Testhanjin_zangba={
  end,
  tearDown=support.clearRoom,
 }
-function Testhanjin_zangba:testEachDamagePointAndFollowupSurvivesLoss()
+function Testqiao_zangba:testEachDamagePointAndFollowupSurvivesLoss()
  local room=FkTest.room
  local me,current=room.players[1],room.players[5]
  local asks=0
@@ -27,8 +27,8 @@ function Testhanjin_zangba:testEachDamagePointAndFollowupSurvivesLoss()
   inRoom(function() room:damage{from=current,to=me,damage=2} end)
  end)
  lu.assertEquals(asks,2)
- lu.assertEquals(current:getMark("hanjin_hengjiang_penalty-turn"),2)
- lu.assertEquals(#current:getTableMark("hanjin_hengjiang_follow-turn"),2)
+ lu.assertEquals(current:getMark("qiao_hengjiang_penalty-turn"),2)
+ lu.assertEquals(#current:getTableMark("qiao_hengjiang_follow-turn"),2)
  inRoom(function()
   room:handleAddLoseSkills(me,"-"..SKILL,nil,false,true)
   current.phase=Player.Discard
@@ -36,4 +36,4 @@ function Testhanjin_zangba:testEachDamagePointAndFollowupSurvivesLoss()
  end)
  lu.assertEquals(#me:getCardIds("h"),me.maxHp)
 end
-return {name="hanjin_zangba"}
+return {name="qiao_zangba"}

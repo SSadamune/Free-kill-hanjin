@@ -3,21 +3,21 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local ROUKE = "hanjin__skill_jin005_1"
-local SHUNLIU = "hanjin__skill_jin005_2"
-local KEQING = "hanjin__skill_jin013_2"
-local WENHU = "hanjin__retinue_skill_wenhu"
+local ROUKE = "qiao__skill_jin005_1"
+local SHUNLIU = "qiao__skill_jin005_2"
+local KEQING = "qiao__skill_jin013_2"
+local WENHU = "qiao__retinue_skill_wenhu"
 
-local OPT_CHAIN = "#hanjin__skill_jin005_1-chain"
-local OPT_RESET = "#hanjin__skill_jin005_1-reset"
-local OPT_HAND = "#hanjin__retinue_skill_wenhu-hand"
-local OPT_EQUIP = "#hanjin__retinue_skill_wenhu-equip"
+local OPT_CHAIN = "#qiao__skill_jin005_1-chain"
+local OPT_RESET = "#qiao__skill_jin005_1-reset"
+local OPT_HAND = "#qiao__retinue_skill_wenhu-hand"
+local OPT_EQUIP = "#qiao__retinue_skill_wenhu-equip"
 
-local TARGET_MARK_KEQING = "hanjin_jin013_2_targets"
-local SOURCE_MARK_KEQING = "hanjin_jin013_2_sources"
+local TARGET_MARK_KEQING = "qiao_jin013_2_targets"
+local SOURCE_MARK_KEQING = "qiao_jin013_2_sources"
 
-Testhanjin_jin_chain = {}
-Testhanjin_jin_chain.tearDown = support.clearRoom
+Testqiao_jin_chain = {}
+Testqiao_jin_chain.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -72,13 +72,13 @@ end
 
 -- 柔克：首张杀实际改为冰杀；未造成伤害后，至多两名角色横置/重置；手牌上限读取
 -- 当前横置总数。
-function Testhanjin_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     skill_test.installDualGenerals(room, p(1), {
-      main = "hanjin__jin005",
-      deputy = "hanjin_test__jin_2",
+      main = "qiao_heg__jin005",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = p(1)
@@ -86,15 +86,15 @@ function Testhanjin_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local slash = giveHand(room, p(2), { { "hanjin__slash", Card.Heart, 7 } })[1]
-  local jink = giveHand(room, p(3), { { "hanjin__jink", Card.Spade, 3 } })[1]
+  local slash = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 7 } })[1]
+  local jink = giveHand(room, p(3), { { "qiao__jink", Card.Spade, 3 } })[1]
   inRoom(function()
     p(2):setChainState(false)
     p(3):setChainState(true)
   end)
 
   local usedCard
-  addProbe(room, "#hanjin_jin_chain_rouke_probe", fk.CardUseFinished, {
+  addProbe(room, "#qiao_jin_chain_rouke_probe", fk.CardUseFinished, {
     can_refresh = function(self, event, target, player, data)
       return target == p(2) and data.card ~= nil
     end,
@@ -116,7 +116,7 @@ function Testhanjin_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
 
   -- 首张杀事实依赖本回合 UseCard 历史，必须在真实 Phase/Turn 事件范围内使用。
   local fired = false
-  local playSkel = fk.CreateSkill { name = "#hanjin_jin_chain_rouke_play" }
+  local playSkel = fk.CreateSkill { name = "#qiao_jin_chain_rouke_play" }
   playSkel:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -139,7 +139,7 @@ function Testhanjin_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   end)
   lu.assertTrue(fired)
 
-  lu.assertEquals(usedCard, "hanjin__ice__slash")
+  lu.assertEquals(usedCard, "qiao__ice__slash")
   lu.assertTrue(p(2).chained)
   lu.assertFalse(p(3).chained)
   -- p2 是当前唯一横置角色；只有柔克持有者羊祜的手牌上限增加。
@@ -150,13 +150,13 @@ function Testhanjin_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
 end
 
 -- 柔克：改牌后、本次用牌结束前失去技能，已建立的“然后”仍按实际改牌来源处理。
-function Testhanjin_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     skill_test.installDualGenerals(room, p(1), {
-      main = "hanjin__jin005",
-      deputy = "hanjin_test__jin_2",
+      main = "qiao_heg__jin005",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = p(1)
@@ -164,18 +164,18 @@ function Testhanjin_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local slash = giveHand(room, p(2), { { "hanjin__slash", Card.Club, 8 } })[1]
-  local jink = giveHand(room, p(3), { { "hanjin__jink", Card.Diamond, 8 } })[1]
+  local slash = giveHand(room, p(2), { { "qiao__slash", Card.Club, 8 } })[1]
+  local jink = giveHand(room, p(3), { { "qiao__jink", Card.Diamond, 8 } })[1]
   inRoom(function()
     p(2):setChainState(false)
     p(3):setChainState(true)
   end)
 
   -- 改牌完成后、本次用牌结束前让羊祜失去柔克；后续监听器必须仍然存在。
-  addProbe(room, "#hanjin_jin_chain_rouke_loss_probe", fk.CardUsing, {
+  addProbe(room, "#qiao_jin_chain_rouke_loss_probe", fk.CardUsing, {
     can_refresh = function(self, event, target, player, data)
       return target == p(2) and data.card ~= nil
-        and data.card.name == "hanjin__ice__slash"
+        and data.card.name == "qiao__ice__slash"
     end,
     on_refresh = function(self, event, target, player, data)
       room:handleAddLoseSkills(p(1), "-" .. ROUKE, nil, false, true)
@@ -191,7 +191,7 @@ function Testhanjin_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
   local fired = false
-  local playSkel = fk.CreateSkill { name = "#hanjin_jin_chain_rouke_loss_play" }
+  local playSkel = fk.CreateSkill { name = "#qiao_jin_chain_rouke_loss_play" }
   playSkel:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -220,13 +220,13 @@ end
 
 -- 顺流：属性伤害后先弃受伤者，再弃当时所有横置角色；受伤者已在 ChangeHp 重置，
 -- 不按伤害前快照重复纳入，也不使用 DamageFinished。
-function Testhanjin_jin_chain:testShunliuDiscardsDamagedAndChainedPlayers()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testShunliuDiscardsDamagedAndChainedPlayers()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     skill_test.installDualGenerals(room, p(1), {
-      main = "hanjin_test__jin_1",
-      deputy = "hanjin__jin005",
+      main = "qiao_test__jin_1",
+      deputy = "qiao_heg__jin005",
       kingdom = "jin",
     })
     room.current = p(1)
@@ -234,8 +234,8 @@ function Testhanjin_jin_chain:testShunliuDiscardsDamagedAndChainedPlayers()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local victimCard = giveHand(room, p(2), { { "hanjin__slash", Card.Heart, 2 } })[1]
-  local chainedCard = giveHand(room, p(3), { { "hanjin__jink", Card.Spade, 4 } })[1]
+  local victimCard = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 2 } })[1]
+  local chainedCard = giveHand(room, p(3), { { "qiao__jink", Card.Spade, 4 } })[1]
   inRoom(function()
     -- 受伤者不横置，避免火焰伤害触发铁索传导，单独验证“受伤者 + 当时横置者”。
     p(2):setChainState(false)
@@ -271,16 +271,16 @@ end
 
 -- 克清：建立效果后，目标使用牌时若横置由其自己弃一张；王濬失去技能后效果仍在，
 -- 直到来源死亡或再次发动。
-function Testhanjin_jin_chain:testKeqingPersistsAfterSkillLoss()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testKeqingPersistsAfterSkillLoss()
+  local room = support.initQiaoRoom()
   local src
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     -- 用非君主位作为王濬来源，避免测试中击杀君主触发游戏结束。
     src = (room:getLord() == p(1)) and p(4) or p(1)
     skill_test.installDualGenerals(room, src, {
-      main = "hanjin__jin013",
-      deputy = "hanjin_test__jin_2",
+      main = "qiao_heg__jin013",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = src
@@ -296,8 +296,8 @@ function Testhanjin_jin_chain:testKeqingPersistsAfterSkillLoss()
   lu.assertTrue(table.contains(p(2):getTableMark(SOURCE_MARK_KEQING), src.id))
 
   -- 第一次真实使用：目标自己弃一张。
-  local firstUse = giveHand(room, p(2), { { "hanjin__slash", Card.Heart, 5 } })[1]
-  local firstCost = giveHand(room, p(2), { { "hanjin__jink", Card.Spade, 5 } })[1]
+  local firstUse = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 5 } })[1]
+  local firstCost = giveHand(room, p(2), { { "qiao__jink", Card.Spade, 5 } })[1]
   FkTest.setNextReplies(p(2), { FkTest.ReplyDiscard({ firstCost }) })
   inRoom(function()
     room:useCard {
@@ -315,8 +315,8 @@ function Testhanjin_jin_chain:testKeqingPersistsAfterSkillLoss()
   end)
   lu.assertFalse(src:hasSkill(KEQING))
 
-  local secondUse = giveHand(room, p(2), { { "hanjin__slash", Card.Club, 6 } })[1]
-  local secondCost = giveHand(room, p(2), { { "hanjin__jink", Card.Diamond, 6 } })[1]
+  local secondUse = giveHand(room, p(2), { { "qiao__slash", Card.Club, 6 } })[1]
+  local secondCost = giveHand(room, p(2), { { "qiao__jink", Card.Diamond, 6 } })[1]
   FkTest.setNextReplies(p(2), { FkTest.ReplyDiscard({ secondCost }) })
   inRoom(function()
     room:useCard {
@@ -333,8 +333,8 @@ function Testhanjin_jin_chain:testKeqingPersistsAfterSkillLoss()
     src.dead = true
     table.removeOne(room.alive_players, src)
   end)
-  local thirdUse = giveHand(room, p(2), { { "hanjin__slash", Card.Spade, 7 } })[1]
-  local thirdCard = giveHand(room, p(2), { { "hanjin__jink", Card.Heart, 7 } })[1]
+  local thirdUse = giveHand(room, p(2), { { "qiao__slash", Card.Spade, 7 } })[1]
+  local thirdCard = giveHand(room, p(2), { { "qiao__jink", Card.Heart, 7 } })[1]
   inRoom(function()
     room:useCard {
       from = p(2),
@@ -350,8 +350,8 @@ function Testhanjin_jin_chain:testKeqingPersistsAfterSkillLoss()
 end
 
 -- 冰属性已由正式包注册为可传导属性：真实冰杀造成伤害时，横置的受伤者先重置。
-function Testhanjin_jin_chain:testIceSlashDamageResetsChainedVictim()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testIceSlashDamageResetsChainedVictim()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     room.current = p(1)
@@ -359,7 +359,7 @@ function Testhanjin_jin_chain:testIceSlashDamageResetsChainedVictim()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local ice = giveHand(room, p(1), { { "hanjin__ice__slash", Card.Spade, 6 } })[1]
+  local ice = giveHand(room, p(1), { { "qiao__ice__slash", Card.Spade, 6 } })[1]
   local hp = p(2).hp
   inRoom(function() p(2):setChainState(true) end)
   inRoom(function()
@@ -374,8 +374,8 @@ function Testhanjin_jin_chain:testIceSlashDamageResetsChainedVictim()
 end
 
 -- 文虎：完整弃置手牌区与装备区，X=2；视为使用目标上限为2的决斗。
-function Testhanjin_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
-  local room = support.initHanjinRoom()
+function Testqiao_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
     room:handleAddLoseSkills(p(1), WENHU, WENHU, false, true)
@@ -385,16 +385,16 @@ function Testhanjin_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
   for i = 1, 4 do clearCards(room, p(i)) end
 
   giveHand(room, p(1), {
-    { "hanjin__slash", Card.Heart, 3 },
-    { "hanjin__jink", Card.Spade, 3 },
+    { "qiao__slash", Card.Heart, 3 },
+    { "qiao__jink", Card.Spade, 3 },
   })
-  local equip = place(room, p(1), Card.PlayerEquip, "hanjin__chixiao_sword", Card.Spade, 3)
-  local judge = place(room, p(1), Card.PlayerJudge, "hanjin__indulgence", Card.Heart, 6)
+  local equip = place(room, p(1), Card.PlayerEquip, "qiao__chixiao_sword", Card.Spade, 3)
+  local judge = place(room, p(1), Card.PlayerJudge, "qiao__indulgence", Card.Heart, 6)
 
   local duel
-  addProbe(room, "#hanjin_jin_chain_wenhu_probe", fk.CardUseFinished, {
+  addProbe(room, "#qiao_jin_chain_wenhu_probe", fk.CardUseFinished, {
     can_refresh = function(self, event, target, player, data)
-      return target == p(1) and data.card ~= nil and data.card.name == "hanjin__duel"
+      return target == p(1) and data.card ~= nil and data.card.name == "qiao__duel"
     end,
     on_refresh = function(self, event, target, player, data)
       duel = data
@@ -406,7 +406,7 @@ function Testhanjin_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
     {
       card = { skill = "virtual_viewas", subcards = {} },
       targets = { p(2).id, p(3).id },
-      interaction_data = "hanjin__duel",
+      interaction_data = "qiao__duel",
     },
   })
   inRoom(function()
@@ -423,4 +423,4 @@ function Testhanjin_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
   lu.assertNotNil(equip)
 end
 
-return { name = "hanjin_jin_chain" }
+return { name = "qiao_jin_chain" }

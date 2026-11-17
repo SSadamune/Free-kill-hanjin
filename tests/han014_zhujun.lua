@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local ZHUJUN = "hanjin__han014"
-local CUICUO = "hanjin__skill_han014_1"
-local HUYI = "hanjin__skill_han014_2"
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHUJUN = "qiao_heg__han014"
+local CUICUO = "qiao__skill_han014_1"
+local HUYI = "qiao__skill_han014_2"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -33,29 +33,29 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode", realSelection = true,
+    mode = "qiao_heg_mode", realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "han", "han", "han", "han" })
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
-      main = ZHUJUN, deputy = "hanjin_test__han_2", kingdom = "han",
+      main = ZHUJUN, deputy = "qiao_test__han_2", kingdom = "han",
     })
   end)
   return room
 end
 
-Testhanjin_han014_zhujun = {
+Testqiao_han014_zhujun = {
   setup = prepare,
   tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end,
 }
 
-function Testhanjin_han014_zhujun:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_han014_zhujun:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(d) return d.id == ZHUJUN end))
   lu.assertEquals(entry.number, "HAN014")
   local g = assert(Fk.generals[ZHUJUN])
@@ -64,16 +64,16 @@ function Testhanjin_han014_zhujun:testFormalRegistration()
   lu.assertEquals(g.kingdom, "han")
   lu.assertEquals(g.maxHp, 4)
   lu.assertEquals(g.gender, General.Male)
-  lu.assertTrue(g:isCompanionWith(Fk.generals["hanjin__han013"]))
-  lu.assertTrue(g:isCompanionWith(Fk.generals["hanjin__wu009"]))
+  lu.assertTrue(g:isCompanionWith(Fk.generals["qiao_heg__han013"]))
+  lu.assertTrue(g:isCompanionWith(Fk.generals["qiao_heg__wu009"]))
   lu.assertTrue(table.contains(g:getSkillNameList(), CUICUO))
   lu.assertTrue(table.contains(g:getSkillNameList(), HUYI))
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(ZHUJUN)) end)
 end
 
-function Testhanjin_han014_zhujun:testCuipuoFirstCardAddsDamageToTarget()
+function Testqiao_han014_zhujun:testCuipuoFirstCardAddsDamageToTarget()
   local room, player, target = FkTest.room, p(1), p(2)
-  local slash = give(player, "hanjin__slash", Card.Spade, 2)
+  local slash = give(player, "qiao__slash", Card.Spade, 2)
   inRoom(function()
     room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1)
   end)
@@ -85,7 +85,7 @@ function Testhanjin_han014_zhujun:testCuipuoFirstCardAddsDamageToTarget()
   lu.assertEquals(target.hp, target.maxHp - 2)
 end
 
-function Testhanjin_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
+function Testqiao_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
   local room, owner, victim, ally = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
     room:setPlayerProperty(ally, "kingdom", "han")
@@ -95,8 +95,8 @@ function Testhanjin_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
     owner.hp, ally.hp, victim.hp = owner.maxHp, ally.maxHp, victim.maxHp
     room.current = ally
   end)
-  local allySlash = give(ally, "hanjin__slash", Card.Spade, 2)
-  local ownerSlash = give(owner, "hanjin__slash", Card.Heart, 3)
+  local allySlash = give(ally, "qiao__slash", Card.Spade, 2)
+  local ownerSlash = give(owner, "qiao__slash", Card.Heart, 3)
 
   skill_test.withSkillRequests(room, HUYI, {
     askToSkillInvoke = function(self, who, params, original)
@@ -122,4 +122,4 @@ function Testhanjin_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
   lu.assertEquals(FkTest.room:getCardArea(ownerSlash), Card.DiscardPile)
 end
 
-return { name = "hanjin_han014_zhujun" }
+return { name = "qiao_han014_zhujun" }

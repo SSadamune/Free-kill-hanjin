@@ -73,9 +73,9 @@ QtObject {
       property int deputyMaxHp: 0
     }
   }
-  function getAllGeneralPack() { return ["hanjin_test_content"] }
-  function getGenerals(pack) { return ["hanjin_test__wei_1", "hanjin_test__shu_1"] }
-  function searchAllGenerals(word) { return getGenerals("hanjin_test_content") }
+  function getAllGeneralPack() { return ["qiao_test_content"] }
+  function getGenerals(pack) { return ["qiao_test__wei_1", "qiao_test__shu_1"] }
+  function searchAllGenerals(word) { return getGenerals("qiao_test_content") }
   function createGeneralCardModel(name) {
     let model = cardComp.createObject(null)
     model.name = name
@@ -213,10 +213,10 @@ Window {
 
   ChooseGeneralModel {
     id: model
-    generals: ["hanjin_test__han_1", "hanjin_test__jin_1"]
+    generals: ["qiao_test__han_1", "qiao_test__jin_1"]
     extraData: ({
       freeAssign: true,
-      offers: ["hanjin_test__han_1", "hanjin_test__jin_1"],
+      offers: ["qiao_test__han_1", "qiao_test__jin_1"],
       guests: [],
       guestFactions: {},
       pairing: {},
@@ -284,11 +284,11 @@ def main():
     qInstallMessageHandler(lambda kind, context, message: warnings.append(message))
     app = QGuiApplication([])
     engine = QQmlApplicationEngine()
-    fixture = Path(tempfile.mkdtemp(prefix="hanjin-free-assign-"))
+    fixture = Path(tempfile.mkdtemp(prefix="qiao-free-assign-"))
     try:
         write_fixture(fixture)
         engine.addImportPath(str(fixture / "imports"))
-        source = (ROOT / "pkg/hanjin_mode/qml/GuestRedrawBox.qml").resolve().as_uri()
+        source = (ROOT / "pkg/qiao_mode/qml/GuestRedrawBox.qml").resolve().as_uri()
         engine.loadData(MAIN_QML.replace("__SOURCE__", source).encode(),
                         QUrl.fromLocalFile(str(fixture / "main.qml")))
         if not engine.rootObjects():
@@ -342,7 +342,7 @@ def main():
             params = params.toVariant()
         if params["index"] != 0:
             fail("Right-click popup index: %r" % (params["index"],))
-        if model.property("generals").toVariant()[0] != "hanjin_test__wei_1":
+        if model.property("generals").toVariant()[0] != "qiao_test__wei_1":
             fail("Right-click selection did not write back to the model")
         if scene.property("finishCount") != 1:
             fail("Right-click popup did not emit finish")
@@ -360,7 +360,7 @@ def main():
             params = params.toVariant()
         if params["index"] != 1:
             fail("Long-press popup index: %r" % (params["index"],))
-        if model.property("generals").toVariant()[1] != "hanjin_test__wei_1":
+        if model.property("generals").toVariant()[1] != "qiao_test__wei_1":
             fail("Long-press selection did not write back to the model")
         if scene.property("finishCount") != 2:
             fail("Long-press popup did not emit finish")

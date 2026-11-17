@@ -2,13 +2,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local H = require "packages.hegemony.util"
-local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
-local JIANGWEI = "hanjin__shu012"
-local TIAOXIN = "hanjin__skill_shu012_1"
-local TIANFU = "hanjin__skill_shu012_2"
-local TIANFU_RULE = "hanjin__skill_shu012_2_rule"
-local CHENGZHI = "hanjin__skill_shu012_3"
+local JIANGWEI = "qiao_heg__shu012"
+local TIAOXIN = "qiao__skill_shu012_1"
+local TIANFU = "qiao__skill_shu012_2"
+local TIANFU_RULE = "qiao__skill_shu012_2_rule"
+local CHENGZHI = "qiao__skill_shu012_3"
 
 local function inRoom(fn)
   local result
@@ -27,15 +27,15 @@ local function give(player, name, suit, number)
   return id
 end
 
-Testhanjin_shu012_jiangwei = {
+Testqiao_shu012_jiangwei = {
   setup = function()
     Fk.currentResponsePattern = nil
     local room = support.createRoom {
-      mode = "hanjin_heg_mode",
+      mode = "qiao_heg_mode",
       realSelection = true,
       settings = {
-        hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-        hanjin_kingdom_limit = 6,
+        qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+        qiao_kingdom_limit = 6,
       },
     }
     inRoom(function()
@@ -43,7 +43,7 @@ Testhanjin_shu012_jiangwei = {
         "shu", "shu", "shu", "shu", "qun", "qun", "qun", "qun",
       })
       skill_test.installDualGenerals(room, room.players[1], {
-        main = JIANGWEI, deputy = "hanjin_test__shu_2", kingdom = "shu",
+        main = JIANGWEI, deputy = "qiao_test__shu_2", kingdom = "shu",
       })
       room.players[1]:revealGeneral(false)
       room.current = room.players[1]
@@ -55,19 +55,19 @@ Testhanjin_shu012_jiangwei = {
   end,
 }
 
-function Testhanjin_shu012_jiangwei:testFormalRegistration()
+function Testqiao_shu012_jiangwei:testFormalRegistration()
   local general = assert(Fk.generals[JIANGWEI])
   lu.assertEquals(general.trueName, "姜维")
   lu.assertEquals(general.maxHp, 4)
   lu.assertEquals(general.kingdom, "shu")
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__shu004"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__shu004"]))
   for _, name in ipairs({ TIAOXIN, TIANFU, CHENGZHI }) do
     lu.assertTrue(table.contains(general:getSkillNameList(), name))
   end
   lu.assertEquals(Exchange.actualGeneral(p(1), false), JIANGWEI)
 end
 
-function Testhanjin_shu012_jiangwei:testTianfuRuleReadsActualFormation()
+function Testqiao_shu012_jiangwei:testTianfuRuleReadsActualFormation()
   local first, second, outsider = p(1), p(2), p(5)
   inRoom(function()
     FkTest.room:addSkill(Fk.skills[TIANFU_RULE])
@@ -80,20 +80,20 @@ function Testhanjin_shu012_jiangwei:testTianfuRuleReadsActualFormation()
   end)
 end
 
-function Testhanjin_shu012_jiangwei:testChengzhiMainSourceBaseline()
+function Testqiao_shu012_jiangwei:testChengzhiMainSourceBaseline()
   local player = p(1)
   inRoom(function()
-    FkTest.room:changeHero(player, "hanjin__shu004", false, false, false, false, false)
-    FkTest.room:setPlayerMark(player, "__heg_general", "hanjin__shu004")
-    lu.assertTrue(Fk.generals["hanjin__shu004"]:getSkillNameList()[1] == "hanjin__skill_shu004_1")
-    lu.assertTrue(table.contains(Fk.generals["hanjin__shu004"]:getSkillNameList(),
-      "hanjin__skill_shu004_1"))
+    FkTest.room:changeHero(player, "qiao_heg__shu004", false, false, false, false, false)
+    FkTest.room:setPlayerMark(player, "__heg_general", "qiao_heg__shu004")
+    lu.assertTrue(Fk.generals["qiao_heg__shu004"]:getSkillNameList()[1] == "qiao__skill_shu004_1")
+    lu.assertTrue(table.contains(Fk.generals["qiao_heg__shu004"]:getSkillNameList(),
+      "qiao__skill_shu004_1"))
   end)
 end
 
-function Testhanjin_shu012_jiangwei:testTiaoxinRealSlashOnJiangwei()
+function Testqiao_shu012_jiangwei:testTiaoxinRealSlashOnJiangwei()
   local room, player, target = FkTest.room, p(1), p(2)
-  local slash = give(target, "hanjin__slash", Card.Spade, 2)
+  local slash = give(target, "qiao__slash", Card.Spade, 2)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
@@ -108,9 +108,9 @@ function Testhanjin_shu012_jiangwei:testTiaoxinRealSlashOnJiangwei()
   lu.assertTrue(table.contains(target:getCardIds("he"), slash) == false)
 end
 
-function Testhanjin_shu012_jiangwei:testTiaoxinCancelDiscardsTargetCard()
+function Testqiao_shu012_jiangwei:testTiaoxinCancelDiscardsTargetCard()
   local room, player, target = FkTest.room, p(1), p(2)
-  local jink = give(target, "hanjin__jink", Card.Heart, 3)
+  local jink = give(target, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
@@ -129,28 +129,28 @@ function Testhanjin_shu012_jiangwei:testTiaoxinCancelDiscardsTargetCard()
     "挑衅取消使用杀后应实际弃置目标一张牌")
 end
 
-function Testhanjin_shu012_jiangwei:testChengzhiReallyAddsTwoGuanxingCards()
+function Testqiao_shu012_jiangwei:testChengzhiReallyAddsTwoGuanxingCards()
   local room,player=FkTest.room,p(2)
   lu.assertTrue(table.contains(Fk.generals[JIANGWEI]:getSkillNameList(), CHENGZHI),
     "姜维印刷技能应含承志")
   inRoom(function()
     -- 先副将姜维、后实际换主将为诸葛亮，复现承志先授予观星再切换印刷来源。
     skill_test.installDualGenerals(room,player,{
-      main="hanjin_test__shu_1",deputy=JIANGWEI,kingdom="shu",
+      main="qiao_test__shu_1",deputy=JIANGWEI,kingdom="shu",
     })
-    room:changeHero(player, "hanjin__shu004", false, false, false, false, false)
-    room:setPlayerMark(player, "__heg_general", "hanjin__shu004")
+    room:changeHero(player, "qiao_heg__shu004", false, false, false, false, false)
+    room:setPlayerMark(player, "__heg_general", "qiao_heg__shu004")
     player.maxHp = player:getGeneralMaxHp()
     player:revealGeneral(false)
     room.current=player
     player.phase=Player.Start
     lu.assertEquals(player.deputyGeneral,JIANGWEI)
     lu.assertTrue(player:hasSkill(CHENGZHI, true, true), "承志应随副将安装")
-    lu.assertTrue(player:hasSkill("hanjin__skill_shu004_1"), "换主将后应恢复印刷观星")
-    lu.assertEquals(player:getMark("hanjin__skill_shu012_3-guanxing-bonus"),1)
+    lu.assertTrue(player:hasSkill("qiao__skill_shu004_1"), "换主将后应恢复印刷观星")
+    lu.assertEquals(player:getMark("qiao__skill_shu012_3-guanxing-bonus"),1)
   end)
   local seen
-  skill_test.withSkillRequests(room,"hanjin__skill_shu004_1",{
+  skill_test.withSkillRequests(room,"qiao__skill_shu004_1",{
     askToSkillInvoke=function() return true end,
     askToGuanxing=function(self,who,params)
       seen=#params.cards
@@ -162,9 +162,9 @@ function Testhanjin_shu012_jiangwei:testChengzhiReallyAddsTwoGuanxingCards()
   lu.assertEquals(seen,7)
   inRoom(function()
     room:handleAddLoseSkills(player,"-"..CHENGZHI,nil,false,true)
-    lu.assertEquals(player:getMark("hanjin__skill_shu012_3-guanxing-bonus"),0)
-    lu.assertTrue(player:hasSkill("hanjin__skill_shu004_1"),"失承志不应失主将观星")
+    lu.assertEquals(player:getMark("qiao__skill_shu012_3-guanxing-bonus"),0)
+    lu.assertTrue(player:hasSkill("qiao__skill_shu004_1"),"失承志不应失主将观星")
   end)
 end
 
-return { name = "hanjin_shu012_jiangwei" }
+return { name = "qiao_shu012_jiangwei" }

@@ -2,28 +2,28 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "紫乔汉晋：安装国战依赖",
+      "label": "平行时空：安装国战依赖",
       "type": "process",
       "command": "python",
       "args": ["${workspaceFolder}/scripts/setup_dependencies.py"],
       "problemMatcher": []
     },
     {
-      "label": "紫乔汉晋：同步扩展",
+      "label": "平行时空：同步扩展",
       "type": "process",
       "command": "powershell.exe",
       "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/dev.ps1", "-Action", "sync"],
       "problemMatcher": []
     },
     {
-      "label": "紫乔汉晋：启动开发版",
+      "label": "平行时空：启动开发版",
       "type": "process",
       "command": "powershell.exe",
       "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/dev.ps1", "-Action", "play"],
       "problemMatcher": []
     },
     {
-      "label": "紫乔汉晋：检查 Lua 语法",
+      "label": "平行时空：检查 Lua 语法",
       "type": "process",
       "command": "python",
       "args": ["${workspaceFolder}/scripts/check_lua.py"],
@@ -31,7 +31,7 @@
       "problemMatcher": []
     },
     {
-      "label": "紫乔汉晋：运行自动化测试",
+      "label": "平行时空：运行自动化测试",
       "type": "process",
       "command": "python",
       "args": ["${workspaceFolder}/scripts/test.py"],

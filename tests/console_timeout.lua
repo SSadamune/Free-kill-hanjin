@@ -1,4 +1,4 @@
-Testhanjin_console_timeout = {}
+Testqiao_console_timeout = {}
 
 -- Run the real Request loop with a deterministic clock and transport.
 local function runRequest(console, timeout, replyAfterWaiting)
@@ -39,7 +39,7 @@ local function runRequest(console, timeout, replyAfterWaiting)
   return request, player, controller, backend
 end
 
-function Testhanjin_console_timeout:testUnlimitedAcceptsLateReplyWithoutTimer()
+function Testqiao_console_timeout:testUnlimitedAcceptsLateReplyWithoutTimer()
   local request, _, controller, backend = runRequest(true, -1, true)
   lu.assertEquals(request.result[1], { "late reply" })
   lu.assertEquals(request.overtimes, {})
@@ -47,7 +47,7 @@ function Testhanjin_console_timeout:testUnlimitedAcceptsLateReplyWithoutTimer()
   lu.assertEquals(controller.kicks, 0)
 end
 
-function Testhanjin_console_timeout:testFiniteConsoleTimeoutReturnsDefaultWithoutPenalty()
+function Testqiao_console_timeout:testFiniteConsoleTimeoutReturnsDefaultWithoutPenalty()
   local request, player, controller, backend = runRequest(true, 90, false)
   lu.assertEquals(request.result[1], "")
   lu.assertEquals(#request.overtimes, 1)
@@ -57,7 +57,7 @@ function Testhanjin_console_timeout:testFiniteConsoleTimeoutReturnsDefaultWithou
   lu.assertEquals(controller.kicks, 0)
 end
 
-function Testhanjin_console_timeout:testOrdinaryServerStillPenalizesEvenWithOneHuman()
+function Testqiao_console_timeout:testOrdinaryServerStillPenalizesEvenWithOneHuman()
   local request, player, controller, backend = runRequest(false, 90, false)
   lu.assertEquals(#request.overtimes, 1)
   lu.assertTrue(request.overtimes[1] == player)
@@ -65,4 +65,4 @@ function Testhanjin_console_timeout:testOrdinaryServerStillPenalizesEvenWithOneH
   lu.assertEquals(controller.kicks, 1)
 end
 
-return { name = "hanjin_console_timeout" }
+return { name = "qiao_console_timeout" }

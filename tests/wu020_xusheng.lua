@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local XUSHENG = "hanjin__wu020"
-local YICHENG = "hanjin__skill_wu020_1"
-local POJUN = "hanjin__skill_wu020_2"
-local DELAY = "hanjin__skill_wu020_1-delay"
+local XUSHENG = "qiao_heg__wu020"
+local YICHENG = "qiao__skill_wu020_1"
+local POJUN = "qiao__skill_wu020_2"
+local DELAY = "qiao__skill_wu020_1-delay"
 
 local function inRoom(fn)
   local result
@@ -31,10 +31,10 @@ local function clear(player)
   end
 end
 
-Testhanjin_wu020_xusheng = {
+Testqiao_wu020_xusheng = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, {
         "wu", "wu", "wu", "wu", "qun", "qun", "qun", "qun",
@@ -53,10 +53,10 @@ Testhanjin_wu020_xusheng = {
   end,
 }
 
-function Testhanjin_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
+function Testqiao_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
   local room, player, ally, source = FkTest.room, p(1), p(2), p(3)
-  local slash = give(source, "hanjin__slash", Card.Spade, 2)
-  local spare = give(ally, "hanjin__slash", Card.Heart, 3)
+  local slash = give(source, "qiao__slash", Card.Spade, 2)
+  local spare = give(ally, "qiao__slash", Card.Heart, 3)
   inRoom(function()
     room.current = source
     player:revealGeneral(false)
@@ -76,10 +76,10 @@ function Testhanjin_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
     end)
   end)
   lu.assertTrue(table.contains(ally:getCardIds("h"), spare))
-  skill_test.withSkillRequests(room, "hanjin__wu020_yicheng_rule", {
+  skill_test.withSkillRequests(room, "qiao__wu020_yicheng_rule", {
     askToDiscard = function(self, who, params, original)
-      if params.skill_name == "hanjin__wu020_yicheng_rule" then
-        self:throwCard({ spare }, "hanjin__wu020_yicheng_rule", who, who)
+      if params.skill_name == "qiao__wu020_yicheng_rule" then
+        self:throwCard({ spare }, "qiao__wu020_yicheng_rule", who, who)
         return { spare }
       end
       return original(self, who, params)
@@ -92,11 +92,11 @@ function Testhanjin_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
   lu.assertFalse(table.contains(ally:getCardIds("h"), spare))
 end
 
-function Testhanjin_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
+function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
   local room, player, target = FkTest.room, p(1), p(2)
-  local slash = give(player, "hanjin__slash", Card.Spade, 2)
-  local first = give(target, "hanjin__jink", Card.Heart, 3)
-  local second = give(target, "hanjin__jink", Card.Club, 4)
+  local slash = give(player, "qiao__slash", Card.Spade, 2)
+  local first = give(target, "qiao__jink", Card.Heart, 3)
+  local second = give(target, "qiao__jink", Card.Club, 4)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
@@ -125,4 +125,4 @@ function Testhanjin_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
   lu.assertEquals(room:getCardArea(second), Card.PlayerHand)
 end
 
-return { name = "hanjin_wu020_xusheng" }
+return { name = "qiao_wu020_xusheng" }

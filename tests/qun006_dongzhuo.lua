@@ -1,17 +1,17 @@
 -- QUN006 董卓：横征、暴凌及所授崩坏定向验收。
--- 规则依据：rules/generals/qun006-dongzhuo.md。
+-- 规则依据：docs/rules/generals/qun006-dongzhuo.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
-local DONGZHUO = "hanjin__qun006"
-local HENGZHENG = "hanjin__skill_qun006_1"
-local BAOLING = "hanjin__skill_qun006_2"
-local BENG = "hanjin__skill_qun006_3"
-local LOSE_HP = "hanjin__skill_qun006_3-lose-hp"
-local LOSE_MAX = "hanjin__skill_qun006_3-lose-max"
+local DONGZHUO = "qiao_heg__qun006"
+local HENGZHENG = "qiao__skill_qun006_1"
+local BAOLING = "qiao__skill_qun006_2"
+local BENG = "qiao__skill_qun006_3"
+local LOSE_HP = "qiao__skill_qun006_3-lose-hp"
+local LOSE_MAX = "qiao__skill_qun006_3-lose-max"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -42,11 +42,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -56,14 +56,14 @@ local function prepare()
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
       main = DONGZHUO,
-      deputy = "hanjin_test__qun_2",
+      deputy = "qiao_test__qun_2",
       kingdom = "qun",
     })
   end)
   return room
 end
 
-Testhanjin_qun006_dongzhuo = {
+Testqiao_qun006_dongzhuo = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -71,8 +71,8 @@ Testhanjin_qun006_dongzhuo = {
   end,
 }
 
-function Testhanjin_qun006_dongzhuo:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_qun006_dongzhuo:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == DONGZHUO
   end), "missing Dong Zhuo data entry")
@@ -90,15 +90,15 @@ function Testhanjin_qun006_dongzhuo:testFormalRegistration()
   end)
 end
 
-function Testhanjin_qun006_dongzhuo:testHengzhengOneFromEachThenNormalDraw()
+function Testqiao_qun006_dongzhuo:testHengzhengOneFromEachThenNormalDraw()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     player.hp = 1
     room.current = player
     player.phase = Player.Start
   end)
-  local secondCard = give(p(2), "hanjin__jink", Card.Heart, 2)
-  local thirdCard = give(p(3), "hanjin__slash", Card.Spade, 3)
+  local secondCard = give(p(2), "qiao__jink", Card.Heart, 2)
+  local thirdCard = give(p(3), "qiao__slash", Card.Spade, 3)
 
   skill_test.withSkillRequests(room, HENGZHENG, {
     askToSkillInvoke = function(self, who, params, original)
@@ -124,7 +124,7 @@ function Testhanjin_qun006_dongzhuo:testHengzhengOneFromEachThenNormalDraw()
   lu.assertEquals(#player:getCardIds(Player.Hand), 4) -- 获得2 + 正常摸2。
 end
 
-function Testhanjin_qun006_dongzhuo:testBaolingRemovesDeputyOnlyOnce()
+function Testqiao_qun006_dongzhuo:testBaolingRemovesDeputyOnlyOnce()
   local room, player = FkTest.room, p(1)
   local oldDeputy = player.deputyGeneral
   inRoom(function()
@@ -152,7 +152,7 @@ function Testhanjin_qun006_dongzhuo:testBaolingRemovesDeputyOnlyOnce()
   lu.assertEquals(player.maxHp, 7)
 end
 
-function Testhanjin_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
+function Testqiao_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
   local room, player, other = FkTest.room, p(1), p(2)
   inRoom(function()
     room:handleAddLoseSkills(player, BENG, nil, false, true)
@@ -181,10 +181,10 @@ function Testhanjin_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
   lu.assertEquals(#player:getCardIds(Player.Hand), 2) -- 额外摸牌阶段。
 end
 
-function Testhanjin_qun006_dongzhuo:testBaolingRejectsExistingRetinueDeputy()
+function Testqiao_qun006_dongzhuo:testBaolingRejectsExistingRetinueDeputy()
   local room, player = FkTest.room, p(1)
   inRoom(function()
-    local wing = "hanjin_test__retinue_alpha"
+    local wing = "qiao_test__retinue_alpha"
     lu.assertTrue(Fk.generals[wing] ~= nil)
     room:setPlayerProperty(player, "deputyGeneral", wing)
     room:setPlayerMark(player, "__heg_deputy", wing)
@@ -200,4 +200,4 @@ function Testhanjin_qun006_dongzhuo:testBaolingRejectsExistingRetinueDeputy()
   lu.assertFalse(player:hasSkill(BENG))
 end
 
-return { name = "hanjin_qun006_dongzhuo" }
+return { name = "qiao_qun006_dongzhuo" }

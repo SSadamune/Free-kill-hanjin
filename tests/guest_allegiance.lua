@@ -1,11 +1,11 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local Guest = require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
-local Pool = require "packages.hanjin.pkg.hanjin_mode.rules.general_pool"
-local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
-local Discard = require "packages.hanjin.pkg.hanjin_mode.rules.general_discard"
-local Selection = require "packages.hanjin.pkg.hanjin_mode.rules.selection"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local Pool = require "packages.qiao.pkg.qiao_mode.rules.general_pool"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
 
-Testhanjin_guest_allegiance = {
+Testqiao_guest_allegiance = {
   setup = function()
     -- Load the independent content only when this suite runs so its global
     -- registrations do not leak into earlier suites of the combined file.
@@ -21,18 +21,18 @@ local function forcedBackend()
   -- Force the ban plan to leave wu/qun/han/jin: the two previous winners are
   -- banned and no other kingdom is protected from the random choice.
   backend._session_data = json.encode {
-    hanjin_faction_ban_v1 = { version = 1, winners = { "wei", "shu" }, banned = {} },
+    qiao_faction_ban_v1 = { version = 1, winners = { "wei", "shu" }, banned = {} },
   }
   return backend
 end
 
 local function create(options)
   options = options or {}
-  options.mode = "hanjin_heg_mode"
+  options.mode = "qiao_heg_mode"
   options.realSelection = true
   options.backend = options.backend or forcedBackend()
   options.settings = options.settings or {}
-  options.settings.hanjin_wild_count = options.settings.hanjin_wild_count or 0
+  options.settings.qiao_wild_count = options.settings.qiao_wild_count or 0
   return support.createRoom(options)
 end
 
@@ -44,7 +44,7 @@ end
 
 local function contentNames()
   local names = {}
-  for _, pack in ipairs({ Fk.packages.hanjin_test_content, Fk.packages.hanjin_test_guest_content }) do
+  for _, pack in ipairs({ Fk.packages.qiao_test_content, Fk.packages.qiao_test_guest_content }) do
     for _, general in ipairs(pack.generals) do table.insert(names, general.name) end
   end
   return names
@@ -54,71 +54,71 @@ local function wildNamesOf(names)
   return table.filter(names, function(name) return Fk.generals[name].kingdom == "wild" end)
 end
 
-function Testhanjin_guest_allegiance:testGuestResolutionOrder()
+function Testqiao_guest_allegiance:testGuestResolutionOrder()
   local allowed = { "wu", "qun", "han", "jin" }
-  local original = Guest.resolve("hanjin_test__guest_partial", allowed)
+  local original = Guest.resolve("qiao_test__guest_partial", allowed)
   lu.assertEquals(original.source, "original")
   lu.assertEquals(original.kingdoms, { "wu" })
-  local guest = Guest.resolve("hanjin_test__guest_dual_1", allowed)
+  local guest = Guest.resolve("qiao_test__guest_dual_1", allowed)
   lu.assertEquals(guest.source, "guest")
   lu.assertEquals(guest.kingdoms, { "han" })
-  lu.assertNil(Guest.resolve("hanjin_test__guest_banned", allowed))
-  lu.assertNil(Guest.resolve("hanjin_test__wei_1", { "wu", "qun" }))
+  lu.assertNil(Guest.resolve("qiao_test__guest_banned", allowed))
+  lu.assertNil(Guest.resolve("qiao_test__wei_1", { "wu", "qun" }))
 end
 
-function Testhanjin_guest_allegiance:testPairingUsesResolvedGuestFactions()
+function Testqiao_guest_allegiance:testPairingUsesResolvedGuestFactions()
   local room = create {}
-  local entry = Guest.factionsOf(room, "hanjin_test__guest_dual_1")
+  local entry = Guest.factionsOf(room, "qiao_test__guest_dual_1")
   lu.assertEquals(entry.source, "guest")
   lu.assertEquals(entry.kingdoms, { "han" })
-  lu.assertTrue(#Guest.pairKingdoms(room, "hanjin_test__guest_dual_1", "hanjin_test__han_1") > 0)
-  lu.assertEquals(#Guest.pairKingdoms(room, "hanjin_test__guest_dual_1", "hanjin_test__wu_1"), 0)
+  lu.assertTrue(#Guest.pairKingdoms(room, "qiao_test__guest_dual_1", "qiao_test__han_1") > 0)
+  lu.assertEquals(#Guest.pairKingdoms(room, "qiao_test__guest_dual_1", "qiao_test__wu_1"), 0)
   -- A wild main general may pair with any allowed deputy; a wild deputy may not.
-  local wild = room:getTag("hanjin_wild_kept_originals_v1")
+  local wild = room:getTag("qiao_wild_kept_originals_v1")
   if #wild > 0 then
-    lu.assertTrue(#Guest.pairKingdoms(room, wild[1], "hanjin_test__han_1") > 0)
-    lu.assertEquals(#Guest.pairKingdoms(room, "hanjin_test__han_1", wild[1]), 0)
+    lu.assertTrue(#Guest.pairKingdoms(room, wild[1], "qiao_test__han_1") > 0)
+    lu.assertEquals(#Guest.pairKingdoms(room, "qiao_test__han_1", wild[1]), 0)
   end
 end
 
-function Testhanjin_guest_allegiance:testGuestOnlyFactionDoesNotEnterPreBanSet()
+function Testqiao_guest_allegiance:testGuestOnlyFactionDoesNotEnterPreBanSet()
   -- Four printed kingdoms; the guest-only Han/Jin factions must not create the
   -- fifth/sixth pre-ban kingdom and trigger bans while the question is pending.
   local names = {
-    "hanjin_test__wei_1", "hanjin_test__shu_1", "hanjin_test__wu_1",
-    "hanjin_test__qun_1", "hanjin_test__guest_dual_1",
+    "qiao_test__wei_1", "qiao_test__shu_1", "qiao_test__wu_1",
+    "qiao_test__qun_1", "qiao_test__guest_dual_1",
   }
   local plan = purePlan(8, names, 0, nil, {
     candidates = { "wei", "shu", "wu", "qun" }, limit = 4,
   })
   lu.assertEquals(plan.banned, {})
   lu.assertEquals(#plan.allowed, 4)
-  lu.assertTrue(table.contains(plan.kept, "hanjin_test__guest_dual_1"))
+  lu.assertTrue(table.contains(plan.kept, "qiao_test__guest_dual_1"))
 end
 
-function Testhanjin_guest_allegiance:testCandidateSetDoesNotDependOnPoolAndCanBeGuestOnly()
-  local names = { "hanjin_test__guest_dual_1" }
+function Testqiao_guest_allegiance:testCandidateSetDoesNotDependOnPoolAndCanBeGuestOnly()
+  local names = { "qiao_test__guest_dual_1" }
   local guestPlan = purePlan(5, names, 0, nil, { candidates = { "han" }, limit = 1 })
   lu.assertEquals(guestPlan.allowed, { "han" })
-  lu.assertTrue(table.contains(guestPlan.kept, "hanjin_test__guest_dual_1"))
+  lu.assertTrue(table.contains(guestPlan.kept, "qiao_test__guest_dual_1"))
   -- A candidate kingdom with no general at all is still a valid candidate set;
   -- it simply contributes no general to the pool.
   local emptyPlan = purePlan(5, names, 0, nil, { candidates = { "jin" }, limit = 1 })
   lu.assertEquals(emptyPlan.allowed, { "jin" })
   lu.assertEquals(emptyPlan.kept, {})
-  lu.assertFalse(table.contains(emptyPlan.kept, "hanjin_test__guest_dual_1"))
+  lu.assertFalse(table.contains(emptyPlan.kept, "qiao_test__guest_dual_1"))
 end
 
-function Testhanjin_guest_allegiance:testAllegianceVersionOutsideCandidatesIsExcluded()
+function Testqiao_guest_allegiance:testAllegianceVersionOutsideCandidatesIsExcluded()
   create {}
-  local plan = purePlan(5, { "hanjin_test__wild_1" }, 0, nil, {
+  local plan = purePlan(5, { "qiao_test__wild_1" }, 0, nil, {
     candidates = { "han" }, limit = 1,
   })
-  lu.assertFalse(table.contains(plan.kept, "hanjin_test__loyal_1"))
-  lu.assertTrue(table.contains(plan.excluded, "hanjin_test__loyal_1"))
+  lu.assertFalse(table.contains(plan.kept, "qiao_test__loyal_1"))
+  lu.assertTrue(table.contains(plan.excluded, "qiao_test__loyal_1"))
 end
 
-function Testhanjin_guest_allegiance:testFourPlayersReplaceEveryWildOriginal()
+function Testqiao_guest_allegiance:testFourPlayersReplaceEveryWildOriginal()
   local names = contentNames()
   local previous = { winners = { "wei", "shu" }, banned = {} }
   local plan = purePlan(4, names, 0, previous)
@@ -129,10 +129,10 @@ function Testhanjin_guest_allegiance:testFourPlayersReplaceEveryWildOriginal()
     lu.assertNotEquals(Fk.generals[name].kingdom, "wild", "Four players must not keep a wild original")
   end
   -- Registered loyalty versions replace the originals even when the cap is 0.
-  lu.assertTrue(kept["hanjin_test__loyal_2"])
-  lu.assertNil(kept["hanjin_test__loyal_1"]) -- wei banned
-  lu.assertNil(kept["hanjin_test__loyal_5"]) -- wei/shu banned
-  lu.assertNil(kept["hanjin_test__wild_1"])
+  lu.assertTrue(kept["qiao_test__loyal_2"])
+  lu.assertNil(kept["qiao_test__loyal_1"]) -- wei banned
+  lu.assertNil(kept["qiao_test__loyal_5"]) -- wei/shu banned
+  lu.assertNil(kept["qiao_test__wild_1"])
   local stub = {
     getTag = function() return nil end,
     getBanner = function() return plan.allowed end,
@@ -142,10 +142,10 @@ function Testhanjin_guest_allegiance:testFourPlayersReplaceEveryWildOriginal()
   for _, name in ipairs(built.names) do
     lu.assertNotEquals(Fk.generals[name].kingdom, "wild")
   end
-  lu.assertTrue(table.contains(built.names, "hanjin_test__loyal_2"))
+  lu.assertTrue(table.contains(built.names, "qiao_test__loyal_2"))
 end
 
-function Testhanjin_guest_allegiance:testFivePlayersCapKeepsOnlySelectedOriginals()
+function Testqiao_guest_allegiance:testFivePlayersCapKeepsOnlySelectedOriginals()
   local names = contentNames()
   local previous = { winners = { "wei", "shu" }, banned = {} }
   local plan = purePlan(5, names, 1, previous)
@@ -162,15 +162,15 @@ function Testhanjin_guest_allegiance:testFivePlayersCapKeepsOnlySelectedOriginal
       seen[name] = true
     end
   end
-  lu.assertNil(kept["hanjin_test__loyal_5"]) -- both factions banned
-  lu.assertNil(kept["hanjin_test__loyal_1"]) -- wei banned
-  lu.assertTrue(kept["hanjin_test__loyal_2"])
+  lu.assertNil(kept["qiao_test__loyal_5"]) -- both factions banned
+  lu.assertNil(kept["qiao_test__loyal_1"]) -- wei banned
+  lu.assertTrue(kept["qiao_test__loyal_2"])
 end
 
-function Testhanjin_guest_allegiance:testBannedOriginalCannotReturnBySameName()
-  local room = create { settings = { hanjin_wild_count = 0, disableSameConvert = true } }
-  local original = "hanjin_test__wild__same"
-  local version = "hanjin_test__loyal__same"
+function Testqiao_guest_allegiance:testBannedOriginalCannotReturnBySameName()
+  local room = create { settings = { qiao_wild_count = 0, disableSameConvert = true } }
+  local original = "qiao_test__wild__same"
+  local version = "qiao_test__loyal__same"
   local function inGame(name)
     if table.contains(room.general_pile, name) then return true end
     for _, player in ipairs(room.players) do
@@ -188,8 +188,8 @@ function Testhanjin_guest_allegiance:testBannedOriginalCannotReturnBySameName()
   FkTest.runInRoom(function()
     lu.assertFalse(Fk:canUseGeneral(original))
     lu.assertFalse(table.contains(Fk:getSameGenerals(version), original))
-    lu.assertFalse(Fk:canUseGeneral("hanjin_test__wild_1"))
-    lu.assertFalse(Fk:canUseGeneral("hanjin_test__loyal_5"))
+    lu.assertFalse(Fk:canUseGeneral("qiao_test__wild_1"))
+    lu.assertFalse(Fk:canUseGeneral("qiao_test__loyal_5"))
   end)
 end
 
@@ -213,20 +213,20 @@ local function redrawDuringSelection(player, count)
   FkTest.setNextReplies(player, { {} })
 end
 
-function Testhanjin_guest_allegiance:testChainedGuestRedrawGoesToDiscardAndNeverReturns()
+function Testqiao_guest_allegiance:testChainedGuestRedrawGoesToDiscardAndNeverReturns()
   local room = create {}
   local player = room.players[1]
   local changes, offers, discarded
   redrawDuringSelection(player, 2)
   FkTest.runInRoom(function()
     room.general_pile = {
-      "hanjin_test__guest_dual_3", "hanjin_test__guest_dual_4", "hanjin_test__wei_2",
+      "qiao_test__guest_dual_3", "qiao_test__guest_dual_4", "qiao_test__wei_2",
     }
     offers = {
-      [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
+      [player] = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2", "qiao_test__wu_1" },
     }
     Selection.ask(room, { player }, offers)
-    changes = room:getTag("hanjin_guest_redraws_v1")
+    changes = room:getTag("qiao_guest_redraws_v1")
     discarded = Discard.list(room)
   end)
   lu.assertEquals(#changes, 2, "The replacement guest candidate must be offered again")
@@ -249,56 +249,56 @@ function Testhanjin_guest_allegiance:testChainedGuestRedrawGoesToDiscardAndNever
   -- Nothing in the discard pile can be returned or drawn later in this room.
   local returned
   FkTest.runInRoom(function()
-    room:returnToGeneralPile({ "hanjin_test__guest_dual_1" })
-    table.insert(room.general_pile, "hanjin_test__guest_dual_1")
+    room:returnToGeneralPile({ "qiao_test__guest_dual_1" })
+    table.insert(room.general_pile, "qiao_test__guest_dual_1")
     local drawn = room:getNGenerals(1)
     local many = room:findGenerals(function() return true end, 2)
     returned = {
-      pile = table.contains(room.general_pile, "hanjin_test__guest_dual_1"),
-      draw = table.contains(drawn, "hanjin_test__guest_dual_1"),
-      find = room:findGeneral("hanjin_test__guest_dual_1"),
-      findMany = table.contains(many, "hanjin_test__guest_dual_1"),
+      pile = table.contains(room.general_pile, "qiao_test__guest_dual_1"),
+      draw = table.contains(drawn, "qiao_test__guest_dual_1"),
+      find = room:findGeneral("qiao_test__guest_dual_1"),
+      findMany = table.contains(many, "qiao_test__guest_dual_1"),
     }
   end)
   lu.assertFalse(returned.pile)
   lu.assertFalse(returned.draw)
   lu.assertNil(returned.find)
   lu.assertFalse(returned.findMany)
-  lu.assertTrue(Discard.contains(room, "hanjin_test__guest_dual_1"))
+  lu.assertTrue(Discard.contains(room, "qiao_test__guest_dual_1"))
 end
 
-function Testhanjin_guest_allegiance:testServerIgnoresNonGuestRedraw()
+function Testqiao_guest_allegiance:testServerIgnoresNonGuestRedraw()
   local room = create {}
   local player = room.players[1]
-  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__wu_1" } }
+  local offers = { [player] = { "qiao_test__han_1", "qiao_test__wu_1" } }
   local ok, reason
   FkTest.runInRoom(function()
-    ok, _, reason = Selection.applyRedraw(room, player, offers, { "hanjin_test__han_1" })
+    ok, _, reason = Selection.applyRedraw(room, player, offers, { "qiao_test__han_1" })
   end)
   lu.assertFalse(ok)
   lu.assertEquals(reason, "no_guest_candidate")
-  lu.assertEquals(offers[player], { "hanjin_test__han_1", "hanjin_test__wu_1" })
+  lu.assertEquals(offers[player], { "qiao_test__han_1", "qiao_test__wu_1" })
 end
 
-function Testhanjin_guest_allegiance:testFailedReplacementKeepsOriginalCandidate()
+function Testqiao_guest_allegiance:testFailedReplacementKeepsOriginalCandidate()
   local room = create {}
   local player = room.players[1]
   local offers, failures
   redrawDuringSelection(player, 1)
   FkTest.runInRoom(function()
-    room.general_pile = { "hanjin_test__qun_1" }
+    room.general_pile = { "qiao_test__qun_1" }
     offers = {
-      [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" },
+      [player] = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" },
     }
     Selection.ask(room, { player }, offers)
-    failures = room:getTag("hanjin_guest_redraw_failures_v1")
+    failures = room:getTag("qiao_guest_redraw_failures_v1")
   end)
-  lu.assertEquals(offers[player], { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
+  lu.assertEquals(offers[player], { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" })
   lu.assertEquals(#Discard.list(room), 0)
   lu.assertEquals(failures[1].reason, "no_legal_replacement")
 end
 
-function Testhanjin_guest_allegiance:testTwoPlayersRedrawInOneRound()
+function Testqiao_guest_allegiance:testTwoPlayersRedrawInOneRound()
   local room = create {}
   local first, second = room.players[1], room.players[2]
   local offers, changes
@@ -306,15 +306,15 @@ function Testhanjin_guest_allegiance:testTwoPlayersRedrawInOneRound()
   redrawDuringSelection(second, 1)
   FkTest.runInRoom(function()
     room.general_pile = {
-      "hanjin_test__wei_2", "hanjin_test__qun_1",
-      "hanjin_test__han_1", "hanjin_test__wu_2",
+      "qiao_test__wei_2", "qiao_test__qun_1",
+      "qiao_test__han_1", "qiao_test__wu_2",
     }
     offers = {
-      [first] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
-      [second] = { "hanjin_test__guest_dual_3", "hanjin_test__guest_dual_4", "hanjin_test__han_2" },
+      [first] = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2", "qiao_test__wu_1" },
+      [second] = { "qiao_test__guest_dual_3", "qiao_test__guest_dual_4", "qiao_test__han_2" },
     }
     Selection.ask(room, { first, second }, offers)
-    changes = room:getTag("hanjin_guest_redraws_v1")
+    changes = room:getTag("qiao_guest_redraws_v1")
   end)
   lu.assertEquals(#changes, 2)
   lu.assertEquals(#Discard.list(room), 2)
@@ -328,51 +328,51 @@ function Testhanjin_guest_allegiance:testTwoPlayersRedrawInOneRound()
   end
 end
 
-function Testhanjin_guest_allegiance:testSelectionAcceptsGuestPairAndKingdom()
+function Testqiao_guest_allegiance:testSelectionAcceptsGuestPairAndKingdom()
   local room = create {}
   local player = room.players[1]
   local offers = {
-    [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
+    [player] = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2", "qiao_test__wu_1" },
   }
   FkTest.setNextReplies(player, {
-    { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" },
+    { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" },
     { "han" },
   })
   local pairs, kingdoms, fallbacks
   FkTest.runInRoom(function()
     pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
   end)
-  lu.assertEquals(pairs[player], { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
+  lu.assertEquals(pairs[player], { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" })
   lu.assertEquals(kingdoms[player], "han")
   lu.assertEquals(#fallbacks, 0)
 end
 
-function Testhanjin_guest_allegiance:testInitialKingdomFallsBackWhenReplyIsIllegal()
+function Testqiao_guest_allegiance:testInitialKingdomFallsBackWhenReplyIsIllegal()
   local room = create {}
   local player = room.players[1]
   local offers = {
-    [player] = { "hanjin_test__guest_multi_1", "hanjin_test__guest_multi_2" },
+    [player] = { "qiao_test__guest_multi_1", "qiao_test__guest_multi_2" },
   }
   FkTest.setNextReplies(player, {
-    { "hanjin_test__guest_multi_1", "hanjin_test__guest_multi_2" },
+    { "qiao_test__guest_multi_1", "qiao_test__guest_multi_2" },
     { "wei" },
   })
   local pairs, kingdoms
   FkTest.runInRoom(function()
     pairs, kingdoms = Selection.choose(room, { player }, offers)
   end)
-  lu.assertEquals(pairs[player], { "hanjin_test__guest_multi_1", "hanjin_test__guest_multi_2" })
+  lu.assertEquals(pairs[player], { "qiao_test__guest_multi_1", "qiao_test__guest_multi_2" })
   lu.assertEquals(kingdoms[player], "han")
 end
 
-function Testhanjin_guest_allegiance:testIllegalSelectionFallsBackAndRejectsBadKingdom()
+function Testqiao_guest_allegiance:testIllegalSelectionFallsBackAndRejectsBadKingdom()
   local room = create {}
   local player = room.players[1]
   local offers = {
-    [player] = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" },
+    [player] = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2", "qiao_test__wu_1" },
   }
   FkTest.setNextReplies(player, {
-    { "hanjin_test__guest_dual_1", "hanjin_test__wu_1" }, -- no common kingdom
+    { "qiao_test__guest_dual_1", "qiao_test__wu_1" }, -- no common kingdom
     { "wei" }, -- also not legal for the fallback pair
   })
   local pairs, kingdoms, fallbacks
@@ -384,42 +384,42 @@ function Testhanjin_guest_allegiance:testIllegalSelectionFallsBackAndRejectsBadK
   lu.assertTrue(table.contains({ "han" }, kingdoms[player]))
 end
 
-function Testhanjin_guest_allegiance:testClientDialogContract()
+function Testqiao_guest_allegiance:testClientDialogContract()
   local room = create {}
-  local offers = { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2", "hanjin_test__wu_1" }
+  local offers = { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2", "qiao_test__wu_1" }
   local data, allowed, blocked
   FkTest.runInRoom(function()
     data = Selection.askData(room, offers)
-    local rule = Fk.choose_general_rule.hanjin_heg_pair
+    local rule = Fk.choose_general_rule.qiao_heg_pair
     local extra = data.component.model.prop.extraData
-    allowed = rule.card_filter("hanjin_test__guest_dual_2",
-      { "hanjin_test__guest_dual_1" }, offers, extra)
-    blocked = rule.card_filter("hanjin_test__wu_1",
-      { "hanjin_test__guest_dual_1" }, offers, extra)
+    allowed = rule.card_filter("qiao_test__guest_dual_2",
+      { "qiao_test__guest_dual_1" }, offers, extra)
+    blocked = rule.card_filter("qiao_test__wu_1",
+      { "qiao_test__guest_dual_1" }, offers, extra)
   end)
-  lu.assertEquals(data.component.url, "packages/hanjin/pkg/hanjin_mode/qml/GuestRedrawBox.qml")
+  lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/GuestRedrawBox.qml")
   lu.assertEquals(data.component.model.name, "ChooseGeneralModel")
   local prop = data.component.model.prop
-  lu.assertEquals(prop.ruleType, "hanjin_heg_pair")
-  lu.assertTrue(prop.extraData.pairing["hanjin_test__guest_dual_1"] ~= nil)
-  lu.assertTrue(table.contains(prop.extraData.pairing["hanjin_test__guest_dual_1"], "hanjin_test__guest_dual_2"))
-  lu.assertEquals(prop.extraData.guests, { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
-  lu.assertEquals(prop.extraData.guestFactions["hanjin_test__guest_dual_1"], { "han" })
+  lu.assertEquals(prop.ruleType, "qiao_heg_pair")
+  lu.assertTrue(prop.extraData.pairing["qiao_test__guest_dual_1"] ~= nil)
+  lu.assertTrue(table.contains(prop.extraData.pairing["qiao_test__guest_dual_1"], "qiao_test__guest_dual_2"))
+  lu.assertEquals(prop.extraData.guests, { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" })
+  lu.assertEquals(prop.extraData.guestFactions["qiao_test__guest_dual_1"], { "han" })
   lu.assertTrue(allowed)
   lu.assertFalse(blocked)
 end
 
-function Testhanjin_guest_allegiance:testFreeAssignDialogAndServerAcceptOutsideBannedPair()
-  local room = create { settings = { enableFreeAssign = true, hanjin_wild_count = 0 } }
+function Testqiao_guest_allegiance:testFreeAssignDialogAndServerAcceptOutsideBannedPair()
+  local room = create { settings = { enableFreeAssign = true, qiao_wild_count = 0 } }
   local player = room.players[1]
-  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  local offers = { [player] = { "qiao_test__han_1", "qiao_test__han_2" } }
   local data, allowed, feasible, pairs, kingdoms, fallbacks
   FkTest.runInRoom(function()
     data = Selection.askData(room, offers[player])
     local extra = data.component.model.prop.extraData
-    local rule = Fk.choose_general_rule.hanjin_heg_pair
-    allowed = rule.card_filter("hanjin_test__wei_1", { "hanjin_test__shu_1" }, offers[player], extra)
-    feasible = rule.feasible({ "hanjin_test__wei_1", "hanjin_test__shu_1" }, offers[player], extra)
+    local rule = Fk.choose_general_rule.qiao_heg_pair
+    allowed = rule.card_filter("qiao_test__wei_1", { "qiao_test__shu_1" }, offers[player], extra)
+    feasible = rule.feasible({ "qiao_test__wei_1", "qiao_test__shu_1" }, offers[player], extra)
   end)
   -- The server must select the HanJin box even when this deal has no guest.
   lu.assertEquals(data.component.url, Selection.redraw_url)
@@ -427,22 +427,22 @@ function Testhanjin_guest_allegiance:testFreeAssignDialogAndServerAcceptOutsideB
   lu.assertTrue(allowed)
   lu.assertTrue(feasible)
   FkTest.setNextReplies(player, {
-    { "hanjin_test__wei_1", "hanjin_test__shu_1" },
+    { "qiao_test__wei_1", "qiao_test__shu_1" },
     { "wei" },
   })
   FkTest.runInRoom(function()
     pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
   end)
-  lu.assertEquals(pairs[player], { "hanjin_test__wei_1", "hanjin_test__shu_1" })
+  lu.assertEquals(pairs[player], { "qiao_test__wei_1", "qiao_test__shu_1" })
   lu.assertEquals(kingdoms[player], "wei") -- printed faction, outside this game's bans
   lu.assertEquals(#fallbacks, 0)
 end
 
-function Testhanjin_guest_allegiance:testFreeAssignWildDeputyStartsAndKeepsMainFaction()
+function Testqiao_guest_allegiance:testFreeAssignWildDeputyStartsAndKeepsMainFaction()
   local room = create { settings = { enableFreeAssign = true } }
   local player = room.players[1]
-  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
-  FkTest.setNextReplies(player, { { "hanjin_test__han_1", "hanjin_test__wild_1" } })
+  local offers = { [player] = { "qiao_test__han_1", "qiao_test__han_2" } }
+  FkTest.setNextReplies(player, { { "qiao_test__han_1", "qiao_test__wild_1" } })
   local pairs, kingdoms, fallbacks
   FkTest.runInRoom(function()
     pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
@@ -460,27 +460,27 @@ function Testhanjin_guest_allegiance:testFreeAssignWildDeputyStartsAndKeepsMainF
     player:revealGeneral(true)
   end)
   lu.assertEquals(#fallbacks, 0)
-  lu.assertEquals(pairs[player], { "hanjin_test__han_1", "hanjin_test__wild_1" })
+  lu.assertEquals(pairs[player], { "qiao_test__han_1", "qiao_test__wild_1" })
   lu.assertEquals(kingdoms[player], "han")
-  lu.assertEquals(player.general, "hanjin_test__han_1")
-  lu.assertEquals(player.deputyGeneral, "hanjin_test__wild_1")
-  lu.assertTrue(Guest.factionsOf(room, "hanjin_test__wild_1").wild)
-  lu.assertEquals(Guest.factionsOf(room, "hanjin_test__han_1").kingdoms, { "han" })
+  lu.assertEquals(player.general, "qiao_test__han_1")
+  lu.assertEquals(player.deputyGeneral, "qiao_test__wild_1")
+  lu.assertTrue(Guest.factionsOf(room, "qiao_test__wild_1").wild)
+  lu.assertEquals(Guest.factionsOf(room, "qiao_test__han_1").kingdoms, { "han" })
 end
 
-function Testhanjin_guest_allegiance:testFreeAssignPrefersNormalGuestResolution()
-  local room = create { settings = { enableFreeAssign = true, hanjin_wild_count = 0 } }
+function Testqiao_guest_allegiance:testFreeAssignPrefersNormalGuestResolution()
+  local room = create { settings = { enableFreeAssign = true, qiao_wild_count = 0 } }
   local player = room.players[1]
-  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
+  local offers = { [player] = { "qiao_test__han_1", "qiao_test__han_2" } }
   FkTest.setNextReplies(player, {
-    { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" },
+    { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" },
   })
   local pairs, kingdoms, fallbacks
   FkTest.runInRoom(function()
     pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
   end)
   lu.assertEquals(#fallbacks, 0)
-  lu.assertEquals(pairs[player], { "hanjin_test__guest_dual_1", "hanjin_test__guest_dual_2" })
+  lu.assertEquals(pairs[player], { "qiao_test__guest_dual_1", "qiao_test__guest_dual_2" })
   -- Both guests share their registered Han faction, so no banned printed
   -- faction is needed and the normal guest resolution must stay authoritative.
   lu.assertEquals(kingdoms[player], "han")
@@ -491,32 +491,32 @@ function Testhanjin_guest_allegiance:testFreeAssignPrefersNormalGuestResolution(
   lu.assertEquals(second.kingdoms, { "han" })
 end
 
-function Testhanjin_guest_allegiance:testFreeAssignPruneUnusedRemovesSelectedExactNames()
-  local unused = { "hanjin_test__han_1", "hanjin_test__han_2", "hanjin_test__wei_1", "hanjin_test__shu_1" }
+function Testqiao_guest_allegiance:testFreeAssignPruneUnusedRemovesSelectedExactNames()
+  local unused = { "qiao_test__han_1", "qiao_test__han_2", "qiao_test__wei_1", "qiao_test__shu_1" }
   local pruned = Selection.pruneUnused(unused, {
-    ["hanjin_test__wei_1"] = true,
-    ["hanjin_test__shu_1"] = true,
+    ["qiao_test__wei_1"] = true,
+    ["qiao_test__shu_1"] = true,
   })
   -- The two cards chosen from another player's offers must not return to the pile.
-  lu.assertEquals(pruned, { "hanjin_test__han_1", "hanjin_test__han_2" })
+  lu.assertEquals(pruned, { "qiao_test__han_1", "qiao_test__han_2" })
   lu.assertEquals(#unused, 4) -- pure helper, caller decides when to replace the list
 end
 
-function Testhanjin_guest_allegiance:testFreeAssignOffFallsBackToOfferedPair()
+function Testqiao_guest_allegiance:testFreeAssignOffFallsBackToOfferedPair()
   local room = create { settings = { enableFreeAssign = false } }
   local player = room.players[1]
-  local offers = { [player] = { "hanjin_test__han_1", "hanjin_test__han_2" } }
-  FkTest.setNextReplies(player, { { "hanjin_test__wei_1", "hanjin_test__shu_1" } })
+  local offers = { [player] = { "qiao_test__han_1", "qiao_test__han_2" } }
+  FkTest.setNextReplies(player, { { "qiao_test__wei_1", "qiao_test__shu_1" } })
   local pairs, _, fallbacks
   FkTest.runInRoom(function()
     pairs, _, fallbacks = Selection.choose(room, { player }, offers)
   end)
   lu.assertEquals(#fallbacks, 1)
-  lu.assertNotEquals(pairs[player][1], "hanjin_test__wei_1")
-  lu.assertNotEquals(pairs[player][2], "hanjin_test__shu_1")
+  lu.assertNotEquals(pairs[player][1], "qiao_test__wei_1")
+  lu.assertNotEquals(pairs[player][2], "qiao_test__shu_1")
 end
 
-function Testhanjin_guest_allegiance:testDecodeAcceptsLegacyAndArrayShapes()
+function Testqiao_guest_allegiance:testDecodeAcceptsLegacyAndArrayShapes()
   lu.assertEquals(Selection.decode(123), {})
   lu.assertEquals(Selection.decode({}), {})
   lu.assertEquals(Selection.decode({ "only_one" }), {})
@@ -529,4 +529,4 @@ function Testhanjin_guest_allegiance:testDecodeAcceptsLegacyAndArrayShapes()
 
 end
 
-return { name = "hanjin_guest_allegiance" }
+return { name = "qiao_guest_allegiance" }

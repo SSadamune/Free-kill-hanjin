@@ -1,13 +1,13 @@
 -- HAN012 蔡邕：铸典、博通。默认国战套件用例（加入 tests/all.lua 后生效）。
--- 规则依据：rules/standard-generals.md 汉区、rulebook/events/use-card.md、
+-- 规则依据：docs/rules/standard-generals.md 汉区、rulebook/events/use-card.md、
 -- rulebook/terms/card-op-terms/recast.md、give.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local ZD = "hanjin__skill_han012_1"
-local BT = "hanjin__skill_han012_2"
+local ZD = "qiao__skill_han012_1"
+local BT = "qiao__skill_han012_2"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han012 = {}
+Testqiao_han012 = {}
 
 local function inRoom(fn)
   local result
@@ -94,8 +94,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -104,25 +104,25 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(p1(), "hanjin__han012", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han012")
+    room:changeHero(p1(), "qiao_heg__han012", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han012")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han012.setup = function()
+Testqiao_han012.setup = function()
   prepare()
 end
-Testhanjin_han012.tearDown = support.clearRoom
+Testqiao_han012.tearDown = support.clearRoom
 
-function Testhanjin_han012:testZhudianBlackDrawRecastsEquipmentDespiteDiscardProhibition()
+function Testqiao_han012:testZhudianBlackDrawRecastsEquipmentDespiteDiscardProhibition()
   local room = FkTest.room
-  local hand = setHand(room, p1(), { { "hanjin__jink", Card.Spade, 9 } })
+  local hand = setHand(room, p1(), { { "qiao__jink", Card.Spade, 9 } })
   local equip = addEquip(room, p1(), "jueying", Card.Spade, 5)
   -- 禁止弃置不影响重铸：这张装备仍应可被选择并置入弃牌堆。
   installTestSkill(room, "#han012_prohibit_equip_discard", {
@@ -133,8 +133,8 @@ function Testhanjin_han012:testZhudianBlackDrawRecastsEquipmentDespiteDiscardPro
     } },
   })
   local drawn = seedDrawPile(room, {
-    { "hanjin__slash", Card.Heart, 3 },  -- second draw (red)
-    { "hanjin__slash", Card.Spade, 2 },  -- first draw (black)
+    { "qiao__slash", Card.Heart, 3 },  -- second draw (red)
+    { "qiao__slash", Card.Spade, 2 },  -- first draw (black)
   })
 
   local shown = {}
@@ -153,7 +153,7 @@ function Testhanjin_han012:testZhudianBlackDrawRecastsEquipmentDespiteDiscardPro
     "1",
     "",
   })
-  useCard(room, p2(), { p1() }, Fk:cloneCard("hanjin__slash", Card.Spade, 4))
+  useCard(room, p2(), { p1() }, Fk:cloneCard("qiao__slash", Card.Spade, 4))
 
   lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
   lu.assertEquals(#p1():getCardIds("e"), 0)
@@ -164,13 +164,13 @@ function Testhanjin_han012:testZhudianBlackDrawRecastsEquipmentDespiteDiscardPro
   lu.assertTrue(table.contains(p1():getCardIds("h"), hand[1]))
 end
 
-function Testhanjin_han012:testZhudianRedDrawDoesNotRevealOrDrawAgain()
+function Testqiao_han012:testZhudianRedDrawDoesNotRevealOrDrawAgain()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 9 },
-    { "hanjin__jink", Card.Heart, 7 },
+    { "qiao__slash", Card.Spade, 9 },
+    { "qiao__jink", Card.Heart, 7 },
   })
-  seedDrawPile(room, { { "hanjin__slash", Card.Heart, 3 } })
+  seedDrawPile(room, { { "qiao__slash", Card.Heart, 3 } })
 
   local shown = {}
   installTestSkill(room, "#han012_show_probe_red", {
@@ -187,7 +187,7 @@ function Testhanjin_han012:testZhudianRedDrawDoesNotRevealOrDrawAgain()
     FkTest.ReplyChooseCards({ ids[1] }),
     "",
   })
-  useCard(room, p2(), { p1() }, Fk:cloneCard("hanjin__slash", Card.Club, 5))
+  useCard(room, p2(), { p1() }, Fk:cloneCard("qiao__slash", Card.Club, 5))
 
   lu.assertEquals(room:getCardArea(ids[1]), Card.DiscardPile)
   lu.assertEquals(#p1():getCardIds("h"), 2)
@@ -195,17 +195,17 @@ function Testhanjin_han012:testZhudianRedDrawDoesNotRevealOrDrawAgain()
   lu.assertEquals(p1():usedSkillTimes(ZD, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han012:testBotongFourSuitsAndGiveAfterUse()
+function Testqiao_han012:testBotongFourSuitsAndGiveAfterUse()
   local room = FkTest.room
   setHand(room, p2(), {})
   local cards = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__jink", Card.Heart, 3 },
-    { "hanjin__slash", Card.Club, 4 },
-    { "hanjin__slash", Card.Diamond, 5 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__jink", Card.Heart, 3 },
+    { "qiao__slash", Card.Club, 4 },
+    { "qiao__slash", Card.Diamond, 5 },
   })
   local use = FkTest.ReplyUseSkill(BT, { p2() }, cards)
-  use.interaction_data = "hanjin__slash"
+  use.interaction_data = "qiao__slash"
 
   FkTest.setNextReplies(p2(), { "" })
   runPlayPhase(room, p1(), {
@@ -221,16 +221,16 @@ function Testhanjin_han012:testBotongFourSuitsAndGiveAfterUse()
   lu.assertEquals(#p1():getCardIds("h"), 0)
 end
 
-function Testhanjin_han012:testBotongThreeCategoriesDiscardsWhenNotGiven()
+function Testqiao_han012:testBotongThreeCategoriesDiscardsWhenNotGiven()
   local room = FkTest.room
   setHand(room, p2(), {})
   local cards = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__duel", Card.Heart, 3 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__duel", Card.Heart, 3 },
     { "jueying", Card.Club, 4 },
   })
   local use = FkTest.ReplyUseSkill(BT, { p2() }, cards)
-  use.interaction_data = "hanjin__slash"
+  use.interaction_data = "qiao__slash"
 
   FkTest.setNextReplies(p1(), {
     use,
@@ -248,4 +248,4 @@ function Testhanjin_han012:testBotongThreeCategoriesDiscardsWhenNotGiven()
   lu.assertEquals(#p2():getCardIds("h"), 0)
 end
 
-return { name = "hanjin_han012" }
+return { name = "qiao_han012" }

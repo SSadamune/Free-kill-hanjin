@@ -3,7 +3,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill = __dofile("../../../tests/support/skill_test.lua")
 
-Testhanjin_test_support = {}
+Testqiao_test_support = {}
 
 local function inRoom(fn)
   local result
@@ -11,25 +11,25 @@ local function inRoom(fn)
   return result
 end
 
-Testhanjin_test_support.setup = function()
-  support.initHanjinRoom()
+Testqiao_test_support.setup = function()
+  support.initQiaoRoom()
 end
-Testhanjin_test_support.tearDown = support.clearRoom
+Testqiao_test_support.tearDown = support.clearRoom
 
-function Testhanjin_test_support:testInstallDualGeneralsSetsMarksAndHp()
+function Testqiao_test_support:testInstallDualGeneralsSetsMarksAndHp()
   local room = FkTest.room
   inRoom(function()
     local p = room.players[1]
     skill.installDualGenerals(room, p, {
-      main = "hanjin_test__wei_1",
-      deputy = "hanjin_test__wei_2",
+      main = "qiao_test__wei_1",
+      deputy = "qiao_test__wei_2",
       kingdom = "wei",
     })
-    lu.assertEquals(p.general, "hanjin_test__wei_1")
-    lu.assertEquals(p.deputyGeneral, "hanjin_test__wei_2")
+    lu.assertEquals(p.general, "qiao_test__wei_1")
+    lu.assertEquals(p.deputyGeneral, "qiao_test__wei_2")
     lu.assertEquals(p.kingdom, "wei")
-    lu.assertEquals(p:getMark("__heg_general"), "hanjin_test__wei_1")
-    lu.assertEquals(p:getMark("__heg_deputy"), "hanjin_test__wei_2")
+    lu.assertEquals(p:getMark("__heg_general"), "qiao_test__wei_1")
+    lu.assertEquals(p:getMark("__heg_deputy"), "qiao_test__wei_2")
     lu.assertEquals(p:getMark("__heg_kingdom"), "wei")
     lu.assertEquals(p:getMark("__heg_init_kingdom"), "wei")
     lu.assertEquals(p:getMark("__heg_wild"), 0)
@@ -38,16 +38,16 @@ function Testhanjin_test_support:testInstallDualGeneralsSetsMarksAndHp()
   end)
 end
 
-function Testhanjin_test_support:testInstallDualGeneralsClearsOldSkillSources()
+function Testqiao_test_support:testInstallDualGeneralsClearsOldSkillSources()
   local room = FkTest.room
   inRoom(function()
     local p = room.players[1]
     skill.installDualGenerals(room, p, {
-      main = "hanjin__han004",
-      deputy = "hanjin_test__han_2",
+      main = "qiao_heg__han004",
+      deputy = "qiao_test__han_2",
       kingdom = "han",
     })
-    local oldSkills = Fk.generals["hanjin__han004"]:getSkillNameList(true)
+    local oldSkills = Fk.generals["qiao_heg__han004"]:getSkillNameList(true)
     local installed = false
     for _, name in ipairs(oldSkills) do
       if p:hasSkill(name) then installed = true end
@@ -55,8 +55,8 @@ function Testhanjin_test_support:testInstallDualGeneralsClearsOldSkillSources()
     lu.assertTrue(installed, "fixture did not install the old main general's skills")
 
     skill.installDualGenerals(room, p, {
-      main = "hanjin_test__han_1",
-      deputy = "hanjin_test__han_2",
+      main = "qiao_test__han_1",
+      deputy = "qiao_test__han_2",
       kingdom = "han",
     })
     for _, name in ipairs(oldSkills) do
@@ -65,47 +65,47 @@ function Testhanjin_test_support:testInstallDualGeneralsClearsOldSkillSources()
   end)
 end
 
-function Testhanjin_test_support:testInstallBlankGeneralsClearsHiddenGeneralSource()
+function Testqiao_test_support:testInstallBlankGeneralsClearsHiddenGeneralSource()
   local room = FkTest.room
   inRoom(function()
     local p = room.players[1]
     skill.installDualGenerals(room, p, {
-      main = "hanjin__han001",
-      deputy = "hanjin_test__han_2",
+      main = "qiao_heg__han001",
+      deputy = "qiao_test__han_2",
       kingdom = "han",
     })
     -- Real engine hide path: keep the old main general as the hidden source,
     -- turn the visible general into anjiang, and leave the fake skill plus the
     -- wild marker that the original fixture bug failed to clear.
     p:hideGeneral(false)
-    p:prelightSkill(Fk.skills["hanjin__skill_han001_1"], true)
+    p:prelightSkill(Fk.skills["qiao__skill_han001_1"], true)
     room:setPlayerMark(p, "__heg_wild", 1)
 
     lu.assertEquals(p.general, "anjiang")
-    lu.assertEquals(p:getMark("__heg_general"), "hanjin__han001")
+    lu.assertEquals(p:getMark("__heg_general"), "qiao_heg__han001")
     lu.assertEquals(p:getMark("__heg_wild"), 1)
-    lu.assertTrue(p:isFakeSkill("hanjin__skill_han001_1"),
+    lu.assertTrue(p:isFakeSkill("qiao__skill_han001_1"),
       "hidden general left no fake skill source to clean")
 
     skill.installBlankGenerals(room, "han")
 
-    lu.assertEquals(p.general, "hanjin_test__han_1")
-    lu.assertEquals(p.deputyGeneral, "hanjin_test__han_2")
-    lu.assertFalse(p:isFakeSkill("hanjin__skill_han001_1"))
-    lu.assertFalse(p:hasSkill("hanjin__skill_han001_1"))
-    lu.assertEquals(p:getMark("__heg_general"), "hanjin_test__han_1")
+    lu.assertEquals(p.general, "qiao_test__han_1")
+    lu.assertEquals(p.deputyGeneral, "qiao_test__han_2")
+    lu.assertFalse(p:isFakeSkill("qiao__skill_han001_1"))
+    lu.assertFalse(p:hasSkill("qiao__skill_han001_1"))
+    lu.assertEquals(p:getMark("__heg_general"), "qiao_test__han_1")
     lu.assertEquals(p:getMark("__heg_wild"), 0)
     lu.assertEquals(p.maxHp, 4)
     lu.assertEquals(p.hp, 4)
   end)
 end
 
-function Testhanjin_test_support:testInstallDualGeneralsRequiresRoomContext()
+function Testqiao_test_support:testInstallDualGeneralsRequiresRoomContext()
   local room = FkTest.room
   local ok, err = pcall(function()
     skill.installDualGenerals(room, room.players[1], {
-      main = "hanjin_test__han_1",
-      deputy = "hanjin_test__han_2",
+      main = "qiao_test__han_1",
+      deputy = "qiao_test__han_2",
       kingdom = "han",
     })
   end)
@@ -113,7 +113,7 @@ function Testhanjin_test_support:testInstallDualGeneralsRequiresRoomContext()
   lu.assertStrContains(tostring(err), "FkTest.runInRoom")
 end
 
-function Testhanjin_test_support:testWithSkillRequestsDelegatesAndRestores()
+function Testqiao_test_support:testWithSkillRequestsDelegatesAndRestores()
   local room = FkTest.room
   local p = room.players[1]
   local originalChoice, originalDiscard = room.askToChoice, room.askToDiscard
@@ -148,7 +148,7 @@ function Testhanjin_test_support:testWithSkillRequestsDelegatesAndRestores()
   lu.assertIs(room.askToDiscard, originalDiscard)
 end
 
-function Testhanjin_test_support:testWithSkillRequestsRestoresWhenBodyFails()
+function Testqiao_test_support:testWithSkillRequestsRestoresWhenBodyFails()
   local room = FkTest.room
   local originalChoice, originalDiscard = room.askToChoice, room.askToDiscard
   local ok, err = pcall(function()
@@ -165,4 +165,4 @@ function Testhanjin_test_support:testWithSkillRequestsRestoresWhenBodyFails()
   lu.assertIs(room.askToDiscard, originalDiscard)
 end
 
-return { name = "hanjin_test_support" }
+return { name = "qiao_test_support" }

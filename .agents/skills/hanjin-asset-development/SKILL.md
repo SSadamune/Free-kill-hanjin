@@ -13,7 +13,7 @@ description: 配置、替换或导入本仓库的图片与音效素材，核对�
 
 | 指令 | 默认执行方式 |
 | --- | --- |
-| 按照 `hanjin-asset-development` 替换刘协默认插画，素材在 `assets-source/` | 查实际程序 ID 与引擎入口，导入并核对路径／字节，必要时构建验证 |
+| 按照 `hanjin-asset-development` 替换刘协默认插画，素材在 `assets/` | 查实际程序 ID 与引擎入口，导入并核对路径／字节，必要时构建验证 |
 | 按照 `hanjin-asset-development` 接入某技能语音，素材已提供 | 查技能骨架名、武将 ID 和真实音频入口后导入；不猜文件名或目录 |
 | 按照 `hanjin-asset-development` 核对客将插画路径 | 只核对素材路径与注册状态，不把静态检查写成客户端显示验收 |
 
@@ -25,7 +25,7 @@ description: 配置、替换或导入本仓库的图片与音效素材，核对�
 - 涉及客将状态换图时读[客将默认插画设计](../../../docs/development/guest-illustrations.md)。
 - 涉及发布、同步或测试时读[测试规范](../../../docs/development/testing.md)、[README 构建节](../../../README.md#构建用户安装包)及 `scripts/build_release.py`、`scripts/dev.ps1`。
 - 具体功能接线查[实现导航](../../../docs/development/implementation/README.md)，实际结果查[开发状态](../../../docs/development/status.md)。
-- 规则、技能语义与卡面描述不属于本 skill；需要时使用 [hanjin-content-development](../hanjin-content-development/SKILL.md) 并引用 `rules/`、`rulebook/`。
+- 规则、技能语义与卡面描述不属于本 skill；需要时使用 [hanjin-content-development](../hanjin-content-development/SKILL.md) 并引用 `docs/rules/`、`rulebook/`。
 
 外部资料只参考，不修改，也不因来源标记改原始 JSON／CSV。
 
@@ -35,7 +35,7 @@ description: 配置、替换或导入本仓库的图片与音效素材，核对�
 | --- | --- | --- |
 | 通用约定 | `AGENTS.md` | 授权、图片目录、发布边界 |
 | 工作流 | 本 skill | 素材任务的动作顺序与资料导航 |
-| 稳定规范 | `docs/development/assets.md`；`rules/`、`rulebook/` | 路径／命名／音效接口；游戏语义 |
+| 稳定规范 | `docs/development/assets.md`；`docs/rules/`、`rulebook/` | 路径／命名／音效接口；游戏语义 |
 | 功能设计 | `guest-illustrations.md` 等 | 待实装行为与验收范围 |
 | 具体接线 | `docs/development/implementation/` | 入口、状态判断、加载位置 |
 | 实际结果 | `docs/development/status.md` | 已验证、未验证与待办 |
@@ -45,13 +45,13 @@ description: 配置、替换或导入本仓库的图片与音效素材，核对�
 
 ## 1. 确认素材与授权
 
-- 优先使用用户提供的原稿或 `assets-source/` 中已存在的文件；缺少原材料时说明需要的程序 ID、用途、尺寸／格式和来源，向用户索取。
+- 优先使用用户提供的原稿或 `assets/` 中已存在的文件；缺少原材料时说明需要的程序 ID、用途、尺寸／格式和来源，向用户索取。
 - 从零生图或绘制素材沿用 `AGENTS.md`，须用户明确批准；用户明确请求制作音效本身即任务授权，已有素材按任务授权处理。
 - 新音效依用户目标和现有引擎接口处理；只有缺少会影响成品的关键需求（如目标技能、素材、格式）时再澄清，不强制询问所有码率／音量参数。
 
 ## 2. 查实际 ID 与引擎入口
 
-- 正式程序 ID 以项目数据为准，例如 `pkg/hanjin_generals/data/standard.lua` 与卡牌数据；`docs/heroes.json`、设计编号和文件名推测都不是正式登记依据。
+- 正式程序 ID 以项目数据为准，例如 `pkg/qiao_generals/data/standard.lua` 与卡牌数据；外部参考的 `heroes.json`（本仓库未收录）、设计编号和文件名推测都不是正式登记依据。
 - 按锁定引擎 `Fk/Base/SkinBank.qml` 核对入口：武将图、附加图、卡牌图、装备图标、延时锦囊图各自按固定目录和程序 ID 查找；不递归搜索分包目录。
 - 临时程序 ID 不能当正式登记依据，也不能仅为图片或音效命名去改武将 ID、建全量路径映射或新增分包层级。
 - 找不到对应入口时，先查锁定源码和项目现有接线；仍无法确认就明确记录边界，不编造目录、后缀或文件名。
@@ -81,7 +81,7 @@ description: 配置、替换或导入本仓库的图片与音效素材，核对�
 
 ## 边界
 
-- 不修改 `rules/`、`rulebook/` 的游戏语义，不修引擎，不为素材改游戏逻辑。
+- 不修改 `docs/rules/`、`rulebook/` 的游戏语义，不修引擎，不为素材改游戏逻辑。
 - 不建立全量图片／音效路径映射，不擅自改程序 ID，不提交或推送未经授权的改动。
 - 不把某一批的数量、尺寸、色彩或 ICC 状态固化为全项目要求。
 - 静态路径、构建和脚本检查不代替客户端显示、声音播放或人工验收。

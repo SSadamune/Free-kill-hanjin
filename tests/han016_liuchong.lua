@@ -1,16 +1,16 @@
 -- HAN016A 刘宠：劲弩、威屯。定向验收文件。
--- 规则依据：rules/generals/han016a-liuchong.md。
+-- 规则依据：docs/rules/generals/han016a-liuchong.md。
 -- 本文件尚未执行；由基础组统一运行：
 --   python scripts/test.py --file tests/han016_liuchong.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local JN = "hanjin__skill_han016_1"
-local WT = "hanjin__skill_han016_2"
+local JN = "qiao__skill_han016_1"
+local WT = "qiao__skill_han016_2"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 local probeSerial = 0
 
-Testhanjin_han016 = {}
+Testqiao_han016 = {}
 
 local function inRoom(fn)
   local result
@@ -55,8 +55,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -74,12 +74,12 @@ local function setP1(room)
     local p = room.players[1]
     p:revealGeneral(false, true)
     p:revealGeneral(true, true)
-    room:changeHero(p, "hanjin__han016", true, false, false, false, false)
-    room:changeHero(p, "hanjin_test__han_2", true, true, false, false, false)
+    room:changeHero(p, "qiao_heg__han016", true, false, false, false, false)
+    room:changeHero(p, "qiao_test__han_2", true, true, false, false, false)
     p.kingdom = "han"
     room:setPlayerProperty(p, "kingdom", "han")
-    room:setPlayerMark(p, "__heg_general", "hanjin__han016")
-    room:setPlayerMark(p, "__heg_deputy", "hanjin_test__han_2")
+    room:setPlayerMark(p, "__heg_general", "qiao_heg__han016")
+    room:setPlayerMark(p, "__heg_deputy", "qiao_test__han_2")
     room:setPlayerMark(p, "__heg_kingdom", "han")
     room:setPlayerMark(p, "__heg_wild", 0)
     for _, q in ipairs(room.players) do q.hp = q.maxHp end
@@ -87,19 +87,19 @@ local function setP1(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   setP1(room)
   return room
 end
 
-Testhanjin_han016.setup = function() prepare() end
-Testhanjin_han016.tearDown = support.clearRoom
+Testqiao_han016.setup = function() prepare() end
+Testqiao_han016.tearDown = support.clearRoom
 
 local function installUseProbe(room, uses)
   probeSerial = probeSerial + 1
-  local key = "__hanjin_han016_use_probe_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_han016_use_probe_" .. probeSerial }
+  local key = "__qiao_han016_use_probe_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_han016_use_probe_" .. probeSerial }
   skel:addEffect(fk.CardUseFinished, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -125,8 +125,8 @@ end
 local function installPhaseSequence(room, names)
   if #names == 0 then return end
   probeSerial = probeSerial + 1
-  local flag = "__hanjin_han016_sequence_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_han016_sequence_" .. probeSerial }
+  local flag = "__qiao_han016_sequence_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_han016_sequence_" .. probeSerial }
   skel:addEffect(fk.BeforePlayCard, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -135,7 +135,7 @@ local function installPhaseSequence(room, names)
     on_refresh = function(self, event, target, player, data)
       data[flag] = true
       for _, name in ipairs(names) do
-        local tos = (name == "hanjin__peach") and { p1() } or { p2() }
+        local tos = (name == "qiao__peach") and { p1() } or { p2() }
         room:useCard { from = p1(), tos = tos, card = Fk:cloneCard(name) }
       end
     end,
@@ -155,9 +155,9 @@ end
 
 -- 劲弩 ---------------------------------------------------------------------
 
-function Testhanjin_han016:testJinnuZeroCardsDoesNotTrigger()
+function Testqiao_han016:testJinnuZeroCardsDoesNotTrigger()
   local room = FkTest.room
-  setHand(room, p1(), { { "hanjin__jink", Card.Heart, 2 } })
+  setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
   setHand(room, p2(), {})
   setHand(room, p5(), {})
   local uses = {}
@@ -168,9 +168,9 @@ function Testhanjin_han016:testJinnuZeroCardsDoesNotTrigger()
   lu.assertEquals(#uses, 0)
 end
 
-function Testhanjin_han016:testJinnuAllSlashTriggersOneDistanceFreeSlash()
+function Testqiao_han016:testJinnuAllSlashTriggersOneDistanceFreeSlash()
   local room = FkTest.room
-  setHand(room, p1(), { { "hanjin__jink", Card.Heart, 2 } })
+  setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
   setHand(room, p2(), {})
   setHand(room, p5(), {})
   inRoom(function()
@@ -179,7 +179,7 @@ function Testhanjin_han016:testJinnuAllSlashTriggersOneDistanceFreeSlash()
   end)
   local uses = {}
   installUseProbe(room, uses)
-  installPhaseSequence(room, { "hanjin__slash", "hanjin__slash" })
+  installPhaseSequence(room, { "qiao__slash", "qiao__slash" })
 
   runPlayTurn(room, {
     "",
@@ -195,18 +195,18 @@ function Testhanjin_han016:testJinnuAllSlashTriggersOneDistanceFreeSlash()
   lu.assertTrue(p1():distanceTo(p5()) > 1)
 end
 
-function Testhanjin_han016:testJinnuLastTwoNonSlashTriggers()
+function Testqiao_han016:testJinnuLastTwoNonSlashTriggers()
   local room = FkTest.room
-  setHand(room, p1(), { { "hanjin__jink", Card.Heart, 2 } })
+  setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
   setHand(room, p2(), {})
   setHand(room, p5(), {})
   inRoom(function() p1().hp = 4 end)
   local uses = {}
   installUseProbe(room, uses)
   installPhaseSequence(room, {
-    "hanjin__slash",
-    "hanjin__peach",
-    "hanjin__peach",
+    "qiao__slash",
+    "qiao__peach",
+    "qiao__peach",
   })
 
   runPlayTurn(room, {
@@ -223,15 +223,15 @@ end
 
 -- 威屯 ---------------------------------------------------------------------
 
-function Testhanjin_han016:testWeitunTiedMostHandsSkipsDiscardAndUsesSameGroup()
+function Testqiao_han016:testWeitunTiedMostHandsSkipsDiscardAndUsesSameGroup()
   local room = FkTest.room
   setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" },
-    { "hanjin__peach" }, { "hanjin__duel" },
+    { "qiao__slash" }, { "qiao__jink" },
+    { "qiao__peach" }, { "qiao__duel" },
   })
   setHand(room, p2(), {
-    { "hanjin__slash" }, { "hanjin__jink" },
-    { "hanjin__peach" }, { "hanjin__duel" },
+    { "qiao__slash" }, { "qiao__jink" },
+    { "qiao__peach" }, { "qiao__duel" },
   })
   setHand(room, p3(), {})
   local uses = {}
@@ -250,8 +250,8 @@ function Testhanjin_han016:testWeitunTiedMostHandsSkipsDiscardAndUsesSameGroup()
   lu.assertEquals(#p1():getCardIds("h"), 5)
   lu.assertEquals(p1():usedSkillTimes(WT, Player.HistoryGame), 1)
   lu.assertEquals(#uses, 2)
-  lu.assertEquals(uses[1].name, "hanjin__god_salvation")
-  lu.assertEquals(uses[2].name, "hanjin__amazing_grace")
+  lu.assertEquals(uses[1].name, "qiao__god_salvation")
+  lu.assertEquals(uses[2].name, "qiao__amazing_grace")
   for _, use in ipairs(uses) do
     lu.assertEquals(#use.tos, 2)
     lu.assertIs(use.tos[1], p1())
@@ -259,4 +259,4 @@ function Testhanjin_han016:testWeitunTiedMostHandsSkipsDiscardAndUsesSameGroup()
   end
 end
 
-return { name = "hanjin_han016" }
+return { name = "qiao_han016" }

@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local LIUYU = "hanjin__han022"
-local SUIFU = "hanjin__skill_han022_1"
-local ANJING = "hanjin__skill_han022_2"
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local LIUYU = "qiao_heg__han022"
+local SUIFU = "qiao__skill_han022_1"
+local ANJING = "qiao__skill_han022_2"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -32,20 +32,20 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode", realSelection = true,
-    settings = { hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, hanjin_kingdom_limit = 6 },
+    mode = "qiao_heg_mode", realSelection = true,
+    settings = { qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, qiao_kingdom_limit = 6 },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "han", "wei", "wei", "wei", "wei", "wei", "wei" })
     for _, player in ipairs(room.players) do clearCards(player) end
-    skill_test.installDualGenerals(room, room.players[1], { main = LIUYU, deputy = "hanjin_test__han_2", kingdom = "han" })
+    skill_test.installDualGenerals(room, room.players[1], { main = LIUYU, deputy = "qiao_test__han_2", kingdom = "han" })
   end)
   return room
 end
 
-Testhanjin_han022_liuyu = { setup = prepare, tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end }
+Testqiao_han022_liuyu = { setup = prepare, tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end }
 
-function Testhanjin_han022_liuyu:testFormalRegistration()
+function Testqiao_han022_liuyu:testFormalRegistration()
   local entry = assert(table.find(ZHEN_SHI.generals, function(d) return d.id == LIUYU end))
   lu.assertEquals(entry.number, "HAN022")
   local g = assert(Fk.generals[LIUYU])
@@ -56,7 +56,7 @@ function Testhanjin_han022_liuyu:testFormalRegistration()
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(LIUYU)) end)
 end
 
-function Testhanjin_han022_liuyu:testAnjingSameKingdomDrawsOncePerTurn()
+function Testqiao_han022_liuyu:testAnjingSameKingdomDrawsOncePerTurn()
   local room, player, ally, other = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
     room.current = other
@@ -80,10 +80,10 @@ function Testhanjin_han022_liuyu:testAnjingSameKingdomDrawsOncePerTurn()
   lu.assertEquals(#other:getCardIds(Player.Hand), 0)
 end
 
-function Testhanjin_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
+function Testqiao_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
   local room, player, current = FkTest.room, p(1), p(2)
   local start = p(3)
-  local hand = give(current, "hanjin__jink", Card.Heart, 2)
+  local hand = give(current, "qiao__jink", Card.Heart, 2)
   inRoom(function()
     room:handleAddLoseSkills(player, "-" .. ANJING, nil, false)
     player.hp = player.maxHp
@@ -113,7 +113,7 @@ function Testhanjin_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
   watcher:addEffect(fk.BeforeCardUseEffect, {
     global = true,
     can_refresh = function(self, event, target, who, data)
-      return who == player and data and data.card and data.card.name == "hanjin__amazing_grace"
+      return who == player and data and data.card and data.card.name == "qiao__amazing_grace"
     end,
     on_refresh = function(self, event, target, who, data)
       if topAtUse == nil then
@@ -126,7 +126,7 @@ function Testhanjin_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
   watcher:addEffect(fk.CardEffectFinished, {
     global = true,
     can_refresh = function(self, event, target, who, data)
-      return who == player and data and data.card and data.card.name == "hanjin__amazing_grace"
+      return who == player and data and data.card and data.card.name == "qiao__amazing_grace"
     end,
     on_refresh = function(self, event, target, who, data)
       table.insert(seen, { to = target.id, from = data.from.id })
@@ -159,7 +159,7 @@ function Testhanjin_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
   inRoom(function()
     room:useCard {
       from = current, tos = table.simpleClone(room.alive_players),
-      card = Fk:cloneCard("hanjin__amazing_grace"),
+      card = Fk:cloneCard("qiao__amazing_grace"),
     }
   end)
   local ordinaryFirst = seen[1] and seen[1].to
@@ -177,4 +177,4 @@ function Testhanjin_han022_liuyu:testSuifuRealFiveGrainOrderFromChosenStart()
   lu.assertEquals(ordinaryFirst, current.id, "普通五谷保留正常结算起点")
 end
 
-return { name = "hanjin_han022_liuyu" }
+return { name = "qiao_han022_liuyu" }

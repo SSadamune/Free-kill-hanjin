@@ -1,8 +1,8 @@
 -- JIN022B 牵弘：烈戎攻击范围持续、勤边最远目标静态验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local U = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_jin"
-local DATA = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_jin"
+local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin"
 
 local function inRoom(fn)
   local result
@@ -12,10 +12,10 @@ end
 
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_jin022b_qianhong = {
+Testqiao_jin022b_qianhong = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function() skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "qun", "qun", "qun", "qun" }) end)
   end,
   tearDown = function()
@@ -24,20 +24,20 @@ Testhanjin_jin022b_qianhong = {
   end,
 }
 
-function Testhanjin_jin022b_qianhong:testDataFragment()
+function Testqiao_jin022b_qianhong:testDataFragment()
   local qianhong
   for _, general in ipairs(DATA.generals) do
-    if general.id == "hanjin__jin022b" then qianhong = general end
+    if general.id == "qiao_heg__jin022b" then qianhong = general end
   end
   lu.assertNotNil(qianhong)
-  lu.assertNotNil(Fk.generals["hanjin__jin022b"], "正式将池尚未合入 JIN022B")
+  lu.assertNotNil(Fk.generals["qiao_heg__jin022b"], "正式将池尚未合入 JIN022B")
   lu.assertEquals(qianhong.mainHpAdjust, 0)
   lu.assertEquals(#qianhong.skills, 2)
-  lu.assertEquals(qianhong.skills[1].id, "hanjin__skill_jin022b_1")
-  lu.assertEquals(qianhong.skills[2].id, "hanjin__skill_jin022b_2")
+  lu.assertEquals(qianhong.skills[1].id, "qiao__skill_jin022b_1")
+  lu.assertEquals(qianhong.skills[2].id, "qiao__skill_jin022b_2")
 end
 
-function Testhanjin_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
+function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
   local first, second, third = p(1), p(2), p(3)
   inRoom(function()
     FkTest.room:addSkill(Fk.skills[U.RANGE_SKILL])
@@ -54,16 +54,16 @@ function Testhanjin_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
   end)
 end
 
-function Testhanjin_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
+function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
   local me, target = p(1), p(2)
   inRoom(function()
-    local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-    local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
-    FkTest.room:handleAddLoseSkills(me, "hanjin__skill_jin022b_1", nil, false, true)
+    local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+    local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+    FkTest.room:handleAddLoseSkills(me, "qiao__skill_jin022b_1", nil, false, true)
     local oldSelect, oldUse = C.selectVirtualCard, C.useCard
     local observed
     C.selectVirtualCard = function()
-      return { from = me, tos = { target }, card = Fk:cloneCard("hanjin__fire__slash"), extra_data = {} }
+      return { from = me, tos = { target }, card = Fk:cloneCard("qiao__fire__slash"), extra_data = {} }
     end
     C.useCard = function(room, player, use, policy)
       observed = use
@@ -71,16 +71,16 @@ function Testhanjin_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
     end
     local before = target.hp
     local ok, err = pcall(function()
-      skill_test.withSkillRequests(FkTest.room, "hanjin__skill_jin022b_1", {
+      skill_test.withSkillRequests(FkTest.room, "qiao__skill_jin022b_1", {
         askToChoice = function() return "1" end,
       }, function()
-        Fk.skills["hanjin__skill_jin022b_1"]:onUse(FkTest.room, { from = me })
+        Fk.skills["qiao__skill_jin022b_1"]:onUse(FkTest.room, { from = me })
       end)
     end)
     C.selectVirtualCard, C.useCard = oldSelect, oldUse
     if not ok then error(err, 0) end
     lu.assertNotNil(observed)
-    lu.assertEquals(observed.card.name, "hanjin__fire__slash")
+    lu.assertEquals(observed.card.name, "qiao__fire__slash")
     lu.assertEquals(me:getMark(U.RANGE), 1)
     lu.assertTrue(target.hp < before, "真实火杀使用入口应实际结算伤害")
     lu.assertTrue(A.isAdaptationCard(observed.card, observed))
@@ -90,4 +90,4 @@ function Testhanjin_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
   end)
 end
 
-return { name = "hanjin_jin022b_qianhong" }
+return { name = "qiao_jin022b_qianhong" }

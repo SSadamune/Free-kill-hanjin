@@ -1,6 +1,6 @@
 # 蜀势力标准包：逐将检索与验证入口
 
-范围为 SHU001–011、SHU013–016 共 15 张标准武将、26 个技能及四种关联翼从；不含君主版。卡面依据为[标准武将表](../../../../rules/standard-generals.md)，集智采用[已确认裁定](../../../../rules/generals/shu007-huangyueying.md)。技能正文与接口分属下列机制页，本页只作检索。当前验收状态见[开发状态](../../status.md)。
+范围为 SHU001–011、SHU013–016 共 15 张标准武将、26 个技能及四种关联翼从；不含君主版。卡面依据为[标准武将表](../../../rules/standard-generals.md)，集智采用[已确认裁定](../../../rules/generals/shu007-huangyueying.md)。技能正文与接口分属下列机制页，本页只作检索。当前验收状态见[开发状态](../../status.md)。
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
@@ -31,7 +31,7 @@
 
 ## 接线与验证
 
-- 所有正式技能通过 `hanjinImplemented` 登记；连环重铸为辅助入口，不增加天生技能数。
+- 所有正式技能通过 `qiaoImplemented` 登记；连环重铸为辅助入口，不增加天生技能数。
 - 模式安装 `shu_hidden_prelight`、`shu_lieyong_bonus`、`shu_state_rule`、`shu_savage_rule`、`shu_tieqi_invalidity`，承接暗将八阵、已建立持续效果、红牌历史与按位置失效；均随正式 `pkg/` 发布。
 - 周仓显式目标策略增加公开、可同步的 `in_attack_range_of` 条件，客户端与服务端使用同一锚点攻击范围，不读取服务端事件历史。阶段历史、抵消者等私有事件读取只用于服务端触发结算。
 - 六套专项 `shu_conversion`、`shu_effects`、`shu_phases`、`shu_savage`、`shu_tieqi`、`shu_retinues` 均纳入默认套件；命令结果和修复证据集中见[共享验证记录](verification-evidence.md#shu-standard)。

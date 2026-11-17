@@ -1,6 +1,6 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/general_exchange_content.lua")
-local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local H = require "packages.hegemony.util"
 
 local G = content.generals
@@ -20,7 +20,7 @@ local function assertCardOwner(room, id, player)
 end
 
 Testgeneral_exchange = {
-  setup = support.initHanjinRoom,
+  setup = support.initQiaoRoom,
   tearDown = function()
     support.clearRoom()
   end,
@@ -139,13 +139,13 @@ function Testgeneral_exchange:testPilesTransferWithOrderAndOtherPilesStay()
     idsA = content.putPile(room, a, content.pile, 2)
     idsB = content.putPile(room, b, content.pile, 1)
     idsC = content.putPile(room, c, content.pile, 1)
-    other = content.putPile(room, a, "hanjin_exchange_other", 1)
+    other = content.putPile(room, a, "qiao_exchange_other", 1)
 
     assert(Exchange.exchange(room, main(a), main(b)))
     lu.assertEquals(a:getPile(content.pile), idsB)
     lu.assertEquals(b:getPile(content.pile), idsA)
     lu.assertEquals(c:getPile(content.pile), idsC)
-    lu.assertEquals(a:getPile("hanjin_exchange_other"), other)
+    lu.assertEquals(a:getPile("qiao_exchange_other"), other)
     for _, id in ipairs(idsB) do
       assertCardOwner(room, id, a)
       lu.assertEquals(room:getCardArea(id), Card.PlayerSpecial)

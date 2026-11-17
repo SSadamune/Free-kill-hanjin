@@ -2,14 +2,14 @@
 -- referenced by init.lua and never enters release content.  The pack is added to
 -- the HanJin mode whitelist only in the test process so the real opening-pool
 -- flow can see the wild originals and their allegiance versions.
-if Fk.packages.hanjin_ascension_test then
-  return Fk.packages.hanjin_ascension_test._ascension_content
+if Fk.packages.qiao_ascension_test then
+  return Fk.packages.qiao_ascension_test._ascension_content
 end
 
-__dofile("../../../tests/support/hanjin_content.lua")
+__dofile("../../../tests/support/qiao_content.lua")
 
-local pack = Package:new("hanjin_ascension_test", Package.CardPack)
-pack.extensionName = "hanjin"
+local pack = Package:new("qiao_ascension_test", Package.CardPack)
+pack.extensionName = "qiao"
 Fk.packages[pack.name] = pack
 table.insert(Fk.package_names, pack.name)
 
@@ -24,13 +24,13 @@ local function createSkill(spec)
 end
 
 local skills = {
-  normal = createSkill { name = "hanjin_ascension_test__normal_skill" },
-  monarch = createSkill { name = "hanjin_ascension_test__monarch_skill" },
-  loyalty = createSkill { name = "hanjin_ascension_test__loyalty_skill" },
+  normal = createSkill { name = "qiao_ascension_test__normal_skill" },
+  monarch = createSkill { name = "qiao_ascension_test__monarch_skill" },
+  loyalty = createSkill { name = "qiao_ascension_test__loyalty_skill" },
 }
 
 local function general(key, kingdom, hp, options)
-  local name = "hanjin_ascension_test__" .. key
+  local name = "qiao_ascension_test__" .. key
   local result = General:new(pack, name, kingdom, hp)
   result.hidden = false
   for field, value in pairs(options or {}) do result[field] = value end
@@ -60,7 +60,7 @@ G.wei_normal:addSkills({ skills.normal })
 G.wei_monarch:addSkills({ skills.monarch })
 G.loyalty_simple:addSkills({ skills.loyalty })
 -- 同名暗副将来来源回归：副将印刷与暗张角相同的两项技能。
-G.qun_deputy:addSkills({ "hanjin__skill_qun010_1", "hanjin__skill_qun010_2" })
+G.qun_deputy:addSkills({ "qiao__skill_qun010_1", "qiao__skill_qun010_2" })
 G.qun_deputy.hidden = true -- 仅供定向夹具，不能进入其他套件的随机将池
 G.wei_normal:addCompanions(G.wei_deputy.name)
 G.wei_monarch:addCompanions(G.wei_deputy.name)
@@ -70,7 +70,7 @@ G.wei_monarch.hidden = true
 G.wei_monarch2.hidden = true
 G.wei_monarch3.hidden = true
 
-local Versions = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 Versions.register { normal = G.wei_normal.name, lord = G.wei_monarch.name }
 Versions.register { normal = G.wei_normal2.name, lord = G.wei_monarch2.name }
 Versions.register { normal = G.wei_normal3.name, lord = G.wei_monarch3.name }
@@ -98,7 +98,7 @@ Fk:loadTranslationTable {
   [skills.loyalty] = "测试效忠技",
 }
 
-table.insert(Fk.game_modes.hanjin_heg_mode.whitelist, pack.name)
+table.insert(Fk.game_modes.qiao_heg_mode.whitelist, pack.name)
 Fk:loadDisabled()
 
 local content = {
@@ -127,7 +127,7 @@ function content.setupHidden(room, player, main, deputy, kingdom)
   room:setPlayerMark(player, "__heg_kingdom", kingdom)
   room:setPlayerMark(player, "__heg_init_kingdom", kingdom)
   room:setPlayerMark(player, "hasShownMainGeneral", 0)
-  local maxHp = require("packages.hanjin.pkg.hanjin_mode.rules.ascension").pair_max_hp(main, deputy)
+  local maxHp = require("packages.qiao.pkg.qiao_mode.rules.ascension").pair_max_hp(main, deputy)
   room:setPlayerProperty(player, "maxHp", maxHp)
   room:setPlayerProperty(player, "hp", maxHp)
   return player
@@ -141,7 +141,7 @@ function content.setupRevealed(room, player, main, deputy, kingdom)
   room:setPlayerMark(player, "__heg_kingdom", kingdom)
   room:setPlayerMark(player, "__heg_init_kingdom", kingdom)
   room:setPlayerMark(player, "hasShownMainGeneral", 1)
-  local maxHp = require("packages.hanjin.pkg.hanjin_mode.rules.ascension").pair_max_hp(main, deputy)
+  local maxHp = require("packages.qiao.pkg.qiao_mode.rules.ascension").pair_max_hp(main, deputy)
   room:setPlayerProperty(player, "maxHp", maxHp)
   room:setPlayerProperty(player, "hp", maxHp)
   return player

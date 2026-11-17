@@ -1,20 +1,20 @@
 -- QUN015 纪灵·双刃、QUN018 邹氏·祸水的核心行为定向验收。
 --
--- 规则依据：rules/generals/qun015-jiling.md、
+-- 规则依据：docs/rules/generals/qun015-jiling.md、
 -- docs/development/implementation/generals/qun-standard.md、
--- rules/only-as.md、rules/card-use-targets.md。
+-- docs/rules/only-as.md、docs/rules/card-use-targets.md。
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
 --
 -- 验收重点：双刃真实拼点两分支、借刀杀人的真实主/副目标、本回合结束清理；
 -- 祸水按来源维护的即时禁明置、真实暗置与收牌、无“限一次”。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
-local Q = require "packages.hanjin.pkg.hanjin_generals.util.qun_control"
+local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
+local Q = require "packages.qiao.pkg.qiao_generals.util.qun_control"
 
-local SR = "hanjin__skill_qun015_1"
-local STATE = "hanjin__qun_shuangren_state"
-local HS = "hanjin__skill_qun018_1"
+local SR = "qiao__skill_qun015_1"
+local STATE = "qiao__qun_shuangren_state"
+local HS = "qiao__skill_qun018_1"
 
 local DEFAULT_KINGDOMS = { "qun", "qun", "wei", "wei", "shu", "shu", "wu", "wu" }
 
@@ -143,23 +143,23 @@ local function installUseProbe()
   return seen
 end
 
-Testhanjin_qun_control = { tearDown = support.clearRoom }
+Testqiao_qun_control = { tearDown = support.clearRoom }
 
-Testhanjin_qun_control.setup = function()
-  local r = support.initHanjinRoom()
+Testqiao_qun_control.setup = function()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
 end
 
 -- 双刃：赢 → 一次多目标【杀】，拼点对手必须包含。
-function Testhanjin_qun_control:testShuangrenWinUsesOneSlashWithOpponent()
+function Testqiao_qun_control:testShuangrenWinUsesOneSlashWithOpponent()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
   grant(p1, SR)
-  local mine = give(p1, "hanjin__jink", Card.Spade, 13)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 5)
-  local theirs = give(p2, "hanjin__jink", Card.Heart, 2)
+  local mine = give(p1, "qiao__jink", Card.Spade, 13)
+  local slash = give(p1, "qiao__slash", Card.Spade, 5)
+  local theirs = give(p2, "qiao__jink", Card.Heart, 2)
   local seen = installUseProbe()
 
   FkTest.setNextReplies(p1, {
@@ -198,15 +198,15 @@ function Testhanjin_qun_control:testShuangrenWinUsesOneSlashWithOpponent()
 end
 
 -- 双刃：没赢 → 手牌【杀】只能当【借刀杀人】使用至回合结束，含之后得到的杀。
-function Testhanjin_qun_control:testShuangrenLoseRestrictsHandSlashUntilTurnEnd()
+function Testqiao_qun_control:testShuangrenLoseRestrictsHandSlashUntilTurnEnd()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
   grant(p1, SR)
-  local low = give(p1, "hanjin__jink", Card.Spade, 2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 5)
-  local high = give(p2, "hanjin__jink", Card.Heart, 13)
+  local low = give(p1, "qiao__jink", Card.Spade, 2)
+  local slash = give(p1, "qiao__slash", Card.Spade, 5)
+  local high = give(p2, "qiao__jink", Card.Heart, 13)
 
   FkTest.setNextReplies(p1, {
     "1",
@@ -238,21 +238,21 @@ function Testhanjin_qun_control:testShuangrenLoseRestrictsHandSlashUntilTurnEnd(
   lu.assertTrue(table.contains(p1:getCardIds("h"), slash))
 
   -- 受限于当前手牌范围：之后得到的【杀】同样只能当借刀，牌名不改。
-  local later = give(p1, "hanjin__slash", Card.Spade, 8)
+  local later = give(p1, "qiao__slash", Card.Spade, 8)
   lu.assertTrue(O.isForbidden(p1, Fk:getCardById(slash)))
   lu.assertTrue(O.isForbidden(p1, Fk:getCardById(later)))
-  lu.assertTrue(table.contains(O.availableTargets(room(), p1, later, "use"), "hanjin__collateral"))
+  lu.assertTrue(table.contains(O.availableTargets(room(), p1, later, "use"), "qiao__collateral"))
   lu.assertEquals(Fk:getCardById(later).trueName, "slash")
 
   -- 借刀杀人转换：真实主目标 + 副目标，结算后武器移交使用者。
   -- 转换入口属于独立状态骨架（失去双刃后仍在），不是双刃本体。
-  local weapon = equip(p2, "hanjin__spear")
+  local weapon = equip(p2, "qiao__spear")
   local seen = installUseProbe()
   local use
   FkTest.setNextReplies(p1, { {
     card = { skill = STATE, subcards = { slash } },
     targets = { p2.id, p3.id },
-    interaction_data = "hanjin__collateral",
+    interaction_data = "qiao__collateral",
   } })
   inRoom(function()
     use = room():askToUseCard(p1, {
@@ -278,21 +278,21 @@ function Testhanjin_qun_control:testShuangrenLoseRestrictsHandSlashUntilTurnEnd(
   lu.assertTrue(p1:hasSkill(STATE))
   inRoom(function() room().logic:trigger(fk.TurnEnd, p1, {}) end)
   lu.assertFalse(O.isForbidden(p1, Fk:getCardById(later)))
-  lu.assertFalse(table.contains(O.availableTargets(room(), p1, later, "use"), "hanjin__collateral"))
+  lu.assertFalse(table.contains(O.availableTargets(room(), p1, later, "use"), "qiao__collateral"))
   lu.assertFalse(p1:hasSkill(STATE))
 end
 
 -- 双刃：真实失去技能本体后，已建立的转换权限仍可用【杀】当借刀，
 -- 且借刀杀人仍能真实选择主目标与副目标。
-function Testhanjin_qun_control:testShuangrenConversionSurvivesLosingTheSkillBody()
+function Testqiao_qun_control:testShuangrenConversionSurvivesLosingTheSkillBody()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
   grant(p1, SR)
-  local low = give(p1, "hanjin__jink", Card.Spade, 2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 5)
-  local high = give(p2, "hanjin__jink", Card.Heart, 13)
+  local low = give(p1, "qiao__jink", Card.Spade, 2)
+  local slash = give(p1, "qiao__slash", Card.Spade, 5)
+  local high = give(p2, "qiao__jink", Card.Heart, 13)
 
   FkTest.setNextReplies(p1, {
     "1",
@@ -315,15 +315,15 @@ function Testhanjin_qun_control:testShuangrenConversionSurvivesLosingTheSkillBod
   lu.assertFalse(p1:hasSkill(SR))
   lu.assertTrue(p1:hasSkill(STATE))
   lu.assertTrue(O.isForbidden(p1, Fk:getCardById(slash)))
-  lu.assertTrue(table.contains(O.availableTargets(room(), p1, slash, "use"), "hanjin__collateral"))
+  lu.assertTrue(table.contains(O.availableTargets(room(), p1, slash, "use"), "qiao__collateral"))
 
-  local weapon = equip(p2, "hanjin__spear")
+  local weapon = equip(p2, "qiao__spear")
   local seen = installUseProbe()
   local use
   FkTest.setNextReplies(p1, { {
     card = { skill = STATE, subcards = { slash } },
     targets = { p2.id, p3.id },
-    interaction_data = "hanjin__collateral",
+    interaction_data = "qiao__collateral",
   } })
   inRoom(function()
     use = room():askToUseCard(p1, {
@@ -344,16 +344,16 @@ function Testhanjin_qun_control:testShuangrenConversionSurvivesLosingTheSkillBod
   lu.assertTrue(table.contains(p1:getCardIds("h"), weapon))
 
   -- 回合结束：独立入口与限制一并撤销，新的手牌【杀】不再受限。
-  local later = give(p1, "hanjin__slash", Card.Spade, 9)
+  local later = give(p1, "qiao__slash", Card.Spade, 9)
   lu.assertTrue(O.isForbidden(p1, Fk:getCardById(later)))
   inRoom(function() room().logic:trigger(fk.TurnEnd, p1, {}) end)
   lu.assertFalse(p1:hasSkill(STATE))
   lu.assertFalse(O.isForbidden(p1, Fk:getCardById(later)))
-  lu.assertFalse(table.contains(O.availableTargets(room(), p1, later, "use"), "hanjin__collateral"))
+  lu.assertFalse(table.contains(O.availableTargets(room(), p1, later, "use"), "qiao__collateral"))
 end
 
 -- 祸水被动段：只在祸水持有者自己的回合、且只撤销自己的来源。
-function Testhanjin_qun_control:testHuoshuiRevealProhibitionFollowsItsOwnSource()
+function Testqiao_qun_control:testHuoshuiRevealProhibitionFollowsItsOwnSource()
   local p1, p2, p3 = p(1), p(2), p(3)
   grantHuoshui(p1)
   -- room:getCurrent() 只在 current 的 phase 不是 NotActive 时返回角色；
@@ -378,17 +378,17 @@ function Testhanjin_qun_control:testHuoshuiRevealProhibitionFollowsItsOwnSource(
 end
 
 -- 祸水主动段：真实暗置（统领/翼从迁移走公共流程）后收牌，且不限一次。
-function Testhanjin_qun_control:testHuoshuiActiveHidesGeneralAndTakesCardTwice()
+function Testqiao_qun_control:testHuoshuiActiveHidesGeneralAndTakesCardTwice()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
   clearCards(p3)
   grant(p1, HS)
   -- 黑色装备牌也是合法消耗（open equipment），且必须真实被弃置。
-  local black = equip(p1, "hanjin__spear", Card.Spade, 5)
-  local red = give(p1, "hanjin__jink", Card.Heart, 6)
-  local give2 = give(p2, "hanjin__jink", Card.Heart, 7)
-  local give3 = give(p3, "hanjin__jink", Card.Club, 4)
+  local black = equip(p1, "qiao__spear", Card.Spade, 5)
+  local red = give(p1, "qiao__jink", Card.Heart, 6)
+  local give2 = give(p2, "qiao__jink", Card.Heart, 7)
+  local give3 = give(p3, "qiao__jink", Card.Club, 4)
   inRoom(function()
     p2:revealGeneral(false, true)
     p2:revealGeneral(true, true)
@@ -434,7 +434,7 @@ function Testhanjin_qun_control:testHuoshuiActiveHidesGeneralAndTakesCardTwice()
 
   -- 不限一次：同一出牌阶段可以再次发动，换另一名仍双将明置的角色；
   -- 祸水仍在生效，因此这里不重新明置目标（那属于被禁止的动作）。
-  local black2 = give(p1, "hanjin__jink", Card.Spade, 9)
+  local black2 = give(p1, "qiao__jink", Card.Spade, 9)
   local err2 = inRoomCaptured(function()
     U.askToChooseGeneralsAndChoice = hideMain
     stubRequests(chooseCard, function()
@@ -455,13 +455,13 @@ end
 
 -- 祸水主动段：弃黑牌是消耗，服务端复核只接受属于自己 he 且可弃的牌；
 -- 伪造用别人的牌支付时不弃牌、不暗置。
-function Testhanjin_qun_control:testHuoshuiCannotPayWithAnotherPlayersCard()
+function Testqiao_qun_control:testHuoshuiCannotPayWithAnotherPlayersCard()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
   grant(p1, HS)
-  local ownBlack = give(p1, "hanjin__jink", Card.Spade, 5)
-  local stolen = give(p2, "hanjin__jink", Card.Club, 3)
+  local ownBlack = give(p1, "qiao__jink", Card.Spade, 5)
+  local stolen = give(p2, "qiao__jink", Card.Club, 3)
   inRoom(function()
     p2:revealGeneral(false, true)
     p2:revealGeneral(true, true)
@@ -482,4 +482,4 @@ function Testhanjin_qun_control:testHuoshuiCannotPayWithAnotherPlayersCard()
   lu.assertTrue(table.contains(p1:getCardIds("h"), ownBlack))
 end
 
-return { name = "hanjin_qun_control" }
+return { name = "qiao_qun_control" }

@@ -1,14 +1,14 @@
 -- SHU019 马岱：马术复用、潜袭保留材料颜色与失技后回合限制。
--- 规则依据：rules/generals/shu019-madai.md。
+-- 规则依据：docs/rules/generals/shu019-madai.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local MADAI = "hanjin__shu019"
-local MASHU = "hanjin__skill_shu006_1"
-local QIANXI = "hanjin__skill_shu019_2"
-local BLANK_DEPUTY = "hanjin_test__shu_2"
+local MADAI = "qiao_heg__shu019"
+local MASHU = "qiao__skill_shu006_1"
+local QIANXI = "qiao__skill_shu019_2"
+local BLANK_DEPUTY = "qiao_test__shu_2"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -39,11 +39,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -60,7 +60,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_shu019_madai = {
+Testqiao_shu019_madai = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -68,8 +68,8 @@ Testhanjin_shu019_madai = {
   end,
 }
 
-function Testhanjin_shu019_madai:testFormalRegistrationSharesMashu()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_shu019_madai:testFormalRegistrationSharesMashu()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == MADAI
   end), "missing Ma Dai data entry")
@@ -80,10 +80,10 @@ function Testhanjin_shu019_madai:testFormalRegistrationSharesMashu()
   lu.assertEquals(general.kingdom, "shu")
   lu.assertEquals(general.maxHp, 4)
   lu.assertEquals(general.gender, General.Male)
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__shu006"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__shu006"]))
   lu.assertTrue(table.contains(general:getSkillNameList(), MASHU))
   lu.assertTrue(table.contains(general:getSkillNameList(), QIANXI))
-  lu.assertTrue(table.contains(Fk.generals["hanjin__shu006"]:getSkillNameList(), MASHU))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__shu006"]:getSkillNameList(), MASHU))
   lu.assertNotEquals(general, Fk.generals["ld__madai"])
   inRoom(function()
     lu.assertTrue(Fk:canUseGeneral(MADAI),
@@ -91,28 +91,28 @@ function Testhanjin_shu019_madai:testFormalRegistrationSharesMashu()
   end)
 end
 
-function Testhanjin_shu019_madai:testQianxiMaterialsAndRestrictionSurvivesSkillLoss()
+function Testqiao_shu019_madai:testQianxiMaterialsAndRestrictionSurvivesSkillLoss()
   local room, player, target = FkTest.room, p(1), p(2)
-  give(player, "hanjin__jink", Card.Heart, 2)
-  local black = give(player, "hanjin__slash", Card.Spade, 3)
-  local targetBlack = give(target, "hanjin__peach", Card.Club, 4)
-  local targetRed = give(target, "hanjin__jink", Card.Diamond, 5)
-  local equip = give(target, "hanjin__qinggang_sword", Card.Spade, 6)
+  give(player, "qiao__jink", Card.Heart, 2)
+  local black = give(player, "qiao__slash", Card.Spade, 3)
+  local targetBlack = give(target, "qiao__peach", Card.Club, 4)
+  local targetRed = give(target, "qiao__jink", Card.Diamond, 5)
+  local equip = give(target, "qiao__qinggang_sword", Card.Spade, 6)
   inRoom(function()
     room:moveCardIntoEquip(target, equip, "test", true, player)
   end)
 
   local invoked, discarded = 0, nil
   local captured = {}
-  local probe = fk.CreateSkill { name = "#hanjin_shu019_qianxi_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_shu019_qianxi_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
       return target == player and who == player and data.phase == Player.Play
     end,
     on_refresh = function()
-      captured.hasRule = room:hasSkill("hanjin__shu019_qianxi_rule")
-      captured.mark = target:getTableMark("hanjin_shu019_qianxi_restrictions")
+      captured.hasRule = room:hasSkill("qiao__shu019_qianxi_rule")
+      captured.mark = target:getTableMark("qiao_shu019_qianxi_restrictions")
       local blackCard = Fk:getCardById(targetBlack)
       local redCard = Fk:getCardById(targetRed)
       local equipCard = Fk:getCardById(equip)
@@ -123,9 +123,9 @@ function Testhanjin_shu019_madai:testQianxiMaterialsAndRestrictionSurvivesSkillL
 
       -- 纯虚拟黑牌没有手牌材料：不能只因转化后颜色被禁止。
       captured.virtualNoMaterial = target:prohibitUse(
-        Fk:cloneCard("hanjin__slash", Card.Spade, 7))
+        Fk:cloneCard("qiao__slash", Card.Spade, 7))
       -- 转化后显示红色，但实体材料是黑色手牌：仍须按材料禁止。
-      local materialVirtual = Fk:cloneCard("hanjin__jink")
+      local materialVirtual = Fk:cloneCard("qiao__jink")
       materialVirtual:addSubcards({ targetBlack })
       materialVirtual.suit = Card.Heart
       materialVirtual.color = Card.Red
@@ -199,21 +199,21 @@ end
 -- 潜袭反馈回归：不以初始距离1目标为发动门槛；弃牌时先保存持有者过滤后的
 -- 颜色（红颜黑桃骑乘牌为红色），再做实际弃牌和距离选择。
 -- 潜袭反馈回归一：先摸1弃1，不能因发动时没有距离1目标而拒绝发动。
-function Testhanjin_shu019_madai:testQianxiStillDrawsAndDiscardsWithoutInitialTarget()
+function Testqiao_shu019_madai:testQianxiStillDrawsAndDiscardsWithoutInitialTarget()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     skill_test.installDualGenerals(room, player, {
-      main = "hanjin_test__shu_1",
-      deputy = "hanjin_test__shu_2",
+      main = "qiao_test__shu_1",
+      deputy = "qiao_test__shu_2",
       kingdom = "shu",
     })
     clearCards(player)
     room:handleAddLoseSkills(player, QIANXI, nil, false, true)
   end)
 
-  local card = give(player, "hanjin__jink", Card.Heart, 2)
+  local card = give(player, "qiao__jink", Card.Heart, 2)
   for index = 2, 8 do
-    local horse = give(p(index), "hanjin__jueying", Card.Spade, index + 4)
+    local horse = give(p(index), "qiao__jueying", Card.Spade, index + 4)
     inRoom(function()
       room:moveCardIntoEquip(p(index), horse, "test", true, p(index))
     end)
@@ -259,26 +259,26 @@ end
 
 -- 潜袭反馈回归二：弃牌时先保存持有者过滤后的颜色。红颜使黑桃牌为红色，
 -- 离区后再取牌会恢复黑色，不能据此建立限制。
-function Testhanjin_shu019_madai:testQianxiSavesFilteredColorBeforeDiscard()
+function Testqiao_shu019_madai:testQianxiSavesFilteredColorBeforeDiscard()
   local room, player, target = FkTest.room, p(1), p(2)
   inRoom(function()
     skill_test.installDualGenerals(room, player, {
-      main = "hanjin_test__shu_1",
-      deputy = "hanjin_test__shu_2",
+      main = "qiao_test__shu_1",
+      deputy = "qiao_test__shu_2",
       kingdom = "shu",
     })
     clearCards(player)
     room:handleAddLoseSkills(player, QIANXI, nil, false, true)
-    room:handleAddLoseSkills(player, "hanjin__skill_wu011_2", nil, false, true)
+    room:handleAddLoseSkills(player, "qiao__skill_wu011_2", nil, false, true)
   end)
 
-  local spade = give(player, "hanjin__jink", Card.Spade, 5)
-  local red = give(target, "hanjin__jink", Card.Heart, 2)
-  local black = give(target, "hanjin__slash", Card.Club, 3)
+  local spade = give(player, "qiao__jink", Card.Spade, 5)
+  local red = give(target, "qiao__jink", Card.Heart, 2)
+  local black = give(target, "qiao__slash", Card.Club, 3)
 
   local invoked = 0
   local captured = {}
-  local probe = fk.CreateSkill { name = "#hanjin_shu019_qianxi_color_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_shu019_qianxi_color_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, who, data)
@@ -326,4 +326,4 @@ function Testhanjin_shu019_madai:testQianxiSavesFilteredColorBeforeDiscard()
   lu.assertFalse(captured.black)
 end
 
-return { name = "hanjin_shu019_madai" }
+return { name = "qiao_shu019_madai" }

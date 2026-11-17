@@ -1,12 +1,12 @@
 -- HAN019 吉平：烈医、蛊毒定向验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
-local JIPING = "hanjin__han019"
-local LIEYI = "hanjin__skill_han019_1"
-local GUDU = "hanjin__skill_han019_2"
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local JIPING = "qiao_heg__han019"
+local LIEYI = "qiao__skill_han019_1"
+local GUDU = "qiao__skill_han019_2"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -32,21 +32,21 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode", realSelection = true,
-    settings = { hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, hanjin_kingdom_limit = 6 },
+    mode = "qiao_heg_mode", realSelection = true,
+    settings = { qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, qiao_kingdom_limit = 6 },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "wei", "wei", "wei", "wei" })
     Commander.saveSources(room, {})
     for _, player in ipairs(room.players) do clearCards(player) end
-    skill_test.installDualGenerals(room, room.players[1], { main = JIPING, deputy = "hanjin_test__han_2", kingdom = "han" })
+    skill_test.installDualGenerals(room, room.players[1], { main = JIPING, deputy = "qiao_test__han_2", kingdom = "han" })
   end)
   return room
 end
 
-Testhanjin_han019_jiping = { setup = prepare, tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end }
+Testqiao_han019_jiping = { setup = prepare, tearDown = function() Fk.currentResponsePattern = nil; support.clearRoom() end }
 
-function Testhanjin_han019_jiping:testFormalRegistration()
+function Testqiao_han019_jiping:testFormalRegistration()
   local entry = assert(table.find(ZHEN_SHI.generals, function(d) return d.id == JIPING end))
   lu.assertEquals(entry.number, "HAN019")
   local g = assert(Fk.generals[JIPING])
@@ -57,10 +57,10 @@ function Testhanjin_han019_jiping:testFormalRegistration()
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(JIPING)) end)
 end
 
-function Testhanjin_han019_jiping:testLieyiHealsThenPreventsLaterDamage()
+function Testqiao_han019_jiping:testLieyiHealsThenPreventsLaterDamage()
   local room, player, target = FkTest.room, p(1), p(2)
-  local first = give(player, "hanjin__slash", Card.Spade, 2)
-  local second = give(player, "hanjin__slash", Card.Heart, 3)
+  local first = give(player, "qiao__slash", Card.Spade, 2)
+  local second = give(player, "qiao__slash", Card.Heart, 3)
   inRoom(function() room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1) end)
   skill_test.withSkillRequests(room, LIEYI, {
     askToSkillInvoke = function(self, who, params, original)
@@ -78,7 +78,7 @@ function Testhanjin_han019_jiping:testLieyiHealsThenPreventsLaterDamage()
   lu.assertEquals(target.hp, target.maxHp)
 end
 
-function Testhanjin_han019_jiping:testGuduPreventsRecoverThenTurnEndLosesHpAndRemovesCard()
+function Testqiao_han019_jiping:testGuduPreventsRecoverThenTurnEndLosesHpAndRemovesCard()
   local room, player, target = FkTest.room, p(1), p(2)
   inRoom(function() target.hp = 2; player.phase = Player.Finish end)
   skill_test.withSkillRequests(room, GUDU, {
@@ -93,14 +93,14 @@ function Testhanjin_han019_jiping:testGuduPreventsRecoverThenTurnEndLosesHpAndRe
     end)
   end)
   lu.assertEquals(target.hp, 1)
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   lu.assertTrue((Exchange.actualGeneral(player, false) or ""):startsWith("blank_"))
 end
 
 local function lieyiHealChoice(choice, expectedHp)
   local room, player, target = FkTest.room, p(1), p(2)
-  local first = give(player, "hanjin__slash", Card.Spade, 2)
-  local second = give(player, "hanjin__slash", Card.Heart, 3)
+  local first = give(player, "qiao__slash", Card.Spade, 2)
+  local second = give(player, "qiao__slash", Card.Heart, 3)
   inRoom(function()
     target.hp = 2
     room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1)
@@ -125,25 +125,25 @@ local function lieyiHealChoice(choice, expectedHp)
   lu.assertEquals(target.hp, expectedHp)
 end
 
-function Testhanjin_han019_jiping:testLieyiChooseOne()
-  lieyiHealChoice("hanjin__skill_han019_1-heal1", 2)
+function Testqiao_han019_jiping:testLieyiChooseOne()
+  lieyiHealChoice("qiao__skill_han019_1-heal1", 2)
 end
 
-function Testhanjin_han019_jiping:testLieyiChooseTwo()
-  lieyiHealChoice("hanjin__skill_han019_1-heal2", 3)
+function Testqiao_han019_jiping:testLieyiChooseTwo()
+  lieyiHealChoice("qiao__skill_han019_1-heal2", 3)
 end
 
-function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
+function Testqiao_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
   local room, source, other, target = FkTest.room, p(1), p(2), p(3)
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   inRoom(function()
     -- 确定性合法统领来源：HAN009 伏完提供穆顺；p4 明置后，蛊毒移除
     -- 留下的空士兵可沿公共 GeneralRemoved -> queueConversion 链转翼从。
     local commander = p(4)
-    room:changeHero(commander, "hanjin__han009", false, false, false, false, false)
-    room:setPlayerMark(commander, "__heg_general", "hanjin__han009")
+    room:changeHero(commander, "qiao_heg__han009", false, false, false, false, false)
+    room:setPlayerMark(commander, "__heg_general", "qiao_heg__han009")
     commander:revealGeneral(false)
-    local commanderSource = Commander.ensureSource(room, "hanjin__han009")
+    local commanderSource = Commander.ensureSource(room, "qiao_heg__han009")
     commanderSource.factions.han = true
     commanderSource.revealed = true
     commanderSource.holder_id = commander.id
@@ -152,8 +152,8 @@ function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
       { player = source, isDeputy = false },
       { player = other, isDeputy = false })
     lu.assertTrue(ok ~= false, "Jiping main should exchange to the other player")
-    room:changeHero(source, "hanjin_test__han_3", false, false, false, false, false)
-    room:setPlayerMark(source, "__heg_general", "hanjin_test__han_3")
+    room:changeHero(source, "qiao_test__han_3", false, false, false, false, false)
+    room:setPlayerMark(source, "__heg_general", "qiao_test__han_3")
     lu.assertEquals(other.general, JIPING)
   end)
 
@@ -170,7 +170,7 @@ function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
   end)
 
   lu.assertEquals(target.hp, 1)
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   local actual = Exchange.actualGeneral(other, false)
   lu.assertNotEquals(actual, JIPING, "蛊毒应移除来源牌 JIPING")
   lu.assertTrue(Commander.isRetinue(actual),
@@ -180,7 +180,7 @@ function Testhanjin_han019_jiping:testGuduRemovesSourceAfterGeneralExchange()
     .. " deputy=" .. tostring(other.deputyGeneral)
     .. " source=" .. tostring(source.general)
     .. " gameover=" .. tostring(room.game_finished))
-  lu.assertEquals(source.general, "hanjin_test__han_3")
+  lu.assertEquals(source.general, "qiao_test__han_3")
 end
 
-return { name = "hanjin_han019_jiping" }
+return { name = "qiao_han019_jiping" }

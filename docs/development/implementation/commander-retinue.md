@@ -1,20 +1,20 @@
 # 统领与翼从：实现与验证
 
-游戏语义见[对应规则](../../../rules/commander-retinue.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
+游戏语义见[对应规则](../../rules/commander-retinue.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
 ## 扩展内实现
 
-**已实装。** 汉晋模式统一登记统领的兵种和牌名、识别士兵位置、处理授予翼从和视为使用。统领武将只声明牌面数据，翼从的具体能力由汉晋扩展独立定义。正式登记见 `pkg/hanjin_generals/init.lua`。
+**已实装。** 汉晋模式统一登记统领的兵种和牌名、识别士兵位置、处理授予翼从和视为使用。统领武将只声明牌面数据，翼从的具体能力由汉晋扩展独立定义。正式登记见 `pkg/qiao_generals/init.lua`。
 
 实现文件：
 
 | 内容 | 文件/接口 |
 | --- | --- |
-| 统领、翼从公共登记与来源状态 | `pkg/hanjin_mode/rules/commander_retinue.lua` |
-| 模式规则触发与能力授予 | `pkg/hanjin_mode/skills/commander_retinue_rule.lua` |
-| 手动共享视为技 | `pkg/hanjin_mode/skills/commander_retinue_ability.lua` |
-| 模式注册、翼从排除出初始将池 | `pkg/hanjin_mode/mode.lua` |
-| 独立测试内容与翼从技能 | `tests/support/hanjin_content.lua` |
+| 统领、翼从公共登记与来源状态 | `pkg/qiao_mode/rules/commander_retinue.lua` |
+| 模式规则触发与能力授予 | `pkg/qiao_mode/skills/commander_retinue_rule.lua` |
+| 手动共享视为技 | `pkg/qiao_mode/skills/commander_retinue_ability.lua` |
+| 模式注册、翼从排除出初始将池 | `pkg/qiao_mode/mode.lua` |
+| 独立测试内容与翼从技能 | `tests/support/qiao_content.lua` |
 | 自动化验收 | `tests/commander_retinue.lua` |
 
 正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/retinues.md#mushun)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。锦帆军、曲阿小将见[吴关联翼从](generals/retinues.md#jinfanjun)，专项 `tests/wu_damage.lua` 已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
@@ -24,12 +24,12 @@
 正式内容包或测试内容按以下顺序登记（翼从必须先登记，统领登记时校验其兵种）：
 
 ```lua
-local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
-C.registerRetinue("hanjin__retinue_somekind", { name = "..." })
-C.registerCommander("hanjin__somecommander", {
-  card = "hanjin__somecard",
-  retinues = { "hanjin__retinue_somekind" },
+C.registerRetinue("qiao__retinue_somekind", { name = "..." })
+C.registerCommander("qiao__somecommander", {
+  card = "qiao__somecard",
+  retinues = { "qiao__retinue_somekind" },
 })
 ```
 
@@ -63,9 +63,9 @@ C.registerCommander("hanjin__somecommander", {
 
 始终区分统领能力与翼从效果。技能一览须按实际来源分别展示对玩家生效的统领能力和翼从效果，写明统领姓名、牌名、移将限制及翼从兵种。发动、选目标及移将代价提示仅描述当前激活的统领能力，不附带翼从效果；提示随激活来源切换。能力限一与偏将限一分别说明，已无可得翼从时不得继续承诺取得该偏将。描述只使用已同步的公开来源信息，保留暗置、跨势力迁移后翼从兵种存续的既定规则。
 
-参考新月杀视为技的 `addEffect("viewas", { ... })` 方式，由可见的 `hanjin_commander_ability`（“统领”按钮）统一提供：
+参考新月杀视为技的 `addEffect("viewas", { ... })` 方式，由可见的 `qiao_commander_ability`（“统领”按钮）统一提供：
 
-- 玩家通过“统领”按钮选择当前可发动的统领来源；`@[hanjin_commander_sources]` 保存客户端可读取的来源列表，并在界面中隐藏内部标记。该列表只列出**来源当前持有者与玩家同势力**、来源已明置、且自己主副将位均无士兵的角色。
+- 玩家通过“统领”按钮选择当前可发动的统领来源；`@[qiao_commander_sources]` 保存客户端可读取的来源列表，并在界面中隐藏内部标记。该列表只列出**来源当前持有者与玩家同势力**、来源已明置、且自己主副将位均无士兵的角色。
 - **入口可用性。** “统领”按钮仅在至少一项能力同时满足以下条件时可点击：存在合法可用的统领来源、存在可为该来源移除的武将牌、当前时机允许视为使用对应牌。当前用牌合法性应使用新月杀视为技的判定路径，涵盖使用/响应窗口、次数及禁止使用；不预先检查是否存在合法目标。目标距离、禁止指定及其他目标限制在进入用牌界面后的选目标与确认阶段检查，未形成合法用牌方案时不能确认，也不支付移将代价。仅存在来源标记不足以开放按钮。
 - **同屏选择。** 点击“统领”后，在当前用牌与目标选择界面直接显示全部当前可发动的能力按钮，不再另弹来源选择窗口。按钮文字为“统领武将·牌名”，如“张辽·杀”“赵云·无懈可击”；限一能力附“（限一）”，如“关羽·酒（限一）”。限一说明取自统领能力自身的限制，不能以翼从是否限一代替。
 - **默认与切换。** 能力列表按稳定顺序排列，首项默认激活；玩家未切换时使用该首项。点击其他能力按钮立即改变激活项、视为牌与合法目标范围。无目标牌依本身规则确认，有目标牌可在同一界面选择合法目标并确认；切换后重新校验已选目标，不得沿用对新牌非法的目标。
@@ -83,7 +83,7 @@ C.registerCommander("hanjin__somecommander", {
 
 ## 与交换模块的接口
 
-交换模块由 `pkg/hanjin_mode/rules/general_exchange.lua` 提供；统领模块不再自行模拟一次武将交换。双方约定如下：
+交换模块由 `pkg/qiao_mode/rules/general_exchange.lua` 提供；统领模块不再自行模拟一次武将交换。双方约定如下：
 
 1. 交换模块在**双方新位置全部就绪、技能与牌堆都同步完成后**调用 `Exchange.addCompletionListener(fn)` 注册的监听器，参数为 `(room, context)`。
 2. `context.sides` 每项含 `player`、`isDeputy`、`previous`、`general`；`context.obtained_soldiers` 列出本次交换到新位置的白板士兵，含 `player`、`isDeputy`、`general`。
