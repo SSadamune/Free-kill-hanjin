@@ -24,7 +24,7 @@ local ZHUDE_AUX = "#qiao__skill_han007_2_aux"
 ---@param player ServerPlayer | ClientPlayer
 ---@return integer[]
 local function ownHearts(player)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   return table.filter(player:getCardIds("he"), function(id)
     return M.isHeart(room, player, id)
   end)
@@ -34,7 +34,7 @@ end
 ---@param player ServerPlayer | ClientPlayer
 ---@return Player[]
 local function otherTargets(player)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   return table.filter(room.alive_players, function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)

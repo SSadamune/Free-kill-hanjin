@@ -30,6 +30,8 @@ def replacements():
             ('Config.preferredTimeout', 'Config.qiaoOperationTimeout'),
         ],
         'Fk/Pages/Lobby/RoomGeneralSettings.qml': [
+            ('  function refreshGameMode(gameMode) {\n    const data = Lua.fn(`function(mode)\n      local m = Fk.game_modes[mode]', '  function refreshGameMode(gameMode) {\n    // Guard empty/unregistered modes before the settings query. The lobby can\n    // emit the initial empty value before a valid mode is assigned.\n    const valid = Lua.fn(`function(mode)\n      return Fk.game_modes[mode] ~= nil\n    end`)(gameMode);\n    if (!valid) return;\n    const data = Lua.fn(`function(mode)\n      local m = Fk.game_modes[mode]'),
+            ('    if (data.playerNums !== undefined) {', '    if (!data) return;\n    if (data.playerNums !== undefined) {'),
             ('        title: Lua.tr("Operation timeout")\n        from: 10', '        title: Lua.tr("Operation timeout")\n        unlimitedText: Config.qiaoConsoleStart ? "无限" : ""\n        items: Config.qiaoConsoleStart ? [-1, ...Array.from({length: 51}, (_, i) => i + 10)] : []\n        from: Config.qiaoConsoleStart ? -1 : 10'),
             ('        value: Config.preferredTimeout', '        value: Config.qiaoOperationTimeout'),
             ('          Config.preferredTimeout = value;', '          if (Config.qiaoConsoleStart) Config.qiaoConsoleTimeout = value;\n          else Config.preferredTimeout = value;'),

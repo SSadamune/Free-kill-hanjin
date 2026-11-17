@@ -51,7 +51,7 @@ skill:addEffect("active", {
   max_phase_use_time = 1,
   can_use = function(self, player)
     return player.phase == Player.Play and not player.dead
-      and hasTwoEquipped(player.room or Fk:currentRoom(), player)
+      and hasTwoEquipped(Fk:currentRoom(), player)
   end,
   target_filter = function(self, player, to_select, selected)
     return #selected < 2 and to_select ~= nil and not to_select.dead

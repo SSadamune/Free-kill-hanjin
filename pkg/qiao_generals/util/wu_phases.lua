@@ -14,7 +14,7 @@ local M = {}
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room | Client
 function M.currentRoom(player)
-  return (player and player.room) or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 本回合由 player 真实使用过的牌记录（花色/类别/颜色/使用阶段）。

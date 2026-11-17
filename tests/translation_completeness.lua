@@ -1,0 +1,79 @@
+-- 正式可见技能/旗/公开牌堆的本地化完整性检查。
+-- 只覆盖会在技能面板、旗状态栏或牌名中显示的键；内部规则/代理技能不强行配文案。
+Testqiao_translation_completeness = {}
+
+local PUBLIC_SKILLS = {
+  "qiao__skill_em_han001_banner",
+  "qiao__skill_em_han001_consume",
+  "qiao__skill_em_jin001_banner",
+  "qiao__skill_em_wei001_banner",
+  "qiao__skill_em_wu001_flag_entry",
+  "qiao__skill_em_wu001_flag",
+  "qiao__gongxin",
+  "qiao__em_qun010_banner",
+}
+
+local PUBLIC_PROMPTS = {
+  "#qiao__skill_han002_1-invoke",
+  "#qiao__skill_han018_1-invoke",
+  "#qiao__skill_em_wu001_flag-grant",
+  "#qiao__skill_em_wu001_flag-remove",
+  "#qiao__gongxin-prompt",
+  "#qiao__gongxin-view",
+  "#qiao__gongxin-show",
+  "#qiao__gongxin-move",
+  "#qiao_adaptation_add_target",
+  "#qiao_adaptation_remove_target",
+  "#qiao_adaptation_discard_equip",
+  "#qiao_adaptation_ignore",
+  "#InvokeSkillQiaoAdaptation",
+}
+
+local PUBLIC_PILES = {
+  "qiao_em_han001_zhaoshu",
+  "qiao_em_wu001_fenghuo",
+  "qiao_em_qun010_tianbing",
+}
+
+function Testqiao_translation_completeness:testPublicSkillsHaveNameAndDescription()
+  for _, name in ipairs(PUBLIC_SKILLS) do
+    local shown = Fk:translate(name)
+    local desc = Fk:translate(":" .. name)
+    lu.assertNotEquals(shown, name, "可见技能缺名称：" .. name)
+    lu.assertNotEquals(desc, ":" .. name, "可见技能缺说明：" .. name)
+    lu.assertTrue(#desc > 0, "可见技能说明为空：" .. name)
+  end
+end
+
+function Testqiao_translation_completeness:testPublicPromptsAreTranslated()
+  for _, key in ipairs(PUBLIC_PROMPTS) do
+    lu.assertNotEquals(Fk:translate(key), key, "请求提示缺本地化：" .. key)
+  end
+end
+
+function Testqiao_translation_completeness:testPublicPilesAndMarksHaveReadableText()
+  for _, name in ipairs(PUBLIC_PILES) do
+    lu.assertNotEquals(Fk:translate(name), name, "公开牌堆缺本地化：" .. name)
+  end
+  for _, name in ipairs({ "qiao_use_target_policy", "qiao_commander_sources" }) do
+    local spec = assert(Fk.qml_marks[name], "缺少 QML 标记注册：" .. name)
+    lu.assertEquals(spec.how_to_show(), "#hidden", "内部标记应隐藏：" .. name)
+  end
+end
+
+function Testqiao_translation_completeness:testEveryFormalGeneralSkillHasText()
+  local missing = {}
+  for id, general in pairs(Fk.generals) do
+    if id:startsWith("qiao_heg__") then
+      for _, skill in ipairs(general:getSkillNameList()) do
+        if Fk.skills[skill] ~= nil then
+          if Fk:translate(skill) == skill then table.insert(missing, id .. ":" .. skill .. ":name") end
+          if Fk:translate(":" .. skill) == ":" .. skill then table.insert(missing, id .. ":" .. skill .. ":desc") end
+        end
+      end
+    end
+  end
+  lu.assertEquals(#missing, 0, "正式武将技能缺少可见文案：" .. table.concat(missing, ", "))
+end
+
+return { name = "qiao_translation_completeness" }

@@ -238,7 +238,7 @@ local function activateSecret(room, player, to, cards)
 end
 
 local function secretMinimum(player)
-  return Fk.skills[MZ]:getMinCardNum(player)
+  return inRoom(function() return Fk.skills[MZ]:getMinCardNum(player) end)
 end
 
 --- 构造真实的 ClientPlayer 形态（没有 room 字段），并临时让 Fk:currentRoom()

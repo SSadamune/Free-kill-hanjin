@@ -39,7 +39,7 @@ end
 ---@param id integer
 ---@return Card
 local function effectiveCard(player, id)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   return (room and room:filterCard(id, player)) or rawCard(id)
 end
 

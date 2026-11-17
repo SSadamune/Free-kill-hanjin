@@ -51,7 +51,7 @@ skill:addEffect(fk.TargetConfirmed, {
 })
 
 Fk:loadTranslationTable {
-  ["qiao__skill_han002_1-invoke"] = "诗怨：你可以发动诗怨",
+  ["#qiao__skill_han002_1-invoke"] = "诗怨：你可以发动诗怨",
 }
 
 return skill

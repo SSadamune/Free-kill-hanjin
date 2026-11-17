@@ -166,12 +166,42 @@ M.types = {
     equip_skill = "qiao__inert_equip", inert = true, derived = true },
   { id = "qiao__liulongcanjia", display = "六龙骖驾", type = "equip",
     subtype = Card.SubtypeDefensiveRide, skill = "default_equip_skill",
-    equip_skill = "qiao__inert_equip", inert = false,
-    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide } },
+    equip_skill = "qiao__liulongcanjia_skill", inert = false,
+    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide },
+    on_install = function(self, room, player)
+      for _, subtype in ipairs({ Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }) do
+        for _, id in ipairs(player:getEquipments(subtype)) do
+          if id ~= self.id then
+            room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+              self.name, nil, true, player)
+          end
+        end
+      end
+    end },
   { id = "qiao__linxiao_yuyu", display = "临筱玉舆", type = "equip",
-    subtype = Card.SubtypeDefensiveRide, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true,
-    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide } },
+    subtype = Card.SubtypeDefensiveRide, skill = "default_equip_skill",
+    equip_skill = "qiao__linxiao_yuyu_skill", inert = false,
+    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide },
+    on_install = function(self, room, player)
+      local cleared = {}
+      for _, subtype in ipairs({ Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }) do
+        for _, id in ipairs(player:getEquipments(subtype)) do
+          if id ~= self.id then
+            room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+              self.name, nil, true, player)
+            table.insert(cleared, id)
+          end
+        end
+      end
+      if #cleared > 0 then
+        -- 嵌套 MoveCards 的事实挂到实际父装备移动事件，供同一次 AfterCardsMove 使用。
+        local ev = room.logic:getCurrentEvent()
+        while ev ~= nil and ev.event ~= GameEvent.MoveCards do ev = ev.parent end
+        if ev ~= nil then
+          room:setTag("qiao_linxiao_replaced", { card = self.id, ids = cleared })
+        end
+      end
+    end },
 
   -- Treasures ------------------------------------------------------------
   { id = "qiao__bronze_sparrow", display = "铜雀", type = "equip",

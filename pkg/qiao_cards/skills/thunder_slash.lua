@@ -7,7 +7,7 @@ local skill = fk.CreateSkill { name = "qiao__thunder_slash_skill" }
 
 local function ignoreTimes(player, card, extra_data)
   if extra_data and extra_data.bypass_times then return true end
-  return A.ignoreTimesCandidate(player.room or Fk:currentRoom(), player, card)
+  return A.ignoreTimesCandidate(Fk:currentRoom(), player, card)
 end
 
 skill:addEffect("cardskill", {

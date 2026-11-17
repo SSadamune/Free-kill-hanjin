@@ -11,7 +11,9 @@ local skill = fk.CreateSkill {
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local function eligibleTargets(player)
-  return table.filter(player.room.alive_players, function(p)
+  local room = Fk:currentRoom()
+  if room == nil then return {} end
+  return table.filter(room.alive_players, function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
       and p.hp > player.hp and player:canPindian(p)
   end)

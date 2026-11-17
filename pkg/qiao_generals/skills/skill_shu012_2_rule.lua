@@ -7,7 +7,7 @@ local TIANFU = "qiao__skill_shu012_2"
 
 skill:addEffect("atkrange", {
   correct_func = function(self, from)
-    local room = from and from.room or Fk:currentRoom()
+    local room = Fk:currentRoom()
     if room == nil or room.current == nil then return 0 end
     for _, holder in ipairs(room.alive_players) do
       if not holder.dead and not holder:isRemoved()

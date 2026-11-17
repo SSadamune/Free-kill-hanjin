@@ -20,7 +20,7 @@ local DELAY_SKILL_NAME = "#qiao_skill_han006_1_delay"
 local delay_skill
 
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 本出牌阶段尚未以此法得到过牌的其他存活角色。

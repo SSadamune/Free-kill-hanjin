@@ -13,7 +13,9 @@ local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local H = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
 
 local function eligible(player)
-  return table.find(player.room.alive_players, function(p)
+  local room = Fk:currentRoom()
+  if room == nil then return false end
+  return table.find(room.alive_players, function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end) ~= nil
 end

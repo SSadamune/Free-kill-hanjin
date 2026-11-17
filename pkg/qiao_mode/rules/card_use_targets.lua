@@ -415,14 +415,14 @@ local function proxyFor(original)
   proxy.visible = false
 
   function proxy:getMinTargetNum(player)
-    local rec = M.topPolicy(player and player.room, player)
+    local rec = M.topPolicy(Fk:currentRoom(), player)
     if rec ~= nil and rec.min_targets ~= nil then return rec.min_targets end
     if rec ~= nil and rec.kind == M.KIND_EXPLICIT then return 1 end
     return original:getMinTargetNum(player)
   end
 
   function proxy:getMaxTargetNum(player, card)
-    local rec = M.activePolicy(player and player.room, player, card)
+    local rec = M.activePolicy(Fk:currentRoom(), player, card)
     if rec ~= nil and rec.max_targets ~= nil then return rec.max_targets end
     if rec ~= nil and rec.kind == M.KIND_EXPLICIT then
       return original:getMaxTargetNum(player, card)
@@ -443,13 +443,13 @@ local function proxyFor(original)
   end
 
   function proxy:fixTargets(player, selected_cards, card, extra_data)
-    local rec = M.activePolicy(player and player.room, player, card)
+    local rec = M.activePolicy(Fk:currentRoom(), player, card)
     if rec ~= nil and rec.kind == M.KIND_EXPLICIT then return nil end
     return original:fixTargets(player, selected_cards, card, extra_data)
   end
 
   function proxy:modTargetFilter(player, to_select, selected, card, extra_data)
-    local rec = M.activePolicy(player and player.room, player, card)
+    local rec = M.activePolicy(Fk:currentRoom(), player, card)
     if rec == nil or rec.kind == M.KIND_DEFAULT then
       return originalModTargetFilter(original, player, to_select, selected, card, extra_data)
     end
@@ -457,11 +457,11 @@ local function proxyFor(original)
       return originalModTargetFilter(original, player, to_select, selected, card, withBypass(extra_data))
     end
     if player:isProhibited(to_select, card) then return false end
-    return M.matchesCondition(player.room, player, card, to_select, rec.condition)
+    return M.matchesCondition(Fk:currentRoom(), player, card, to_select, rec.condition)
   end
 
   function proxy:targetFilter(player, to_select, selected, selected_cards, card, extra_data)
-    local rec = M.activePolicy(player and player.room, player, card)
+    local rec = M.activePolicy(Fk:currentRoom(), player, card)
     if rec == nil or rec.kind == M.KIND_DEFAULT then
       if rec ~= nil and (rec.min_targets ~= nil or rec.max_targets ~= nil)
         and original.targetFilter == Util.CardTargetFilter then
@@ -478,7 +478,7 @@ local function proxyFor(original)
       return originalTargetFilter(original, player, to_select, selected, selected_cards, card, merged)
     end
     if player:isProhibited(to_select, card) then return false end
-    if not M.matchesCondition(player.room, player, card, to_select, rec.condition) then return false end
+    if not M.matchesCondition(Fk:currentRoom(), player, card, to_select, rec.condition) then return false end
     local max = rec.max_targets or original:getMaxTargetNum(player, card)
     if max > 0 and #selected >= max then return false end
     return true
@@ -939,4 +939,11 @@ function M.useCard(room, player, use, policy, context)
   return use
 end
 
+-- 内部目标策略栈不应以程序键显示在武将牌状态栏。
+if Fk.addQmlMark then
+  Fk:addQmlMark {
+    name = "qiao_use_target_policy",
+    how_to_show = function() return "#hidden" end,
+  }
+end
 return M

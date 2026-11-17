@@ -1,4 +1,5 @@
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
+local H = require "packages.hegemony.util"
 
 -- 模式级升变规则。由统领规则在所有包加载完成后挂到实际 Skill 对象上，
 -- 避免和其他会话同时修改 mode.lua 的 rule 字段；房间建立时已有的模式技会一并加载。
@@ -16,6 +17,25 @@ skill:addEffect(fk.GameStart, {
 })
 
 -- 普通君主升变沿用“首个回合开始”的原有时机；一回合只询问一次。
+
+-- 普通双亮奖励实际发放时记录历史资格。priority 高于上游 consume 逻辑，
+-- 先读取 pending 快照；不改 event.data。
+skill:addEffect(fk.GeneralRevealed, {
+  priority = 1000,
+  can_trigger = function(self, event, target, player)
+    return target == player and player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
+      and player.deputyGeneral ~= ""
+      and (player:getMark("HalfMaxHpLeft") > 0 or player:getMark("CompanionEffect") > 0)
+  end,
+  on_trigger = function(self, event, target, player)
+    if player:getMark("HalfMaxHpLeft") > 0 then
+      player.room:setPlayerMark(player, A.YINYANG_MARK, 1)
+    end
+    if player:getMark("CompanionEffect") > 0 then
+      player.room:setPlayerMark(player, A.COMPANION_MARK, 1)
+    end
+  end,
+})
 skill:addEffect(fk.TurnStart, {
   priority = 200,
   can_trigger = function(self, event, target, player)

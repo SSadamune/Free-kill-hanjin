@@ -24,7 +24,7 @@ local DELAY_USED = "__qiao_skill_han013_1_delay_used"
 local delay_skill
 
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 暗将的当前实际势力预测，沿用密诏及汉晋公共明置/转野判定。

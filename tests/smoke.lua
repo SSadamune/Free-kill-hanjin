@@ -53,7 +53,7 @@ function Testqiao_smoke:testEmptyGeneralPacks()
   }
   lu.assertEquals(#visible, #expected)
   for i, name in ipairs(expected) do lu.assertEquals(visible[i], name) end
-  for _, name in ipairs({ "qiao_buchen", "qiao_bingqing", "qiao_zongheng" }) do
+  for _, name in ipairs({ "qiao_buchen", "qiao_zongheng" }) do
     local pack = assert(Fk.packages[name], "missing empty pack " .. name)
     lu.assertEquals(pack.type, Package.GeneralPack)
     lu.assertEquals(pack.extensionName, "qiao")
@@ -65,6 +65,12 @@ function Testqiao_smoke:testEmptyGeneralPacks()
     lu.assertTrue(table.contains(group, name))
     lu.assertEquals(#ClientUtil:getGenerals(name), 0)
   end
+  local bingqing = assert(Fk.packages.qiao_bingqing)
+  lu.assertEquals(bingqing.type, Package.GeneralPack)
+  lu.assertEquals(bingqing.extensionName, "qiao")
+  lu.assertTrue(table.contains(bingqing.game_modes_whitelist, "qiao_heg_mode"))
+  lu.assertEquals(#ClientUtil:getGenerals("qiao_bingqing"), 2)
+  lu.assertEquals(#bingqing.cards, 0)
 end
 
 function Testqiao_smoke:testJianxiongObtainsDamageCard()

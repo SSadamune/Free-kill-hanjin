@@ -26,7 +26,7 @@ local listener
 ---@param player ServerPlayer
 ---@return ServerPlayer[]
 local function chainedTargets(player)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   return table.filter(J.alivePlayers(room), function(p)
     return p ~= player and not p.dead and not p:isRemoved() and p.chained
   end)

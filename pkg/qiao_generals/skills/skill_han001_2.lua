@@ -17,7 +17,7 @@ local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room | Client
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 当前实际势力的预测值。暗将尚未明置时，用本局势力标记和明置后的

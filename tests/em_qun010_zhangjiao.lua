@@ -21,6 +21,7 @@ function Testqiao_em_qun010_zhangjiao:testDataFragment()
   lu.assertEquals(DATA.skillCount, 3)
   lu.assertNotNil(Fk.generals["qiao_heg__em_qun010"], "正式将池尚未合入 EM(QUN010)")
   lu.assertEquals(DATA.versions[1].normal, "qiao_heg__qun010")
+  lu.assertEquals(Fk:translate("qiao_em_qun010_tianbing"), "天兵", "天兵旗状态栏实际显示键应本地化")
 end
 
 function Testqiao_em_qun010_zhangjiao:testTianbingCountAndLargePowerOverlay()

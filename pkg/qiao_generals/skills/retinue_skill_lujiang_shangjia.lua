@@ -34,7 +34,6 @@ skill:addEffect("active", {
   can_use = function(self, player)
     if player == nil or player.dead or player.phase ~= Player.Play then return false end
     if not player:hasSkill(skill.name) then return false end
-    if player.room ~= nil then Z.ensureBonusRule(player.room) end
     if player:getHandcardNum() == #player:getCardIds("e") then return false end
     local x = ownerCount(player)
     return Z.canUse(player, skill.name, x)

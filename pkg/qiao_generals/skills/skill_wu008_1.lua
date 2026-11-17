@@ -18,7 +18,7 @@ local PLACE = "#qiao__skill_wu008_1-place"
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room | Client
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 可作为弃置成本的手牌。

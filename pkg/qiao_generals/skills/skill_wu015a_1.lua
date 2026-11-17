@@ -14,7 +14,7 @@ skill.qiaoImplemented = true
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room | Client
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 其他存活角色（客户端使用公共房间副本）。

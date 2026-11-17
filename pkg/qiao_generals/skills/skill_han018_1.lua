@@ -105,7 +105,7 @@ skill:addEffect(fk.DrawNCards, {
 })
 
 Fk:loadTranslationTable {
-  ["qiao__skill_han018_1-invoke"] = "集兵：你可以多摸X张牌",
+  ["#qiao__skill_han018_1-invoke"] = "集兵：你可以多摸X张牌",
 }
 
 return skill
