@@ -1,6 +1,7 @@
 -- 穿心使用的固定翼从变更：沿用国战变更事件，但不验明原暗将。
 local H=require "packages.hegemony.util"
 local E=require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local CardState=require "packages.hanjin.pkg.hanjin_mode.rules.general_card_state"
 local C=require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
 local M={}
 function M.replaceDeputy(room,player,retinue,skillName)
@@ -13,14 +14,7 @@ function M.replaceDeputy(room,player,retinue,skillName)
   if room.logic:trigger(H.GeneralTransforming,player,data) then return false end
   -- 不调用 revealGeneral：旧暗将的明置技能、统领明置都不得发动。
   if player.deputyGeneral=="anjiang" then
-    local other=Fk.generals[E.actualGeneral(player,false)]
-    local kept=other and other:getSkillNameList(true) or {}
-    for _,name in ipairs(Fk.generals[old]:getSkillNameList(true)) do
-      if not table.contains(kept,name) then
-        player:loseFakeSkill(name)
-        player:prelightSkill(name,false)
-      end
-    end
+    CardState.clearLeavingCardState(player,old,true)
   end
   C.onGeneralHidden(room,player,old)
   room:changeHero(player,retinue,false,true,false,false,false)

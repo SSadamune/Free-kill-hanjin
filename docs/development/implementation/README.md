@@ -21,7 +21,7 @@
 - [统领与翼从](commander-retinue.md)
 - [指定额外目标](extra-targets.md)
 - [势力禁选规范](faction-ban.md)
-- [交换武将](general-exchange.md)
+- [交换武将](general-exchange.md)；离牌 fake/prelight 接口见同页 `GeneralCardState`
 - [客将](guest-factions.md)
 - [“X 只能当 Y 使用／打出”](only-as.md)
 - [第二君主](second-lord.md)
