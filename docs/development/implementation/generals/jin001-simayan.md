@@ -22,7 +22,7 @@
 | JIN015 | 石苞 | [前驱](active.md#jin015-1) |
 | JIN016 | 张华 | [复礼](support.md#jin016-1)、[风物](support.md#jin016-2) |
 
-运行时武将 ID 为 `hanjin__jin编号`；除应期外，各技能源码为 `pkg/hanjin_generals/skills/skill_jin编号_顺序.lua`。应期仍为 `hanjin__skill_wei002_3`，不新增晋副本。
+运行时武将 ID 为 `qiao__jin编号`；除应期外，各技能源码为 `pkg/qiao_generals/skills/skill_jin编号_顺序.lua`。应期仍为 `qiao__skill_wei002_3`，不新增晋副本。
 
 ## 2. 关联翼从
 
@@ -59,7 +59,7 @@
 
 ### 实质发现与来源边界
 
-- **需修正的登记**：`pkg/hanjin_generals/data/standard.lua` 的 JIN003 `companions` 为空；标准表及 JSON `zhulian_ke` 均有 JIN002，当前 `init.lua` 只把该空表加载并自校验，不能检查出来源漏项。影响真实珠联璧合组合。
+- **需修正的登记**：`pkg/qiao_generals/data/standard.lua` 的 JIN003 `companions` 为空；标准表及 JSON `zhulian_ke` 均有 JIN002，当前 `init.lua` 只把该空表加载并自校验，不能检查出来源漏项。影响真实珠联璧合组合。
 - **需修正的文本**：JIN007 恤下运行时写“交给其两张牌并摸两张牌”，来源是“交给其两张牌，然后摸两张牌”。不应将顺序和连接关系改写。JIN003 昭然亦有“此阶段内／省略你”的非逐字改写，应恢复来源；JIN005 顺流体力括注是旧解释，采用现有已确认配将修正规则，保持 `deputyHpAdjust = -1`。尖括号样式差异另与语义差异区分，不作为新增效果。
 - **次要展示差异**：JIN002、003、008、009、010、011、014 的运行时称号均只保留来源首项，漏第二项；另有繁简字差异。标准表已保留完整来源，不应从 CSV 的其他称号补写替换。属于数据展示待修正，不与技能效果缺失混为一项故障。
 - **版本差异**：泰然 JSON 写结束阶段、CSV 写回合结束时；用户于 2026-11-15 明确时机尚未定案，**暂按回合结束时**（对应规则集回合结束前），标准表及逐将约定已标明暂行性质，不能把暂行口径写成最终裁定。当前运行时 `data/standard.lua` 仍显示旧“结束阶段”，后续实装须同步修正。骤霆仍采用标准表／JSON 的亮出与角色数上限，不采用 CSV 无该上限的版本；外部资料保留原样。
@@ -72,7 +72,7 @@
 - `.dev/runtime/FreeKill-release/ltk/server/room.lua`：`askToUseCard` 返回待执行数据；`askToUseRealCard` 默认已执行，`skip=true` 才只选择；`askToUseActiveSkill` 默认执行主动技的 `onUse`。悖弑、骤霆、风物等必须选定一种执行契约，不能拿返回值再重复用一次。骤霆额外开放处理区顶牌，通过 `expand_pile` 等正式参数授权，不先放手牌。
 - 同文件 `askToGuanxing` 默认完成置顶／置底，返回 `top`、`bottom`；权变可复用项目 `skill_shu004_1.lua` 的观星交互，不重写牌堆排序。
 - `.dev/runtime/FreeKill-release/ltk/core/events/usecard.lua`：`UseCardData:isUsingHandcard()` 读取素材来源；`changeCard()` 保留使用身份、实体材料等；`damageDealt` 为角色对象键。权变、柔克及用牌后伤害关联均据此适配，不能用已经离开手牌的实时牌区或角色 ID 键误读。
-- `pkg/hanjin_mode/rules/adaptation.lua`：`addEntry`、`grantIgnore`、`registerEffect`；通法复用一令牌一条件，乘流和前驱需新增雷电属性／弃装备效果处理，再通过统一 prepare／resolve 时点执行。现有 effect 表没有这两个专属效果，仅登记卡面不构成实现。
+- `pkg/qiao_mode/rules/adaptation.lua`：`addEntry`、`grantIgnore`、`registerEffect`；通法复用一令牌一条件，乘流和前驱需新增雷电属性／弃装备效果处理，再通过统一 prepare／resolve 时点执行。现有 effect 表没有这两个专属效果，仅登记卡面不构成实现。
 - `retinue_skill_xiyuanjun.lua` 的正式 `visibility`／`prohibit` 接线可供昭然、复礼参考；昭然公开范围须随手牌流动变化，复礼是花色禁用／禁打出，不能误改为仅锁定被展示的一张牌。
 - `skill_qun012_2.lua` 及其 `qun_duanchang` 来源维护可供扼绝核对，但断肠是整张将牌失技，扼绝须选择并失去一个技能，不能直接调用整将删除。须区分将牌上的技能与非将牌技能：前者按将牌及技能保存失去状态并接入交换来源过滤，后者依实际授予来源处理、不随将牌转移。现有断肠模块提供整将失技的参考，但不表示扼绝的单技能失去与非将牌来源已接入或验证。
 - `commander_retinue.lua` 已登记 JIN002 的红桃与助战条目、JIN009 的调虎离山及文鸯的限一来源；复用公共能力，新增翼从专属效果，不另造移将、选兵种、限一计数。
@@ -89,9 +89,9 @@
 
 ## 3. 接线
 
-晋新增技能及两翼从均在骨架上设置 `hanjinImplemented = true`，加载断言核对实际 effect。既有司马炎保留白名单；应期共用魏技能。
+晋新增技能及两翼从均在骨架上设置 `qiaoImplemented = true`，加载断言核对实际 effect。既有司马炎保留白名单；应期共用魏技能。
 
-`mode.lua` 正式注册 `hanjin__jin_resources_rule`（泰然及限定技事实）、`hanjin__jin_deck_rule`（权变已建立禁用）、`hanjin__jin_information_rule`（昭然持续可见）、`hanjin__jin_adaptation_rule`（本次用牌雷伤）、`hanjin__jin_sources_rule`（复礼承诺与花色禁用）。柔克、克清的持续监听按需安装在房间中；扼绝复用单技能失去入口及交换来源过滤，保留将牌失技状态。正式卡包依锁定应变参考登记冰伤属性，真实冰伤重置有定向回归。
+`mode.lua` 正式注册 `qiao__jin_resources_rule`（泰然及限定技事实）、`qiao__jin_deck_rule`（权变已建立禁用）、`qiao__jin_information_rule`（昭然持续可见）、`qiao__jin_adaptation_rule`（本次用牌雷伤）、`qiao__jin_sources_rule`（复礼承诺与花色禁用）。柔克、克清的持续监听按需安装在房间中；扼绝复用单技能失去入口及交换来源过滤，保留将牌失技状态。正式卡包依锁定应变参考登记冰伤属性，真实冰伤重置有定向回归。
 
 默认 `tests/all.lua` 接入八套新增晋专项：`jin_basic`、`jin_resources`、`jin_deck`、`jin_information`、`jin_reactive`、`jin_adaptation`、`jin_chain`、`jin_sources`。原 `jin001_simayan` 与 `wei_pair_hp` 覆盖继续复用。
 

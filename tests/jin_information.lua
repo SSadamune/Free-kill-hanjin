@@ -2,11 +2,11 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local ZHAORAN = "hanjin__skill_jin003_1"
-local SHIREN = "hanjin__skill_jin007_1"
+local ZHAORAN = "qiao__skill_jin003_1"
+local SHIREN = "qiao__skill_jin007_1"
 
-Testhanjin_jin_information = {}
-Testhanjin_jin_information.tearDown = support.clearRoom
+Testqiao_jin_information = {}
+Testqiao_jin_information.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -15,7 +15,7 @@ local function inRoom(fn)
 end
 
 local function prepare(main)
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "wei" })
     for _, q in ipairs(room.players) do
@@ -26,7 +26,7 @@ local function prepare(main)
     end
     skill_test.installDualGenerals(room, room.players[1], {
       main = main,
-      deputy = "hanjin_test__jin_2",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = room.players[1]
@@ -47,8 +47,8 @@ local function give(room, player, specs)
   return ids
 end
 
-function Testhanjin_jin_information:testZhaoranVisibilityAndLostLastSuit()
-  local room = prepare("hanjin__jin003")
+function Testqiao_jin_information:testZhaoranVisibilityAndLostLastSuit()
+  local room = prepare("qiao_heg__jin003")
   local p, viewer = room.players[1], room.players[2]
   local heart = give(room, p, { { "jink", Card.Heart, 3 } })[1]
 
@@ -56,19 +56,19 @@ function Testhanjin_jin_information:testZhaoranVisibilityAndLostLastSuit()
   inRoom(function()
     room.logic:trigger(fk.EventPhaseStart, p, { phase = Player.Play })
   end)
-  lu.assertTrue(p:getMark("hanjin_jin003_1_open-phase") > 0)
+  lu.assertTrue(p:getMark("qiao_jin003_1_open-phase") > 0)
   lu.assertTrue(viewer:cardVisible(heart))
 
   -- 真实弃置最后一张红桃：只识别一次，选择摸一张。
-  FkTest.setNextReplies(p, { { "hanjin__skill_jin003_1-draw" } })
+  FkTest.setNextReplies(p, { { "qiao__skill_jin003_1-draw" } })
   inRoom(function()
     room:throwCard({ heart }, "test", p, p)
   end)
-  lu.assertTrue(table.contains(p:getTableMark("hanjin_jin003_1_lost_suits-phase"), Card.Heart))
+  lu.assertTrue(table.contains(p:getTableMark("qiao_jin003_1_lost_suits-phase"), Card.Heart))
 end
 
-function Testhanjin_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
-  local room = prepare("hanjin__jin007")
+function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
+  local room = prepare("qiao_heg__jin007")
   local p, p2, p3 = room.players[1], room.players[2], room.players[3]
   local c2 = give(room, p2, { { "jink", Card.Heart, 4 } })[1]
   local c3 = give(room, p3, { { "peach", Card.Heart, 5 } })[1]
@@ -94,4 +94,4 @@ function Testhanjin_jin_information:testShirenHiddenPickThenDeclareAndRevealOne(
   lu.assertFalse(table.contains(p3:getCardIds("h"), c3))
 end
 
-return { name = "hanjin_jin_information" }
+return { name = "qiao_jin_information" }

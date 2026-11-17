@@ -1,11 +1,11 @@
 -- 八阵兵：正常选择 1-2 名其他角色、本次结算临时无懈、同名轮次独立。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
-local BAZHEN = "hanjin__retinue_skill_bazhenbing"
-local TEMP = "hanjin__retinue_skill_bazhenbing_viewas"
-local LURE = "hanjin__lure_tiger"
+local BAZHEN = "qiao__retinue_skill_bazhenbing"
+local TEMP = "qiao__retinue_skill_bazhenbing_viewas"
+local LURE = "qiao__lure_tiger"
 
 local function inRoom(fn)
   local result
@@ -14,10 +14,10 @@ local function inRoom(fn)
 end
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_retinue_bazhenbing = {
+Testqiao_retinue_bazhenbing = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, {
         "shu", "shu", "shu", "shu", "qun", "qun", "qun", "qun",
@@ -37,10 +37,10 @@ local function triggerPhase(room, target)
   })
 end
 
-function Testhanjin_retinue_bazhenbing:testTargetsOtherAndTemporaryViewAsCleansUp()
+function Testqiao_retinue_bazhenbing:testTargetsOtherAndTemporaryViewAsCleansUp()
   local room, owner, phase, other = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
-    R.grant(owner, { general = "hanjin__retinue_bazhenbing", skill = BAZHEN,
+    R.grant(owner, { general = "qiao_heg__retinue_bazhenbing", skill = BAZHEN,
       origin = "granted" })
   end)
   skill_test.withSkillRequests(room, BAZHEN, {
@@ -61,15 +61,15 @@ function Testhanjin_retinue_bazhenbing:testTargetsOtherAndTemporaryViewAsCleansU
   lu.assertEquals(other:getMark("@@lure_tiger-turn"), 1)
   lu.assertEquals(phase:getMark("@@lure_tiger-turn"), 0)
   lu.assertFalse(phase:hasSkill(TEMP))
-  lu.assertEquals(phase:getMark("@@hanjin_bazhen_viewas"), 0)
+  lu.assertEquals(phase:getMark("@@qiao_bazhen_viewas"), 0)
 end
 
-function Testhanjin_retinue_bazhenbing:testSameNameInstancesHaveIndependentRoundLedgers()
+function Testqiao_retinue_bazhenbing:testSameNameInstancesHaveIndependentRoundLedgers()
   local room, owner, phase, a, b = FkTest.room, p(1), p(2), p(3), p(4)
   inRoom(function()
-    R.grant(owner, { general = "hanjin__retinue_bazhenbing", skill = BAZHEN,
+    R.grant(owner, { general = "qiao_heg__retinue_bazhenbing", skill = BAZHEN,
       origin = "granted" })
-    R.grant(owner, { general = "hanjin__retinue_bazhenbing", skill = BAZHEN,
+    R.grant(owner, { general = "qiao_heg__retinue_bazhenbing", skill = BAZHEN,
       origin = "granted" })
   end)
   local turns = { a, b }
@@ -98,14 +98,14 @@ function Testhanjin_retinue_bazhenbing:testSameNameInstancesHaveIndependentRound
   lu.assertFalse(phase:hasSkill(TEMP))
 end
 
-function Testhanjin_retinue_bazhenbing:testRealNullificationRequestUsesSlashAsNullification()
+function Testqiao_retinue_bazhenbing:testRealNullificationRequestUsesSlashAsNullification()
   local room, owner, phase, other = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
-    R.grant(owner, { general = "hanjin__retinue_bazhenbing", skill = BAZHEN,
+    R.grant(owner, { general = "qiao_heg__retinue_bazhenbing", skill = BAZHEN,
       origin = "granted" })
   end)
   local slash = inRoom(function()
-    local card = room:printCard("hanjin__slash", Card.Spade, 8)
+    local card = room:printCard("qiao__slash", Card.Spade, 8)
     room:obtainCard(phase, card, false, fk.ReasonJustMove)
     return card.id
   end)
@@ -113,7 +113,7 @@ function Testhanjin_retinue_bazhenbing:testRealNullificationRequestUsesSlashAsNu
     if p == phase then
       FkTest.setNextReplies(p, {
         { card = { skill = TEMP, subcards = { slash } }, targets = {},
-          interaction_data = "hanjin__nullification" },
+          interaction_data = "qiao__nullification" },
       })
     else
       FkTest.setNextReplies(p, { "" })
@@ -137,19 +137,19 @@ function Testhanjin_retinue_bazhenbing:testRealNullificationRequestUsesSlashAsNu
   lu.assertEquals(other:getMark("@@lure_tiger-turn"), 0)
   lu.assertFalse(table.contains(phase:getCardIds("h"), slash))
   lu.assertFalse(phase:hasSkill(TEMP))
-  lu.assertEquals(phase:getMark("@@hanjin_bazhen_viewas"), 0)
+  lu.assertEquals(phase:getMark("@@qiao_bazhen_viewas"), 0)
 end
 
-function Testhanjin_retinue_bazhenbing:testTemporaryViewAsActuallyUsesSlashAsNullification()
+function Testqiao_retinue_bazhenbing:testTemporaryViewAsActuallyUsesSlashAsNullification()
   local room, phase = FkTest.room, p(2)
   local slash = inRoom(function()
-    local card = room:printCard("hanjin__slash", Card.Spade, 7)
+    local card = room:printCard("qiao__slash", Card.Spade, 7)
     room:obtainCard(phase, card, false, fk.ReasonJustMove)
     return card.id
   end)
   local card
   inRoom(function()
-    room:setPlayerMark(phase, "@@hanjin_bazhen_viewas", 1)
+    room:setPlayerMark(phase, "@@qiao_bazhen_viewas", 1)
     room:handleAddLoseSkills(phase, TEMP, BAZHEN, false, true)
     card = Fk.skills[TEMP]:viewAs(phase, { slash })
   end)
@@ -159,10 +159,10 @@ function Testhanjin_retinue_bazhenbing:testTemporaryViewAsActuallyUsesSlashAsNul
   inRoom(function()
     room:useCard { from = phase, tos = {}, card = card }
     room:handleAddLoseSkills(phase, "-" .. TEMP, BAZHEN, false, true)
-    room:setPlayerMark(phase, "@@hanjin_bazhen_viewas", 0)
+    room:setPlayerMark(phase, "@@qiao_bazhen_viewas", 0)
   end)
   lu.assertFalse(table.contains(phase:getCardIds("h"), slash))
   lu.assertFalse(phase:hasSkill(TEMP))
 end
 
-return { name = "hanjin_retinue_bazhenbing" }
+return { name = "qiao_retinue_bazhenbing" }

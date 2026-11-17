@@ -10,7 +10,7 @@
 
 ## 涉猎定义
 
-用户指定采用 [standard.lua](../../pkg/hanjin_generals/data/standard.lua) 中 `hanjin__skill_wu003_3` 的描述：
+用户指定采用 [standard.lua](../../pkg/qiao_generals/data/standard.lua) 中 `qiao__skill_wu003_3` 的描述：
 
 > 摸牌阶段，你可以改为亮出牌堆顶的五张牌，然后获得其中任意张花色各不相同的牌。
 

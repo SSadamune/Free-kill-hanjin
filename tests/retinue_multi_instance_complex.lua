@@ -1,8 +1,8 @@
 -- 并州狼骑/锦帆军多实例登记静态夹具；行为另由 runtime 验证。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
-local Z = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_retinues"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 
 local function inRoom(fn)
   local result
@@ -11,20 +11,20 @@ local function inRoom(fn)
 end
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_retinue_multi_instance_complex = {
+Testqiao_retinue_multi_instance_complex = {
   setup = function()
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function() skill_test.installBlankGenerals(room, "han") end)
   end,
   tearDown = support.clearRoom,
 }
 
-function Testhanjin_retinue_multi_instance_complex:testTwoInstancesPerComplexSkill()
+function Testqiao_retinue_multi_instance_complex:testTwoInstancesPerComplexSkill()
   local me, donor = p(1), p(2)
   inRoom(function()
     for _, spec in ipairs({
-      { "hanjin__retinue_bingzhou_langqi", "hanjin__retinue_skill_bingzhou_langqi" },
-      { "hanjin__retinue_jinfanjun", "hanjin__retinue_skill_jinfanjun" },
+      { "qiao_heg__retinue_bingzhou_langqi", "qiao__retinue_skill_bingzhou_langqi" },
+      { "qiao_heg__retinue_jinfanjun", "qiao__retinue_skill_jinfanjun" },
     }) do
       R.grant(me, { general = spec[1], skill = spec[2], origin = "shared", shared_from = donor.id })
       R.grant(me, { general = spec[1], skill = spec[2], origin = "shared", shared_from = donor.id })
@@ -34,30 +34,30 @@ function Testhanjin_retinue_multi_instance_complex:testTwoInstancesPerComplexSki
   end)
 end
 
-function Testhanjin_retinue_multi_instance_complex:testDirectJinfanSkillFallbackExists()
+function Testqiao_retinue_multi_instance_complex:testDirectJinfanSkillFallbackExists()
   local me = p(3)
   inRoom(function()
-    FkTest.room:handleAddLoseSkills(me, "hanjin__retinue_skill_jinfanjun", nil, false, true)
-    lu.assertEquals(R.countForSkill(me, "hanjin__retinue_skill_jinfanjun"), 0)
-    lu.assertTrue(me:hasSkill("hanjin__retinue_skill_jinfanjun"))
+    FkTest.room:handleAddLoseSkills(me, "qiao__retinue_skill_jinfanjun", nil, false, true)
+    lu.assertEquals(R.countForSkill(me, "qiao__retinue_skill_jinfanjun"), 0)
+    lu.assertTrue(me:hasSkill("qiao__retinue_skill_jinfanjun"))
   end)
 end
 
-function Testhanjin_retinue_multi_instance_complex:testClientBingzhouButtonAfterOneOfTwoUsed()
+function Testqiao_retinue_multi_instance_complex:testClientBingzhouButtonAfterOneOfTwoUsed()
   local me, donor = p(1), p(2)
   local first, second
   inRoom(function()
     first = R.grant(me, {
-      general = "hanjin__retinue_bingzhou_langqi",
-      skill = "hanjin__retinue_skill_bingzhou_langqi",
+      general = "qiao_heg__retinue_bingzhou_langqi",
+      skill = "qiao__retinue_skill_bingzhou_langqi",
       origin = "shared", shared_from = donor.id,
     })
     second = R.grant(me, {
-      general = "hanjin__retinue_bingzhou_langqi",
-      skill = "hanjin__retinue_skill_bingzhou_langqi",
+      general = "qiao_heg__retinue_bingzhou_langqi",
+      skill = "qiao__retinue_skill_bingzhou_langqi",
       origin = "shared", shared_from = donor.id,
     })
-    Z.spend(me, first, "hanjin__retinue_skill_bingzhou_langqi")
+    Z.spend(me, first, "qiao__retinue_skill_bingzhou_langqi")
   end)
 
   local ClientPlayer = require "ltk.client.clientplayer"
@@ -77,55 +77,55 @@ function Testhanjin_retinue_multi_instance_complex:testClientBingzhouButtonAfter
 
   local copy = copyOf(me)
   copy.phase = Player.Play
-  lu.assertEquals(R.countForSkill(copy, "hanjin__retinue_skill_bingzhou_langqi"), 2)
-  lu.assertTrue(Z.canUse(copy, "hanjin__retinue_skill_bingzhou_langqi", 1),
+  lu.assertEquals(R.countForSkill(copy, "qiao__retinue_skill_bingzhou_langqi"), 2)
+  lu.assertTrue(Z.canUse(copy, "qiao__retinue_skill_bingzhou_langqi", 1),
     "第一份已用、第二份未用时，ClientPlayer应仍可点按钮")
-  lu.assertTrue(Fk.skills["hanjin__retinue_skill_bingzhou_langqi"]:canUse(copy),
+  lu.assertTrue(Fk.skills["qiao__retinue_skill_bingzhou_langqi"]:canUse(copy),
     "客户端主动按钮的 canUse 也应可用")
 
   inRoom(function()
-    Z.spend(me, second, "hanjin__retinue_skill_bingzhou_langqi")
+    Z.spend(me, second, "qiao__retinue_skill_bingzhou_langqi")
   end)
   copy = copyOf(me)
   copy.phase = Player.Play
-  lu.assertFalse(Z.canUse(copy, "hanjin__retinue_skill_bingzhou_langqi", 1),
+  lu.assertFalse(Z.canUse(copy, "qiao__retinue_skill_bingzhou_langqi", 1),
     "两份都用完后，ClientPlayer按钮应不可用")
-  lu.assertFalse(Fk.skills["hanjin__retinue_skill_bingzhou_langqi"]:canUse(copy))
+  lu.assertFalse(Fk.skills["qiao__retinue_skill_bingzhou_langqi"]:canUse(copy))
 end
 
-function Testhanjin_retinue_multi_instance_complex:testTwoJinfanInstancesUseRedIndependently()
+function Testqiao_retinue_multi_instance_complex:testTwoJinfanInstancesUseRedIndependently()
   local me, donor = p(1), p(2)
   local first, second, red1, red2
   inRoom(function()
     first = R.grant(me, {
-      general = "hanjin__retinue_jinfanjun",
-      skill = "hanjin__retinue_skill_jinfanjun",
+      general = "qiao_heg__retinue_jinfanjun",
+      skill = "qiao__retinue_skill_jinfanjun",
       origin = "shared", shared_from = donor.id,
     })
     second = R.grant(me, {
-      general = "hanjin__retinue_jinfanjun",
-      skill = "hanjin__retinue_skill_jinfanjun",
+      general = "qiao_heg__retinue_jinfanjun",
+      skill = "qiao__retinue_skill_jinfanjun",
       origin = "shared", shared_from = donor.id,
     })
-    red1 = FkTest.room:printCard("hanjin__jink", Card.Heart, 2)
-    red2 = FkTest.room:printCard("hanjin__jink", Card.Heart, 3)
+    red1 = FkTest.room:printCard("qiao__jink", Card.Heart, 2)
+    red2 = FkTest.room:printCard("qiao__jink", Card.Heart, 3)
     FkTest.room:obtainCard(me, red1, false, fk.ReasonJustMove)
     FkTest.room:obtainCard(me, red2, false, fk.ReasonJustMove)
   end)
 
   local discarded = 0
-  skill_test.withSkillRequests(FkTest.room, "hanjin__retinue_skill_jinfanjun", {
+  skill_test.withSkillRequests(FkTest.room, "qiao__retinue_skill_jinfanjun", {
     askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == "hanjin__retinue_skill_jinfanjun" then return true end
+      if params.skill_name == "qiao__retinue_skill_jinfanjun" then return true end
       return original(self, who, params)
     end,
     askToDiscard = function(self, who, params, original)
-      if params.skill_name ~= "hanjin__retinue_skill_jinfanjun" then
+      if params.skill_name ~= "qiao__retinue_skill_jinfanjun" then
         return original(self, who, params)
       end
       discarded = discarded + 1
       local id = discarded == 1 and red1.id or red2.id
-      FkTest.room:throwCard({ id }, "hanjin__retinue_skill_jinfanjun", who, who)
+      FkTest.room:throwCard({ id }, "qiao__retinue_skill_jinfanjun", who, who)
       return { id }
     end,
   }, function()
@@ -147,4 +147,4 @@ function Testhanjin_retinue_multi_instance_complex:testTwoJinfanInstancesUseRedI
   lu.assertTrue(second.jinfanUsed[Card.Red])
 end
 
-return { name = "hanjin_retinue_multi_instance_complex" }
+return { name = "qiao_retinue_multi_instance_complex" }

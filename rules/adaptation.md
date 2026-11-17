@@ -2,7 +2,7 @@
 
 本规范记录已确认的汉晋应变语义、牌位与效果约束；程序接口及验收资料另见文末开发资料。
 
-`MUST` 为必须满足的约束。本规范覆盖汉晋模式 `hanjin_heg_mode`，不改变原版国战或身份局。
+`MUST` 为必须满足的约束。本规范覆盖汉晋模式 `qiao_heg_mode`，不改变原版国战或身份局。
 
 ## 2. ADAPT-001：应变牌的定义
 
@@ -34,7 +34,7 @@
 - `sequential`（已确认的正式规则）：每个条目开始结算时，重新读取手牌、体力和势力人数。前一条目及其成功事件监听器完整结束后，再检测下一条目。
 - 例：两个“空巢”条目，第一项摸牌后，第二项空巢不再满足；反之，第一项摸牌也可能让之后原本不满足的富甲变为满足。已经处理的条目不会回头再检测。
 - `snapshot` 作为现有实现的对照分支保留配置与测试：在 `fk.AfterCardUseDeclared` 缓存普通条件，之后所有条目使用这次快照；第一项摸牌不使后续空巢失效。该分支不属于已确认的正式规则。
-- 开发配置在 `pkg/hanjin_mode/rules/config.lua` 的 `adaptation_condition_timing`，实现支持 `sequential`、`snapshot`；正式模式 MUST 使用 `sequential`，不提供房主切换选项。
+- 开发配置在 `pkg/qiao_mode/rules/config.lua` 的 `adaptation_condition_timing`，实现支持 `sequential`、`snapshot`；正式模式 MUST 使用 `sequential`，不提供房主切换选项。
 - 策略在本次使用准备时固定；中途修改配置不改变已经开始准备的这张牌。执行结果记录 `condition_timing` 供审查。
 - 两种策略下，助战都在对应条目结算时单独询问，不把交互结果提前视为成立。用牌的实体材料此时已离开手牌。
 
@@ -80,7 +80,7 @@
 
 1. `ignore_times` 表示“本次使用不计入次数”，MUST 同时满足“超过上限仍可选择/使用”和“本次不进入 `addCardUseHistory`”。
 2. 咆哮、连弩等状态型效果属于 `TargetModSkill.bypass_times`：只让 `withinTimesLimit` 返回真，绕过上限；本次使用照常计数。二者 MUST 分开实现，不能把状态型效果改成 `extraUse`。
-3. 正式牌包独立创建 `hanjin__thunder__slash`（雷杀），恰好为♠9、♠10，`trueName == "slash"`、雷电伤害，并自带条目 `{ condition = "gujun", effect = "ignore_times" }`。该牌使用独立的 `hanjin__thunder_slash_skill`，不复制上游 `slash_skill` 或 `thunder__slash_skill`。
+3. 正式牌包独立创建 `qiao__thunder__slash`（雷杀），恰好为♠9、♠10，`trueName == "slash"`、雷电伤害，并自带条目 `{ condition = "gujun", effect = "ignore_times" }`。该牌使用独立的 `qiao__thunder_slash_skill`，不复制上游 `slash_skill` 或 `thunder__slash_skill`。
 
 ### 8.2 时点：选牌/选目标 → PreCardUse → 记数 → 应变常规结算
 

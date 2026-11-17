@@ -5,13 +5,13 @@
 --   python scripts/test.py --file tests/han009_fuwan.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local MC = "hanjin__skill_han009_1"
-local OPTION_DRAW = "#hanjin__skill_han009_1-draw"
-local OPTION_DISCARD = "#hanjin__skill_han009_1-discard"
+local MC = "qiao__skill_han009_1"
+local OPTION_DRAW = "#qiao__skill_han009_1-draw"
+local OPTION_DISCARD = "#qiao__skill_han009_1-discard"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han009 = {}
+Testqiao_han009 = {}
 
 local function inRoom(fn)
   local result
@@ -56,8 +56,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -75,12 +75,12 @@ local function setP1(room)
     local p = room.players[1]
     p:revealGeneral(false, true)
     p:revealGeneral(true, true)
-    room:changeHero(p, "hanjin__han009", true, false, false, false, false)
-    room:changeHero(p, "hanjin_test__han_2", true, true, false, false, false)
+    room:changeHero(p, "qiao_heg__han009", true, false, false, false, false)
+    room:changeHero(p, "qiao_test__han_2", true, true, false, false, false)
     p.kingdom = "han"
     room:setPlayerProperty(p, "kingdom", "han")
-    room:setPlayerMark(p, "__heg_general", "hanjin__han009")
-    room:setPlayerMark(p, "__heg_deputy", "hanjin_test__han_2")
+    room:setPlayerMark(p, "__heg_general", "qiao_heg__han009")
+    room:setPlayerMark(p, "__heg_deputy", "qiao_test__han_2")
     room:setPlayerMark(p, "__heg_kingdom", "han")
     room:setPlayerMark(p, "__heg_wild", 0)
     for _, q in ipairs(room.players) do q.hp = q.maxHp end
@@ -88,22 +88,22 @@ local function setP1(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   setP1(room)
   return room
 end
 
-Testhanjin_han009.setup = function() prepare() end
-Testhanjin_han009.tearDown = support.clearRoom
+Testqiao_han009.setup = function() prepare() end
+Testqiao_han009.tearDown = support.clearRoom
 
 -- 单选 ---------------------------------------------------------------------
 
-function Testhanjin_han009:testMoukuiSingleOptionsWithoutCounter()
+function Testqiao_han009:testMoukuiSingleOptionsWithoutCounter()
   local room = FkTest.room
-  local extra = setHand(room, p1(), { { "hanjin__peach" } })[1]
+  local extra = setHand(room, p1(), { { "qiao__peach" } })[1]
   setHand(room, p2(), {})
-  local p3card = setHand(room, p3(), { { "hanjin__peach" } })[1]
+  local p3card = setHand(room, p3(), { { "qiao__peach" } })[1]
 
   -- 只摸一张：目标没有任何牌，弃牌选项不可选。
   FkTest.setNextReplies(p1(), {
@@ -111,7 +111,7 @@ function Testhanjin_han009:testMoukuiSingleOptionsWithoutCounter()
     FkTest.ReplyChoosePlayer({ p2() }),
   })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(#p1():getCardIds("h"), 2)
 
@@ -123,7 +123,7 @@ function Testhanjin_han009:testMoukuiSingleOptionsWithoutCounter()
     p3card,
   })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(room:getCardArea(p3card), Card.DiscardPile)
   lu.assertEquals(p1():usedSkillTimes(MC, Player.HistoryGame), 2)
@@ -132,12 +132,12 @@ end
 
 -- 双选后的抵消 -------------------------------------------------------------
 
-function Testhanjin_han009:testMoukuiDoubleSelectionCounterDiscardsOwnerCard()
+function Testqiao_han009:testMoukuiDoubleSelectionCounterDiscardsOwnerCard()
   local room = FkTest.room
-  local extra = setHand(room, p1(), { { "hanjin__peach" } })[1]
+  local extra = setHand(room, p1(), { { "qiao__peach" } })[1]
   local p2cards = setHand(room, p2(), {
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__peach", Card.Heart, 3 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__peach", Card.Heart, 3 },
   })
   local jink, discardCard = p2cards[1], p2cards[2]
 
@@ -152,7 +152,7 @@ function Testhanjin_han009:testMoukuiDoubleSelectionCounterDiscardsOwnerCard()
     extra,
   })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
 
   lu.assertEquals(room:getCardArea(discardCard), Card.DiscardPile)
@@ -163,11 +163,11 @@ end
 
 -- 其他目标抵消不反弃 -------------------------------------------------------
 
-function Testhanjin_han009:testMoukuiOtherTargetCancelsNoCounter()
+function Testqiao_han009:testMoukuiOtherTargetCancelsNoCounter()
   local room = FkTest.room
-  local extra = setHand(room, p1(), { { "hanjin__peach" } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__peach" } })[1]
-  local p3card = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 2 } })[1]
+  local extra = setHand(room, p1(), { { "qiao__peach" } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__peach" } })[1]
+  local p3card = setHand(room, p3(), { { "qiao__jink", Card.Heart, 2 } })[1]
 
   FkTest.setNextReplies(p1(), {
     "1",
@@ -179,7 +179,7 @@ function Testhanjin_han009:testMoukuiOtherTargetCancelsNoCounter()
     FkTest.ReplyCard(Fk:getCardById(p3card)),
   })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2(), p3() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2(), p3() }, card = Fk:cloneCard("qiao__slash") }
   end)
 
   lu.assertEquals(room:getCardArea(p2card), Card.DiscardPile)
@@ -187,4 +187,4 @@ function Testhanjin_han009:testMoukuiOtherTargetCancelsNoCounter()
   lu.assertEquals(p1():usedSkillTimes(MC, Player.HistoryGame), 1)
 end
 
-return { name = "hanjin_han009" }
+return { name = "qiao_han009" }

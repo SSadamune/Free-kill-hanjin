@@ -3,10 +3,10 @@
 -- 输入通过官方 FkTest 回复队列；不替换 useVirtualCard/room:useCard/damage。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local WEIKUI = "hanjin__skill_wei011_1"
-local QIANGXI = "hanjin__skill_wei012_1"
-local QUHU = "hanjin__skill_wei013_1"
-local H = require "packages.hanjin.pkg.hanjin_mode.rules.wei_history"
+local WEIKUI = "qiao__skill_wei011_1"
+local QIANGXI = "qiao__skill_wei012_1"
+local QUHU = "qiao__skill_wei013_1"
+local H = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
 
 local DEFAULT_KINGDOMS = { "wei", "wei", "wei", "wei", "wei", "wei", "wei", "wei" }
 
@@ -62,8 +62,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i] or "wei"
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -81,8 +81,8 @@ end
 
 --- 记录真实 CardUseFinished，不替换使用流程。
 local function installUseProbe(uses)
-  local key = "__hanjin_wei_active_use_probe"
-  local skel = fk.CreateSkill { name = "#hanjin_wei_active_use_probe" }
+  local key = "__qiao_wei_active_use_probe"
+  local skel = fk.CreateSkill { name = "#qiao_wei_active_use_probe" }
   skel:addEffect(fk.CardUseFinished, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -106,14 +106,14 @@ local function installUseProbe(uses)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wei_active = { setup = prepare, tearDown = support.clearRoom }
+Testqiao_wei_active = { setup = prepare, tearDown = support.clearRoom }
 
-function Testhanjin_wei_active:testChangquRecorderInstalledAndClientVisible()
+function Testqiao_wei_active:testChangquRecorderInstalledAndClientVisible()
   local p1, p2 = p(1), p(2)
   lu.assertTrue(room():hasSkill(H.HISTORY_SKILL))
   lu.assertTrue(room():hasSkill(H.WEIKUI_DISTANCE_SKILL))
@@ -126,7 +126,7 @@ function Testhanjin_wei_active:testChangquRecorderInstalledAndClientVisible()
   lu.assertEquals(p1:getTableMark(H.MARK), {})
 end
 
-function Testhanjin_wei_active:testQiangxiPaysHpAndDamagesOncePerTargetPerPhase()
+function Testqiao_wei_active:testQiangxiPaysHpAndDamagesOncePerTargetPerPhase()
   local p1, p2 = p(1), p(2)
   grant(p1, QIANGXI)
   clearCards(p1)
@@ -136,16 +136,16 @@ function Testhanjin_wei_active:testQiangxiPaysHpAndDamagesOncePerTargetPerPhase(
   activate(p1, QIANGXI, { p2 })
   lu.assertEquals(p1.hp, p1.maxHp - 1)
   lu.assertEquals(p2.hp, before - 1)
-  lu.assertTrue(table.contains(p1:getTableMark("hanjin__skill_wei012_1-targets-phase"), p2.id))
+  lu.assertTrue(table.contains(p1:getTableMark("qiao__skill_wei012_1-targets-phase"), p2.id))
 end
 
-function Testhanjin_wei_active:testWeikuiDiscardsWithoutJink()
+function Testqiao_wei_active:testWeikuiDiscardsWithoutJink()
   local p1, p2 = p(1), p(2)
   grant(p1, WEIKUI)
   clearCards(p1)
   clearCards(p2)
-  local first = give(p2, "hanjin__slash")
-  give(p2, "hanjin__slash")
+  local first = give(p2, "qiao__slash")
+  give(p2, "qiao__slash")
   setPlayPhase(p1)
   inRoom(function() p1.hp = p1.maxHp end)
 
@@ -158,12 +158,12 @@ function Testhanjin_wei_active:testWeikuiDiscardsWithoutJink()
   lu.assertEquals(#p2:getCardIds("h"), beforeHand - 1)
 end
 
-function Testhanjin_wei_active:testWeikuiJinkBranchUsesRealSlash()
+function Testqiao_wei_active:testWeikuiJinkBranchUsesRealSlash()
   local p1, p2 = p(1), p(2)
   grant(p1, WEIKUI)
   clearCards(p1)
   clearCards(p2)
-  local jink = give(p2, "hanjin__jink", Card.Heart, 2)
+  local jink = give(p2, "qiao__jink", Card.Heart, 2)
   setPlayPhase(p1)
   inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp end)
 
@@ -202,13 +202,13 @@ function Testhanjin_wei_active:testWeikuiJinkBranchUsesRealSlash()
   lu.assertEquals(uses[1].card.trueName, "slash")
 end
 
-function Testhanjin_wei_active:testQuhuTieUsesRealSlash()
+function Testqiao_wei_active:testQuhuTieUsesRealSlash()
   local p1, p2 = p(1), p(2)
   grant(p1, QUHU)
   clearCards(p1)
   clearCards(p2)
-  local p1card = give(p1, "hanjin__slash", Card.Spade, 5)
-  local p2card = give(p2, "hanjin__slash", Card.Heart, 5)
+  local p1card = give(p1, "qiao__slash", Card.Spade, 5)
+  local p2card = give(p2, "qiao__slash", Card.Heart, 5)
   setPlayPhase(p1)
   inRoom(function() p1.hp = 2; p2.hp = 3 end)
 
@@ -235,13 +235,13 @@ function Testhanjin_wei_active:testQuhuTieUsesRealSlash()
   lu.assertEquals(uses[1].card.trueName, "slash")
 end
 
-function Testhanjin_wei_active:testQuhuWinDealsDamageFromOpponent()
+function Testqiao_wei_active:testQuhuWinDealsDamageFromOpponent()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p1, QUHU)
   clearCards(p1)
   clearCards(p2)
-  give(p1, "hanjin__slash", Card.Spade, 7)
-  give(p2, "hanjin__jink", Card.Heart, 2)
+  give(p1, "qiao__slash", Card.Spade, 7)
+  give(p2, "qiao__jink", Card.Heart, 2)
   setPlayPhase(p1)
   inRoom(function() p1.hp = 2; p2.hp = 3; p3.hp = p3.maxHp end)
 
@@ -257,4 +257,4 @@ function Testhanjin_wei_active:testQuhuWinDealsDamageFromOpponent()
   lu.assertEquals(p2.hp, 3)
 end
 
-return { name = "hanjin_wei_active" }
+return { name = "qiao_wei_active" }

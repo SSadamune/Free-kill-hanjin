@@ -15,14 +15,14 @@ local pairsForSeats = {
 function M.createRoom(options)
   options = options or {}
   local modeName = options.mode or "new_heg_mode"
-  if modeName == "hanjin_heg_mode" then __dofile("../../../tests/support/hanjin_content.lua") end
+  if modeName == "qiao_heg_mode" then __dofile("../../../tests/support/qiao_content.lua") end
   local mode = assert(Fk.game_modes[modeName], "Install hegemony first")
   local originalLogic = mode.logic
-  local logic = originalLogic():subclass("HanjinHegTestLogic")
+  local logic = originalLogic():subclass("QiaoHegTestLogic")
   function logic:action()
     self:trigger(fk.GamePrepared)
     GameEvent.DrawInitial:create(DrawInitialData:new({ who = self.room.players })):exec()
-    self.room:setTag("hanjin_test_ready", true)
+    self.room:setTag("qiao_test_ready", true)
     while true do
       local fn = coroutine.yield("__handleRequest")
       if not fn then break end
@@ -70,13 +70,13 @@ function M.createRoom(options)
   RoomInstance = nil
   mode.logic = originalLogic
   assert(ok, err)
-  assert(room:getTag("hanjin_test_ready"), "National-war setup did not reach the test loop")
+  assert(room:getTag("qiao_test_ready"), "National-war setup did not reach the test loop")
   for _, p in ipairs(room.players) do FkTest.cleanNextReplies(p) end
   return room
 end
 
 function M.initRoom() return M.createRoom() end
-function M.initHanjinRoom() return M.createRoom { mode = "hanjin_heg_mode", realSelection = true } end
+function M.initQiaoRoom() return M.createRoom { mode = "qiao_heg_mode", realSelection = true } end
 
 M.clearRoom = FkTest.clearRoom
 return M

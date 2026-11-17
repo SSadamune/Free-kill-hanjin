@@ -1,10 +1,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-Testhanjin_card_resolution = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+Testqiao_card_resolution = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 -- Observe the real use pipeline; grant repetition at CardUsing, as a skill would.
 local function probe(room, name, cardName, repeats)
   local counts, effects, uses = {}, {}, {}
-  local skel = fk.CreateSkill { name = "#hanjin_resolution_probe_" .. name }
+  local skel = fk.CreateSkill { name = "#qiao_resolution_probe_" .. name }
   for _, event in ipairs({ fk.AfterCardUseDeclared, fk.CardUsing,
     fk.TargetSpecifying, fk.TargetConfirming, fk.TargetSpecified, fk.TargetConfirmed,
     fk.PreCardEffect, fk.CardEffecting, fk.CardUseFinished }) do
@@ -41,9 +41,9 @@ local function assertSingleUse(counts, targets, effects)
   lu.assertEquals(counts[fk.CardEffecting], effects)
 end
 
-function Testhanjin_card_resolution:testDyingAnalepticKeepsRecoveryAfterLeavingDying()
+function Testqiao_card_resolution:testDyingAnalepticKeepsRecoveryAfterLeavingDying()
   local room, p = FkTest.room, FkTest.room.players[1]
-  local c = Fk:cloneCard("hanjin__analeptic")
+  local c = Fk:cloneCard("qiao__analeptic")
   local counts, effects, uses = probe(room, "dying", c.name, 1)
   FkTest.runInRoom(function()
     local physical = room:printCard(c.name)
@@ -65,9 +65,9 @@ function Testhanjin_card_resolution:testDyingAnalepticKeepsRecoveryAfterLeavingD
   end
 end
 
-function Testhanjin_card_resolution:testNormalAnalepticRepeatsSameUse()
+function Testqiao_card_resolution:testNormalAnalepticRepeatsSameUse()
   local room, p = FkTest.room, FkTest.room.players[1]
-  local c = Fk:cloneCard("hanjin__analeptic")
+  local c = Fk:cloneCard("qiao__analeptic")
   local counts = probe(room, "drank", c.name, 2)
   FkTest.runInRoom(function()
     p.hp = p.maxHp - 1
@@ -79,10 +79,10 @@ function Testhanjin_card_resolution:testNormalAnalepticRepeatsSameUse()
   assertSingleUse(counts, 1, 3)
 end
 
-function Testhanjin_card_resolution:testRepeatVisitsAllTargetsWithoutRepeatingAimEvents()
+function Testqiao_card_resolution:testRepeatVisitsAllTargetsWithoutRepeatingAimEvents()
   local room = FkTest.room
   local p, a, b = room.players[1], room.players[2], room.players[3]
-  local c = Fk:cloneCard("hanjin__slash")
+  local c = Fk:cloneCard("qiao__slash")
   local counts, effects, uses = probe(room, "targets", c.name, 1)
   local ahp, bhp = a.hp, b.hp
   FkTest.runInRoom(function()
@@ -100,12 +100,12 @@ function Testhanjin_card_resolution:testRepeatVisitsAllTargetsWithoutRepeatingAi
 end
 
 -- Repeating a cancellation cannot cancel the same responding card any further.
-function Testhanjin_card_resolution:testToCardCancellationRemainsSingleEffect()
+function Testqiao_card_resolution:testToCardCancellationRemainsSingleEffect()
   local room, p = FkTest.room, FkTest.room.players[1]
-  local c = Fk:cloneCard("hanjin__jink")
+  local c = Fk:cloneCard("qiao__jink")
   local counts, effects, uses = probe(room, "tocard", c.name, 1)
   FkTest.runInRoom(function()
-    room:useCard { from = p, card = c, toCard = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p, card = c, toCard = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(counts[fk.CardUsing], 1)
   lu.assertEquals(counts[fk.CardUseFinished], 1)
@@ -113,4 +113,4 @@ function Testhanjin_card_resolution:testToCardCancellationRemainsSingleEffect()
   lu.assertEquals(uses[1].additionalEffect, 1)
 end
 
-return { name = "hanjin_card_resolution" }
+return { name = "qiao_card_resolution" }

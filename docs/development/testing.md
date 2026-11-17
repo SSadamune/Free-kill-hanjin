@@ -41,8 +41,8 @@
 
 ## 公共辅助与套件模板
 
-- 新套件从 [skill_suite.lua](../../tests/templates/skill_suite.lua) 复制到 `tests/`，一并重命名 `Testhanjin_skill_template` 测试类与返回描述符的 `hanjin_skill_template`，填写真实主流程用例，再将文件名加入 `tests/all.lua`。模板本身不纳入默认套件；未填测试的空模板不能当作验证通过。
-- 使用[国战房间辅助](../../tests/support/hegemony.lua)的 `initHanjinRoom()` 建房；在 `FkTest.runInRoom` 内调用[技能测试辅助](../../tests/support/skill_test.lua)的 `installBlankGenerals(room, kingdoms)` 安装已知白板，或用 `installDualGenerals(room, player, { main, deputy, kingdom, hp? })` 安装已知组合。辅助通过正式明置／换将清旧来源，更新 `__heg_*` 后重算体力；仍须由用例建立本技能需要的牌、阶段和历史。
+- 新套件从 [skill_suite.lua](../../tests/templates/skill_suite.lua) 复制到 `tests/`，一并重命名 `Testqiao_skill_template` 测试类与返回描述符的 `qiao_skill_template`，填写真实主流程用例，再将文件名加入 `tests/all.lua`。模板本身不纳入默认套件；未填测试的空模板不能当作验证通过。
+- 使用[国战房间辅助](../../tests/support/hegemony.lua)的 `initQiaoRoom()` 建房；在 `FkTest.runInRoom` 内调用[技能测试辅助](../../tests/support/skill_test.lua)的 `installBlankGenerals(room, kingdoms)` 安装已知白板，或用 `installDualGenerals(room, player, { main, deputy, kingdom, hp? })` 安装已知组合。辅助通过正式明置／换将清旧来源，更新 `__heg_*` 后重算体力；仍须由用例建立本技能需要的牌、阶段和历史。
 - 优先使用官方 `FkTest.setNextReplies` 队列控制真实请求。确需覆盖请求方法时，用 `withSkillRequests(room, skillName, overrides, fn)` 限定所属技能，非目标请求委托原方法；退出或异常后恢复原方法。处理器参数为 `(self, player, params, original, ...)`，可在其中继续调用原请求。辅助负责恢复与重抛错误，不代替真实效果断言。
 - 公共辅助的回归见 [test_support.lua](../../tests/test_support.lua)，吴包辅助套件已示范复用。后续仅按明确的重复需求扩充，不一次迁移所有旧套件，也不为每个技能新增一套公共回归。
 - 修改运行时锁或 Python 入口时，运行 `python -m unittest discover -s tests/python -p "test_*.py" -v`；修改 Lua 辅助时先运行 `python scripts/test.py --file tests/test_support.lua --timeout 180` 及实际受影响套件，稳定后再做默认全量。

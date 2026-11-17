@@ -68,8 +68,8 @@ function M.installBlankGenerals(room, kingdoms)
     end
     kingdom = kingdom or "han"
     M.installDualGenerals(room, player, {
-      main = "hanjin_test__" .. kingdom .. "_1",
-      deputy = "hanjin_test__" .. kingdom .. "_2",
+      main = "qiao_test__" .. kingdom .. "_1",
+      deputy = "qiao_test__" .. kingdom .. "_2",
       kingdom = kingdom,
     })
   end

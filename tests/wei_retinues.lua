@@ -3,15 +3,15 @@
 --   python scripts/test.py --file tests/wei_retinues.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local BZ = "hanjin__retinue_skill_bingzhou_langqi"
-local HW = "hanjin__retinue_skill_huweijun"
-local NJ = "hanjin__retinue_skill_niujin"
+local BZ = "qiao__retinue_skill_bingzhou_langqi"
+local HW = "qiao__retinue_skill_huweijun"
+local NJ = "qiao__retinue_skill_niujin"
 
 -- p1/p2 魏（发动者与回合结束的同势力目标），p3 群为击杀敌人，
 -- p4 蜀保留另一存活势力，避免击杀导致游戏结束或同势力击杀弃牌。
 local DEFAULT_KINGDOMS = { "wei", "wei", "qun", "shu", "wei", "wei", "wei", "wei" }
 
-Testhanjin_wei_retinues = {}
+Testqiao_wei_retinues = {}
 
 local function inRoom(fn)
   local result
@@ -62,8 +62,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -85,17 +85,17 @@ local function grant(player, skillName)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wei_retinues.setup = function() prepare() end
-Testhanjin_wei_retinues.tearDown = support.clearRoom
+Testqiao_wei_retinues.setup = function() prepare() end
+Testqiao_wei_retinues.tearDown = support.clearRoom
 
 --- 记录实际使用事件（用于确认决斗使用者/牛金窗口用牌）。
 local function installUseProbe(room, uses)
-  local skel = fk.CreateSkill { name = "#hanjin_wei_retinue_use_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_wei_retinue_use_probe" }
   skel:addEffect(fk.CardUseFinished, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -116,7 +116,7 @@ end
 
 --- 记录牛金奖励实际摸牌（按 move.skillName 去重，每名接收者只统计一次）。
 local function installMoveProbe(room, record)
-  local skel = fk.CreateSkill { name = "#hanjin_wei_retinue_move_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_wei_retinue_move_probe" }
   skel:addEffect(fk.AfterCardsMove, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -139,7 +139,7 @@ local function installMoveProbe(room, record)
   inRoom(function() room:addSkill(skill) end)
 end
 
-function Testhanjin_wei_retinues:testBingzhouDuelByTargetFixedDistanceAndOncePerPhase()
+function Testqiao_wei_retinues:testBingzhouDuelByTargetFixedDistanceAndOncePerPhase()
   local room = FkTest.room
   grant(p1(), BZ)
   setHand(room, p1(), {})
@@ -156,14 +156,14 @@ function Testhanjin_wei_retinues:testBingzhouDuelByTargetFixedDistanceAndOncePer
 
   -- 决斗由目标角色对并州狼骑持有者使用。
   local duel = table.find(uses, function(use)
-    return use.name == "hanjin__duel" and use.from == p2()
+    return use.name == "qiao__duel" and use.from == p2()
   end)
   lu.assertNotNil(duel)
   lu.assertIs(duel.tos[1], p1())
   -- 双向距离1，且关系以表记录。
   lu.assertEquals(p1():distanceTo(p2()), 1)
   lu.assertEquals(p2():distanceTo(p1()), 1)
-  local pairs = p1():getMark("@[hanjin_bingzhou_pairs]")
+  local pairs = p1():getMark("@[qiao_bingzhou_pairs]")
   lu.assertEquals(type(pairs), "table")
   lu.assertNotNil(table.find(pairs, function(entry)
     return type(entry) == "table" and entry.other == p2().id
@@ -178,15 +178,15 @@ function Testhanjin_wei_retinues:testBingzhouDuelByTargetFixedDistanceAndOncePer
   end)
 end
 
-function Testhanjin_wei_retinues:testHuweijunOtherTurnDamageAllowsMove()
+function Testqiao_wei_retinues:testHuweijunOtherTurnDamageAllowsMove()
   local room = FkTest.room
   grant(p1(), HW)
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  local equip = addEquip(room, p2(), "hanjin__chixiao_sword")
-  addEquip(room, p1(), "hanjin__vine", Card.Heart, 4)
+  local equip = addEquip(room, p2(), "qiao__chixiao_sword")
+  addEquip(room, p1(), "qiao__vine", Card.Heart, 4)
   -- 在 p2 的真实 Turn 事件范围内由 p1 造成实际伤害；回合末再检查历史。
-  local probeName = "#hanjin_wei_retinue_turn_damage_probe"
+  local probeName = "#qiao_wei_retinue_turn_damage_probe"
   local skel = fk.CreateSkill { name = probeName }
   local done = false
   skel:addEffect(fk.EventPhaseStart, {
@@ -218,12 +218,12 @@ function Testhanjin_wei_retinues:testHuweijunOtherTurnDamageAllowsMove()
   lu.assertEquals(room:getCardOwner(equip).id, p1().id)
 end
 
-function Testhanjin_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
+function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
   local room = FkTest.room
   grant(p1(), NJ)
   lu.assertTrue(p1():hasSkill(NJ))
-  local slash = setHand(room, p1(), { { "hanjin__slash" } })[1]
-  addEquip(room, p1(), "hanjin__qinggang_sword", Card.Spade, 2)
+  local slash = setHand(room, p1(), { { "qiao__slash" } })[1]
+  addEquip(room, p1(), "qiao__qinggang_sword", Card.Spade, 2)
   setHand(room, p2(), {})
   setHand(room, p3(), {})
   inRoom(function()
@@ -238,14 +238,14 @@ function Testhanjin_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
     "1",
     { "basic" },
     FkTest.ReplyCard(Fk:getCardById(slash), { p3() }),
-    { "#hanjin__retinue_skill_niujin-stop" },
+    { "#qiao__retinue_skill_niujin-stop" },
   })
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
   end)
 
   local usedSlash = table.find(uses, function(use)
-    return use.name == "hanjin__slash" and use.from == p1()
+    return use.name == "qiao__slash" and use.from == p1()
   end)
   lu.assertNotNil(usedSlash)
   lu.assertTrue(p3().dead)
@@ -256,4 +256,4 @@ function Testhanjin_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
   lu.assertEquals(p1():usedSkillTimes(NJ, Player.HistoryGame), 1)
 end
 
-return { name = "hanjin_wei_retinues" }
+return { name = "qiao_wei_retinues" }

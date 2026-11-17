@@ -1,6 +1,6 @@
-local BattleRoyal = require "packages.hanjin.pkg.hanjin_mode.rules.battle_royal"
+local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local support = __dofile("../../../tests/support/hegemony.lua")
-local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
+local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local H = require "packages.hegemony.util"
 
 local function setup()
@@ -13,12 +13,12 @@ local function teardown()
   support.clearRoom()
 end
 
-Testhanjin_upstream_battle_royal = { setup = setup, tearDown = teardown }
+Testqiao_upstream_battle_royal = { setup = setup, tearDown = teardown }
 
 local function room() return FkTest.room end
 local function run(fn) FkTest.runInRoom(fn) end
 
-function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamOldBattleRoyal()
+function Testqiao_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamOldBattleRoyal()
   local player = room().players[1]
   run(function()
     room().settings._mode = room().settings._mode or {}
@@ -33,8 +33,8 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamOldBattle
   lu.assertFalse(player:hasSkill(BattleRoyal.SKILL, true, true))
   lu.assertEquals(player:getMark(O.SOURCE_MARK), 0)
 
-  local handPeach = room():printCard("hanjin__peach", Card.Heart, 4)
-  local deckPeach = room():printCard("hanjin__peach", Card.Heart, 5)
+  local handPeach = room():printCard("qiao__peach", Card.Heart, 4)
+  local deckPeach = room():printCard("qiao__peach", Card.Heart, 5)
   run(function()
     room():obtainCard(player, handPeach, true)
     room():moveCardTo(deckPeach, Card.DrawPile, nil, fk.ReasonPut, nil, nil, true)
@@ -44,7 +44,7 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamOldBattle
   lu.assertFalse(player:prohibitUse(deckPeach))
 end
 
-function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamNewBattleRoyalPeachWine()
+function Testqiao_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamNewBattleRoyalPeachWine()
   local player = room().players[1]
   run(function()
     room().settings._mode = room().settings._mode or {}
@@ -55,7 +55,7 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamNewBattle
   lu.assertTrue(player:hasSkill("new_battle_royal&", true, true))
   lu.assertFalse(player:hasSkill(BattleRoyal.SKILL, true, true))
   lu.assertEquals(player:getMark(O.SOURCE_MARK), 0)
-  local peach = room():printCard("hanjin__peach", Card.Heart, 4)
+  local peach = room():printCard("qiao__peach", Card.Heart, 4)
   run(function() room():obtainCard(player, peach, true) end)
   local upstream = Fk.skills["new_battle_royal&"]
   local converted = upstream:viewAs(player, { peach.id })
@@ -64,4 +64,4 @@ function Testhanjin_upstream_battle_royal:testOrdinaryRoomKeepsUpstreamNewBattle
   lu.assertTrue(table.contains(room().logic.skills, "#new_battle_royal_event&"))
 end
 
-return { name = "hanjin_upstream_battle_royal" }
+return { name = "qiao_upstream_battle_royal" }

@@ -1,13 +1,13 @@
 -- WU017 蒋钦：尚义、鸟翔定向验收。
--- 正式编号 hanjin__wu017；数据由阵包 fragment 经中央入口合并。
+-- 正式编号 qiao_heg__wu017；数据由阵包 fragment 经中央入口合并。
 local H = require "packages.hegemony.util"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local JIANGQIN = "hanjin__wu017"
-local SHANGYI = "hanjin__skill_wu017_1"
-local NIAOXIANG = "hanjin__skill_wu017_2"
-local BLANK_DEPUTY = "hanjin_test__wu_2"
+local JIANGQIN = "qiao_heg__wu017"
+local SHANGYI = "qiao__skill_wu017_1"
+local NIAOXIANG = "qiao__skill_wu017_2"
+local BLANK_DEPUTY = "qiao_test__wu_2"
 
 local function inRoom(fn)
   local result
@@ -38,11 +38,11 @@ end
 local function prepare(kingdoms)
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -56,7 +56,7 @@ local function prepare(kingdoms)
   return room
 end
 
-Testhanjin_wu017_jiangqin = {
+Testqiao_wu017_jiangqin = {
   setup = function() prepare({ "wu", "wu", "wu", "wu", "wei", "wei", "wei", "wei" }) end,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -64,25 +64,25 @@ Testhanjin_wu017_jiangqin = {
   end,
 }
 
-function Testhanjin_wu017_jiangqin:testFormalRegistration()
+function Testqiao_wu017_jiangqin:testFormalRegistration()
   local general = assert(Fk.generals[JIANGQIN])
   lu.assertEquals(general.trueName, "蒋钦")
   lu.assertEquals(general.maxHp, 4)
   lu.assertEquals(general.gender, General.Male)
   lu.assertEquals(general.kingdom, "wu")
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wu013"]))
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wu003"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wu013"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wu003"]))
   lu.assertTrue(table.contains(general:getSkillNameList(), SHANGYI))
   lu.assertTrue(table.contains(general:getSkillNameList(), NIAOXIANG))
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(JIANGQIN)) end)
 end
 
-function Testhanjin_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackSuit()
+function Testqiao_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackSuit()
   local room, player, target = FkTest.room, p(1), p(2)
-  give(player, "hanjin__jink", Card.Heart, 2)
-  local spade = give(target, "hanjin__jink", Card.Spade, 3)
-  local club = give(target, "hanjin__jink", Card.Club, 4)
-  local heart = give(target, "hanjin__jink", Card.Heart, 5)
+  give(player, "qiao__jink", Card.Heart, 2)
+  local spade = give(target, "qiao__jink", Card.Spade, 3)
+  local club = give(target, "qiao__jink", Card.Club, 4)
+  local heart = give(target, "qiao__jink", Card.Heart, 5)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
@@ -113,16 +113,16 @@ function Testhanjin_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackS
   lu.assertEquals(room:getCardArea(spade), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(club), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(heart), Card.PlayerHand)
-  lu.assertEquals(player:getMark("hanjin__skill_wu017_1_active-phase"), 1)
+  lu.assertEquals(player:getMark("qiao__skill_wu017_1_active-phase"), 1)
   inRoom(function() lu.assertFalse(skill:canUse(player), "主动入口本阶段限一次") end)
 end
 
-function Testhanjin_wu017_jiangqin:testShangyiResponseEntryUsesCardSource()
+function Testqiao_wu017_jiangqin:testShangyiResponseEntryUsesCardSource()
   local room, player, source = FkTest.room, p(1), p(2)
-  local slash = give(source, "hanjin__slash", Card.Spade, 6)
-  local jink = give(player, "hanjin__jink", Card.Heart, 7)
-  give(player, "hanjin__peach", Card.Heart, 9) -- 响应后仍有手牌可供对方观看
-  give(source, "hanjin__jink", Card.Spade, 8)
+  local slash = give(source, "qiao__slash", Card.Spade, 6)
+  local jink = give(player, "qiao__jink", Card.Heart, 7)
+  give(player, "qiao__peach", Card.Heart, 9) -- 响应后仍有手牌可供对方观看
+  give(source, "qiao__jink", Card.Spade, 8)
   local skill = assert(Fk.skills[SHANGYI])
   local viewed = {}
   skill_test.withSkillRequests(room, SHANGYI, {
@@ -153,14 +153,14 @@ function Testhanjin_wu017_jiangqin:testShangyiResponseEntryUsesCardSource()
   lu.assertIs(viewed[1], source, "响应入口先让牌的使用者观看发动者手牌")
 end
 
-function Testhanjin_wu017_jiangqin:testNiaoxiangAddsOneJinkToExistingRequirement()
+function Testqiao_wu017_jiangqin:testNiaoxiangAddsOneJinkToExistingRequirement()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   local holder, user, victim
@@ -189,10 +189,10 @@ function Testhanjin_wu017_jiangqin:testNiaoxiangAddsOneJinkToExistingRequirement
     Fk:addSkill(skill)
     inRoom(function() room:addSkill(skill) end)
   end
-  addProbe("#hanjin_test_niaoxiang_set_two", 2, function(self, event, target, player, data)
+  addProbe("#qiao_test_niaoxiang_set_two", 2, function(self, event, target, player, data)
     data:setResponseTimes(2, data.to)
   end)
-  addProbe("#hanjin_test_niaoxiang_record", 0, function(self, event, target, player, data)
+  addProbe("#qiao_test_niaoxiang_record", 0, function(self, event, target, player, data)
     recorded = data:getResponseTimes(data.to)
   end)
 
@@ -208,4 +208,4 @@ function Testhanjin_wu017_jiangqin:testNiaoxiangAddsOneJinkToExistingRequirement
   support.clearRoom()
 end
 
-return { name = "hanjin_wu017_jiangqin" }
+return { name = "qiao_wu017_jiangqin" }

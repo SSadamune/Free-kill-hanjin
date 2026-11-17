@@ -3,12 +3,12 @@
 -- docs/development/implementation/card-use-targets.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local MZ = "hanjin__skill_han005_1"
-local GN = "hanjin__skill_han005_2"
-local MARK = "hanjin_skill_han005_2_source-noclear"
+local MZ = "qiao__skill_han005_1"
+local GN = "qiao__skill_han005_2"
+local MARK = "qiao_skill_han005_2_source-noclear"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han005 = {}
+Testqiao_han005 = {}
 
 local function inRoom(fn)
   local result
@@ -81,8 +81,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -91,38 +91,38 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(p1(), "hanjin__han005", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han005")
+    room:changeHero(p1(), "qiao_heg__han005", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han005")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han005.setup = function() prepare() end
-Testhanjin_han005.tearDown = support.clearRoom
+Testqiao_han005.setup = function() prepare() end
+Testqiao_han005.tearDown = support.clearRoom
 
-function Testhanjin_han005:testMouzhuGiveThenDifferentKingdomTargetNoDiscard()
+function Testqiao_han005:testMouzhuGiveThenDifferentKingdomTargetNoDiscard()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p3(), "han")
   setKingdom(room, p2(), "wei")
   setHand(room, p2(), {})
   local mine = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   local theirs = setHand(room, p3(), {
-    { "hanjin__slash", Card.Club, 3 },
-    { "hanjin__jink", Card.Diamond, 4 },
+    { "qiao__slash", Card.Club, 3 },
+    { "qiao__jink", Card.Diamond, 4 },
   })
 
   FkTest.setNextReplies(p3(), {
     FkTest.ReplyChooseCards({ theirs[1] }),
-    virtualUse(p2(), "hanjin__slash"),
+    virtualUse(p2(), "qiao__slash"),
   })
   FkTest.setNextReplies(p2(), { "" })
   runPlayPhase(room, p1(), {
@@ -137,7 +137,7 @@ function Testhanjin_han005:testMouzhuGiveThenDifferentKingdomTargetNoDiscard()
   lu.assertEquals(#mine, 2)
 end
 
-function Testhanjin_han005:testMouzhuSameKingdomTargetForcesDiscard()
+function Testqiao_han005:testMouzhuSameKingdomTargetForcesDiscard()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p3(), "han")
@@ -149,17 +149,17 @@ function Testhanjin_han005:testMouzhuSameKingdomTargetForcesDiscard()
   lu.assertNotEquals(p2().deputyGeneral, "anjiang")
   local p2Hp = p2().hp
   local mine = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   local theirs = setHand(room, p3(), {
-    { "hanjin__slash", Card.Club, 3 },
-    { "hanjin__jink", Card.Diamond, 4 },
+    { "qiao__slash", Card.Club, 3 },
+    { "qiao__jink", Card.Diamond, 4 },
   })
 
   FkTest.setNextReplies(p3(), {
     FkTest.ReplyChooseCards({ theirs[1] }),
-    virtualUse(p2(), "hanjin__slash"),
+    virtualUse(p2(), "qiao__slash"),
     FkTest.ReplyDiscard({ theirs[2] }),
   })
   FkTest.setNextReplies(p2(), { "" })
@@ -175,7 +175,7 @@ function Testhanjin_han005:testMouzhuSameKingdomTargetForcesDiscard()
   lu.assertEquals(#mine, 2)
 end
 
-function Testhanjin_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashExcluded()
+function Testqiao_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashExcluded()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p2(), "wei")
@@ -212,7 +212,7 @@ function Testhanjin_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashE
     room:useCard {
       from = p2(),
       tos = { p3() },
-      card = Fk:cloneCard("hanjin__slash", Card.Spade, 1),
+      card = Fk:cloneCard("qiao__slash", Card.Spade, 1),
     }
   end)
 
@@ -221,7 +221,7 @@ function Testhanjin_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashE
     room:useCard {
       from = p3(),
       tos = { p2() },
-      card = Fk:cloneCard("hanjin__slash", Card.Club, 2),
+      card = Fk:cloneCard("qiao__slash", Card.Club, 2),
     }
   end)
 
@@ -230,7 +230,7 @@ function Testhanjin_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashE
     room:useCard {
       from = p3(),
       tos = { p2() },
-      card = Fk:cloneCard("hanjin__fire__slash", Card.Heart, 3),
+      card = Fk:cloneCard("qiao__fire__slash", Card.Heart, 3),
     }
   end)
 
@@ -240,4 +240,4 @@ function Testhanjin_han005:testGounanNormalSlashBothDirectionsAndAttributeSlashE
   lu.assertEquals(damages[3], 1) -- 火杀被排除
 end
 
-return { name = "hanjin_han005" }
+return { name = "qiao_han005" }

@@ -12,18 +12,18 @@
 
 ## 7. 元数据与扩展 API
 
-实现：`pkg/hanjin_mode/rules/adaptation.lua`；事件接入：`pkg/hanjin_mode/skills/adaptation.lua`。
+实现：`pkg/qiao_mode/rules/adaptation.lua`；事件接入：`pkg/qiao_mode/skills/adaptation.lua`。
 
 ### 卡牌或转化牌明确附带条目
 
 ```lua
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 A.setCardEntries(card, {
   { id = "skill_support", condition = "zhuzhan", effect = "execute_both" },
 })
 ```
 
-正式牌堆也可在独立卡牌的 `extra_data.hanjin_adaptation` 中写入同样的条目数组。未写 ID 时按 `card:序号` 自动编号；本次使用增加的条目按 `use:序号` 编号。
+正式牌堆也可在独立卡牌的 `extra_data.qiao_adaptation` 中写入同样的条目数组。未写 ID 时按 `card:序号` 自动编号；本次使用增加的条目按 `use:序号` 编号。
 
 扩充正式牌堆时 MUST 按牌位核对应变元数据。例如，势备篇 ♠9、♠10 雷杀带有孤军，势备篇 ♠J 雷杀只有合纵，标准版一 ♣6 雷杀两者皆无。其余雷杀使用单独的牌型并沿用雷杀基础效果；新增同名牌位时须检查其实际取得的条目，避免从牌型继承孤军。
 
@@ -52,7 +52,7 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 ### 8.3 实现接口
 
 - `A.ignoreTimesCandidate(room, player, card, use?)`：只读查询，供卡的 `cardskill.can_use` 和 `target_filter` 在次数已满时判断能否选择。不会锁条件或发事件。
-- `A.lockIgnoreTimes(room, use)`：幂等；在 `fk.PreCardUse` 调用，记录 `use.extra_data.hanjin_adaptation_locked[entry.id]` 并按结果设置 `use.extraUse`。直接按规则 API 使用而未经过 `PreCardUse` 时，`A.prepare` 会补锁，但此时已晚于引擎记数，不能替代正式用牌路径。
+- `A.lockIgnoreTimes(room, use)`：幂等；在 `fk.PreCardUse` 调用，记录 `use.extra_data.qiao_adaptation_locked[entry.id]` 并按结果设置 `use.extraUse`。直接按规则 API 使用而未经过 `PreCardUse` 时，`A.prepare` 会补锁，但此时已晚于引擎记数，不能替代正式用牌路径。
 - `A.conditionSatisfied(room, player, condition)`：五种条件的只读判定，供 `A.snapshot` 和选牌阶段共用；`zhuzhan` 仍需在实际结算时询问，不能提前判定。
 - 卡的 `target_filter` MUST 继续执行攻击距离检查；无视次数只豁免次数，不改变距离、目标合法性或响应规则。
 
@@ -80,4 +80,4 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 
 尚未人工验证多人网络客户端的助战界面与取消请求展示；原生 Request 的并发与取消流程已由自动化测试调用和检查。
 
-正式扩展的 `pkg/hanjin_mode/client.lua` 在汉晋模式的结算区脚注中将 `parseMsg(msg, true)` 的玩家名格式标签去除，实体牌及虚拟牌继承引擎通知路径；普通日志与其他模式保留富文本。`tests/han001_liuxie.lua:testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式张虎&乐綝双将名及 `##UseCardTo` 消息，验证两条通知与隔离。脚注定向 59/59；纯打出闪回归曾因测试回复被隐张让的无懈询问提前消费而失败，现固定场景并明确排队取消无懈、再打出闪，断言 CardResponding 一次、CardUsing 零次及应变零次。卡牌定向 35/35，默认全量 765/765，详见[开发状态](../status.md)与[故障案例](../lessons.md#预排的闪回复被无懈询问提前消费)。实际 Qt 渲染未人工验收。
+正式扩展的 `pkg/qiao_mode/client.lua` 在汉晋模式的结算区脚注中将 `parseMsg(msg, true)` 的玩家名格式标签去除，实体牌及虚拟牌继承引擎通知路径；普通日志与其他模式保留富文本。`tests/han001_liuxie.lua:testCardFootnoteStripsRichTextOnlyInQiaoMode` 使用正式张虎&乐綝双将名及 `##UseCardTo` 消息，验证两条通知与隔离。脚注定向 59/59；纯打出闪回归曾因测试回复被隐张让的无懈询问提前消费而失败，现固定场景并明确排队取消无懈、再打出闪，断言 CardResponding 一次、CardUsing 零次及应变零次。卡牌定向 35/35，默认全量 765/765，详见[开发状态](../status.md)与[故障案例](../lessons.md#预排的闪回复被无懈询问提前消费)。实际 Qt 渲染未人工验收。

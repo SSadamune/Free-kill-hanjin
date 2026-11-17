@@ -4,12 +4,12 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local SHANGSHI = "hanjin__skill_jin010_1"
-local EJUE = "hanjin__skill_jin010_2"
-local FULI = "hanjin__skill_jin016_1"
+local SHANGSHI = "qiao__skill_jin010_1"
+local EJUE = "qiao__skill_jin010_2"
+local FULI = "qiao__skill_jin016_1"
 
-Testhanjin_jin_sources = {}
-Testhanjin_jin_sources.tearDown = support.clearRoom
+Testqiao_jin_sources = {}
+Testqiao_jin_sources.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -43,12 +43,12 @@ local function give(room, player, specs)
 end
 
 local function prepare(general)
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(room, { "jin", "jin", "wei" }) end)
   inRoom(function()
     skill_test.installDualGenerals(room, room.players[1], {
       main = general,
-      deputy = "hanjin_test__jin_2",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
   end)
@@ -95,8 +95,8 @@ local function withClientRoom(current, fn)
   return clients, clientRoom
 end
 
-function Testhanjin_jin_sources:testEjueLosesNamedGeneralSkillAndRaisesDamage()
-  local room = prepare("hanjin__jin010")
+function Testqiao_jin_sources:testEjueLosesNamedGeneralSkillAndRaisesDamage()
+  local room = prepare("qiao_heg__jin010")
   local owner, victim = p1(), p2()
   inRoom(function() victim.hp = victim.maxHp end)
   lu.assertTrue(owner:hasSkill(SHANGSHI))
@@ -125,8 +125,8 @@ function Testhanjin_jin_sources:testEjueLosesNamedGeneralSkillAndRaisesDamage()
   lu.assertTrue(owner:hasSkill(EJUE))
 end
 
-function Testhanjin_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
-  local room = prepare("hanjin__jin010")
+function Testqiao_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
+  local room = prepare("qiao_heg__jin010")
   local owner, target = p1(), p2()
   inRoom(function()
     owner.maxHp = 4
@@ -151,8 +151,8 @@ function Testhanjin_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
   lu.assertEquals(#owner:getCardIds("h"), 2)
 end
 
-function Testhanjin_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
-  local room = prepare("hanjin__jin016")
+function Testqiao_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
+  local room = prepare("qiao_heg__jin016")
   local zhangHua, drawer = p1(), p2()
   local shown
   skill_test.withSkillRequests(room, FULI, {
@@ -173,11 +173,11 @@ function Testhanjin_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit
 
   lu.assertNotNil(shown)
   lu.assertTrue(table.contains(zhangHua:getCardIds("h"), shown))
-  lu.assertEquals(drawer:getMark("hanjin_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
+  lu.assertEquals(drawer:getMark("qiao_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
 end
 
-function Testhanjin_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()
-  local room = prepare("hanjin__jin016")
+function Testqiao_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()
+  local room = prepare("qiao_heg__jin016")
   inRoom(function() p1().phase = Player.Play end)
 
   withClientRoom(room, function(clients)
@@ -185,15 +185,15 @@ function Testhanjin_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()
     lu.assertNil(me.room)
     lu.assertEquals(me.class.name, "ClientPlayer")
     local handler = ReqPlayCard:new(me)
-    handler.skill_name = "hanjin__skill_jin016_2"
+    handler.skill_name = "qiao__skill_jin016_2"
     handler:setup()
-    lu.assertTrue(handler:skillButtonValidity("hanjin__skill_jin016_2"))
+    lu.assertTrue(handler:skillButtonValidity("qiao__skill_jin016_2"))
     handler:_finish()
   end)
 end
 
-function Testhanjin_jin_sources:testFengwuThirdSuitThenFourthDrawsAndRecovers()
-  local room = prepare("hanjin__jin016")
+function Testqiao_jin_sources:testFengwuThirdSuitThenFourthDrawsAndRecovers()
+  local room = prepare("qiao_heg__jin016")
   local owner, user, other = p1(), p2(), p3()
   inRoom(function() owner.hp = owner.maxHp - 1 end)
   local spade = give(room, user, { { "jueying", Card.Spade, 1 } })[1]
@@ -220,18 +220,18 @@ function Testhanjin_jin_sources:testFengwuThirdSuitThenFourthDrawsAndRecovers()
   local hp, hand = owner.hp, #owner:getCardIds("h")
   FkTest.setNextReplies(user, { FkTest.ReplyCard(Fk:getCardById(diamond), { user }) })
   runPlayPhase(room, owner, {
-    FkTest.ReplyUseSkill("hanjin__skill_jin016_2", { user }, {}),
+    FkTest.ReplyUseSkill("qiao__skill_jin016_2", { user }, {}),
   })
 
   lu.assertEquals(owner.hp, hp + 1)
   lu.assertEquals(#owner:getCardIds("h"), hand + 2)
 end
 
-function Testhanjin_jin_sources:testEjueLostCardSkillDoesNotReturnAfterExchange()
-  local room = prepare("hanjin__jin010")
+function Testqiao_jin_sources:testEjueLostCardSkillDoesNotReturnAfterExchange()
+  local room = prepare("qiao_heg__jin010")
   local owner, other = p1(), p2()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  local Duanchang = require "packages.hanjin.pkg.hanjin_mode.rules.qun_duanchang"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local Duanchang = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
   inRoom(function() Duanchang.loseCardSkill(room, owner, false, SHANGSHI) end)
   lu.assertFalse(owner:hasSkill(SHANGSHI))
 
@@ -242,11 +242,11 @@ function Testhanjin_jin_sources:testEjueLostCardSkillDoesNotReturnAfterExchange(
   lu.assertFalse(other:hasSkill(SHANGSHI))
 end
 
-function Testhanjin_jin_sources:testExtraSkillLossDoesNotTravelWithExchange()
-  local room = prepare("hanjin__jin010")
+function Testqiao_jin_sources:testExtraSkillLossDoesNotTravelWithExchange()
+  local room = prepare("qiao_heg__jin010")
   local owner, other = p1(), p2()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  local EXTRA = "hanjin__skill_han001_1"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local EXTRA = "qiao__skill_han001_1"
   inRoom(function() room:handleAddLoseSkills(owner, EXTRA, nil, true, false) end)
   lu.assertTrue(owner:hasSkill(EXTRA))
 
@@ -261,20 +261,20 @@ function Testhanjin_jin_sources:testExtraSkillLossDoesNotTravelWithExchange()
   lu.assertFalse(owner:hasSkill(EXTRA))
 end
 
-function Testhanjin_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
-  local room = prepare("hanjin__jin010")
+function Testqiao_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
+  local room = prepare("qiao_heg__jin010")
   local owner, target = p1(), p2()
   inRoom(function()
     owner.maxHp = 4
     owner.hp = 4
   end)
-  give(room, target, { { "hanjin__peach" } })
+  give(room, target, { { "qiao__peach" } })
   local hp = target.hp
 
   skill_test.withSkillRequests(room, SHANGSHI, {
     askToSkillInvoke = function() return true end,
     askToChoice = function(self, player, params, original)
-      return "#hanjin__skill_jin010_1-slash"
+      return "#qiao__skill_jin010_1-slash"
     end,
   }, function()
     inRoom(function()
@@ -288,8 +288,8 @@ function Testhanjin_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
   lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()
-  local room = prepare("hanjin__jin016")
+function Testqiao_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()
+  local room = prepare("qiao_heg__jin016")
   local zhangHua, drawer = p1(), p2()
   local shown
   skill_test.withSkillRequests(room, FULI, {
@@ -313,7 +313,7 @@ function Testhanjin_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()
 
   lu.assertNotNil(shown)
   lu.assertTrue(table.contains(zhangHua:getCardIds("h"), shown))
-  lu.assertEquals(drawer:getMark("hanjin_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
+  lu.assertEquals(drawer:getMark("qiao_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
 end
 
-return { name = "hanjin_jin_sources" }
+return { name = "qiao_jin_sources" }

@@ -1,30 +1,30 @@
--- 扩展目录必须命名为 hanjin（游戏内路径：packages/hanjin）。
+-- 扩展目录必须命名为 qiao（游戏内路径：packages/qiao）。
 Fk:loadTranslationTable {
-  ["hanjin"] = "平行时空国战",
+  ["qiao"] = "平行时空国战",
 }
 
 -- GeneralsOverview builds its left-side extension list from
--- Fk.extension_names in raw order. Move hanjin immediately after the actual
+-- Fk.extension_names in raw order. Move qiao immediately after the actual
 -- 国战 extension (hegemony), preserving every other extension's order.
 Fk:addPostLoadFunc(function()
   local names = Fk.extension_names
-  local hanjinIndex, hegemonyIndex
+  local qiaoIndex, hegemonyIndex
   for i, name in ipairs(names) do
-    if name == "hanjin" then hanjinIndex = i end
+    if name == "qiao" then qiaoIndex = i end
     if name == "hegemony" then hegemonyIndex = i end
   end
-  if hanjinIndex == nil or hegemonyIndex == nil then return end
-  if hanjinIndex == hegemonyIndex + 1 then return end
-  table.remove(names, hanjinIndex)
-  if hanjinIndex < hegemonyIndex then hegemonyIndex = hegemonyIndex - 1 end
-  table.insert(names, hegemonyIndex + 1, "hanjin")
+  if qiaoIndex == nil or hegemonyIndex == nil then return end
+  if qiaoIndex == hegemonyIndex + 1 then return end
+  table.remove(names, qiaoIndex)
+  if qiaoIndex < hegemonyIndex then hegemonyIndex = hegemonyIndex - 1 end
+  table.insert(names, hegemonyIndex + 1, "qiao")
 end)
 
 return {
-  (require "packages.hanjin.pkg.hanjin_generals"),
-  (require "packages.hanjin.pkg.hanjin_bingqing"),
-  (require "packages.hanjin.pkg.hanjin_buchen"),
-  (require "packages.hanjin.pkg.hanjin_zongheng"),
-  (require "packages.hanjin.pkg.hanjin_cards"),
-  (require "packages.hanjin.pkg.hanjin_mode"),
+  (require "packages.qiao.pkg.qiao_generals"),
+  (require "packages.qiao.pkg.qiao_bingqing"),
+  (require "packages.qiao.pkg.qiao_buchen"),
+  (require "packages.qiao.pkg.qiao_zongheng"),
+  (require "packages.qiao.pkg.qiao_cards"),
+  (require "packages.qiao.pkg.qiao_mode"),
 }

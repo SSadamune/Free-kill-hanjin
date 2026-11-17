@@ -6,17 +6,17 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_support = __dofile("../../../tests/support/skill_test.lua")
 
-local HUATUO = "hanjin__qun001"
-local JIAXU = "hanjin__qun007"
-local JISHI = "hanjin__skill_qun001_1"
-local WANSHA = "hanjin__skill_qun007_1"
-local RULE = "hanjin__qun_dying_rule"
+local HUATUO = "qiao_heg__qun001"
+local JIAXU = "qiao_heg__qun007"
+local JISHI = "qiao__skill_qun001_1"
+local WANSHA = "qiao__skill_qun007_1"
+local RULE = "qiao__qun_dying_rule"
 
-Testhanjin_qun_dying = {}
-Testhanjin_qun_dying.tearDown = support.clearRoom
+Testqiao_qun_dying = {}
+Testqiao_qun_dying.tearDown = support.clearRoom
 
-Testhanjin_qun_dying.setup = function()
-  local room = support.initHanjinRoom()
+Testqiao_qun_dying.setup = function()
+  local room = support.initQiaoRoom()
   FkTest.runInRoom(function()
     skill_support.installBlankGenerals(room, "qun")
     for _, player in ipairs(room.players) do
@@ -69,7 +69,7 @@ end
 
 -- 济世：红色装备牌当【桃】救起濒死，濒死结束后首次跨势力交换华佗 --------
 
-function Testhanjin_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce()
+function Testqiao_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce()
   local room = FkTest.room
   local owner, exchanged, later = p(1), p(2), p(3)
   local exchangedMain
@@ -78,19 +78,19 @@ function Testhanjin_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoO
   inRoom(function()
     clearAll(room)
     skill_support.installDualGenerals(room, owner, {
-      main = HUATUO, deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = HUATUO, deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     skill_support.installDualGenerals(room, exchanged, {
-      main = "hanjin_test__wei_1", deputy = "hanjin_test__wei_2", kingdom = "wei",
+      main = "qiao_test__wei_1", deputy = "qiao_test__wei_2", kingdom = "wei",
     })
     -- 第三名不同势力角色用于验证“首次成功交换即止”，不为他提供华佗。
     skill_support.installDualGenerals(room, later, {
-      main = "hanjin_test__shu_1", deputy = "hanjin_test__shu_2", kingdom = "shu",
+      main = "qiao_test__shu_1", deputy = "qiao_test__shu_2", kingdom = "shu",
     })
     for _, player in ipairs(room.players) do
       if player ~= owner and player ~= exchanged and player ~= later then
         skill_support.installDualGenerals(room, player, {
-          main = "hanjin_test__qun_1", deputy = "hanjin_test__qun_2", kingdom = "qun",
+          main = "qiao_test__qun_1", deputy = "qiao_test__qun_2", kingdom = "qun",
         })
       end
     end
@@ -98,7 +98,7 @@ function Testhanjin_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoO
     -- 从救人的华佗开始行动顺序：其后的交换者先于第三名不同势力角色。
     room:setCurrent(owner)
     room:setPlayerProperty(exchanged, "hp", 0)
-    redEquip = placeEquip(room, owner, "hanjin__chitu", Card.Heart, 5)
+    redEquip = placeEquip(room, owner, "qiao__chitu", Card.Heart, 5)
   end)
 
   -- 济世：红色装备牌作为唯一的【桃】来源；救援后立即进入客将交换询问。
@@ -106,9 +106,9 @@ function Testhanjin_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoO
     { card = { skill = JISHI, subcards = { redEquip } }, targets = { exchanged.id } },
   })
   -- AskForChoices 的回复体是选项表；裸字符串会被 askToChoices 当作非法回复取消。
-  FkTest.setNextReplies(exchanged, { { "yes" }, { "#hanjin__skill_qun001_1-main" } })
+  FkTest.setNextReplies(exchanged, { { "yes" }, { "#qiao__skill_qun001_1-main" } })
   -- 若错误地在首次成功后继续询问，这张牌会被换给原持有者。
-  FkTest.setNextReplies(later, { { "yes" }, { "#hanjin__skill_qun001_1-main" } })
+  FkTest.setNextReplies(later, { { "yes" }, { "#qiao__skill_qun001_1-main" } })
   enterDying(room, exchanged)
 
   lu.assertEquals(exchanged.hp, 1)
@@ -122,7 +122,7 @@ end
 
 -- 济世：原文只写“此濒死结算后”，未救活也处理仍有效的来源交换 ---------------
 
-function Testhanjin_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
+function Testqiao_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
   local room = FkTest.room
   local owner, victim, candidate = p(1), p(2), p(3)
   local redEquip, candidateMain
@@ -130,18 +130,18 @@ function Testhanjin_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
   inRoom(function()
     clearAll(room)
     skill_support.installDualGenerals(room, owner, {
-      main = HUATUO, deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = HUATUO, deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     skill_support.installDualGenerals(room, victim, {
-      main = "hanjin_test__wei_1", deputy = "hanjin_test__wei_2", kingdom = "wei",
+      main = "qiao_test__wei_1", deputy = "qiao_test__wei_2", kingdom = "wei",
     })
     skill_support.installDualGenerals(room, candidate, {
-      main = "hanjin_test__shu_1", deputy = "hanjin_test__shu_2", kingdom = "shu",
+      main = "qiao_test__shu_1", deputy = "qiao_test__shu_2", kingdom = "shu",
     })
     for _, player in ipairs(room.players) do
       if player ~= owner and player ~= victim and player ~= candidate then
         skill_support.installDualGenerals(room, player, {
-          main = "hanjin_test__qun_1", deputy = "hanjin_test__qun_2", kingdom = "qun",
+          main = "qiao_test__qun_1", deputy = "qiao_test__qun_2", kingdom = "qun",
         })
       end
     end
@@ -149,7 +149,7 @@ function Testhanjin_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
     room:setCurrent(owner)
     -- 一张济世【桃】只回复1点：-1 → 0，仍濒死，随后死亡，交换照常处理。
     room:setPlayerProperty(victim, "hp", -1)
-    redEquip = placeEquip(room, owner, "hanjin__chitu", Card.Heart, 6)
+    redEquip = placeEquip(room, owner, "qiao__chitu", Card.Heart, 6)
   end)
 
   FkTest.setNextReplies(owner, {
@@ -159,7 +159,7 @@ function Testhanjin_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
   for index = 2, #room.players do
     local player = p(index)
     if player == candidate then
-      FkTest.setNextReplies(player, { "", { "yes" }, { "#hanjin__skill_qun001_1-main" } })
+      FkTest.setNextReplies(player, { "", { "yes" }, { "#qiao__skill_qun001_1-main" } })
     else
       FkTest.setNextReplies(player, { "", "" })
     end
@@ -175,7 +175,7 @@ end
 
 -- 完杀：贾诩回合内其他角色濒死，其他人（含贾诩）不能对其用桃 ----------------
 
-function Testhanjin_qun_dying:testWanshaBlocksEveryoneButDyingPlayer()
+function Testqiao_qun_dying:testWanshaBlocksEveryoneButDyingPlayer()
   local room = FkTest.room
   local other, jiaxu, victim = p(1), p(2), p(3)
   local otherPeach, jiaxuPeach
@@ -183,12 +183,12 @@ function Testhanjin_qun_dying:testWanshaBlocksEveryoneButDyingPlayer()
   inRoom(function()
     clearAll(room)
     skill_support.installDualGenerals(room, jiaxu, {
-      main = JIAXU, deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = JIAXU, deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     room:setCurrent(jiaxu)
     room:setPlayerProperty(victim, "hp", 0)
-    otherPeach = give(room, other, "hanjin__peach", Card.Heart, 4)
-    jiaxuPeach = give(room, jiaxu, "hanjin__peach", Card.Heart, 5)
+    otherPeach = give(room, other, "qiao__peach", Card.Heart, 4)
+    jiaxuPeach = give(room, jiaxu, "qiao__peach", Card.Heart, 5)
   end)
 
   -- 濒死角色本人没有桃；其他存活角色均被禁止使用桃，因此不会产生求桃请求。
@@ -200,13 +200,13 @@ function Testhanjin_qun_dying:testWanshaBlocksEveryoneButDyingPlayer()
   lu.assertTrue(table.contains(jiaxu:getCardIds("h"), jiaxuPeach))
   -- 本次濒死结束后限制清理，不延续到下一次。
   inRoom(function()
-    lu.assertFalse(other:isProhibited(victim, Fk:cloneCard("hanjin__peach")))
+    lu.assertFalse(other:isProhibited(victim, Fk:cloneCard("qiao__peach")))
   end)
 end
 
 -- 完杀：濒死角色本人使用自己的【桃】自救不受限制 ----------------------------
 
-function Testhanjin_qun_dying:testWanshaAllowsDyingPlayerOwnPeach()
+function Testqiao_qun_dying:testWanshaAllowsDyingPlayerOwnPeach()
   local room = FkTest.room
   local jiaxu, victim = p(2), p(3)
   local victimPeach
@@ -214,11 +214,11 @@ function Testhanjin_qun_dying:testWanshaAllowsDyingPlayerOwnPeach()
   inRoom(function()
     clearAll(room)
     skill_support.installDualGenerals(room, jiaxu, {
-      main = JIAXU, deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = JIAXU, deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     room:setCurrent(jiaxu)
     room:setPlayerProperty(victim, "hp", 0)
-    victimPeach = give(room, victim, "hanjin__peach", Card.Heart, 6)
+    victimPeach = give(room, victim, "qiao__peach", Card.Heart, 6)
   end)
 
   FkTest.setNextReplies(victim, {
@@ -233,7 +233,7 @@ end
 
 -- 完杀：不在贾诩回合时不产生用桃限制 ---------------------------------------
 
-function Testhanjin_qun_dying:testWanshaInactiveOutsideJiaxuTurn()
+function Testqiao_qun_dying:testWanshaInactiveOutsideJiaxuTurn()
   local room = FkTest.room
   local other, jiaxu, victim = p(1), p(2), p(3)
   local otherPeach
@@ -241,11 +241,11 @@ function Testhanjin_qun_dying:testWanshaInactiveOutsideJiaxuTurn()
   inRoom(function()
     clearAll(room)
     skill_support.installDualGenerals(room, jiaxu, {
-      main = JIAXU, deputy = "hanjin_test__qun_2", kingdom = "qun",
+      main = JIAXU, deputy = "qiao_test__qun_2", kingdom = "qun",
     })
     room:setCurrent(other)
     room:setPlayerProperty(victim, "hp", 0)
-    otherPeach = give(room, other, "hanjin__peach", Card.Heart, 7)
+    otherPeach = give(room, other, "qiao__peach", Card.Heart, 7)
   end)
 
   FkTest.setNextReplies(other, {
@@ -258,4 +258,4 @@ function Testhanjin_qun_dying:testWanshaInactiveOutsideJiaxuTurn()
   lu.assertFalse(table.contains(other:getCardIds("h"), otherPeach))
 end
 
-return { name = "hanjin_qun_dying" }
+return { name = "qiao_qun_dying" }

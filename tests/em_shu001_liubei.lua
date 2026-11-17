@@ -1,13 +1,13 @@
 -- EM(SHU001) 君刘备：静态数据/技能骨架验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local DATA = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_lord_shu"
+local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_shu"
 
-local LORD = "hanjin__em_shu001"
-local ZHANGWU = "hanjin__skill_em_shu001_1"
-local TIANYI = "hanjin__skill_em_shu001_2"
-local JIZHAO = "hanjin__skill_em_shu001_3"
-local FLAG = "hanjin__skill_em_shu001_flag"
+local LORD = "qiao_heg__em_shu001"
+local ZHANGWU = "qiao__skill_em_shu001_1"
+local TIANYI = "qiao__skill_em_shu001_2"
+local JIZHAO = "qiao__skill_em_shu001_3"
+local FLAG = "qiao__skill_em_shu001_flag"
 
 local function inRoom(fn)
   local result
@@ -25,10 +25,10 @@ local function give(player, name, suit, number)
   return id
 end
 
-Testhanjin_em_shu001_liubei = {
+Testqiao_em_shu001_liubei = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, {
         "shu", "shu", "shu", "shu", "qun", "qun", "qun", "qun",
@@ -43,7 +43,7 @@ Testhanjin_em_shu001_liubei = {
   end,
 }
 
-function Testhanjin_em_shu001_liubei:testStaticFragment()
+function Testqiao_em_shu001_liubei:testStaticFragment()
   lu.assertEquals(DATA.generalCount, 1)
   lu.assertEquals(DATA.skillCount, 3)
   lu.assertEquals(DATA.kingdoms[1], "shu")
@@ -53,23 +53,23 @@ function Testhanjin_em_shu001_liubei:testStaticFragment()
   lu.assertTrue(general.is_lord)
   lu.assertEquals(general.lord_kingdoms[1], "shu")
   lu.assertEquals(#DATA.versions, 1)
-  lu.assertEquals(DATA.versions[1].normal, "hanjin__shu001")
+  lu.assertEquals(DATA.versions[1].normal, "qiao_heg__shu001")
   lu.assertEquals(DATA.versions[1].lord, LORD)
 end
 
-function Testhanjin_em_shu001_liubei:testSkillsAndDragonPhoenixIdentity()
+function Testqiao_em_shu001_liubei:testSkillsAndDragonPhoenixIdentity()
   for _, name in ipairs({ ZHANGWU, TIANYI, JIZHAO, FLAG }) do
     lu.assertNotNil(Fk.skills[name], "missing skill skeleton: " .. name)
   end
-  local card = assert(Fk.all_card_types["hanjin__dragon_phoenix"])
+  local card = assert(Fk.all_card_types["qiao__dragon_phoenix"])
   lu.assertEquals(card.type, Card.TypeEquip)
   lu.assertEquals(card.display_name or Fk:translate(card.name), "飞龙夺凤")
 end
 
-function Testhanjin_em_shu001_liubei:testTianyiSplitsOnlyDragonPhoenixMove()
+function Testqiao_em_shu001_liubei:testTianyiSplitsOnlyDragonPhoenixMove()
   local room, lord, other = FkTest.room, p(1), p(2)
-  local dragon = give(other, "hanjin__dragon_phoenix", Card.Spade, 2)
-  local jink = give(other, "hanjin__jink", Card.Heart, 3)
+  local dragon = give(other, "qiao__dragon_phoenix", Card.Spade, 2)
+  local jink = give(other, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     room:handleAddLoseSkills(lord, TIANYI, nil, false, true)
     room:moveCards {
@@ -82,10 +82,10 @@ function Testhanjin_em_shu001_liubei:testTianyiSplitsOnlyDragonPhoenixMove()
   lu.assertEquals(room:getCardArea(jink), Card.DiscardPile)
 end
 
-function Testhanjin_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
+function Testqiao_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   local room, lord, other = FkTest.room, p(1), p(2)
-  local first = give(other, "hanjin__jink", Card.Heart, 2)
-  local second = give(other, "hanjin__jink", Card.Club, 3)
+  local first = give(other, "qiao__jink", Card.Heart, 2)
+  local second = give(other, "qiao__jink", Card.Club, 3)
   inRoom(function()
     room:handleAddLoseSkills(lord, ZHANGWU, nil, false, true)
     room:handleAddLoseSkills(other, FLAG, nil, false, true)
@@ -93,7 +93,7 @@ function Testhanjin_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   end)
   skill_test.withSkillRequests(room, FLAG, {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == FLAG then return "hanjin__skill_shu002_1" end
+      if params.skill_name == FLAG then return "qiao__skill_shu002_1" end
       return original(self, who, params)
     end,
   }, function()
@@ -105,7 +105,7 @@ function Testhanjin_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   end)
   lu.assertTrue(table.contains(lord:getCardIds("h"), first))
   lu.assertTrue(table.contains(lord:getCardIds("h"), second))
-  lu.assertTrue(other:hasSkill("hanjin__skill_shu002_1"))
+  lu.assertTrue(other:hasSkill("qiao__skill_shu002_1"))
 end
 
-return { name = "hanjin_em_shu001_liubei" }
+return { name = "qiao_em_shu001_liubei" }

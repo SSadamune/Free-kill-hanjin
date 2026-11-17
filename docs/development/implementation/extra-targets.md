@@ -12,7 +12,7 @@
 
 ### 已接入的适配及验证范围
 
-`pkg/hanjin_mode/rules/extra_targets.lua` 已提供以下接口，并在汉晋应变 `add_target` 中接线：
+`pkg/qiao_mode/rules/extra_targets.lua` 已提供以下接口，并在汉晋应变 `add_target` 中接线：
 
 | 接口 | 用途 |
 | --- | --- |

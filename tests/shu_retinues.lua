@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local BAIMA = "hanjin__retinue_skill_baima_yicong"
-local XIANGBING = "hanjin__retinue_skill_xiangbing"
-local ZHOUCANG = "hanjin__retinue_skill_zhoucang"
-local XILIANG = "hanjin__retinue_skill_xiliang_jingqi"
+local BAIMA = "qiao__retinue_skill_baima_yicong"
+local XIANGBING = "qiao__retinue_skill_xiangbing"
+local ZHOUCANG = "qiao__retinue_skill_zhoucang"
+local XILIANG = "qiao__retinue_skill_xiliang_jingqi"
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
 
 local function room() return FkTest.room end
@@ -29,22 +29,22 @@ local function clearCards(player)
 end
 local function prepare()
   Fk.currentResponsePattern = nil
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
   return r
 end
 local function teardown() Fk.currentResponsePattern = nil; support.clearRoom() end
 
-Testhanjin_shu_retinues = { setup = prepare, tearDown = teardown }
+Testqiao_shu_retinues = { setup = prepare, tearDown = teardown }
 
-function Testhanjin_shu_retinues:testBaimaGainsResponderCardOnJink()
+function Testqiao_shu_retinues:testBaimaGainsResponderCardOnJink()
   local p1, p2 = p(1), p(2)
   grant(p1, BAIMA)
   clearCards(p1)
   clearCards(p2)
-  local jink = give(p1, "hanjin__jink", Card.Heart, 3)
-  local steal = give(p2, "hanjin__peach", Card.Diamond, 4)
-  local slash = give(p2, "hanjin__slash", Card.Spade, 8)
+  local jink = give(p1, "qiao__jink", Card.Heart, 3)
+  local steal = give(p2, "qiao__peach", Card.Diamond, 4)
+  local slash = give(p2, "qiao__slash", Card.Spade, 8)
   inRoom(function()
     room().current = p2
     p2.phase = Player.Play
@@ -66,12 +66,12 @@ function Testhanjin_shu_retinues:testBaimaGainsResponderCardOnJink()
   lu.assertTrue(table.contains(p1:getCardIds("he"), steal))
 end
 
-function Testhanjin_shu_retinues:testXiangbingSlashSpawnsOneNanmanOnDamagedTargets()
+function Testqiao_shu_retinues:testXiangbingSlashSpawnsOneNanmanOnDamagedTargets()
   local p1, p2 = p(1), p(2)
   grant(p1, XIANGBING)
   clearCards(p1)
   clearCards(p2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 8)
+  local slash = give(p1, "qiao__slash", Card.Spade, 8)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
@@ -83,7 +83,7 @@ function Testhanjin_shu_retinues:testXiangbingSlashSpawnsOneNanmanOnDamagedTarge
   lu.assertEquals(p2.hp, p2.maxHp - 2) -- 杀 1 点 + 视为南蛮 1 点
 end
 
-function Testhanjin_shu_retinues:testXiangbingFireHitsBothNeighborsOnce()
+function Testqiao_shu_retinues:testXiangbingFireHitsBothNeighborsOnce()
   local p1, p2, p3 = p(1), p(2), p(8)
   grant(p1, XIANGBING)
   for _, q in ipairs({ p1, p2, p3 }) do clearCards(q) end
@@ -100,13 +100,13 @@ end
 -- 周仓主流程：真实红【杀】使用完成后交给第三名角色，该角色用自己手里的
 -- 合法【杀】指定“在周仓攻击范围内、不在其自身攻击范围内”的角色。
 -- 目标 p8 与周仓（1 号位）距离 1，与受赠者（3 号位）距离 3。
-function Testhanjin_shu_retinues:testZhoucangRedSlashLetsThirdPlayerUseOwnSlashInZhoucangRange()
+function Testqiao_shu_retinues:testZhoucangRedSlashLetsThirdPlayerUseOwnSlashInZhoucangRange()
   local p1, p2, p3, p8 = p(1), p(2), p(3), p(8)
   grant(p1, ZHOUCANG)
   for _, q in ipairs({ p1, p2, p3, p8 }) do clearCards(q) end
-  local red = give(p1, "hanjin__slash", Card.Heart, 5)
-  local component = give(p1, "hanjin__jink", Card.Spade, 4)
-  local own = give(p3, "hanjin__slash", Card.Spade, 9)
+  local red = give(p1, "qiao__slash", Card.Heart, 5)
+  local component = give(p1, "qiao__jink", Card.Spade, 4)
+  local own = give(p3, "qiao__slash", Card.Spade, 9)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
@@ -127,7 +127,7 @@ function Testhanjin_shu_retinues:testZhoucangRedSlashLetsThirdPlayerUseOwnSlashI
     askToChoosePlayers = function() return { p3 } end,
   }, function()
     inRoom(function()
-      local slash = Fk:cloneCard("hanjin__slash")
+      local slash = Fk:cloneCard("qiao__slash")
       slash:addSubcards({red, component})
       room():useCard(UseCardData:new { from = p1, tos = { p2 }, card = slash, extra_data = {} })
     end)
@@ -147,12 +147,12 @@ end
 
 -- 西凉精骑主流程：结束阶段真实使用手牌【杀】，目标相邻（在目标自身攻击范围内
 -- 不含西凉精骑，故不进入弃牌分支），【杀】实体耗去且不增加通常次数。
-function Testhanjin_shu_retinues:testXiliangFinishPhaseReallyUsesSlashWithoutNormalTimes()
+function Testqiao_shu_retinues:testXiliangFinishPhaseReallyUsesSlashWithoutNormalTimes()
   local p1, p2 = p(1), p(2)
   grant(p1, XILIANG)
   clearCards(p1)
   clearCards(p2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 8)
+  local slash = give(p1, "qiao__slash", Card.Spade, 8)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Finish
@@ -182,14 +182,14 @@ end
 
 -- 白马义从“打出”入口：【万箭齐发】要求打出【闪】时触发 CardResponding，
 -- 取得万箭使用者的一张手牌/装备。
-function Testhanjin_shu_retinues:testBaimaTakesArcheryUserCardWhenPlayingJink()
+function Testqiao_shu_retinues:testBaimaTakesArcheryUserCardWhenPlayingJink()
   local p1, p3 = p(1), p(3)
   grant(p1, BAIMA)
   clearCards(p1)
   clearCards(p3)
-  local jink = give(p1, "hanjin__jink", Card.Heart, 3)
-  local archery = give(p3, "hanjin__archery_attack", Card.Heart, 1)
-  local peach = give(p3, "hanjin__peach", Card.Diamond, 4)
+  local jink = give(p1, "qiao__jink", Card.Heart, 3)
+  local archery = give(p3, "qiao__archery_attack", Card.Heart, 1)
+  local peach = give(p3, "qiao__peach", Card.Diamond, 4)
   inRoom(function()
     room().current = p3
     p1.hp = p1.maxHp
@@ -214,19 +214,19 @@ function Testhanjin_shu_retinues:testBaimaTakesArcheryUserCardWhenPlayingJink()
   lu.assertEquals(room():getCardArea(jink), Card.DiscardPile)
 end
 
-function Testhanjin_shu_retinues:testXiliangTargetOutsideAttackRangeMustDiscard()
+function Testqiao_shu_retinues:testXiliangTargetOutsideAttackRangeMustDiscard()
   local p1, p2 = p(1), p(4)
-  grant(p1, "hanjin__retinue_skill_xiliang_jingqi")
+  grant(p1, "qiao__retinue_skill_xiliang_jingqi")
   clearCards(p1)
   clearCards(p2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 8)
-  local card = give(p2, "hanjin__jink", Card.Heart, 3)
+  local slash = give(p1, "qiao__slash", Card.Spade, 8)
+  local card = give(p2, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
     p2.hp = p2.maxHp
   end)
-  FkTest.setNextReplies(p1, { "hanjin__retinue_skill_xiliang_jingqi", "1" })
+  FkTest.setNextReplies(p1, { "qiao__retinue_skill_xiliang_jingqi", "1" })
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(card)) })
   inRoom(function()
     room():useCard(UseCardData:new { from = p1, tos = { p2 }, card = Fk:getCardById(slash), extra_data = {} })
@@ -234,4 +234,4 @@ function Testhanjin_shu_retinues:testXiliangTargetOutsideAttackRangeMustDiscard(
   lu.assertFalse(table.contains(p2:getCardIds("he"), card)) -- 目标自行弃置，不是周仓/使用者选
 end
 
-return { name = "hanjin_shu_retinues" }
+return { name = "qiao_shu_retinues" }

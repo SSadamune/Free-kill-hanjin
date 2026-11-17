@@ -1,13 +1,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 __dofile("../../../tests/support/only_as_content.lua")
-local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
-local BattleRoyal = require "packages.hanjin.pkg.hanjin_mode.rules.battle_royal"
+local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
+local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local H = require "packages.hegemony.util"
-local Variants = require "packages.hanjin.pkg.hanjin_mode.rules.variants"
+local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 
 local function setup()
   Fk.currentResponsePattern = nil
-  return support.initHanjinRoom()
+  return support.initQiaoRoom()
 end
 
 local function teardown()
@@ -15,7 +15,7 @@ local function teardown()
   support.clearRoom()
 end
 
-Testhanjin_battle_royal = { setup = setup, tearDown = teardown }
+Testqiao_battle_royal = { setup = setup, tearDown = teardown }
 
 local function room() return FkTest.room end
 local function run(fn) FkTest.runInRoom(fn) end
@@ -57,7 +57,7 @@ local function setMode(key, value)
   room().settings[key] = value
 end
 
-function Testhanjin_battle_royal:testUpstreamCallPathIsTakenOverAndIdempotent()
+function Testqiao_battle_royal:testUpstreamCallPathIsTakenOverAndIdempotent()
   local player = room().players[1]
   setMode("old_battle_royal", true)
   run(function()
@@ -69,9 +69,9 @@ function Testhanjin_battle_royal:testUpstreamCallPathIsTakenOverAndIdempotent()
   lu.assertFalse(player:hasSkill("battle_royal&", true, true))
   lu.assertFalse(player:hasSkill("new_battle_royal&", true, true))
   lu.assertFalse(hasUpstreamStatus())
-  lu.assertNotNil(Fk.skills["#hanjin_only_as_rule"])
+  lu.assertNotNil(Fk.skills["#qiao_only_as_rule"])
   lu.assertNotNil(Fk.skills[BattleRoyal.SKILL])
-  lu.assertTrue(table.contains(room().logic.skills, "#hanjin_only_as_rule"))
+  lu.assertTrue(table.contains(room().logic.skills, "#qiao_only_as_rule"))
   lu.assertTrue(player:hasSkill(BattleRoyal.SKILL, true, true))
   lu.assertTrue(table.contains(player.player_skills, Fk.skills[BattleRoyal.SKILL]))
   lu.assertTrue(sourceDefs(player)["battle_royal"] == 1)
@@ -84,7 +84,7 @@ function Testhanjin_battle_royal:testUpstreamCallPathIsTakenOverAndIdempotent()
   lu.assertEquals(sourceDefs(player)["battle_royal"], before)
 end
 
-function Testhanjin_battle_royal:testUpstreamCallPathWithWolvesOnKeepsEventsOnly()
+function Testqiao_battle_royal:testUpstreamCallPathWithWolvesOnKeepsEventsOnly()
   local player = room().players[1]
   setMode(Variants.key, true)
   run(function()
@@ -95,14 +95,14 @@ function Testhanjin_battle_royal:testUpstreamCallPathWithWolvesOnKeepsEventsOnly
   lu.assertFalse(player:hasSkill("new_battle_royal&", true, true))
   lu.assertFalse(player:hasSkill("battle_royal&", true, true))
   lu.assertEquals(sourceDefs(player)["battle_royal"], 1)
-  local peach = give(player, "hanjin__peach", Card.Heart, 4)
+  local peach = give(player, "qiao__peach", Card.Heart, 4)
   local targets = O.availableTargets(room(), player, peach.id, "use")
-  lu.assertTrue(table.contains(targets, "hanjin__slash"))
-  lu.assertTrue(table.contains(targets, "hanjin__jink"))
-  lu.assertFalse(table.contains(targets, "hanjin__analeptic"))
+  lu.assertTrue(table.contains(targets, "qiao__slash"))
+  lu.assertTrue(table.contains(targets, "qiao__jink"))
+  lu.assertFalse(table.contains(targets, "qiao__analeptic"))
 end
 
-function Testhanjin_battle_royal:testWolvesOnKeepsHistoricalEventsButUsesSlashJink()
+function Testqiao_battle_royal:testWolvesOnKeepsHistoricalEventsButUsesSlashJink()
   local player = room().players[1]
   setMode(Variants.key, true)
   run(function() BattleRoyal.enter(room()) end)
@@ -110,22 +110,22 @@ function Testhanjin_battle_royal:testWolvesOnKeepsHistoricalEventsButUsesSlashJi
   lu.assertTrue(table.contains(room().logic.skills, BattleRoyal.EVENT_SKILL))
   lu.assertFalse(player:hasSkill("battle_royal&", true, true))
   lu.assertFalse(player:hasSkill("new_battle_royal&", true, true))
-  local peach = give(player, "hanjin__peach", Card.Heart, 4)
+  local peach = give(player, "qiao__peach", Card.Heart, 4)
   local targets = O.availableTargets(room(), player, peach.id, "use")
-  lu.assertTrue(table.contains(targets, "hanjin__slash"))
-  lu.assertTrue(table.contains(targets, "hanjin__jink"))
-  lu.assertFalse(table.contains(targets, "hanjin__analeptic"))
+  lu.assertTrue(table.contains(targets, "qiao__slash"))
+  lu.assertTrue(table.contains(targets, "qiao__jink"))
+  lu.assertFalse(table.contains(targets, "qiao__analeptic"))
   lu.assertTrue(O.isForbidden(player, peach))
 end
 
-function Testhanjin_battle_royal:testWolvesOffDoesNotAddHistoricalEvents()
+function Testqiao_battle_royal:testWolvesOffDoesNotAddHistoricalEvents()
   setMode(Variants.key, false)
   run(function() BattleRoyal.enter(room()) end)
   lu.assertFalse(Variants.enabled(room()))
   lu.assertFalse(table.contains(room().logic.skills, BattleRoyal.EVENT_SKILL))
 end
 
-function Testhanjin_battle_royal:testEntryConditionAndTriggerPriority()
+function Testqiao_battle_royal:testEntryConditionAndTriggerPriority()
   local players = room().players
   local savedAlive = room().alive_players
   lu.assertFalse(BattleRoyal.shouldEnter(room()))
@@ -138,7 +138,7 @@ function Testhanjin_battle_royal:testEntryConditionAndTriggerPriority()
 
   local foundPriority = false
   for _, skill in ipairs(room().logic.skill_table[fk.BeforeTurnStart] or {}) do
-    if skill.name == "#hanjin_battle_royal_rule" and skill.priority == 10 then
+    if skill.name == "#qiao_battle_royal_rule" and skill.priority == 10 then
       foundPriority = true
     end
   end
@@ -151,4 +151,4 @@ function Testhanjin_battle_royal:testEntryConditionAndTriggerPriority()
   lu.assertTrue(sourceDefs(players[1])["battle_royal"] == 1)
 end
 
-return { name = "hanjin_battle_royal" }
+return { name = "qiao_battle_royal" }

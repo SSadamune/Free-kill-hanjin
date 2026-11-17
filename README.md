@@ -59,7 +59,7 @@ python scripts/setup_dependencies.py
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 ```
 
-脚本会核验依赖，将本项目的游戏内容复制到 `packages/hanjin/`，然后启动新月杀。创建房间时选择“大合集”。
+脚本会核验依赖，将本项目的游戏内容复制到 `packages/qiao/`，然后启动新月杀。创建房间时选择“大合集”。
 
 ### 测试用自由选将
 
@@ -82,15 +82,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 python scripts/build_release.py
 ```
 
-生成 `.dev/dist/hanjin.zip`，解压到用户游戏的 `packages/` 后得到 `packages/hanjin/`。
+生成 `.dev/dist/qiao.zip`，解压到用户游戏的 `packages/` 后得到 `packages/qiao/`。
+
+从旧版升级时，先移除旧扩展目录 `packages/hanjin/`，再安装 `packages/qiao/`，避免同时加载两份扩展。
 
 构建脚本从项目中的 `init.lua`、`pkg/`、`image/`、`audio/` 打包，排除开发脚本、测试、原素材和 `.dev/` 环境，确保本体适配与用户安装包隔离。
 
-默认武将及卡牌图片按引擎固定目录和程序 ID 保存，例如 `image/generals/hanjin__han001.jpg`；构建与开发同步按原相对路径复制，不做图片改名。客将附加插画的保存与读取约定见[图片资源保存规范](docs/development/assets.md)。
+默认武将及卡牌图片按引擎固定目录和程序 ID 保存，例如 `image/generals/qiao_heg__han001.jpg`；构建与开发同步按原相对路径复制，不做图片改名。客将附加插画的保存与读取约定见[图片资源保存规范](docs/development/assets.md)。
+
+正式武将程序 ID 使用 `qiao_heg__` 前缀，其中 `heg__` 片段命中锁定新月杀 v0.5.25 的国战体力显示；技能、卡牌、标记、包名和模式 ID 均使用 qiao 命名空间（技能、卡牌为 `qiao__`），qiao 命名空间本身不参与该显示识别。这是本项目为兼容该引擎版本采用的约定，并非上游正式命名规范。旧收藏、禁将配置、录像及按旧武将 ID／旧包名／旧模式名保存的外部数据不会自动迁移。
 
 ## 日常开发与测试
 
-修改文件后，关闭开发版游戏，再运行启动命令，使改动同步到游戏。请在本项目中修改文件；同步按相对路径覆盖开发版 `packages/hanjin/` 中的对应文件，不要在该副本内保存唯一原稿。删除或重命名源文件后，仍需核对并清理开发副本中的旧文件。
+修改文件后，关闭开发版游戏，再运行启动命令，使改动同步到游戏。请在本项目中修改文件；同步按相对路径覆盖开发版 `packages/qiao/` 中的对应文件，不要在该副本内保存唯一原稿。删除或重命名源文件后，仍需核对并清理开发副本中的旧文件。
 
 检查 Lua 语法、运行全部自动化测试：
 
@@ -145,9 +149,9 @@ VS Code 和 Cursor 均可通过“终端 → 运行任务”执行启动、同�
 Free-kill-hanjin/
 ├─ init.lua                 游戏内容加载入口
 ├─ pkg/
-│  ├─ hanjin_mode/          国战模式、公共规则与界面
-│  ├─ hanjin_generals/      武将、翼从资料与技能
-│  └─ hanjin_cards/         牌表、卡牌与技能
+│  ├─ qiao_mode/          国战模式、公共规则与界面
+│  ├─ qiao_generals/      武将、翼从资料与技能
+│  └─ qiao_cards/         牌表、卡牌与技能
 ├─ image/                   游戏使用的图片
 ├─ audio/                   技能与阵亡语音
 ├─ assets-source/           用户提供的原始素材

@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local MIFUREN = "hanjin__shu021"
-local GUIXIU = "hanjin__skill_shu021_1"
-local YONGJUE = "hanjin__skill_shu021_2"
-local CUNSI = "hanjin__skill_shu021_3"
+local MIFUREN = "qiao_heg__shu021"
+local GUIXIU = "qiao__skill_shu021_1"
+local YONGJUE = "qiao__skill_shu021_2"
+local CUNSI = "qiao__skill_shu021_3"
 
 local function inRoom(fn)
   local result
@@ -31,15 +31,15 @@ local function clear(player)
   end
 end
 
-Testhanjin_shu021_mifuren = {
+Testqiao_shu021_mifuren = {
   setup = function()
     Fk.currentResponsePattern = nil
     local room = support.createRoom {
-      mode = "hanjin_heg_mode",
+      mode = "qiao_heg_mode",
       realSelection = true,
       settings = {
-        hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-        hanjin_kingdom_limit = 6,
+        qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+        qiao_kingdom_limit = 6,
       },
     }
     inRoom(function()
@@ -47,7 +47,7 @@ Testhanjin_shu021_mifuren = {
         "shu", "shu", "shu", "shu", "qun", "qun", "qun", "qun",
       })
       skill_test.installDualGenerals(room, room.players[1], {
-        main = MIFUREN, deputy = "hanjin_test__shu_2", kingdom = "shu",
+        main = MIFUREN, deputy = "qiao_test__shu_2", kingdom = "shu",
       })
       for _, player in ipairs(room.players) do clear(player) end
       room:setBanner("RoundCount", 1)
@@ -59,7 +59,7 @@ Testhanjin_shu021_mifuren = {
   end,
 }
 
-function Testhanjin_shu021_mifuren:testFormalRegistrationAndGuixiuReveal()
+function Testqiao_shu021_mifuren:testFormalRegistrationAndGuixiuReveal()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     player:hideGeneral(false)
@@ -73,7 +73,7 @@ function Testhanjin_shu021_mifuren:testFormalRegistrationAndGuixiuReveal()
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(MIFUREN)) end)
 end
 
-function Testhanjin_shu021_mifuren:testGuixiuFinishDrawsWhenUnhurt()
+function Testqiao_shu021_mifuren:testGuixiuFinishDrawsWhenUnhurt()
   local player = p(1)
   inRoom(function()
     player.hp = player.maxHp
@@ -85,7 +85,7 @@ function Testhanjin_shu021_mifuren:testGuixiuFinishDrawsWhenUnhurt()
   end)
 end
 
-function Testhanjin_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi()
+function Testqiao_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi()
   local room, player, target = FkTest.room, p(1), p(2)
   local companionBefore = target:getMark("CompanionEffect")
   inRoom(function()
@@ -106,7 +106,7 @@ function Testhanjin_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi
       end, { from = player, tos = { target } })
     end)
   end)
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   lu.assertNotEquals(Exchange.actualGeneral(player, false), MIFUREN,
     "勇决应移除糜夫人将牌（允许自动转翼从）")
   -- 真实选将/明置换将可能已给出初始珠联标记；勇决只应增加本次的一枚。
@@ -115,14 +115,14 @@ function Testhanjin_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi
   lu.assertTrue(target:hasSkill(CUNSI))
 end
 
-function Testhanjin_shu021_mifuren:testCunsiSlashInsideTurnAndPeachOutsideTurn()
+function Testqiao_shu021_mifuren:testCunsiSlashInsideTurnAndPeachOutsideTurn()
   local room, player, source = FkTest.room, p(1), p(2)
   inRoom(function()
     room:handleAddLoseSkills(player, CUNSI, nil, false, true)
     player:revealGeneral(false)
     lu.assertTrue(player:hasSkill(CUNSI))
   end)
-  local slash = give(player, "hanjin__slash", Card.Spade, 2)
+  local slash = give(player, "qiao__slash", Card.Spade, 2)
   skill_test.withSkillRequests(room, CUNSI, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == CUNSI then return true end
@@ -138,7 +138,7 @@ function Testhanjin_shu021_mifuren:testCunsiSlashInsideTurnAndPeachOutsideTurn()
   lu.assertTrue(table.contains(player:getCardIds("h"), slash),
     "回合内使用杀后获得该杀；area=" .. tostring(room:getCardArea(slash)))
 
-  local peach = give(player, "hanjin__peach", Card.Heart, 3)
+  local peach = give(player, "qiao__peach", Card.Heart, 3)
   skill_test.withSkillRequests(room, CUNSI, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == CUNSI then return true end
@@ -153,4 +153,4 @@ function Testhanjin_shu021_mifuren:testCunsiSlashInsideTurnAndPeachOutsideTurn()
   lu.assertTrue(table.contains(player:getCardIds("h"), peach), "回合外使用桃后获得该桃")
 end
 
-return { name = "hanjin_shu021_mifuren" }
+return { name = "qiao_shu021_mifuren" }

@@ -2,7 +2,7 @@
 -- 规则依据：rules/commander-retinue.md「拥有数量与独立实例」。
 --
 -- 生产目录只有通用实例模块；探测技能与外部来源标记在
--- tests/support/retinue_instances.lua 中注册，使用 hanjin_test__ 前缀，不发布。
+-- tests/support/retinue_instances.lua 中注册，使用 qiao_test__ 前缀，不发布。
 -- 本套件验证：
 --   1. 两份同名实例共用单个技能定义，同一时机各自可选发动一次、各自计次；
 --   2. 拒绝第一份后仍会询问并发动第二份（不是一次询问代表全部）；
@@ -16,12 +16,12 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local probe = __dofile("../../../tests/support/retinue_instances.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
 local SKILL = probe.SKILL
 local EXTERNAL_SOURCE = probe.EXTERNAL_SOURCE
 -- 兵种键只是测试记号；正式青州精锐的注册与正式翼从效果留待后续批次。
-local GENERAL = "hanjin_test__retinue_qingzhou_jingrui"
+local GENERAL = "qiao_test__retinue_qingzhou_jingrui"
 
 local function inRoom(fn)
   local result
@@ -41,7 +41,7 @@ end
 
 local function prepare()
   Fk.currentResponsePattern = nil
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, "han")
     for _, player in ipairs(room.players) do clearHand(player) end
@@ -66,7 +66,7 @@ local function withClientPlayer(player, fn)
   if not ok then error(err, 0) end
 end
 
-Testhanjin_retinue_instances = {
+Testqiao_retinue_instances = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -74,7 +74,7 @@ Testhanjin_retinue_instances = {
   end,
 }
 
-function Testhanjin_retinue_instances:testSameNameInstancesEachActivateOnce()
+function Testqiao_retinue_instances:testSameNameInstancesEachActivateOnce()
   lu.assertNotNil(Fk.skills[SKILL], "instance probe skill was not loaded")
   local player, source = p(1), p(2)
   local first, second
@@ -117,7 +117,7 @@ function Testhanjin_retinue_instances:testSameNameInstancesEachActivateOnce()
   lu.assertNil(summary[1].uses)
 end
 
-function Testhanjin_retinue_instances:testDeclineFirstStillPromptsAndUsesSecond()
+function Testqiao_retinue_instances:testDeclineFirstStillPromptsAndUsesSecond()
   local player, source = p(1), p(2)
   local first, second
   inRoom(function()
@@ -138,7 +138,7 @@ function Testhanjin_retinue_instances:testDeclineFirstStillPromptsAndUsesSecond(
   lu.assertEquals(R.publicCount(player), 2)
 end
 
-function Testhanjin_retinue_instances:testRemovingOneInstanceKeepsTheOther()
+function Testqiao_retinue_instances:testRemovingOneInstanceKeepsTheOther()
   local player, source = p(1), p(2)
   local first, second
   inRoom(function()
@@ -174,7 +174,7 @@ function Testhanjin_retinue_instances:testRemovingOneInstanceKeepsTheOther()
   end)
 end
 
-function Testhanjin_retinue_instances:testRemovalKeepsExternalSameNameSource()
+function Testqiao_retinue_instances:testRemovalKeepsExternalSameNameSource()
   local player = p(1)
   inRoom(function()
     -- 外部独立导数来源先持有同名技能。
@@ -204,7 +204,7 @@ function Testhanjin_retinue_instances:testRemovalKeepsExternalSameNameSource()
   end)
 end
 
-function Testhanjin_retinue_instances:testClientReadsPublicSummaryWithoutServerRoom()
+function Testqiao_retinue_instances:testClientReadsPublicSummaryWithoutServerRoom()
   local player = p(1)
   inRoom(function()
     R.grant(player, { general = GENERAL, skill = SKILL, position = "main" })
@@ -229,7 +229,7 @@ function Testhanjin_retinue_instances:testClientReadsPublicSummaryWithoutServerR
   end)
 end
 
-function Testhanjin_retinue_instances:testExternalMultiEffectSurvivesInstanceRemoval()
+function Testqiao_retinue_instances:testExternalMultiEffectSurvivesInstanceRemoval()
   local player = p(1)
   inRoom(function()
     -- 外部独立来源先持有“主效果 + 关联 targetmod”的多效果技能。
@@ -260,4 +260,4 @@ function Testhanjin_retinue_instances:testExternalMultiEffectSurvivesInstanceRem
   end)
 end
 
-return { name = "hanjin_retinue_instances" }
+return { name = "qiao_retinue_instances" }

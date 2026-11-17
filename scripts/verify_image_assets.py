@@ -2,7 +2,7 @@
 
 Usage:
     python scripts/verify_image_assets.py              # batch specs + coverage
-    python scripts/verify_image_assets.py --release    # built .dev/dist/hanjin.zip
+    python scripts/verify_image_assets.py --release    # built .dev/dist/qiao.zip
     python scripts/verify_image_assets.py --sync DIR   # an isolated dev.ps1 sync
 """
 from __future__ import annotations
@@ -63,7 +63,7 @@ def jpeg_info(path):
 
 
 def registered_ids():
-    text = (ROOT / 'pkg/hanjin_generals/data/standard.lua').read_text(encoding='utf-8')
+    text = (ROOT / 'pkg/qiao_generals/data/standard.lua').read_text(encoding='utf-8')
     generals = text[text.index('M.generals'):text.index('M.retinues')]
     entries = re.findall(
         r'number = \[=\=\[([^\]]*)\]=\=\],\s*id = \[=\=\[([^\]]+)\]=\=\],.*?guests = \{([^}]*)\}',
@@ -72,7 +72,7 @@ def registered_ids():
     guest_ids = [entry[1] for entry in entries if entry[2].strip()]
     retinues = text[text.index('M.retinues'):text.index('M.commanders')]
     retinue_ids = [name for name in re.findall(
-        r'id = \[=\=\[(hanjin__retinue_[^\]]+)\]=\=\]', retinues) if '_skill_' not in name]
+        r'id = \[=\=\[(qiao_heg__retinue_[^\]]+)\]=\=\]', retinues) if '_skill_' not in name]
     return general_ids, guest_ids, retinue_ids
 
 
@@ -145,10 +145,10 @@ def check_release(zip_path):
             errors.append('ZIP has duplicate entries')
         entries = {}
         for name in names:
-            if not name.startswith('hanjin/'):
-                errors.append(f'ZIP path outside hanjin/: {name}')
+            if not name.startswith('qiao/'):
+                errors.append(f'ZIP path outside qiao/: {name}')
                 continue
-            relative = name[len('hanjin/'):]
+            relative = name[len('qiao/'):]
             if relative.startswith('/') or '..' in relative.split('/'):
                 errors.append(f'unsafe ZIP path: {name}')
                 continue
@@ -219,8 +219,8 @@ def check_sync(destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release', nargs='?', const=str(ROOT / '.dev/dist/hanjin.zip'),
-                        help='check the built ZIP, default .dev/dist/hanjin.zip')
+    parser.add_argument('--release', nargs='?', const=str(ROOT / '.dev/dist/qiao.zip'),
+                        help='check the built ZIP, default .dev/dist/qiao.zip')
     parser.add_argument('--sync', metavar='DIR', help='check a synced package directory')
     args = parser.parse_args()
     errors = []

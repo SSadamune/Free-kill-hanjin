@@ -5,19 +5,19 @@
 --   python scripts/test.py --file tests/han017_liuyao.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local QN = "hanjin__skill_han017_1"
-local NJ = "hanjin__skill_han017_2"
+local QN = "qiao__skill_han017_1"
+local NJ = "qiao__skill_han017_2"
 
-local USED_TARGETS = "hanjin__skill_han017_1-given_targets-phase"
-local LOCK = "hanjin__skill_han017_1-locked-turn"
-local NEXT_SLASH = "hanjin_skill_han017_1_next_slash_damage-turn"
-local BONUS = "hanjin__skill_han017_2-bonus-turn"
-local OPTION_TAKE = "#hanjin__skill_han017_1-take"
+local USED_TARGETS = "qiao__skill_han017_1-given_targets-phase"
+local LOCK = "qiao__skill_han017_1-locked-turn"
+local NEXT_SLASH = "qiao_skill_han017_1_next_slash_damage-turn"
+local BONUS = "qiao__skill_han017_2-bonus-turn"
+local OPTION_TAKE = "#qiao__skill_han017_1-take"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 local probeSerial = 0
 
-Testhanjin_han017 = {}
+Testqiao_han017 = {}
 
 local function inRoom(fn)
   local result
@@ -70,8 +70,8 @@ end
 
 local function installUseProbe(room, uses)
   probeSerial = probeSerial + 1
-  local key = "__hanjin_han017_use_probe_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_han017_use_probe_" .. probeSerial }
+  local key = "__qiao_han017_use_probe_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_han017_use_probe_" .. probeSerial }
   skel:addEffect(fk.CardUseFinished, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -98,8 +98,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -117,12 +117,12 @@ local function setP1(room)
     local p = room.players[1]
     p:revealGeneral(false, true)
     p:revealGeneral(true, true)
-    room:changeHero(p, "hanjin__han017", true, false, false, false, false)
-    room:changeHero(p, "hanjin_test__han_2", true, true, false, false, false)
+    room:changeHero(p, "qiao_heg__han017", true, false, false, false, false)
+    room:changeHero(p, "qiao_test__han_2", true, true, false, false, false)
     p.kingdom = "han"
     room:setPlayerProperty(p, "kingdom", "han")
-    room:setPlayerMark(p, "__heg_general", "hanjin__han017")
-    room:setPlayerMark(p, "__heg_deputy", "hanjin_test__han_2")
+    room:setPlayerMark(p, "__heg_general", "qiao_heg__han017")
+    room:setPlayerMark(p, "__heg_deputy", "qiao_test__han_2")
     room:setPlayerMark(p, "__heg_kingdom", "han")
     room:setPlayerMark(p, "__heg_wild", 0)
     for _, q in ipairs(room.players) do q.hp = q.maxHp end
@@ -130,14 +130,14 @@ local function setP1(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   setP1(room)
   return room
 end
 
-Testhanjin_han017.setup = function() prepare() end
-Testhanjin_han017.tearDown = support.clearRoom
+Testqiao_han017.setup = function() prepare() end
+Testqiao_han017.tearDown = support.clearRoom
 
 local function activate(room, player, targets)
   inRoom(function()
@@ -147,10 +147,10 @@ end
 
 -- 戡难 ---------------------------------------------------------------------
 
-function Testhanjin_han017:testKannanWinObtainsCardLocksAndBuffsNextSlash()
+function Testqiao_han017:testKannanWinObtainsCardLocksAndBuffsNextSlash()
   local room = FkTest.room
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })[1]
   local uses = {}
   installUseProbe(room, uses)
 
@@ -169,14 +169,14 @@ function Testhanjin_han017:testKannanWinObtainsCardLocksAndBuffsNextSlash()
   lu.assertEquals(p1():getMark(NEXT_SLASH), 1)
   lu.assertTrue(table.contains(p1():getTableMark(USED_TARGETS), p2().id))
 
-  setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })
+  setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })
   setHand(room, p3(), {})
   inRoom(function()
     p3().maxHp = 20
     p3().hp = 20
   end)
   inRoom(function()
-    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(#uses, 1)
   lu.assertEquals(uses[1].additionalDamage, 1)
@@ -184,10 +184,10 @@ function Testhanjin_han017:testKannanWinObtainsCardLocksAndBuffsNextSlash()
   lu.assertEquals(p1():getMark(NEXT_SLASH), 0)
 end
 
-function Testhanjin_han017:testKannanTargetWinNoLockAndPerCharacterLimit()
+function Testqiao_han017:testKannanTargetWinNoLockAndPerCharacterLimit()
   local room = FkTest.room
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 3 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 10 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 3 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 10 } })[1]
 
   FkTest.setNextReplies(p1(), { FkTest.ReplyChooseCards({ p1card }) })
   FkTest.setNextReplies(p2(), {
@@ -203,8 +203,8 @@ function Testhanjin_han017:testKannanTargetWinNoLockAndPerCharacterLimit()
   lu.assertTrue(table.contains(p1():getTableMark(USED_TARGETS), p2().id))
 
   -- 同一角色本阶段不能再选；另一名角色仍可。
-  local p1next = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 5 } })[1]
-  local p3card = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 2 } })[1]
+  local p1next = setHand(room, p1(), { { "qiao__slash", Card.Spade, 5 } })[1]
+  local p3card = setHand(room, p3(), { { "qiao__jink", Card.Heart, 2 } })[1]
   local p2Before = #p2():getCardIds("h")
   activate(room, p1(), { p2() })
   lu.assertEquals(#p2():getCardIds("h"), p2Before)
@@ -216,10 +216,10 @@ function Testhanjin_han017:testKannanTargetWinNoLockAndPerCharacterLimit()
   lu.assertTrue(p1():getMark(LOCK) > 0)
 end
 
-function Testhanjin_han017:testKannanTieHasNoObtainNoBuffNoLock()
+function Testqiao_han017:testKannanTieHasNoObtainNoBuffNoLock()
   local room = FkTest.room
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 7 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 7 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 7 } })[1]
 
   FkTest.setNextReplies(p1(), { FkTest.ReplyChooseCards({ p1card }) })
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ p2card }) })
@@ -233,13 +233,13 @@ end
 
 -- 逆拒 ---------------------------------------------------------------------
 
-function Testhanjin_han017:testNijuAsTargetDrawsThenAccumulates()
+function Testqiao_han017:testNijuAsTargetDrawsThenAccumulates()
   local room = FkTest.room
   local p1card = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 5 },
-    { "hanjin__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 5 },
+    { "qiao__peach", Card.Heart, 2 },
   })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 10 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 10 } })[1]
   local before = #p1():getCardIds("h")
 
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ p2card }) })
@@ -253,10 +253,10 @@ function Testhanjin_han017:testNijuAsTargetDrawsThenAccumulates()
 
   -- 下一次拼点 11 + 3 = 13，封顶；平局后继续累计到 6。
   local p1next = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 11 },
-    { "hanjin__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 11 },
+    { "qiao__peach", Card.Heart, 2 },
   })[1]
-  local p2next = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 13 } })[1]
+  local p2next = setHand(room, p2(), { { "qiao__jink", Card.Heart, 13 } })[1]
   local before2 = #p1():getCardIds("h")
   FkTest.setNextReplies(p1(), { FkTest.ReplyChooseCards({ p1next }) })
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ p2next }) })
@@ -268,4 +268,4 @@ function Testhanjin_han017:testNijuAsTargetDrawsThenAccumulates()
   lu.assertEquals(#p1():getCardIds("h"), before2)
 end
 
-return { name = "hanjin_han017" }
+return { name = "qiao_han017" }

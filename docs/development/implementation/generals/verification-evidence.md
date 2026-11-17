@@ -147,7 +147,7 @@ python scripts/test.py --timeout 180
 608 项通过，0 失败，退出码 0
 
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip，退出码 0
+Built .dev/dist/qiao.zip，退出码 0
 ```
 
 ## 吴区
@@ -195,7 +195,7 @@ Ran 657 tests in 107.552 seconds, 657 successes, 0 failures
 退出码 0
 
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip
+Built .dev/dist/qiao.zip
 退出码 0
 ```
 
@@ -213,7 +213,7 @@ exit 0
 python scripts/check_lua.py
 366 Lua files OK, exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip
+Built .dev/dist/qiao.zip
 ```
 
 八套新增晋专项共65项纳入默认套件，公共转换额外加入暗卧龙回归。默认全量输出 `.dev/logs/jin_full_final.log`；保留原生 Distance malfunction 警告，无critical Lua错误或失败断言。安装包包含五个新增正式模式规则、共享辅助及技能接线，无测试、脚本或本体开发补丁。文档本地链接和差异格式检查通过。
@@ -263,7 +263,7 @@ python scripts/test.py --file tests/jin_chain.lua --timeout 180
 Ran 6 tests in 1.448 seconds, 6 successes, 0 failures
 ```
 
-覆盖柔克改冰杀与失技后本次后续、顺流受伤者与横置者弃牌、克清失技持续/来源不再存活、文虎整区一次弃置与决斗目标上限、冰杀伤害重置横置受伤者。冰属性在正式 `pkg/hanjin_cards/init.lua` 按锁定参考 `variation_cards/init.lua` 注册（引擎默认 `can_chain = true`），用例用真实冰杀伤害观察重置。克清真实 `killPlayer` 因夹具先触发游戏结束，死亡用例改用真实 `dead` 状态后继续真实用牌；`fk.Death` 清理链路仍待独立夹具或人工复核，客户端/联网重连未验。
+覆盖柔克改冰杀与失技后本次后续、顺流受伤者与横置者弃牌、克清失技持续/来源不再存活、文虎整区一次弃置与决斗目标上限、冰杀伤害重置横置受伤者。冰属性在正式 `pkg/qiao_cards/init.lua` 按锁定参考 `variation_cards/init.lua` 注册（引擎默认 `can_chain = true`），用例用真实冰杀伤害观察重置。克清真实 `killPlayer` 因夹具先触发游戏结束，死亡用例改用真实 `dead` 状态后继续真实用牌；`fk.Death` 清理链路仍待独立夹具或人工复核，客户端/联网重连未验。
 
 <a id="jin-information"></a>
 ### jin_information.lua
@@ -295,7 +295,7 @@ JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。最新实际执行�
 
 曾报 `expected:1 actual:6`。确定性原因：`initializeGenerals` 调用 `changeHero` 时，`__heg_general`／`__heg_deputy` 标记仍指向本局随机初始双将；引擎 `getGeneralMaxHp()` 优先读取这两个标记，测试角色 `maxHp/hp` 随初始双将变为 3 或 4（并可更高），而不是测试将面的 4。若体力值使 `max(1, hp+1)` 大于回复中的 5 张，持重会正确判定选牌不足并取消发动，`p1` 保留 6 张牌，表现为“expected 1 actual 6”。
 
-诊断时保留的证据：初始双将始终被替换为 `hanjin_test__wei_1/wei_2`，但 `hp/maxhp` 出现 3/4 两种；`player.phase = Player.NotActive`、`RoundCount = 1`、技能来源仅为 `hanjin__skill_wei003_2`；请求消费为 `"1"→askToSkillInvoke`、`ReplyChooseCards→askToCards`、`ReplyChooseCardAndPlayers→askToYiji`，逐次 q 长度 3→2→1→0，均未错位。修复：写入测试双将标记后用 `pl:getGeneralMaxHp()` 重算 `maxHp/hp`，夹具固定为 4/4；未修改断言、未禁用测试、未固定随机种子。修复后连续 10 次运行均 3/3 通过。
+诊断时保留的证据：初始双将始终被替换为 `qiao_test__wei_1/wei_2`，但 `hp/maxhp` 出现 3/4 两种；`player.phase = Player.NotActive`、`RoundCount = 1`、技能来源仅为 `qiao__skill_wei003_2`；请求消费为 `"1"→askToSkillInvoke`、`ReplyChooseCards→askToCards`、`ReplyChooseCardAndPlayers→askToYiji`，逐次 q 长度 3→2→1→0，均未错位。修复：写入测试双将标记后用 `pl:getGeneralMaxHp()` 重算 `maxHp/hp`，夹具固定为 4/4；未修改断言、未禁用测试、未固定随机种子。修复后连续 10 次运行均 3/3 通过。
 
 <a id="设变巧变超时根因"></a>
 ### 设变／巧变 90s 超时根因
@@ -305,7 +305,7 @@ JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。最新实际执行�
 <a id="魏包白板夹具"></a>
 ### 魏包白板夹具根因
 
-`wei_active.lua` 夹具改为明确白板双将：`support.initHanjinRoom()` 后统一替换为 `hanjin_test__wei_1/2`，写入 `__heg_general/__heg_deputy`、势力与 `__heg_*` 标记，并用 `getGeneralMaxHp()` 重算 `maxHp/hp`；显式设置当前角色与出牌阶段，避免随机真实双将的技能在嵌套【杀】时插入额外询问。C 此前在旧随机真实双将夹具下报告这两个嵌套【杀】用例 30–90 秒超时；改白板夹具后 6 个用例均通过。该对照只证明当前夹具消除了失败现象，未重新用随机夹具做 A/B 重跑，因此不把“随机双将触发额外技能/请求”写成已证实的唯一根因。
+`wei_active.lua` 夹具改为明确白板双将：`support.initQiaoRoom()` 后统一替换为 `qiao_test__wei_1/2`，写入 `__heg_general/__heg_deputy`、势力与 `__heg_*` 标记，并用 `getGeneralMaxHp()` 重算 `maxHp/hp`；显式设置当前角色与出牌阶段，避免随机真实双将的技能在嵌套【杀】时插入额外询问。C 此前在旧随机真实双将夹具下报告这两个嵌套【杀】用例 30–90 秒超时；改白板夹具后 6 个用例均通过。该对照只证明当前夹具消除了失败现象，未重新用随机夹具做 A/B 重跑，因此不把“随机双将触发额外技能/请求”写成已证实的唯一根因。
 
 <a id="牛金奖励根因"></a>
 ### 牛金 `expected 3 actual 25` 根因
@@ -328,7 +328,7 @@ DSH 分批实现，Codex 审阅并接手收尾修复与验收。规则资料提�
 
 最终 `python scripts/test.py --timeout 180`：`Ran 713 tests in 120.582 seconds, 713 successes, 0 failures`，退出码 0；六套蜀包专项共 50 项均已纳入默认套件。`python scripts/check_lua.py` 退出码 0。共享目标机制定向历史：`card_use_targets` 34/34、`extra_targets` 37/37，由 DSH 工具原生检查确认，最终默认套件亦包含这些回归。
 
-`python scripts/build_release.py` 构建 `.dev/dist/hanjin.zip` 成功。Codex 核对本批修改／新增正式文件，包含全部技能、重铸辅助、模式接线和共享目标条件；包内仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含开发补丁、脚本或测试。15 个蜀区主称号及 26 条卡面技能原文与 JSON 标准版逐项一致。
+`python scripts/build_release.py` 构建 `.dev/dist/qiao.zip` 成功。Codex 核对本批修改／新增正式文件，包含全部技能、重铸辅助、模式接线和共享目标条件；包内仅 `init.lua`、`pkg/`、`image/`、`audio/`，不含开发补丁、脚本或测试。15 个蜀区主称号及 26 条卡面技能原文与 JSON 标准版逐项一致。
 
 本批闭合的实质问题：仁德选择窗口的次数参数须进入执行复核；咆哮不能只累计得技后的计次杀；享乐保留使用者自行弃牌；突阵不能读取响应牌当前持有者猜抵消者；烈勇的本次杀加成失技后仍生效；祸首／巨象的免疫须检查技能归属；祸首不改变用牌者；周仓执行时必须沿用显式目标策略；象兵火伤生成的杀不豁免其杀后南蛮条款；周仓与巨象处理对应的全部实体牌。
 
@@ -349,7 +349,7 @@ Ran 764 tests in 140.766 seconds, 764 successes, 0 failures
 python scripts/check_lua.py
 exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip
+Built .dev/dist/qiao.zip
 ```
 
 群技能文件已核对在包内，包内路径仅限正式发布目录。日志为本地 `.dev/logs/qun_client_fixed.log`、`.dev/logs/qun_client_full.log`；全量仍有原生 Distance malfunction 警告，未出现 critical Lua 错误或失败断言。客户端点击、联网／重连与干净本体安装未人工验收。故障预防与夹具说明补在 [lessons.md](../../lessons.md) 及 [testing.md](../../testing.md)，不重复增加原则性警告。以下保留首次集成的历史结果与有复用价值的经验。
@@ -388,7 +388,7 @@ Ran 761 tests in 129.619 seconds, 761 successes, 0 failures
 python scripts/check_lua.py
 exit 0
 python scripts/build_release.py
-Built .dev/dist/hanjin.zip
+Built .dev/dist/qiao.zip
 ```
 
 受影响的汉区拼点、司马炎、吴区伤害与群包十套件共同执行 98 项全部通过（22.964 秒）；使用的是原套件断言，临时组合入口随后删除。安装包内新增／修改正式文件已核对，三个旧群马术骨架不在包内，且排除测试、脚本与开发本体适配。正式将性别登记为 17 女／73 男，离间／倾城针对真实双将的性别过滤已有回归。默认全量完整输出保存在本地 `.dev/logs/qun_full_final.log`。

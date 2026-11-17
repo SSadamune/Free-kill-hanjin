@@ -3,12 +3,12 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local LIDIAN = "hanjin__wei017"
-local XUNXUN = "hanjin__skill_wei017_1"
-local WANGXI = "hanjin__skill_wei017_2"
-local BLANK_DEPUTY = "hanjin_test__wei_2"
+local LIDIAN = "qiao_heg__wei017"
+local XUNXUN = "qiao__skill_wei017_1"
+local WANGXI = "qiao__skill_wei017_2"
+local BLANK_DEPUTY = "qiao_test__wei_2"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -29,11 +29,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -50,7 +50,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_wei017_lidian = {
+Testqiao_wei017_lidian = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -64,8 +64,8 @@ local function revoke(player, name)
   end)
 end
 
-function Testhanjin_wei017_lidian:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_wei017_lidian:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == LIDIAN
   end), "missing Li Dian data entry")
@@ -76,7 +76,7 @@ function Testhanjin_wei017_lidian:testFormalRegistration()
   lu.assertEquals(general.kingdom, "wei")
   lu.assertEquals(general.maxHp, 3)
   lu.assertEquals(general.gender, General.Male)
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wei016"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wei016"]))
   lu.assertTrue(table.contains(general:getSkillNameList(), XUNXUN))
   lu.assertTrue(table.contains(general:getSkillNameList(), WANGXI))
   lu.assertNotEquals(general, Fk.generals["ld__lidian"])
@@ -85,12 +85,12 @@ function Testhanjin_wei017_lidian:testFormalRegistration()
   end)
 end
 
-function Testhanjin_wei017_lidian:testXunxunOwnTurnFourCardsExactlyTwoBottom()
+function Testqiao_wei017_lidian:testXunxunOwnTurnFourCardsExactlyTwoBottom()
   local room, player = FkTest.room, p(1)
   local invoked, calls = 0, {}
 
   -- 出牌阶段再摸一张：同一回合第二次摸牌不得再次触发恂恂。
-  local probe = fk.CreateSkill { name = "#hanjin_wei017_draw_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_wei017_draw_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
@@ -142,11 +142,11 @@ function Testhanjin_wei017_lidian:testXunxunOwnTurnFourCardsExactlyTwoBottom()
   lu.assertEquals(#player:getCardIds(Player.Hand), 3)
 end
 
-function Testhanjin_wei017_lidian:testXunxunOutsideTurnTwoCardsNoBottomLimit()
+function Testqiao_wei017_lidian:testXunxunOutsideTurnTwoCardsNoBottomLimit()
   local room, player, current = FkTest.room, p(1), p(2)
   local invoked, calls = 0, {}
 
-  local probe = fk.CreateSkill { name = "#hanjin_wei017_outside_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_wei017_outside_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
@@ -195,12 +195,12 @@ function Testhanjin_wei017_lidian:testXunxunOutsideTurnTwoCardsNoBottomLimit()
   lu.assertEquals(#player:getCardIds(Player.Hand), 1)
 end
 
-function Testhanjin_wei017_lidian:testXunxunSeesDrawBeforeLateAcquire()
+function Testqiao_wei017_lidian:testXunxunSeesDrawBeforeLateAcquire()
   local room, player = FkTest.room, p(1)
   revoke(player, XUNXUN)
 
   local invoked, calls = 0, 0
-  local probe = fk.CreateSkill { name = "#hanjin_wei017_late_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_wei017_late_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
@@ -241,7 +241,7 @@ function Testhanjin_wei017_lidian:testXunxunSeesDrawBeforeLateAcquire()
   lu.assertEquals(#player:getCardIds(Player.Hand), 3)
 end
 
-function Testhanjin_wei017_lidian:testWangxiOncePerDamageEventNotPerPoint()
+function Testqiao_wei017_lidian:testWangxiOncePerDamageEventNotPerPoint()
   local room, player, other = FkTest.room, p(1), p(2)
   revoke(player, XUNXUN)
 
@@ -275,4 +275,4 @@ function Testhanjin_wei017_lidian:testWangxiOncePerDamageEventNotPerPoint()
   lu.assertEquals(#other:getCardIds(Player.Hand), 2)
 end
 
-return { name = "hanjin_wei017_lidian" }
+return { name = "qiao_wei017_lidian" }

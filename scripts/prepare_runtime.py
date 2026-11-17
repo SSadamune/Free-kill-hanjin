@@ -18,21 +18,21 @@ def replacements():
             ('      local reply = self.timeout > 0 and self:_checkReply(player, use_ai) or "__notready"', '      local reply = (unlimited or self.timeout > 0) and self:_checkReply(player, use_ai) or "__notready"'),
         ],
         'Fk/Base/Config.qml': [
-            ('  property int preferredTimeout\n', '  property int preferredTimeout\n  property bool hanjinConsoleStart: false\n  property int hanjinConsoleTimeout: -1\n  readonly property int hanjinOperationTimeout: hanjinConsoleStart ? hanjinConsoleTimeout : preferredTimeout\n'),
+            ('  property int preferredTimeout\n', '  property int preferredTimeout\n  property bool qiaoConsoleStart: false\n  property int qiaoConsoleTimeout: -1\n  readonly property int qiaoOperationTimeout: qiaoConsoleStart ? qiaoConsoleTimeout : preferredTimeout\n'),
         ],
         'Fk/Pages/Common/Init.qml': [
-            ('            Backend.startServer(9527);', '            Config.hanjinConsoleStart = true;\n            Config.hanjinConsoleTimeout = -1;\n            Backend.startServer(9527);'),
-            ('      Backend.startServer(9527);', '      Config.hanjinConsoleStart = true;\n      Config.hanjinConsoleTimeout = -1;\n      Backend.startServer(9527);'),
-            ('            serverDialog.show();', '            Config.hanjinConsoleStart = false;\n            serverDialog.show();'),
-            ('data.timeout ?? Config.preferredTimeout', 'data.timeout ?? Config.hanjinOperationTimeout'),
+            ('            Backend.startServer(9527);', '            Config.qiaoConsoleStart = true;\n            Config.qiaoConsoleTimeout = -1;\n            Backend.startServer(9527);'),
+            ('      Backend.startServer(9527);', '      Config.qiaoConsoleStart = true;\n      Config.qiaoConsoleTimeout = -1;\n      Backend.startServer(9527);'),
+            ('            serverDialog.show();', '            Config.qiaoConsoleStart = false;\n            serverDialog.show();'),
+            ('data.timeout ?? Config.preferredTimeout', 'data.timeout ?? Config.qiaoOperationTimeout'),
         ],
         'Fk/Pages/Lobby/CreateRoom.qml': [
-            ('Config.preferredTimeout', 'Config.hanjinOperationTimeout'),
+            ('Config.preferredTimeout', 'Config.qiaoOperationTimeout'),
         ],
         'Fk/Pages/Lobby/RoomGeneralSettings.qml': [
-            ('        title: Lua.tr("Operation timeout")\n        from: 10', '        title: Lua.tr("Operation timeout")\n        unlimitedText: Config.hanjinConsoleStart ? "无限" : ""\n        items: Config.hanjinConsoleStart ? [-1, ...Array.from({length: 51}, (_, i) => i + 10)] : []\n        from: Config.hanjinConsoleStart ? -1 : 10'),
-            ('        value: Config.preferredTimeout', '        value: Config.hanjinOperationTimeout'),
-            ('          Config.preferredTimeout = value;', '          if (Config.hanjinConsoleStart) Config.hanjinConsoleTimeout = value;\n          else Config.preferredTimeout = value;'),
+            ('        title: Lua.tr("Operation timeout")\n        from: 10', '        title: Lua.tr("Operation timeout")\n        unlimitedText: Config.qiaoConsoleStart ? "无限" : ""\n        items: Config.qiaoConsoleStart ? [-1, ...Array.from({length: 51}, (_, i) => i + 10)] : []\n        from: Config.qiaoConsoleStart ? -1 : 10'),
+            ('        value: Config.preferredTimeout', '        value: Config.qiaoOperationTimeout'),
+            ('          Config.preferredTimeout = value;', '          if (Config.qiaoConsoleStart) Config.qiaoConsoleTimeout = value;\n          else Config.preferredTimeout = value;'),
         ],
         'Fk/Widgets/SpinRow.qml': [
             ('  property bool editable: false', '  property bool editable: false\n  property string unlimitedText: ""'),
@@ -60,6 +60,10 @@ def apply(runtime=RUNTIME):
         path = runtime / relative
         original = path.read_text(encoding='utf-8')
         updated = original
+        # Migrate markers installed by earlier local-console patches so repeated
+        # syncs remain idempotent after the project namespace rename.
+        for old_name in ('hanjinConsoleStart', 'hanjinConsoleTimeout', 'hanjinOperationTimeout'):
+            updated = updated.replace(old_name, 'qiao' + old_name[len('hanjin'):])
         for old, new in edits:
             # Exact lines avoid matching an indented occurrence inside another block.
             if new in updated:

@@ -2,12 +2,12 @@
 -- 夹具直接授予正式翼从技能，以验证技能本身；翼从取得流程由统领公共套件覆盖。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local MS = "hanjin__retinue_skill_mushun"
-local XY = "hanjin__retinue_skill_xiyuanjun"
-local LOCK = "hanjin_retinue_xiyuanjun_lock-turn-inhand"
+local MS = "qiao__retinue_skill_mushun"
+local XY = "qiao__retinue_skill_xiyuanjun"
+local LOCK = "qiao_retinue_xiyuanjun_lock-turn-inhand"
 local DEFAULT_KINGDOMS = { "han", "han", "han", "wei", "wei", "shu", "shu", "wei" }
 
-Testhanjin_han_retinues = {}
+Testqiao_han_retinues = {}
 
 local function inRoom(fn)
   local result
@@ -53,8 +53,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -69,18 +69,18 @@ local function initializeGenerals(room)
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han_retinues.setup = function() prepare() end
-Testhanjin_han_retinues.tearDown = support.clearRoom
+Testqiao_han_retinues.setup = function() prepare() end
+Testqiao_han_retinues.tearDown = support.clearRoom
 
-function Testhanjin_han_retinues:testMushunObtainsThenPunishesNextDiscard()
+function Testqiao_han_retinues:testMushunObtainsThenPunishesNextDiscard()
   local room = FkTest.room
   grant(p1(), MS)
   local theirs = setHand(room, p2(), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   inRoom(function() p1().hp = 4 end)
 
@@ -102,12 +102,12 @@ function Testhanjin_han_retinues:testMushunObtainsThenPunishesNextDiscard()
   lu.assertFalse(table.contains(p1():getCardIds("h"), theirs[2]))
 end
 
-function Testhanjin_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDamage()
+function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDamage()
   local room = FkTest.room
   grant(p1(), XY)
   -- 当前出牌阶段角色 p2 空手；被选牌角色 p4 为敌方（魏）也可选。
   setHand(room, p2(), {})
-  local card = setHand(room, FkTest.room.players[4], { { "hanjin__jink", Card.Heart, 5 } })[1]
+  local card = setHand(room, FkTest.room.players[4], { { "qiao__jink", Card.Heart, 5 } })[1]
   setHand(room, p3(), {})
 
   local p4 = FkTest.room.players[4]
@@ -117,7 +117,7 @@ function Testhanjin_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterD
   -- 在同一个出牌阶段内部检查公开/锁定/转化禁用，并在受伤害取牌后继续
   -- 检查；回合结束后的断言只用于确认 -turn 标记已清理。
   local done = false
-  local skel = fk.CreateSkill { name = "#hanjin_retinue_play_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_retinue_play_probe" }
   skel:addEffect(fk.BeforePlayCard, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -127,7 +127,7 @@ function Testhanjin_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterD
       done = true
       lu.assertTrue(p3():cardVisible(card))
       lu.assertTrue(p4:prohibitUse(Fk:getCardById(card)))
-      local virtual = Fk:cloneCard("hanjin__slash")
+      local virtual = Fk:cloneCard("qiao__slash")
       virtual:addSubcard(card)
       lu.assertTrue(p4:prohibitUse(virtual))
       lu.assertEquals(Fk:getCardById(card):getMark(LOCK), 1)
@@ -159,4 +159,4 @@ function Testhanjin_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterD
   lu.assertEquals(Fk:getCardById(card):getMark(LOCK), 0)
 end
 
-return { name = "hanjin_han_retinues" }
+return { name = "qiao_han_retinues" }

@@ -3,16 +3,16 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local SUNCE = "hanjin__wu010"
-local JIANG = "hanjin__skill_wu010_1"
-local YINGYANG = "hanjin__skill_wu010_2"
-local HUNSHANG = "hanjin__skill_wu010_3"
-local YINGHUN = "hanjin__skill_wu009_1"
-local YINGZI = "hanjin__skill_wu005_1"
-local DISABLED = "hanjin__skill_wu010_1-disabled-turn"
-local PLUS = "hanjin__skill_wu010_2-plus3"
+local SUNCE = "qiao_heg__wu010"
+local JIANG = "qiao__skill_wu010_1"
+local YINGYANG = "qiao__skill_wu010_2"
+local HUNSHANG = "qiao__skill_wu010_3"
+local YINGHUN = "qiao__skill_wu009_1"
+local YINGZI = "qiao__skill_wu005_1"
+local DISABLED = "qiao__skill_wu010_1-disabled-turn"
+local PLUS = "qiao__skill_wu010_2-plus3"
 
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -43,11 +43,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -56,7 +56,7 @@ local function prepare()
     })
     for _, player in ipairs(room.players) do clearCards(player) end
     skill_test.installDualGenerals(room, room.players[1], {
-      main = "hanjin_test__wu_1",
+      main = "qiao_test__wu_1",
       deputy = SUNCE,
       kingdom = "wu",
     })
@@ -64,7 +64,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_wu010_sunce = {
+Testqiao_wu010_sunce = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -72,8 +72,8 @@ Testhanjin_wu010_sunce = {
   end,
 }
 
-function Testhanjin_wu010_sunce:testFormalRegistration()
-  local pack = assert(Fk.packages.hanjin_zhenshi)
+function Testqiao_wu010_sunce:testFormalRegistration()
+  local pack = assert(Fk.packages.qiao_zhenshi)
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == SUNCE
   end), "missing Sun Ce data entry")
@@ -85,9 +85,9 @@ function Testhanjin_wu010_sunce:testFormalRegistration()
   lu.assertEquals(general.maxHp, 4)
   lu.assertEquals(general.gender, General.Male)
   lu.assertEquals(general.deputyMaxHpAdjustedValue, -1)
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wu005"]))
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wu012"]))
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__wu006"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wu005"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wu012"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__wu006"]))
   for _, name in ipairs({ JIANG, YINGYANG, HUNSHANG }) do
     lu.assertTrue(table.contains(general:getSkillNameList(), name))
   end
@@ -96,24 +96,24 @@ function Testhanjin_wu010_sunce:testFormalRegistration()
   end)
 end
 
-function Testhanjin_wu010_sunce:testJiangNormalVirtualThenConvertedDisables()
+function Testqiao_wu010_sunce:testJiangNormalVirtualThenConvertedDisables()
   local room, player, target = FkTest.room, p(1), p(2)
-  local material = give(player, "hanjin__jink", Card.Heart, 2)
+  local material = give(player, "qiao__jink", Card.Heart, 2)
   local invoked, captured = 0, {}
 
   local function useVirtual(converted)
     local card
     if converted then
-      card = Fk:cloneCard("hanjin__slash", Card.Heart, 7, nil, { material })
+      card = Fk:cloneCard("qiao__slash", Card.Heart, 7, nil, { material })
     else
-      card = Fk:cloneCard("hanjin__slash", Card.Heart, 7)
+      card = Fk:cloneCard("qiao__slash", Card.Heart, 7)
     end
     room:useCard(UseCardData:new {
       from = player, tos = { target }, card = card, extra_data = {},
     })
   end
 
-  local probe = fk.CreateSkill { name = "#hanjin_wu010_jiang_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_wu010_jiang_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, who, data)
@@ -160,10 +160,10 @@ function Testhanjin_wu010_sunce:testJiangNormalVirtualThenConvertedDisables()
   lu.assertEquals(captured.afterThird, 2)
 end
 
-function Testhanjin_wu010_sunce:testYingyangChangesOwnPindianNumber()
+function Testqiao_wu010_sunce:testYingyangChangesOwnPindianNumber()
   local room, player, other = FkTest.room, p(1), p(2)
-  local own = give(player, "hanjin__slash", Card.Spade, 5)
-  local theirs = give(other, "hanjin__jink", Card.Heart, 10)
+  local own = give(player, "qiao__slash", Card.Spade, 5)
+  local theirs = give(other, "qiao__jink", Card.Heart, 10)
 
   FkTest.setNextReplies(player, { FkTest.ReplyChooseCards({ own }) })
   FkTest.setNextReplies(other, { FkTest.ReplyChooseCards({ theirs }) })
@@ -180,7 +180,7 @@ function Testhanjin_wu010_sunce:testYingyangChangesOwnPindianNumber()
   lu.assertEquals(data.fromCard.number, 8)
 end
 
-function Testhanjin_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi()
+function Testqiao_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi()
   local room, player = FkTest.room, p(1)
   inRoom(function()
     player.hp = 1
@@ -188,7 +188,7 @@ function Testhanjin_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi(
   end)
 
   local invoked, captured = 0, {}
-  local probe = fk.CreateSkill { name = "#hanjin_wu010_hunshang_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_wu010_hunshang_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, who, data)
@@ -226,4 +226,4 @@ function Testhanjin_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi(
   lu.assertTrue(player:hasSkill(YINGZI))
 end
 
-return { name = "hanjin_wu010_sunce" }
+return { name = "qiao_wu010_sunce" }

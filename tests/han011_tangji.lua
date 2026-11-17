@@ -2,13 +2,13 @@
 -- 规则依据：rules/standard-generals.md 汉区 HAN011、rulebook/events/death.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local AY = "hanjin__skill_han011_1"
-local JB = "hanjin__skill_han011_2"
-local OPT_CARDS = "hanjin__skill_han011_2-cards"
-local OPT_DRAW = "hanjin__skill_han011_2-draw"
+local AY = "qiao__skill_han011_1"
+local JB = "qiao__skill_han011_2"
+local OPT_CARDS = "qiao__skill_han011_2-cards"
+local OPT_DRAW = "qiao__skill_han011_2-draw"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han011 = {}
+Testqiao_han011 = {}
 
 local function inRoom(fn)
   local result
@@ -66,8 +66,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -76,29 +76,29 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(p1(), "hanjin__han011", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han011")
+    room:changeHero(p1(), "qiao_heg__han011", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han011")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han011.setup = function() prepare() end
-Testhanjin_han011.tearDown = support.clearRoom
+Testqiao_han011.setup = function() prepare() end
+Testqiao_han011.tearDown = support.clearRoom
 
-function Testhanjin_han011:testAiwuOncePerDamageEventHealsWhenTotalAtLeastThree()
+function Testqiao_han011:testAiwuOncePerDamageEventHealsWhenTotalAtLeastThree()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p3(), "han")
   local mine = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
   })
-  local theirs = setHand(room, p3(), { { "hanjin__slash", Card.Club, 3 } })
+  local theirs = setHand(room, p3(), { { "qiao__slash", Card.Club, 3 } })
   inRoom(function()
     p1().maxHp = 10
     p3().maxHp = 10
@@ -123,12 +123,12 @@ function Testhanjin_han011:testAiwuOncePerDamageEventHealsWhenTotalAtLeastThree(
   lu.assertEquals(p3().hp, 2)
 end
 
-function Testhanjin_han011:testAiwuTotalLessThanThreeDoesNotHeal()
+function Testqiao_han011:testAiwuTotalLessThanThreeDoesNotHeal()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p3(), "han")
-  local mine = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 1 } })
-  local theirs = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 2 } })
+  local mine = setHand(room, p1(), { { "qiao__slash", Card.Spade, 1 } })
+  local theirs = setHand(room, p3(), { { "qiao__jink", Card.Heart, 2 } })
   inRoom(function()
     p1().maxHp = 10
     p3().maxHp = 10
@@ -147,14 +147,14 @@ function Testhanjin_han011:testAiwuTotalLessThanThreeDoesNotHeal()
   lu.assertEquals(p1():usedSkillTimes(AY, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_han011:testJuebieOtherSameKingdomGetsAllCardsBeforeBury()
+function Testqiao_han011:testJuebieOtherSameKingdomGetsAllCardsBeforeBury()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p3(), "han")
   setHand(room, p1(), {})
   local cards = setHand(room, p3(), {
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__jink", Card.Heart, 5 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__jink", Card.Heart, 5 },
   })
   local equip = addEquip(room, p3(), "jueying", Card.Club, 6)
 
@@ -174,12 +174,12 @@ function Testhanjin_han011:testJuebieOtherSameKingdomGetsAllCardsBeforeBury()
   lu.assertEquals(room:getCardArea(equip), Card.PlayerHand)
 end
 
-function Testhanjin_han011:testJuebieOwnerDeathAlsoAppliesAndBeneficiaryDrawsThree()
+function Testqiao_han011:testJuebieOwnerDeathAlsoAppliesAndBeneficiaryDrawsThree()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p2(), "han")
   setHand(room, p2(), {})
-  setHand(room, p1(), { { "hanjin__slash", Card.Spade, 7 } })
+  setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 } })
 
   FkTest.setNextReplies(p1(), {
     "1",
@@ -193,4 +193,4 @@ function Testhanjin_han011:testJuebieOwnerDeathAlsoAppliesAndBeneficiaryDrawsThr
   -- 死亡角色的技能历史在死亡清理后不作为可观察断言；牌数已证明效果。
 end
 
-return { name = "hanjin_han011" }
+return { name = "qiao_han011" }

@@ -7,25 +7,25 @@
 -- 开局即计入，不待明置；普通交换/移除/替换不重算，升变走公共流程。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local WEI002 = "hanjin__wei002" -- 贡献 3 半格；资料登记为晋客将
-local JIN009 = "hanjin__jin009" -- 贡献 3 半格；资料登记为魏客将
-local GUEST = "hanjin__wei001"  -- 贡献 4 半格；资料登记汉/群客将
-local PLAIN = "hanjin__wei003"  -- 贡献 4 半格；单势力、无客将
+local WEI002 = "qiao_heg__wei002" -- 贡献 3 半格；资料登记为晋客将
+local JIN009 = "qiao_heg__jin009" -- 贡献 3 半格；资料登记为魏客将
+local GUEST = "qiao_heg__wei001"  -- 贡献 4 半格；资料登记汉/群客将
+local PLAIN = "qiao_heg__wei003"  -- 贡献 4 半格；单势力、无客将
 
 local function pairHp()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.pair_hp"
+  return require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 end
 
 local function ascension()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
+  return require "packages.qiao.pkg.qiao_mode.rules.ascension"
 end
 
 local function guestFactions()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.guest_factions"
+  return require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 end
 
 local function factionBan()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
+  return require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 end
 
 local function room() return FkTest.room end
@@ -52,25 +52,25 @@ local function installHiddenPair(player, main, deputy)
   end)
 end
 
-Testhanjin_wei_pair_hp = {}
+Testqiao_wei_pair_hp = {}
 
-Testhanjin_wei_pair_hp.setup = function()
+Testqiao_wei_pair_hp.setup = function()
   support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "wei", "jin", "han", "qun" },
-      hanjin_kingdom_limit = 4,
-      hanjin_wild_count = 0,
+      qiao_candidate_kingdoms = { "wei", "jin", "han", "qun" },
+      qiao_kingdom_limit = 4,
+      qiao_wild_count = 0,
     },
   }
 end
-Testhanjin_wei_pair_hp.tearDown = support.clearRoom
+Testqiao_wei_pair_hp.tearDown = support.clearRoom
 
-function Testhanjin_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
+function Testqiao_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   local P = pairHp()
   -- 身份/来源接线：两版司马懿引用同一个应期技能 ID，晋不另设骨架或识别项。
-  local YINGQI = "hanjin__skill_wei002_3"
+  local YINGQI = "qiao__skill_wei002_3"
   for _, generalName in ipairs({ WEI002, JIN009 }) do
     local count = 0
     for _, name in ipairs(Fk.generals[generalName]:getSkillNameList()) do
@@ -79,8 +79,8 @@ function Testhanjin_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
     lu.assertEquals(count, 1, "应期应只注册一次：" .. generalName)
     lu.assertTrue(P.has_yingqi(generalName))
   end
-  lu.assertNil(Fk.skill_skels["hanjin__skill_jin009_3"])
-  lu.assertNil(P.YINGQI_SKILLS["hanjin__skill_jin009_3"])
+  lu.assertNil(Fk.skill_skels["qiao__skill_jin009_3"])
+  lu.assertNil(P.YINGQI_SKILLS["qiao__skill_jin009_3"])
   -- 两处卡面文本统一到魏文本；同 ID 下晋条目不会把翻译覆盖成旧“阴阳鱼+2”。
   lu.assertEquals(Fk:translate(":" .. YINGQI),
     "锁定技，若你配将为多势力或客将，☯️+2。")
@@ -115,7 +115,7 @@ function Testhanjin_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   end
 end
 
-function Testhanjin_wei_pair_hp:testPlainPartnerKeepsEngineContribution()
+function Testqiao_wei_pair_hp:testPlainPartnerKeepsEngineContribution()
   local P = pairHp()
   lu.assertEquals(#guestFactions().guestKingdoms(PLAIN), 0)
   lu.assertEquals(#factionBan().affiliations(Fk.generals[PLAIN]), 1)
@@ -130,7 +130,7 @@ function Testhanjin_wei_pair_hp:testPlainPartnerKeepsEngineContribution()
   lu.assertEquals(p:getMark("HalfMaxHpLeft"), 1)
 end
 
-function Testhanjin_wei_pair_hp:testIdentityUsesPrintedDataNotBanFilter()
+function Testqiao_wei_pair_hp:testIdentityUsesPrintedDataNotBanFilter()
   local P, G, Ban = pairHp(), guestFactions(), factionBan()
   local r = room()
   -- 本局魏可用：曹操按原势力结算，不是本局解析出的客将。
@@ -152,7 +152,7 @@ function Testhanjin_wei_pair_hp:testIdentityUsesPrintedDataNotBanFilter()
   lu.assertEquals(P.yinyang(WEI002, { kingdom = "wei" }), 0)
 end
 
-function Testhanjin_wei_pair_hp:testAscensionReusesPairContribution()
+function Testqiao_wei_pair_hp:testAscensionReusesPairContribution()
   local P, A = pairHp(), ascension()
   local p = p1()
   installHiddenPair(p, WEI002, GUEST) -- 3 + 4 + 2 = 9 → 4
@@ -177,4 +177,4 @@ function Testhanjin_wei_pair_hp:testAscensionReusesPairContribution()
   lu.assertEquals(p.hp, 4)
 end
 
-return { name = "hanjin_wei_pair_hp" }
+return { name = "qiao_wei_pair_hp" }

@@ -2,7 +2,7 @@
 -- 输入类请求（是否发动、选哪张牌）用测试桩，其余判定与打出流程均为真实实现。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local SKILL = "hanjin__skill_wei002_2"
+local SKILL = "qiao__skill_wei002_2"
 
 local function room() return FkTest.room end
 local function p(n) return room().players[n] end
@@ -36,9 +36,9 @@ local function give(player, name, suit, number)
   return id
 end
 
-Testhanjin_wei_retrial = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+Testqiao_wei_retrial = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
-function Testhanjin_wei_retrial:testRealJudgeCompletesWithRespondedCard()
+function Testqiao_wei_retrial:testRealJudgeCompletesWithRespondedCard()
   local p1, p2 = p(1), p(2)
   grant(p2, SKILL)
   clearHand(p2)
@@ -48,7 +48,7 @@ function Testhanjin_wei_retrial:testRealJudgeCompletesWithRespondedCard()
   room().askToSkillInvoke = function() return true end
   room().askToCards = function() return { chosen } end
 
-  local judge = { who = p1, reason = "hanjin_test_judge", pattern = "." }
+  local judge = { who = p1, reason = "qiao_test_judge", pattern = "." }
   local ok, err = pcall(function() inRoom(function() room():judge(judge) end) end)
   room().askToSkillInvoke, room().askToCards = oldInvoke, oldAsk
   assert(ok, err)
@@ -59,7 +59,7 @@ function Testhanjin_wei_retrial:testRealJudgeCompletesWithRespondedCard()
   lu.assertFalse(table.contains(p2:getCardIds("h"), chosen))
 end
 
-function Testhanjin_wei_retrial:testProhibitedCardCannotBePlayed()
+function Testqiao_wei_retrial:testProhibitedCardCannotBePlayed()
   local p1, p2 = p(1), p(2)
   grant(p2, SKILL)
   clearHand(p2)
@@ -70,7 +70,7 @@ function Testhanjin_wei_retrial:testProhibitedCardCannotBePlayed()
   local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToCards
   room().askToSkillInvoke = function() return true end
   room().askToCards = function() return { chosen } end
-  local judge = { who = p1, reason = "hanjin_test_judge", pattern = "." }
+  local judge = { who = p1, reason = "qiao_test_judge", pattern = "." }
   local ok, err = pcall(function() inRoom(function() room():judge(judge) end) end)
   p2.prohibitResponse = oldProhibit
   room().askToSkillInvoke, room().askToCards = oldInvoke, oldAsk
@@ -79,4 +79,4 @@ function Testhanjin_wei_retrial:testProhibitedCardCannotBePlayed()
   lu.assertTrue(table.contains(p2:getCardIds("h"), chosen))
 end
 
-return { name = "hanjin_wei_retrial" }
+return { name = "qiao_wei_retrial" }

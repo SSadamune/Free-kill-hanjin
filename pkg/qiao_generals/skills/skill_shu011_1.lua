@@ -1,0 +1,149 @@
+-- SHU011 诸葛亮（卧龙） · 八阵
+--
+-- 规则基线：rules/standard-generals.md 蜀区 SHU011。
+-- 锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。
+--
+-- 实际效果直接调用正式汉晋【八卦阵】的装备技能（qiao__eight_diagram_skill），
+-- 不复制判定与响应逻辑。该技能带 attached_equip，公共“无视防具”规则（青釭剑
+-- 等）会照常把这座虚拟防具视为防具处理，因此无需在八阵内另行适配。
+-- 八阵本身是锁定技，不属于铁骑“非锁定技失效”的对象；这里处理的是真正的
+-- 来源变化：明置/暗置、移除技能与装备区防具变化。
+--
+-- 授予带八阵作为来源；同一玩家装备区真实八卦阵自带的同名技能来自装备本身，
+-- 移除衍生来源时不会删掉真实来源。八阵未明置时不得单独提供虚拟八卦阵。
+local skill = fk.CreateSkill {
+  name = "qiao__skill_shu011_1",
+  tags = { Skill.Compulsory },
+}
+skill.qiaoImplemented = true
+
+local ARMOR_SKILL = "qiao__eight_diagram_skill"
+local SYNCING = "qiao__skill_shu011_1_syncing"
+
+local function hasArmor(player)
+  return #player:getEquipments(Card.SubtypeArmor) > 0
+end
+
+local function isJink(pattern)
+  return pattern ~= nil
+    and Exppattern:Parse(pattern):matchExp("jink|0|nosuit|none")
+end
+
+--- 暗将/预亮状态：八阵仍是假技能但已可触发；明置后交给正式八卦阵技能。
+local function hiddenBazhen(player)
+  return player:isFakeSkill(Fk.skills[skill.name]) and player:hasSkill(skill.name)
+end
+
+--- 直接调用正式八卦阵技能的判定/提供闪效果，以八阵为发动来源；
+--- SkillEffect 在进入 on_use 前会按 main_skill 自动明置八阵。
+local function delegateToArmor(event, target, player, data)
+  local armor = Fk.skills[ARMOR_SKILL]
+  if armor ~= nil and armor.use ~= nil then
+    return armor.use(armor, event, target, player, data)
+  end
+end
+
+skill:addEffect(fk.AskForCardUse, {
+  is_delay_effect = true,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and hiddenBazhen(player) and not hasArmor(player)
+      and isJink(data.pattern)
+      and not player:prohibitUse(Fk:cloneCard("qiao__jink"))
+      and (data.extraData == nil or data.extraData == {} or data.extraData.not_passive ~= true)
+  end,
+  on_cost = function(self, event, target, player, data)
+    local ok = player.room:askToSkillInvoke(player, {
+      skill_name = skill.name,
+      prompt = "#qiao__skill_shu011_1-reveal_jink",
+    })
+    if not ok then return false end
+    player:revealBySkillName(skill.name)
+    -- 明置被禁止或失败时不能脱离八阵来源白得八卦阵。
+    return player:hasShownSkill(skill.name)
+  end,
+  on_use = function(self, event, target, player, data)
+    delegateToArmor(event, target, player, data)
+  end,
+})
+
+skill:addEffect(fk.AskForCardResponse, {
+  is_delay_effect = true,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and hiddenBazhen(player) and not hasArmor(player)
+      and isJink(data.pattern)
+      and not player:prohibitResponse(Fk:cloneCard("qiao__jink"))
+  end,
+  on_cost = function(self, event, target, player, data)
+    local ok = player.room:askToSkillInvoke(player, {
+      skill_name = skill.name,
+      prompt = "#qiao__skill_shu011_1-reveal_jink",
+    })
+    if not ok then return false end
+    player:revealBySkillName(skill.name)
+    return player:hasShownSkill(skill.name)
+  end,
+  on_use = function(self, event, target, player, data)
+    delegateToArmor(event, target, player, data)
+  end,
+})
+
+local function sync(room, player)
+  if room == nil or player == nil or player.dead then return end
+  if Fk.skills[ARMOR_SKILL] == nil then return end
+  if player:getMark(SYNCING) > 0 then return end
+  room:setPlayerMark(player, SYNCING, 1)
+  if not player:hasShownSkill(skill.name) or hasArmor(player) then
+    room:handleAddLoseSkills(player, "-" .. ARMOR_SKILL, skill.name, false, true)
+  else
+    room:handleAddLoseSkills(player, ARMOR_SKILL, skill.name, false, true)
+  end
+  room:setPlayerMark(player, SYNCING, 0)
+end
+
+-- 装备区防具变化。
+skill:addEffect(fk.AfterCardsMove, {
+  can_refresh = function(self, event, target, player, data)
+    return player ~= nil and not player.dead and player:hasSkill(skill.name)
+  end,
+  on_refresh = function(self, event, target, player, data)
+    sync(player.room, player)
+  end,
+})
+
+-- 明置/暗置与换将：重新按“已明置且无防具”同步。
+skill:addEffect(fk.GeneralRevealed, {
+  can_refresh = function(self, event, target, player, data)
+    return target == player and player:hasSkill(skill.name)
+  end,
+  on_refresh = function(self, event, target, player, data)
+    sync(player.room, player)
+  end,
+})
+
+skill:addEffect(fk.AfterPropertyChange, {
+  can_refresh = function(self, event, target, player, data)
+    return target == player and player:hasSkill(skill.name)
+  end,
+  on_refresh = function(self, event, target, player, data)
+    sync(player.room, player)
+  end,
+})
+
+skill:addAcquireEffect(function(self, player)
+  sync(player.room or Fk:currentRoom(), player)
+end)
+
+skill:addLoseEffect(function(self, player)
+  local room = player.room or Fk:currentRoom()
+  if room ~= nil and not player.dead then
+    room:handleAddLoseSkills(player, "-" .. ARMOR_SKILL, skill.name, false, true)
+  end
+end)
+
+Fk:loadTranslationTable {
+  ["qiao__skill_shu011_1"] = "八阵",
+  [":qiao__skill_shu011_1"] = "锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。",
+  ["#qiao__skill_shu011_1-reveal_jink"] = "八阵：明置八阵并视为装备【八卦阵】，进行判定",
+}
+
+return skill

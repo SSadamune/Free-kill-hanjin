@@ -1,9 +1,9 @@
 -- 同名翼从触发技：两份共享实例在同一个 EventPhaseStart 各自询问一次。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
-local XIYUAN = "hanjin__retinue_skill_xiyuanjun"
+local XIYUAN = "qiao__retinue_skill_xiyuanjun"
 
 local function inRoom(fn)
   local result
@@ -13,10 +13,10 @@ end
 
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_retinue_multi_instance = {
+Testqiao_retinue_multi_instance = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "qun", "qun", "qun", "qun" })
       for _, player in ipairs(room.players) do
@@ -34,21 +34,21 @@ Testhanjin_retinue_multi_instance = {
   end,
 }
 
-function Testhanjin_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
+function Testqiao_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
   local player, target = p(1), p(2)
   inRoom(function()
     for _, spec in ipairs({ { Card.Heart, 2 }, { Card.Spade, 3 } }) do
-      local card = FkTest.room:printCard("hanjin__jink", spec[1], spec[2])
+      local card = FkTest.room:printCard("qiao__jink", spec[1], spec[2])
       FkTest.room:obtainCard(target, card, false, fk.ReasonJustMove)
     end
     local first = R.grant(player, {
-      general = "hanjin__retinue_xiyuanjun",
+      general = "qiao_heg__retinue_xiyuanjun",
       skill = XIYUAN,
       origin = "shared",
       shared_from = 2,
     })
     local second = R.grant(player, {
-      general = "hanjin__retinue_xiyuanjun",
+      general = "qiao_heg__retinue_xiyuanjun",
       skill = XIYUAN,
       origin = "shared",
       shared_from = 3,
@@ -86,4 +86,4 @@ function Testhanjin_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice(
   lu.assertEquals(choices, 2, "两份实例应各自完成一次选牌成本")
 end
 
-return { name = "hanjin_retinue_multi_instance" }
+return { name = "qiao_retinue_multi_instance" }

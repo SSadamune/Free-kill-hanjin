@@ -3,22 +3,22 @@
 -- rules/equipment-movement.md、rules/adaptation.md、rules/card-use-targets.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local CT = "hanjin__skill_jin001_1"
-local XT = "hanjin__skill_jin001_2"
-local AUX = "#hanjin__skill_jin001_2_active"
-local OPTION_EQUIP = "hanjin__skill_jin001_2-option_equip"
-local OPTION_DRAW = "hanjin__skill_jin001_2-option_draw"
-local TRACK_TAG = "hanjin_jin001_2_adaptation_used"
+local CT = "qiao__skill_jin001_1"
+local XT = "qiao__skill_jin001_2"
+local AUX = "#qiao__skill_jin001_2_active"
+local OPTION_EQUIP = "qiao__skill_jin001_2-option_equip"
+local OPTION_DRAW = "qiao__skill_jin001_2-option_draw"
+local TRACK_TAG = "qiao_jin001_2_adaptation_used"
 
 --- Resolve the HanJin API only after the engine has loaded packages; a
 --- top-level require here would initialize the mode package before postLoad.
 local function adaptation()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
+  return require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 end
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_jin001 = {}
+Testqiao_jin001 = {}
 
 local function inRoom(fn)
   local result
@@ -83,8 +83,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -93,8 +93,8 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(room.players[1], "hanjin__jin001", true, false, false, false, false)
-    room:setPlayerMark(room.players[1], "__heg_general", "hanjin__jin001")
+    room:changeHero(room.players[1], "qiao_heg__jin001", true, false, false, false, false)
+    room:setPlayerMark(room.players[1], "__heg_general", "qiao_heg__jin001")
     room.players[1].kingdom = "jin"
     room:setPlayerProperty(room.players[1], "kingdom", "jin")
     room:setPlayerMark(room.players[1], "__heg_kingdom", "jin")
@@ -105,22 +105,22 @@ end
 local function installJinDeputy(room)
   inRoom(function()
     local p = room.players[1]
-    room:changeHero(p, "hanjin_test__han_1", true, false, false, false, false)
-    room:changeHero(p, "hanjin__jin001", true, true, false, false, false)
-    room:setPlayerMark(p, "__heg_general", "hanjin_test__han_1")
-    room:setPlayerMark(p, "__heg_deputy", "hanjin__jin001")
+    room:changeHero(p, "qiao_test__han_1", true, false, false, false, false)
+    room:changeHero(p, "qiao_heg__jin001", true, true, false, false, false)
+    room:setPlayerMark(p, "__heg_general", "qiao_test__han_1")
+    room:setPlayerMark(p, "__heg_deputy", "qiao_heg__jin001")
   end)
 end
 
 local function prepare()
-  initializeGenerals(support.initHanjinRoom())
+  initializeGenerals(support.initQiaoRoom())
   return FkTest.room
 end
 
-Testhanjin_jin001.setup = function()
+Testqiao_jin001.setup = function()
   prepare()
 end
-Testhanjin_jin001.tearDown = support.clearRoom
+Testqiao_jin001.tearDown = support.clearRoom
 
 local function p1() return FkTest.room.players[1] end
 local function p2() return FkTest.room.players[2] end
@@ -146,7 +146,7 @@ local function turnEnd(room, player)
 end
 
 local function useAdaptation(room, from, to)
-  local card = Fk:cloneCard("hanjin_test__blank_basic")
+  local card = Fk:cloneCard("qiao_test__blank_basic")
   adaptation().setCardEntries(card, { { condition = "gujun", effect = "draw" } })
   inRoom(function()
     room:useCard { from = from, tos = { to }, card = card }
@@ -154,7 +154,7 @@ local function useAdaptation(room, from, to)
 end
 
 local function useOrdinary(room, from, to)
-  local card = Fk:cloneCard("hanjin_test__blank_basic")
+  local card = Fk:cloneCard("qiao_test__blank_basic")
   inRoom(function()
     room:useCard { from = from, tos = { to }, card = card }
   end)
@@ -162,7 +162,7 @@ end
 
 --- 纯“打出”一张带应变条目的实体牌，不经过使用牌事件。
 local function pureRespond(room, from)
-  local id = addHand(room, from, { { "hanjin_test__blank_basic" } })[1]
+  local id = addHand(room, from, { { "qiao_test__blank_basic" } })[1]
   local card = Fk:getCardById(id)
   adaptation().setCardEntries(card, { { condition = "gujun", effect = "draw" } })
   inRoom(function()
@@ -173,7 +173,7 @@ end
 --- 在真实回合的 TurnStart 时机使用一张牌，随后由真实 TurnEnd 检查兴图。
 local function installTurnStartCard(room, from, to, entries)
   local fired = false
-  local skel = fk.CreateSkill { name = "#hanjin_jin001_turnstart_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin001_turnstart_probe" }
   skel:addEffect(fk.TurnStart, {
     global = true,
     can_refresh = function(self, event, target, player)
@@ -181,7 +181,7 @@ local function installTurnStartCard(room, from, to, entries)
     end,
     on_refresh = function(self, event, target, player)
       fired = true
-      local card = Fk:cloneCard("hanjin_test__blank_basic")
+      local card = Fk:cloneCard("qiao_test__blank_basic")
       entries = entries or { { condition = "gujun", effect = "draw" } }
       adaptation().setCardEntries(card, entries)
       from.room:useCard { from = from, tos = { to }, card = card }
@@ -190,7 +190,7 @@ local function installTurnStartCard(room, from, to, entries)
   inRoom(function() room:addSkill(skel:createSkill()) end)
 end
 
-local function installUseProbe(room, uses)  local skel = fk.CreateSkill { name = "#hanjin_jin001_peach_probe" }
+local function installUseProbe(room, uses)  local skel = fk.CreateSkill { name = "#qiao_jin001_peach_probe" }
   skel:addEffect(fk.CardUsing, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -209,7 +209,7 @@ end
 
 -- 垂统 ---------------------------------------------------------------------
 
-function Testhanjin_jin001:testCT01MovesIntoEmptyCorrespondingSlotNotHand()
+function Testqiao_jin001:testCT01MovesIntoEmptyCorrespondingSlotNotHand()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p2(), "jueying")
@@ -222,7 +222,7 @@ function Testhanjin_jin001:testCT01MovesIntoEmptyCorrespondingSlotNotHand()
   lu.assertEquals(p1():usedSkillTimes(CT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testCT02DeputySourceAndHiddenSourceReveal()
+function Testqiao_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   local room = FkTest.room
   clearAllHands(room)
   installJinDeputy(room)
@@ -240,12 +240,12 @@ function Testhanjin_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   local hiddenEquip = addEquip(room, p2(), "qinggang_sword")
   FkTest.setNextReplies(p1(), { "1", hiddenEquip })
   enterDying(room, p2())
-  lu.assertEquals(p1().deputyGeneral, "hanjin__jin001")
+  lu.assertEquals(p1().deputyGeneral, "qiao_heg__jin001")
   lu.assertFalse(p1():isFakeSkill(CT))
   lu.assertTrue(table.contains(p1():getCardIds("e"), hiddenEquip))
 end
 
-function Testhanjin_jin001:testCT03OccupiedOrSealedSlotAndNoCardDoNotMove()
+function Testqiao_jin001:testCT03OccupiedOrSealedSlotAndNoCardDoNotMove()
   local room = FkTest.room
   clearAllHands(room)
   local owned = addEquip(room, p1(), "jueying")
@@ -286,7 +286,7 @@ function Testhanjin_jin001:testCT03OccupiedOrSealedSlotAndNoCardDoNotMove()
   lu.assertEquals(p1():usedSkillTimes(CT, Player.HistoryGame), 0)
 end
 
-function Testhanjin_jin001:testCT04DyingEventOffersOnceNotPerPeachRequest()
+function Testqiao_jin001:testCT04DyingEventOffersOnceNotPerPeachRequest()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p2(), "jueying")
@@ -304,7 +304,7 @@ end
 
 -- 兴图 ---------------------------------------------------------------------
 
-function Testhanjin_jin001:testXT01NoAdaptationUseNoTrigger()
+function Testqiao_jin001:testXT01NoAdaptationUseNoTrigger()
   local room = FkTest.room
   clearAllHands(room)
   turnStart(room, p1())
@@ -326,13 +326,13 @@ function Testhanjin_jin001:testXT01NoAdaptationUseNoTrigger()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 0)
 end
 
-function Testhanjin_jin001:testXT02OtherRoleUseBeforeSkillAcquiredCountsAtTurnEnd()
+function Testqiao_jin001:testXT02OtherRoleUseBeforeSkillAcquiredCountsAtTurnEnd()
   local room = FkTest.room
   clearAllHands(room)
   -- 先用测试武将，确保用牌事实发生在 p1 尚未获得兴图之前。
   inRoom(function()
-    room:changeHero(p1(), "hanjin_test__han_2", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin_test__han_2")
+    room:changeHero(p1(), "qiao_test__han_2", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_test__han_2")
   end)
   lu.assertFalse(p1():hasSkill(XT))
   turnStart(room, p1())
@@ -347,7 +347,7 @@ function Testhanjin_jin001:testXT02OtherRoleUseBeforeSkillAcquiredCountsAtTurnEn
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT03AnyRolesTurnEndAndNextTurnCleanup()
+function Testqiao_jin001:testXT03AnyRolesTurnEndAndNextTurnCleanup()
   local room = FkTest.room
   clearAllHands(room)
   turnStart(room, p2())
@@ -366,7 +366,7 @@ function Testhanjin_jin001:testXT03AnyRolesTurnEndAndNextTurnCleanup()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT03bRealTurnPreTurnStartClearsFact()
+function Testqiao_jin001:testXT03bRealTurnPreTurnStartClearsFact()
   local room = FkTest.room
   clearAllHands(room)
   installTurnStartCard(room, p2(), p3())
@@ -388,7 +388,7 @@ function Testhanjin_jin001:testXT03bRealTurnPreTurnStartClearsFact()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT04DrawOptionAndDecline()
+function Testqiao_jin001:testXT04DrawOptionAndDecline()
   local room = FkTest.room
   clearAllHands(room)
   turnStart(room, p2())
@@ -408,7 +408,7 @@ function Testhanjin_jin001:testXT04DrawOptionAndDecline()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT04bCancelDoesNotRevealOrCount()
+function Testqiao_jin001:testXT04bCancelDoesNotRevealOrCount()
   local room = FkTest.room
   clearAllHands(room)
   inRoom(function()
@@ -425,7 +425,7 @@ function Testhanjin_jin001:testXT04bCancelDoesNotRevealOrCount()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 0)
 end
 
-function Testhanjin_jin001:testXT05PeachFromHandUsesRealCardAndHealsOther()
+function Testqiao_jin001:testXT05PeachFromHandUsesRealCardAndHealsOther()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addHand(room, p1(), { { "jueying" } })[1]
@@ -452,7 +452,7 @@ function Testhanjin_jin001:testXT05PeachFromHandUsesRealCardAndHealsOther()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT06PeachFromEquipmentOnUnwoundedTargetStillOneUse()
+function Testqiao_jin001:testXT06PeachFromEquipmentOnUnwoundedTargetStillOneUse()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p1(), "jueying")
@@ -473,10 +473,10 @@ function Testhanjin_jin001:testXT06PeachFromEquipmentOnUnwoundedTargetStillOneUs
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin001:testXT07NoEquipmentOnlyDrawOptionAndPeachCancel()
+function Testqiao_jin001:testXT07NoEquipmentOnlyDrawOptionAndPeachCancel()
   local room = FkTest.room
   clearAllHands(room)
-  setHand(room, p1(), { { "hanjin__slash" } })
+  setHand(room, p1(), { { "qiao__slash" } })
   turnStart(room, p2())
   useAdaptation(room, p2(), p3())
   local captured
@@ -508,7 +508,7 @@ function Testhanjin_jin001:testXT07NoEquipmentOnlyDrawOptionAndPeachCancel()
   lu.assertEquals(room:getCardArea(equip), Card.PlayerHand)
 end
 
-function Testhanjin_jin001:testXT08DeputySource()
+function Testqiao_jin001:testXT08DeputySource()
   local room = FkTest.room
   clearAllHands(room)
   installJinDeputy(room)
@@ -520,27 +520,27 @@ function Testhanjin_jin001:testXT08DeputySource()
   turnEnd(room, p2())
   lu.assertEquals(#p1():getCardIds("h"), before + 1)
 end
-function Testhanjin_jin001:testHGDefaultSuiteAndRoomIsolation()
-  lu.assertTrue(table.contains(Fk.packages.hanjin_generals.game_modes_whitelist, "hanjin_heg_mode"))
-  lu.assertEquals(FkTest.room:getSettings("gameMode"), "hanjin_heg_mode")
+function Testqiao_jin001:testHGDefaultSuiteAndRoomIsolation()
+  lu.assertTrue(table.contains(Fk.packages.qiao_generals.game_modes_whitelist, "qiao_heg_mode"))
+  lu.assertEquals(FkTest.room:getSettings("gameMode"), "qiao_heg_mode")
   lu.assertNotNil(Fk.skills[CT])
   lu.assertNotNil(Fk.skills[XT])
   lu.assertNotNil(Fk.skills[AUX])
 end
 
-function Testhanjin_jin001:testXT09bEightDiagramVirtualJinkHasNoAdaptationEntry()
-  local card = Fk:cloneCard("hanjin__jink")
-  card.skillName = "hanjin__eight_diagram_skill"
+function Testqiao_jin001:testXT09bEightDiagramVirtualJinkHasNoAdaptationEntry()
+  local card = Fk:cloneCard("qiao__jink")
+  card.skillName = "qiao__eight_diagram_skill"
   local use = { from = p1(), tos = {}, card = card }
   lu.assertEquals(#adaptation().getEntries(card, use), 0)
   lu.assertFalse(adaptation().isAdaptationCard(card, use))
 end
 
-function Testhanjin_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
+function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addHand(room, p1(), { { "jueying" } })[1]
-  local nonEquip = addHand(room, p1(), { { "hanjin__slash" } })[1]
+  local nonEquip = addHand(room, p1(), { { "qiao__slash" } })[1]
   -- 触发真实的 AskForUseActiveSkill 请求，使客户端拿到实际房间状态。
   FkTest.setNextReplies(p1(), { { OPTION_EQUIP }, FkTest.ReplyUseSkill(AUX, { p2() }, { equip }) })
   turnStart(room, p2())
@@ -552,7 +552,7 @@ function Testhanjin_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
   FkTest.runInClient(function()
     local handler = ClientInstance.current_request_handler
     lu.assertNotNil(handler)
-    lu.assertEquals(handler.class.name, "HanjinActiveSkill")
+    lu.assertEquals(handler.class.name, "QiaoActiveSkill")
     lu.assertEquals(handler.class.super.name, "ReqActiveSkill")
     lu.assertEquals(handler.skill_name, AUX)
     local me = handler.player
@@ -569,4 +569,4 @@ function Testhanjin_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
   FkTest.resumeRoom()
 end
 
-return { name = "hanjin_jin001" }
+return { name = "qiao_jin001" }

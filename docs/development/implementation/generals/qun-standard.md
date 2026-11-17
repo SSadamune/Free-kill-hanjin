@@ -22,7 +22,7 @@
 | QUN018 | 邹氏 | [祸水](active.md#qun018-1)、[倾城](support.md#qun018-2) |
 | QUN027 | 韩遂 | [马术](active.md#shu006-1)、[骁逆](conversion.md#qun027-2) |
 
-QUN008、QUN013、QUN027 的马术与 SHU006 马超共用 `hanjin__skill_shu006_1`，不另建正文；三处逐将链接复用[同一锚点](active.md#shu006-1)。黄巾雷使的翼从专属技能见[翼从专属技能](retinues.md#huangjin-leishi)。
+QUN008、QUN013、QUN027 的马术与 SHU006 马超共用 `qiao__skill_shu006_1`，不另建正文；三处逐将链接复用[同一锚点](active.md#shu006-1)。黄巾雷使的翼从专属技能见[翼从专属技能](retinues.md#huangjin-leishi)。
 
 ## 测试入口与当前状态
 
@@ -47,19 +47,19 @@ QUN008、QUN013、QUN027 的马术与 SHU006 马超共用 `hanjin__skill_shu006_
 - **客将交换**：QUN001 济世方括号段按[华佗规范](../../../../rules/generals/qun001-huatuo.md)受“客将替换”设置控制；设置尚未实装时默认开启，跨势力交换显式许可，首次成功即止。
 - **目标与限制**：QUN007 乱武按最近距离先算全体其他角色，再检查合法用【杀】且至少包含一名最近角色，允许附带较远合法目标；不能改选较远但能杀的角色。完杀不保留贾诩本人豁免；帷幕只在成为黑色锦囊目标时取消该目标，不改成禁止选取或拦截延时锦囊移入判定区。
 - **判定差异**：QUN010 鬼道“替换”包含获得原判定牌，区别于鹰视“代替”；先真实打出再 `changeJudge{exchange=true}`。QUN012 悲歌的判定与分支效果见[判定与花色](retrial.md#qun012-1)。
-- **共享马术**：QUN008／QUN013／QUN027 直接引用 `hanjin__skill_shu006_1`，不再实现三份；双将同时提供同一技能时按公共技能来源去重，不重复减距离。
+- **共享马术**：QUN008／QUN013／QUN027 直接引用 `qiao__skill_shu006_1`，不再实现三份；双将同时提供同一技能时按公共技能来源去重，不重复减距离。
 - **来源与持续效果**：双刃已建立的转换权限由独立状态骨架承载至回合结束；断肠记录整张将牌技能的失去，明置及交换通过来源过滤维持结果。两者的真实主流程已通过定向验证。
-- **黄巾雷使**：`hanjin__qun_damage_history` 记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；不是“每名角色首次”或“本回合首次发动”，晚取得翼从不重开已消耗的机会。
+- **黄巾雷使**：`qiao__qun_damage_history` 记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；不是“每名角色首次”或“本回合首次发动”，晚取得翼从不重开已消耗的机会。
 
 ## 模式级接线
 
-以下技能已由 `pkg/hanjin_mode/mode.lua` 在 `logic:start` 注册房间规则；文档只记必要接线，不转为正式规则：
+以下技能已由 `pkg/qiao_mode/mode.lua` 在 `logic:start` 注册房间规则；文档只记必要接线，不转为正式规则：
 
-- [qun_dying_rule](../../../../pkg/hanjin_mode/skills/qun_dying_rule.lua)：完杀用桃禁止与济世濒死序号／客将交换收尾，共享状态见 [util/qun_dying](../../../../pkg/hanjin_generals/util/qun_dying.lua)。
-- [qun_cards_rule](../../../../pkg/hanjin_mode/skills/qun_cards_rule.lua)：乱击响应摸牌、狂斧与骁逆的用牌后结算、乱击花色清理。
-- [qun_damage_history](../../../../pkg/hanjin_mode/skills/qun_damage_history.lua)：黄巾雷使的首个非手牌伤害机会事实。
-- [qun_control_rule](../../../../pkg/hanjin_mode/skills/qun_control_rule.lua)：祸水回合内禁明置的按来源维护，工具见 [util/qun_control](../../../../pkg/hanjin_generals/util/qun_control.lua)。
-- [qun_duanchang_rule](../../../../pkg/hanjin_mode/skills/qun_duanchang_rule.lua)：断肠已失技在后续明置时的幂等兜底，失技模块见 [qun_duanchang](../../../../pkg/hanjin_mode/rules/qun_duanchang.lua)。
+- [qun_dying_rule](../../../../pkg/qiao_mode/skills/qun_dying_rule.lua)：完杀用桃禁止与济世濒死序号／客将交换收尾，共享状态见 [util/qun_dying](../../../../pkg/qiao_generals/util/qun_dying.lua)。
+- [qun_cards_rule](../../../../pkg/qiao_mode/skills/qun_cards_rule.lua)：乱击响应摸牌、狂斧与骁逆的用牌后结算、乱击花色清理。
+- [qun_damage_history](../../../../pkg/qiao_mode/skills/qun_damage_history.lua)：黄巾雷使的首个非手牌伤害机会事实。
+- [qun_control_rule](../../../../pkg/qiao_mode/skills/qun_control_rule.lua)：祸水回合内禁明置的按来源维护，工具见 [util/qun_control](../../../../pkg/qiao_generals/util/qun_control.lua)。
+- [qun_duanchang_rule](../../../../pkg/qiao_mode/skills/qun_duanchang_rule.lua)：断肠已失技在后续明置时的幂等兜底，失技模块见 [qun_duanchang](../../../../pkg/qiao_mode/rules/qun_duanchang.lua)。
 
 ## 实际参考
 

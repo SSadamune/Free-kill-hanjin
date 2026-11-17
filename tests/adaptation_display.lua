@@ -1,14 +1,14 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 
-Testadaptation_display = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+Testadaptation_display = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 local function room() return FkTest.room end
 
 local function mountedDisplay()
   for _, list in pairs(room().status_skills) do
     for _, skill in ipairs(list) do
-      if skill.skeleton and skill.skeleton.name == "#hanjin_adaptation_display" then
+      if skill.skeleton and skill.skeleton.name == "#qiao_adaptation_display" then
         return skill
       end
     end
@@ -18,14 +18,14 @@ end
 
 local function bySlot(current, slot)
   return table.find(Fk.cards, function(card)
-    return (card.extra_data or {}).hanjin_slot == slot
+    return (card.extra_data or {}).qiao_slot == slot
       and current:getCardArea(card.id) ~= Card.Unknown
   end)
 end
 
 local function use(entries)
   local current = room()
-  local card = Fk:cloneCard("hanjin_test__blank_basic")
+  local card = Fk:cloneCard("qiao_test__blank_basic")
   if entries then A.setCardEntries(card, entries) end
   return UseCardData:new {
     from = current.players[1], tos = { current.players[2] }, card = card, extra_data = {},
@@ -40,7 +40,7 @@ local function captureSpecific(fn)
   local ok, err = pcall(fn)
   current.sendLog = original
   assert(ok, err)
-  return table.filter(logs, function(log) return log.type == "#InvokeSkillHanjinAdaptation" end), logs
+  return table.filter(logs, function(log) return log.type == "#InvokeSkillQiaoAdaptation" end), logs
 end
 
 local function clearHands(current, player)
@@ -64,8 +64,8 @@ function Testadaptation_display:testPhysicalCardsExposeTheirOwnSlotMarks()
   local current = room()
   local canqu = assert(bySlot(current, "standard1/S/10"))
   local gujun = assert(bySlot(current, "shibei/S/4"))
-  lu.assertEquals(canqu.name, "hanjin__slash")
-  lu.assertEquals(gujun.name, "hanjin__slash")
+  lu.assertEquals(canqu.name, "qiao__slash")
+  lu.assertEquals(gujun.name, "qiao__slash")
   -- Move both same-name cards into a hand; the hand move is what publishes the
   -- marks to their owner (draw-pile cards are intentionally not stamped).
   local canquMark, gujunMark, secondMark, canquKey, canquSeen, gujunCanqu, gujunSeen
@@ -81,8 +81,8 @@ function Testadaptation_display:testPhysicalCardsExposeTheirOwnSlotMarks()
     gujunSeen = gujun:getMark(A.markKey(1, "gujun")) ~= 0
   end)
 
-  lu.assertEquals(canquMark, { "·", "hanjin_adaptation_add_target" })
-  lu.assertEquals(gujunMark, { "·", "hanjin_adaptation_add_target" })
+  lu.assertEquals(canquMark, { "·", "qiao_adaptation_add_target" })
+  lu.assertEquals(gujunMark, { "·", "qiao_adaptation_add_target" })
   -- Same card name at different physical positions must not share entries:
   -- the condition lives in the mark key, not in the value.
   lu.assertTrue(canquSeen)
@@ -114,7 +114,7 @@ function Testadaptation_display:testMultipleEntriesAndVirtualCardsUseExplicitMet
   local current = room()
   local card
   FkTest.runInRoom(function()
-    card = current:printCard("hanjin_test__blank_basic", Card.Heart, 5)
+    card = current:printCard("qiao_test__blank_basic", Card.Heart, 5)
     A.setCardEntries(card, {
       { condition = "gujun", effect = "ignore_times" },
       { condition = "kongchao", effect = "draw" },
@@ -122,21 +122,21 @@ function Testadaptation_display:testMultipleEntriesAndVirtualCardsUseExplicitMet
     A.stampCard(current, card)
   end)
   lu.assertEquals(card:getMark(A.markKey(1, "gujun")),
-    { "·", "hanjin_adaptation_ignore_times" })
+    { "·", "qiao_adaptation_ignore_times" })
   lu.assertEquals(card:getMark(A.markKey(2, "kongchao")),
-    { "·", "hanjin_adaptation_draw" })
+    { "·", "qiao_adaptation_draw" })
 
   local tips = assert(A.cardTips(card))
   lu.assertEquals(#tips, 2)
   lu.assertEquals(tips[1], { content = "孤军·无视次数", type = "normal" })
   lu.assertEquals(tips[2], { content = "空巢·摸一张牌", type = "normal" })
 
-  local virtual = Fk:cloneCard("hanjin__slash")
+  local virtual = Fk:cloneCard("qiao__slash")
   lu.assertNil(A.cardTips(virtual))
   A.setCardEntries(virtual, { { condition = "fujia", effect = "damage" } })
   lu.assertEquals(A.cardTips(virtual)[1].content, "富甲·伤害+1")
 
-  local material = Fk:cloneCard("hanjin__slash")
+  local material = Fk:cloneCard("qiao__slash")
   material:addSubcard(card.id)
   lu.assertNil(A.cardTips(material))
 end
@@ -146,7 +146,7 @@ function Testadaptation_display:testStampSyncClearsReducedAndLostMarks()
   local card
   local initialStamped, initialSecond
   FkTest.runInRoom(function()
-    card = current:printCard("hanjin_test__blank_basic", Card.Heart, 4)
+    card = current:printCard("qiao_test__blank_basic", Card.Heart, 4)
     A.setCardEntries(card, {
       { condition = "gujun", effect = "ignore_times" },
       { condition = "kongchao", effect = "draw" },
@@ -174,7 +174,7 @@ function Testadaptation_display:testStampSyncClearsReducedAndLostMarks()
     afterStamped = A.cardStamped(card)
   end)
   lu.assertEquals(afterSecond, 0)
-  lu.assertEquals(afterFirst, { "·", "hanjin_adaptation_ignore_times" })
+  lu.assertEquals(afterFirst, { "·", "qiao_adaptation_ignore_times" })
   lu.assertTrue(afterStamped)
 
   -- Entries removed entirely: old marks must be cleared rather than skipped.
@@ -193,7 +193,7 @@ function Testadaptation_display:testStampSyncClearsReducedAndLostMarks()
   local broadcasts = 0
   local original = current.doBroadcastNotify
   FkTest.runInRoom(function()
-    local plain = current:printCard("hanjin_test__blank_basic", Card.Heart, 3)
+    local plain = current:printCard("qiao_test__blank_basic", Card.Heart, 3)
     current.doBroadcastNotify = function(self, command, data, players)
       if command == "SetCardMark" then broadcasts = broadcasts + 1 end
       return original(self, command, data, players)
@@ -209,7 +209,7 @@ function Testadaptation_display:testDrawPileCardsAreNotStampedAndHandAudienceIsO
   local current = room()
   local card
   for _, candidate in ipairs(Fk.cards) do
-    if (candidate.extra_data or {}).hanjin_slot and A.isAdaptationCard(candidate)
+    if (candidate.extra_data or {}).qiao_slot and A.isAdaptationCard(candidate)
       and current:getCardArea(candidate.id) == Card.DrawPile then
       card = candidate
       break
@@ -244,7 +244,7 @@ function Testadaptation_display:testInitialHandHookStampsOnlyTheOwner()
   local player = current.players[1]
   local card
   for _, candidate in ipairs(Fk.cards) do
-    if (candidate.extra_data or {}).hanjin_slot and A.isAdaptationCard(candidate)
+    if (candidate.extra_data or {}).qiao_slot and A.isAdaptationCard(candidate)
       and current:getCardArea(candidate.id) == Card.DrawPile then
       card = candidate
       break
@@ -274,7 +274,7 @@ function Testadaptation_display:testPublicMoveNotifiesAllPlayers()
   local player = current.players[1]
   local card
   FkTest.runInRoom(function()
-    card = current:printCard("hanjin_test__blank_basic", Card.Heart, 6)
+    card = current:printCard("qiao_test__blank_basic", Card.Heart, 6)
     A.setCardEntries(card, { { condition = "gujun", effect = "damage" } })
   end)
   local seen, broadcastToAll, hasMarks
@@ -304,7 +304,7 @@ function Testadaptation_display:testMountedCardTipUsesTheCurrentViewAsResult()
   local materialTips = assert(A.cardTips(material))
   lu.assertEquals(materialTips[1].content, "残躯·目标+1")
 
-  local virtual = Fk:cloneCard("hanjin_test__blank_basic")
+  local virtual = Fk:cloneCard("qiao_test__blank_basic")
   A.setCardEntries(virtual, { { condition = "gujun", effect = "damage" } })
   local resultTips = display:getCardTip(current.players[1], material.id,
     { material.id }, {}, virtual, true, {})
@@ -313,7 +313,7 @@ function Testadaptation_display:testMountedCardTipUsesTheCurrentViewAsResult()
 
   -- The result card is authoritative even when it has no adaptation entry:
   -- the material's entries must not leak onto it.
-  local bare = Fk:cloneCard("hanjin_test__blank_basic")
+  local bare = Fk:cloneCard("qiao_test__blank_basic")
   lu.assertNil(display:getCardTip(current.players[1], material.id,
     { material.id }, {}, bare, true, {}))
 
@@ -326,9 +326,9 @@ end
 function Testadaptation_display:testRealClientCardTipPathUsesTheResultCard()
   local current = room()
   local material = assert(bySlot(current, "standard1/S/10"))
-  local virtual = Fk:cloneCard("hanjin_test__blank_basic")
+  local virtual = Fk:cloneCard("qiao_test__blank_basic")
   A.setCardEntries(virtual, { { condition = "gujun", effect = "damage" } })
-  local bare = Fk:cloneCard("hanjin_test__blank_basic")
+  local bare = Fk:cloneCard("qiao_test__blank_basic")
   local ClientUtil = require "ltk.client.util"
   local handlerClass = ClientInstance.request_handlers["AskForUseActiveSkill"]
   local oldHandler = ClientInstance.current_request_handler
@@ -407,7 +407,7 @@ function Testadaptation_display:testEveryConditionNamesItsOwnTrigger()
       end)
     end)
     lu.assertEquals(#specific, 1, condition)
-    lu.assertEquals(specific[1].arg, "hanjin_condition_" .. condition)
+    lu.assertEquals(specific[1].arg, "qiao_condition_" .. condition)
     return data
   end
 
@@ -449,7 +449,7 @@ function Testadaptation_display:testMultipleEntriesShowInResolutionOrder()
     end)
   end)
   lu.assertEquals(table.map(specific, function(log) return log.arg end), {
-    "hanjin_condition_canqu", "hanjin_condition_kongchao",
+    "qiao_condition_canqu", "qiao_condition_kongchao",
   })
 end
 
@@ -461,7 +461,7 @@ function Testadaptation_display:testReentrantResolutionShowsEachSuccessfulEntryO
     { condition = "canqu", effect = "damage" },
     { condition = "canqu", effect = "damage" },
   }
-  local skel = fk.CreateSkill { name = "#hanjin_test_adaptation_display_reentrant" }
+  local skel = fk.CreateSkill { name = "#qiao_test_adaptation_display_reentrant" }
   skel:addEffect(A.Triggered, {
     global = true,
     can_refresh = function(self, event, target, player) return target == player end,
@@ -535,7 +535,7 @@ function Testadaptation_display:testIgnoreTokenKeepsTheOriginalConditionName()
     end)
   end)
   lu.assertEquals(#specific, 1)
-  lu.assertEquals(specific[1].arg, "hanjin_condition_canqu")
+  lu.assertEquals(specific[1].arg, "qiao_condition_canqu")
   lu.assertEquals(A.getResult(data).entries[1].ignored_by, "test_source")
 end
 
@@ -553,13 +553,13 @@ function Testadaptation_display:testUseOnlyAddedEntryNamesItsCondition()
     end)
   end)
   lu.assertEquals(#specific, 1)
-  lu.assertEquals(specific[1].arg, "hanjin_condition_canqu")
+  lu.assertEquals(specific[1].arg, "qiao_condition_canqu")
   lu.assertTrue(A.getResult(data).triggered)
 end
 
 local function physical(suit, number)
   return assert(table.find(Fk.cards, function(card)
-    return card.name == "hanjin__thunder__slash" and card.suit == suit and card.number == number
+    return card.name == "qiao__thunder__slash" and card.suit == suit and card.number == number
   end))
 end
 
@@ -596,7 +596,7 @@ end
 function Testadaptation_display:testRealUseShowsOneConcreteConditionAndNoGenericText()
   local data, specific, logs = realUse("han")
   lu.assertEquals(#specific, 1)
-  lu.assertEquals(specific[1].arg, "hanjin_condition_gujun")
+  lu.assertEquals(specific[1].arg, "qiao_condition_gujun")
   lu.assertEquals(#table.filter(logs, function(log)
     return log.type:startsWith("#InvokeSkill")
   end), 1)

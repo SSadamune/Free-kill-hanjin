@@ -6,7 +6,7 @@
 
 ## 1. 内容边界与术语
 
-1. 模式代码名为 `hanjin_heg_mode`，显示名为“大合集”。基础引擎为 FreeKill v0.5.25，上游依赖由 `dependencies.lock.json` 固定。
+1. 模式代码名为 `qiao_heg_mode`，显示名为“大合集”。基础引擎为 FreeKill v0.5.25，上游依赖由 `dependencies.lock.json` 固定。
 2. 所有可选武将、可摸实体卡牌 MUST 独立创建于汉晋内容包，使用汉晋独立标识。不得把上游国战或身份局的武将、卡牌直接加入本模式。
 3. 上游仅作为规则流程、接口及实现参考。复用其房间、双将明暗、事件、请求和展示框架不表示复用上游游戏内容。
 4. `anjiang` 等引擎暗将占位符是显示/流程基础设施，不是加入将池的正式武将。后续士兵、翼从等正式内容仍须独立创建。
@@ -27,9 +27,9 @@
 
 设置键：
 
-- `hanjin_candidate_kingdoms`：可选，程序/测试用候选势力数组。提供时以它为准，仍走同一校验。
-- `hanjin_candidate_<势力>`：每个已知势力一个布尔开关；未设置时按该势力是否属于默认六势力取值。界面使用这一组开关。
-- `hanjin_kingdom_limit`：允许上限 `L`；缺省按 `min(4, |C|)`。
+- `qiao_candidate_kingdoms`：可选，程序/测试用候选势力数组。提供时以它为准，仍走同一校验。
+- `qiao_candidate_<势力>`：每个已知势力一个布尔开关；未设置时按该势力是否属于默认六势力取值。界面使用这一组开关。
+- `qiao_kingdom_limit`：允许上限 `L`；缺省按 `min(4, |C|)`。
 - 旧房没有上述键时按默认六势力与默认上限处理；不得因旧房间缺少设置而拒绝开局。旧上游开关 `notBanToFourKingdoms` 不再作为本模式的免禁依据，避免绕过候选/上限校验。
 - 未来第 7/8 势力通过 `faction_ban.registerKingdom(id, { default = false })` 登记为可选项；应在模式创建前登记，默认候选集仍为六势力。登记只增加房间设置选项和势力识别，不创建正式武将/卡牌，也不自动把该势力纳入默认候选。
 
@@ -67,7 +67,7 @@
 
 ## 4. BAN-003：野心家专属武将数量
 
-- 房主可将 `hanjin_wild_count` 设为 `0` 至 `12` 的整数，默认 `4`。
+- 房主可将 `qiao_wild_count` 设为 `0` 至 `12` 的整数，默认 `4`。
 - 此选项直接替代实体规则中“若将池不大”的判断，不设置隐含将池大小阈值。
 - 设定值 `N` 表示本局随机保留至多 `N` 张野心家专属武将。少于 `N` 张时全部保留；设为 `0` 时全部排除。
 - 筛选发生在发将前，使用房间随机数进行无放回抽样；未保留的专属武将亦加入 `disabled_generals`。
@@ -79,12 +79,12 @@
 
 | 势力 | 独立君主装备 | 替换牌 | 程序登记名或状态 |
 | --- | --- | --- | --- |
-| 魏 | 六龙骖驾 | 爪黄飞电 | `hanjin__liulongcanjia` → `hanjin__zhuahuangfeidian` |
-| 蜀 | 飞龙夺凤 | 雌雄双股剑 | `hanjin__dragon_phoenix` → `hanjin__double_swords` |
-| 吴 | 定澜夜明珠 | 吴六剑 | `hanjin__luminous_pearl` → `hanjin__six_swords` |
-| 群 | 太平要术 | 惊帆·合 | `hanjin__peace_spell` → `hanjin__jingfan` |
-| 汉 | 赤霄剑 | 无：占用 EX/♥/9 | `hanjin__chixiao_sword` |
-| 晋 | 临筱玉舆 | 绝影 | `hanjin__linxiao_yuyu` → `hanjin__jueying` |
+| 魏 | 六龙骖驾 | 爪黄飞电 | `qiao__liulongcanjia` → `qiao__zhuahuangfeidian` |
+| 蜀 | 飞龙夺凤 | 雌雄双股剑 | `qiao__dragon_phoenix` → `qiao__double_swords` |
+| 吴 | 定澜夜明珠 | 吴六剑 | `qiao__luminous_pearl` → `qiao__six_swords` |
+| 群 | 太平要术 | 惊帆·合 | `qiao__peace_spell` → `qiao__jingfan` |
+| 汉 | 赤霄剑 | 无：占用 EX/♥/9 | `qiao__chixiao_sword` |
+| 晋 | 临筱玉舆 | 绝影 | `qiao__linxiao_yuyu` → `qiao__jueying` |
 | 汉 | 四海流钱 | 过河拆桥 | 已登记，效果为空壳 |
 | 魏 | 州郡领兵印 | 太公阴符 | 已登记，效果为空壳 |
 | 蜀 | 锦绣征袍 | 黑光铠 | 已登记，效果为空壳 |
@@ -115,7 +115,7 @@
 ## 6. BAN-005：同房间上一局记录
 
 1. 使用引擎 `Room:getSessionData()` / `Room:setSessionData()` 保存到原生房间对象；禁止按进程全局变量、全服最近一局或用户账号共享记录。
-2. 命名空间键为 `hanjin_faction_ban_v1`，结构为：
+2. 命名空间键为 `qiao_faction_ban_v1`，结构为：
 
 ```lua
 { version = 1, winners = { "wei" }, banned = { "han", "jin" } }

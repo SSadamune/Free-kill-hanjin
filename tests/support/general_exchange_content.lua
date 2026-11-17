@@ -2,12 +2,12 @@
 -- referenced by init.lua and never enters the release content.  The generals
 -- are hidden so they cannot leak into any mode's selection pool; tests place
 -- them explicitly with Room:changeHero.
-if Fk.packages.hanjin_exchange_test then
-  return Fk.packages.hanjin_exchange_test._exchange_content
+if Fk.packages.qiao_exchange_test then
+  return Fk.packages.qiao_exchange_test._exchange_content
 end
 
-local pack = Package:new("hanjin_exchange_test", Package.CardPack)
-pack.extensionName = "hanjin"
+local pack = Package:new("qiao_exchange_test", Package.CardPack)
+pack.extensionName = "qiao"
 Fk.packages[pack.name] = pack
 table.insert(Fk.package_names, pack.name)
 
@@ -22,16 +22,16 @@ local function createSkill(spec)
 end
 
 local names = {
-  limited = "hanjin_exchange_test__limited",
-  round = "hanjin_exchange_test__round",
-  branch = "hanjin_exchange_test__branch",
-  switch = "hanjin_exchange_test__switch",
-  mainonly = "hanjin_exchange_test__mainonly",
-  deputyonly = "hanjin_exchange_test__deputyonly",
-  pile = "hanjin_exchange_test__pile",
-  pile_other = "hanjin_exchange_test__pile_other",
-  shared = "hanjin_exchange_test__shared",
-  retinue = "hanjin_exchange_test__retinue_skill",
+  limited = "qiao_exchange_test__limited",
+  round = "qiao_exchange_test__round",
+  branch = "qiao_exchange_test__branch",
+  switch = "qiao_exchange_test__switch",
+  mainonly = "qiao_exchange_test__mainonly",
+  deputyonly = "qiao_exchange_test__deputyonly",
+  pile = "qiao_exchange_test__pile",
+  pile_other = "qiao_exchange_test__pile_other",
+  shared = "qiao_exchange_test__shared",
+  retinue = "qiao_exchange_test__retinue_skill",
 }
 
 createSkill { name = names.limited, max_game_use_time = 1 }
@@ -44,13 +44,13 @@ createSkill {
 createSkill { name = names.switch, tags = { Skill.Switch } }
 createSkill { name = names.mainonly, tags = { Skill.MainPlace } }
 createSkill { name = names.deputyonly, tags = { Skill.DeputyPlace } }
-createSkill { name = names.pile, derived_piles = "hanjin_exchange_tian" }
-createSkill { name = names.pile_other, derived_piles = "hanjin_exchange_other" }
+createSkill { name = names.pile, derived_piles = "qiao_exchange_tian" }
+createSkill { name = names.pile_other, derived_piles = "qiao_exchange_other" }
 createSkill { name = names.shared }
 createSkill { name = names.retinue }
 
 local function general(key, kingdom, hp, skills, options)
-  local name = "hanjin_exchange_test__" .. key
+  local name = "qiao_exchange_test__" .. key
   local result = General:new(pack, name, kingdom, hp)
   result.hidden = true
   if skills then result:addSkills(skills) end
@@ -80,7 +80,7 @@ local G = {
   shu = general("shu_a", "shu", 4),
 }
 
-local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 Exchange.registerSoldierGeneral(G.retinue.name, "retinue")
 
 Fk:loadTranslationTable {
@@ -101,7 +101,7 @@ local content = {
   pack = pack,
   skills = names,
   generals = G,
-  pile = "hanjin_exchange_tian",
+  pile = "qiao_exchange_tian",
 
   --- Place a revealed general into one position.  Call inside FkTest.runInRoom.
   place = function(room, player, isDeputy, generalName)

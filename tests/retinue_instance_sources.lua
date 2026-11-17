@@ -2,14 +2,14 @@
 -- 使用现有标准翼从（西园军）做真实位置变更；不注册正式将池、不改 central。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
-local S = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instance_sources"
-local Z = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_retinues"
-local Commander = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
-local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local S = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
+local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
-local RETINUE = "hanjin__retinue_xiyuanjun"
-local SKILL = "hanjin__retinue_skill_xiyuanjun"
+local RETINUE = "qiao_heg__retinue_xiyuanjun"
+local SKILL = "qiao__retinue_skill_xiyuanjun"
 local BLANK = "blank_shibing"
 
 local function inRoom(fn)
@@ -42,7 +42,7 @@ end
 
 local function prepare()
   Fk.currentResponsePattern = nil
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "qun", "qun", "qun", "qun" })
     for _, player in ipairs(room.players) do
@@ -59,7 +59,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_retinue_instance_sources = {
+Testqiao_retinue_instance_sources = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -67,7 +67,7 @@ Testhanjin_retinue_instance_sources = {
   end,
 }
 
-function Testhanjin_retinue_instance_sources:testExistingRetinuePositionCreatesOneStableEntity()
+function Testqiao_retinue_instance_sources:testExistingRetinuePositionCreatesOneStableEntity()
   local player = p(1)
   setPosition(player, false, BLANK)
   assign(player, false, RETINUE)
@@ -89,7 +89,7 @@ function Testhanjin_retinue_instance_sources:testExistingRetinuePositionCreatesO
   lu.assertEquals(again[1].id, id, "同一位置同一兵种应保留稳定实例")
 end
 
-function Testhanjin_retinue_instance_sources:testSameRetinueOnBothPositionsCreatesTwoEntities()
+function Testqiao_retinue_instance_sources:testSameRetinueOnBothPositionsCreatesTwoEntities()
   local player = p(1)
   setPosition(player, false, BLANK)
   setPosition(player, true, BLANK)
@@ -105,7 +105,7 @@ function Testhanjin_retinue_instance_sources:testSameRetinueOnBothPositionsCreat
   lu.assertEquals(R.countForSkill(player, SKILL), 2, "两个位置各算一份实例")
 end
 
-function Testhanjin_retinue_instance_sources:testRemovingOnePositionKeepsOtherAndExtraSource()
+function Testqiao_retinue_instance_sources:testRemovingOnePositionKeepsOtherAndExtraSource()
   local player = p(1)
   setPosition(player, false, BLANK)
   setPosition(player, true, BLANK)
@@ -127,7 +127,7 @@ function Testhanjin_retinue_instance_sources:testRemovingOnePositionKeepsOtherAn
   lu.assertEquals(R.countForSkill(player, SKILL), 2)
 end
 
-function Testhanjin_retinue_instance_sources:testPositionChangeReplacesOnlyEntity()
+function Testqiao_retinue_instance_sources:testPositionChangeReplacesOnlyEntity()
   local player = p(1)
   setPosition(player, false, BLANK)
   assign(player, false, RETINUE)
@@ -137,11 +137,11 @@ function Testhanjin_retinue_instance_sources:testPositionChangeReplacesOnlyEntit
     extra = R.grant(player, { general = RETINUE, skill = SKILL, origin = "granted" })
   end)
 
-  setPosition(player, false, "hanjin__retinue_mushun")
+  setPosition(player, false, "qiao_heg__retinue_mushun")
   inRoom(function() S.syncPlayer(player) end)
   local current = entities(player, false)
   lu.assertEquals(#current, 1)
-  lu.assertEquals(current[1].general, "hanjin__retinue_mushun")
+  lu.assertEquals(current[1].general, "qiao_heg__retinue_mushun")
   lu.assertNotEquals(current[1].id, old.id)
   lu.assertNotNil(R.get(player, extra.id), "额外来源必须保留")
   local remaining = R.instancesForSkill(player, SKILL)
@@ -149,7 +149,7 @@ function Testhanjin_retinue_instance_sources:testPositionChangeReplacesOnlyEntit
   lu.assertIs(remaining[1], extra)
 end
 
-function Testhanjin_retinue_instance_sources:testExchangeMovesEntityIdentityUsesAndPhase()
+function Testqiao_retinue_instance_sources:testExchangeMovesEntityIdentityUsesAndPhase()
   local first, second = p(1), p(2)
   setPosition(first, false, BLANK)
   setPosition(second, false, BLANK)
@@ -193,7 +193,7 @@ function Testhanjin_retinue_instance_sources:testExchangeMovesEntityIdentityUses
   end)
 end
 
-function Testhanjin_retinue_instance_sources:testSamePlayerPositionExchangePreservesEachIdentity()
+function Testqiao_retinue_instance_sources:testSamePlayerPositionExchangePreservesEachIdentity()
   local player = p(1)
   setPosition(player, false, BLANK)
   setPosition(player, true, BLANK)
@@ -228,7 +228,7 @@ function Testhanjin_retinue_instance_sources:testSamePlayerPositionExchangePrese
   end)
 end
 
-function Testhanjin_retinue_instance_sources:testIllegalHideDoesNotRecreateEntity()
+function Testqiao_retinue_instance_sources:testIllegalHideDoesNotRecreateEntity()
   local player = p(1)
   setPosition(player, false, BLANK)
   assign(player, false, RETINUE)
@@ -260,4 +260,4 @@ function Testhanjin_retinue_instance_sources:testIllegalHideDoesNotRecreateEntit
   lu.assertEquals(Z.phaseUsed(player, revealed[1]), 1)
 end
 
-return { name = "hanjin_retinue_instance_sources" }
+return { name = "qiao_retinue_instance_sources" }

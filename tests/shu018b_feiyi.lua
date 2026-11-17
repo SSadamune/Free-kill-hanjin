@@ -4,13 +4,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local FEIYI = "hanjin__shu018b"
-local SHENGXI = "hanjin__skill_shu018b_1"
-local SHOUCHENG = "hanjin__skill_shu018b_2"
-local BLANK_DEPUTY = "hanjin_test__shu_2"
+local FEIYI = "qiao_heg__shu018b"
+local SHENGXI = "qiao__skill_shu018b_1"
+local SHOUCHENG = "qiao__skill_shu018b_2"
+local BLANK_DEPUTY = "qiao_test__shu_2"
 
-local STANDARD = require "packages.hanjin.pkg.hanjin_generals.data.standard"
-local ZHEN_SHI = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi"
+local STANDARD = require "packages.qiao.pkg.qiao_generals.data.standard"
+local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
 local function inRoom(fn)
   local result
@@ -46,11 +46,11 @@ end
 local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
-    mode = "hanjin_heg_mode",
+    mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      hanjin_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      hanjin_kingdom_limit = 6,
+      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
+      qiao_kingdom_limit = 6,
     },
   }
   inRoom(function()
@@ -68,7 +68,7 @@ local function prepare()
   return room
 end
 
-Testhanjin_shu018b_feiyi = {
+Testqiao_shu018b_feiyi = {
   setup = prepare,
   tearDown = function()
     Fk.currentResponsePattern = nil
@@ -76,21 +76,21 @@ Testhanjin_shu018b_feiyi = {
   end,
 }
 
-function Testhanjin_shu018b_feiyi:testFormalRegistrationDoesNotMixUpstreamFeiyi()
-  local pack = assert(Fk.packages.hanjin_zhenshi, "missing 阵/势 formal package")
+function Testqiao_shu018b_feiyi:testFormalRegistrationDoesNotMixUpstreamFeiyi()
+  local pack = assert(Fk.packages.qiao_zhenshi, "missing 阵/势 formal package")
   local entry = assert(table.find(ZHEN_SHI.generals, function(data)
     return data.id == FEIYI
   end), "missing Feiyi data entry")
   lu.assertEquals(entry.number, "SHU018B")
-  lu.assertEquals(#Fk.packages.hanjin_generals.generals,
+  lu.assertEquals(#Fk.packages.qiao_generals.generals,
     STANDARD.generalCount + STANDARD.retinueCount)
-  lu.assertNil(table.find(Fk.packages.hanjin_generals.generals, function(g)
+  lu.assertNil(table.find(Fk.packages.qiao_generals.generals, function(g)
     return g.name == FEIYI
   end))
   lu.assertEquals(STANDARD.generalCount, 90)
   lu.assertEquals(ZHEN_SHI.generalCount, #ZHEN_SHI.generals)
 
-  lu.assertTrue(table.contains(Fk.extensions["hanjin"], "hanjin_zhenshi"))
+  lu.assertTrue(table.contains(Fk.extensions["qiao"], "qiao_zhenshi"))
   local general = assert(Fk.generals[FEIYI])
   lu.assertIs(general.package, pack)
   lu.assertTrue(table.contains(pack.generals, general))
@@ -100,7 +100,7 @@ function Testhanjin_shu018b_feiyi:testFormalRegistrationDoesNotMixUpstreamFeiyi(
   lu.assertEquals(general.gender, General.Male)
   lu.assertEquals(general.mainMaxHpAdjustedValue, 0)
   lu.assertEquals(general.deputyMaxHpAdjustedValue, 0)
-  lu.assertTrue(general:isCompanionWith(Fk.generals["hanjin__shu004"]))
+  lu.assertTrue(general:isCompanionWith(Fk.generals["qiao_heg__shu004"]))
   lu.assertTrue(table.contains(general:getSkillNameList(), SHENGXI))
   lu.assertTrue(table.contains(general:getSkillNameList(), SHOUCHENG))
   lu.assertNotEquals(general, Fk.generals["os_heg__feiyi"])
@@ -110,7 +110,7 @@ function Testhanjin_shu018b_feiyi:testFormalRegistrationDoesNotMixUpstreamFeiyi(
   end)
 end
 
-function Testhanjin_shu018b_feiyi:testShengxiDrawsTwoInRealEndPhaseWithoutDamage()
+function Testqiao_shu018b_feiyi:testShengxiDrawsTwoInRealEndPhaseWithoutDamage()
   local room, player = FkTest.room, p(1)
   local invoked = 0
   skill_test.withSkillRequests(room, SHENGXI, {
@@ -131,7 +131,7 @@ function Testhanjin_shu018b_feiyi:testShengxiDrawsTwoInRealEndPhaseWithoutDamage
   lu.assertEquals(player:usedSkillTimes(SHENGXI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_shu018b_feiyi:testShengxiSeesDamageBeforeLateAcquireAndSkipsAfterDamage()
+function Testqiao_shu018b_feiyi:testShengxiSeesDamageBeforeLateAcquireAndSkipsAfterDamage()
   local room, player = FkTest.room, p(1)
   local victim = p(3)
   inRoom(function()
@@ -140,7 +140,7 @@ function Testhanjin_shu018b_feiyi:testShengxiSeesDamageBeforeLateAcquireAndSkips
 
   -- 在真实出牌阶段内造成一次伤害；伤害后重新取得生息，再进入结束阶段。
   -- 若实现只记录“取得技能后”的伤害，就会错误触发。
-  local probe = fk.CreateSkill { name = "#hanjin_shu018b_damage_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_shu018b_damage_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
@@ -176,18 +176,18 @@ function Testhanjin_shu018b_feiyi:testShengxiSeesDamageBeforeLateAcquireAndSkips
   lu.assertEquals(player:usedSkillTimes(SHENGXI, Player.HistoryGame), 0)
 end
 
-function Testhanjin_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne()
+function Testqiao_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne()
   local room = FkTest.room
   local holder, first, second = p(1), p(2), p(4)
   local turn_player, second_holder, other_kingdom = p(3), p(5), p(6)
-  give(first, "hanjin__jink", Card.Heart, 2)
-  give(first, "hanjin__peach", Card.Diamond, 3)
-  give(second, "hanjin__slash", Card.Spade, 4)
-  give(turn_player, "hanjin__jink", Card.Club, 5)
-  give(other_kingdom, "hanjin__peach", Card.Heart, 6)
+  give(first, "qiao__jink", Card.Heart, 2)
+  give(first, "qiao__peach", Card.Diamond, 3)
+  give(second, "qiao__slash", Card.Spade, 4)
+  give(turn_player, "qiao__jink", Card.Club, 5)
+  give(other_kingdom, "qiao__peach", Card.Heart, 6)
 
   local invoked, discards, invokedBy = 0, {}, {}
-  local probe = fk.CreateSkill { name = "#hanjin_shu018b_shoucheng_probe" }
+  local probe = fk.CreateSkill { name = "#qiao_shu018b_shoucheng_probe" }
   probe:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, who, data)
@@ -226,7 +226,7 @@ function Testhanjin_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne
       second_holder.kingdom = "shu"
       room:setPlayerMark(second_holder, "__heg_kingdom", "shu")
       room:handleAddLoseSkills(second_holder, SHOUCHENG, nil, false, true)
-      local extra = room:printCard("hanjin__jink", Card.Heart, 8)
+      local extra = room:printCard("qiao__jink", Card.Heart, 8)
       room:obtainCard(first, extra, false, fk.ReasonJustMove)
       moveHandToDiscard(first)
       lu.assertEquals(invoked, 3)
@@ -282,4 +282,4 @@ function Testhanjin_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne
   lu.assertEquals(#other_kingdom:getCardIds(Player.Hand), 0)
 end
 
-return { name = "hanjin_shu018b_feiyi" }
+return { name = "qiao_shu018b_feiyi" }

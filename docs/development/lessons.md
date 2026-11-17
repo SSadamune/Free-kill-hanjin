@@ -15,8 +15,8 @@
 
 - 现象：使用助战杀时，结算区卡牌上显示 `</b></font>` 等标签并折行遮挡牌面。
 - 接口核对：锁定引擎 `Client:parseMsg(msg, true)` 仍给玩家名加 `font/b` 标签；实体牌 `setCardNote` 与虚拟牌 `showVirtualCard` 都调用它。截图含张虎&乐綝，但 `&` 是否导致 Qt AutoText 解析失败尚未通过渲染验证。
-- 修复：正式扩展的 `HanjinClient:parseMsg` 仅对汉晋模式的 `nocolor == true` 输出去除这些格式标签；继承两条通知路径，普通日志及其他模式保留原行为，不修改本体 QML。
-- 回归：`tests/han001_liuxie.lua` 的 `testCardFootnoteStripsRichTextOnlyInHanjinMode` 使用正式双将名及真实 `##UseCardTo` 消息，捕获两条客户端通知，核对脚注、普通日志与模式隔离；客户端实际渲染待人工验收。
+- 修复：正式扩展的 `QiaoClient:parseMsg` 仅对汉晋模式的 `nocolor == true` 输出去除这些格式标签；继承两条通知路径，普通日志及其他模式保留原行为，不修改本体 QML。
+- 回归：`tests/han001_liuxie.lua` 的 `testCardFootnoteStripsRichTextOnlyInQiaoMode` 使用正式双将名及真实 `##UseCardTo` 消息，捕获两条客户端通知，核对脚注、普通日志与模式隔离；客户端实际渲染待人工验收。
 
 ## 预排的闪回复被无懈询问提前消费
 
@@ -45,7 +45,7 @@
 - 架构：`General` 定义只是牌面技能清单；角色实际状态分散在 `player.player_skills`、`_fake_skills`、`prelighted_skills`、`derivative_skills`。`changeHero` 按当前 `player.general` 清理旧技能，暗置时该值是 `anjiang`，不会看到旧普通将 fake；这些列表必须由升变流程按 `actual_main` 显式同步。
 - 另一层：`弘法`/`章武` 原带 `Skill.Lord`，`ChangeProperty` 用身份模式的 `isLord` 和 `getSkillNameList(isLord)` 过滤，国战势力角色不会获得；`Player:hasSkill` 本身不按 Lord 过滤，`Player:canAttachSkill` 才是获取限制。两者不能混说。
 - 修复：公共升变在换将前清理旧主将 fake/prelight，只删 fake 且保留实际独立来源；两个国战君主技能移除身份模式 Lord 获取标签，君主资格仍按 `general_versions` 和国战牌来源。
-- 回归：`tests/second_lord.lua` 真实 `hanjin__qun010` + 暗貂蝉、真实 `hanjin__shu001`、独立同名鬼道来源；33/33。君主将局部套件各 4/4。此前测试君主技能没有 `Skill.Lord`，旧技能断言只查 `hasSkill`，未检查 fake 与预亮列表；正式君主局部套件又绕开了实际升变，因此正常路径的来源与标签问题同时漏检。
+- 回归：`tests/second_lord.lua` 真实 `qiao_heg__qun010` + 暗貂蝉、真实 `qiao_heg__shu001`、独立同名鬼道来源；33/33。君主将局部套件各 4/4。此前测试君主技能没有 `Skill.Lord`，旧技能断言只查 `hasSkill`，未检查 fake 与预亮列表；正式君主局部套件又绕开了实际升变，因此正常路径的来源与标签问题同时漏检。
 
 ### 本次漏检的复盘
 
@@ -65,7 +65,7 @@
 
 ## 多个 boardgame 复用同一引擎导致重复初始化（已修复）
 
-- 现象：加载时牌型数量从 179 增至 358，随后报 `Duplicate game_mode hanjin_heg_mode detected`；遍历顺序不同会使故障时隐时现。
+- 现象：加载时牌型数量从 179 增至 358，随后报 `Duplicate game_mode qiao_heg_mode detected`；遍历顺序不同会使故障时隐时现。
 - 根因：在引擎的 `postLoad` 回调中新增共享同一 Engine 的 boardgame；本体遍历 boardgame 调用各自引擎的 `postLoad`，可能再次初始化同一引擎。这不是可用重跑消除的环境问题。
 - 修复：沿用原 boardgame，仅替换客户端类；自定义请求同时限定汉晋模式和密诏技能，其余委托原处理器。子类序列化也需核对父类动态转发，避免递归。
 - 回归：`tests/mode_rules.lua` 检查同一 Engine 只登记一次；刘协 MZ33 同时验证汉晋单选替换和上游模式原有行为，默认全量套件验证完整加载。
@@ -81,7 +81,7 @@
 
 - 现象：汉包、吴包定向验证曾运行超出目标文件范围的上游内置用例，产生无关失败。
 - 根因：外部套件未返回其 LuaUnit 分组描述符，运行器没有按目标套件隔离执行。
-- 修复：文件末尾返回 `return { name = "hanjin_套件名" }`，与测试类名 `Testhanjin_套件名` 对应；新套件从项目模板开始。入口要求非空成功汇总，空模板不能当作通过。
+- 修复：文件末尾返回 `return { name = "qiao_套件名" }`，与测试类名 `Testqiao_套件名` 对应；新套件从项目模板开始。入口要求非空成功汇总，空模板不能当作通过。
 - 复核依据：吴阶段套件补齐描述符后只运行本文件用例；历史定向结果见[共享验证证据](implementation/generals/verification-evidence.md#wu_phases)。
 
 ## 请求覆盖误拦截引擎内部选择（已修复）

@@ -1,14 +1,14 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-local CardData = require "packages.hanjin.pkg.hanjin_cards.data.cards"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local CardData = require "packages.qiao.pkg.qiao_cards.data.cards"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wu", "wu" }
 
 -- 固定全体白板双将：卡牌复用/应变用例只依赖卡牌与请求顺序，不能因随机双将
 -- 引入额外技能询问；需要特定武将的交互用例在本用例内自行装入。
-Testhanjin_card_reuse = {
+Testqiao_card_reuse = {
   setup = function()
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     FkTest.runInRoom(function() skill_test.installBlankGenerals(room, DEFAULT_KINGDOMS) end)
   end,
   tearDown = support.clearRoom,
@@ -64,10 +64,10 @@ local function observeAdaptationUse(room, cardName, skillName)
   return seen
 end
 
-function Testhanjin_card_reuse:testSlashDamage()
+function Testqiao_card_reuse:testSlashDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__slash")
+  local c = card("qiao__slash")
   local hp = t.hp
   FkTest.runInRoom(function()
     give(room, p, c)
@@ -77,25 +77,25 @@ function Testhanjin_card_reuse:testSlashDamage()
   lu.assertEquals(t.hp, hp - 1)
 end
 
-function Testhanjin_card_reuse:testJinkResponse()
+function Testqiao_card_reuse:testJinkResponse()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local slash, jink = card("hanjin__slash"), card("hanjin__jink")
+  local slash, jink = card("qiao__slash"), card("qiao__jink")
   local hp = t.hp
   lu.assertEquals(jink.skill.name, "jink_skill")
   FkTest.runInRoom(function()
     give(room, p, slash)
     give(room, t, jink)
     FkTest.setNextReplies(t, { { card = jink.id } })
-    room:useVirtualCard("hanjin__slash", nil, p, t)
+    room:useVirtualCard("qiao__slash", nil, p, t)
   end)
   lu.assertEquals(t.hp, hp)
 end
 
-function Testhanjin_card_reuse:testPeachHeal()
+function Testqiao_card_reuse:testPeachHeal()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__peach")
+  local c = card("qiao__peach")
   FkTest.runInRoom(function()
     p.hp = p.maxHp - 1
     give(room, p, c)
@@ -104,11 +104,11 @@ function Testhanjin_card_reuse:testPeachHeal()
   lu.assertEquals(p.hp, p.maxHp)
 end
 
-function Testhanjin_card_reuse:testDismantlement()
+function Testqiao_card_reuse:testDismantlement()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__dismantlement")
-  local targetCard = card("hanjin__slash", Card.Heart, 10)
+  local c = card("qiao__dismantlement")
+  local targetCard = card("qiao__slash", Card.Heart, 10)
   FkTest.runInRoom(function()
     give(room, p, c)
     give(room, t, targetCard)
@@ -121,29 +121,29 @@ function Testhanjin_card_reuse:testDismantlement()
   lu.assertFalse(table.contains(t:getCardIds("h"), targetCard.id))
 end
 
-function Testhanjin_card_reuse:testAxeEquipSkill()
+function Testqiao_card_reuse:testAxeEquipSkill()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__axe")
+  local c = card("qiao__axe")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
   end)
   lu.assertTrue(table.contains(p:getEquipments(), c.id))
-  lu.assertTrue(p:hasSkill("hanjin__axe_skill"))
+  lu.assertTrue(p:hasSkill("qiao__axe_skill"))
 end
 
-function Testhanjin_card_reuse:testIceSlashDamage()
+function Testqiao_card_reuse:testIceSlashDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__ice__slash")
+  local c = card("qiao__ice__slash")
   local hp = t.hp
   local dtype
-  local skel = fk.CreateSkill { name = "#hanjin_probe_ice_damage" }
+  local skel = fk.CreateSkill { name = "#qiao_probe_ice_damage" }
   skel:addEffect(fk.DamageInflicted, {
     global = true,
     can_refresh = function(self, event, target, player, data)
-      return target == player and data.card and data.card.name == "hanjin__ice__slash"
+      return target == player and data.card and data.card.name == "qiao__ice__slash"
     end,
     on_refresh = function(self, event, target, player, data) dtype = data.damageType end,
   })
@@ -157,14 +157,14 @@ function Testhanjin_card_reuse:testIceSlashDamage()
   lu.assertEquals(dtype, fk.IceDamage)
 end
 
-function Testhanjin_card_reuse:testChasingNearExecuteBoth()
+function Testqiao_card_reuse:testChasingNearExecuteBoth()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local physical = card("hanjin__chasing_near")
-  local c = Fk:cloneCard("hanjin__chasing_near")
+  local physical = card("qiao__chasing_near")
+  local c = Fk:cloneCard("qiao__chasing_near")
   c:addSubcard(physical.id)
-  local first = card("hanjin__slash", Card.Club, 2)
-  local second = card("hanjin__slash", Card.Club, 3)
+  local first = card("qiao__slash", Card.Club, 2)
+  local second = card("qiao__slash", Card.Club, 3)
   A.setCardEntries(c, { { id = "probe_both", condition = "kongchao", effect = "execute_both" } })
   local data
   FkTest.runInRoom(function()
@@ -187,10 +187,10 @@ function Testhanjin_card_reuse:testChasingNearExecuteBoth()
   lu.assertTrue(A.hasEffect(data, "execute_both"))
 end
 
-function Testhanjin_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCards()
+function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCards()
   local room = FkTest.room
   local player = room.players[1]
-  local c = card("hanjin__foresight")
+  local c = card("qiao__foresight")
   local top1, top2, top3
   local order = {}
   local handAfter, bottom
@@ -234,12 +234,12 @@ function Testhanjin_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothC
   lu.assertFalse(A.isAdaptationCard(c))
 end
 
-function Testhanjin_card_reuse:testChasingNearRealSupportAtDistanceOneDiscardsThenHasNothingToObtain()
+function Testqiao_card_reuse:testChasingNearRealSupportAtDistanceOneDiscardsThenHasNothingToObtain()
   local room = FkTest.room
   local p, t, helper = room.players[1], room.players[2], room.players[3]
-  local c = card("hanjin__chasing_near")
-  local targetCard = card("hanjin__peach", Card.Heart, 4)
-  local supportCard = card("hanjin__dismantlement")
+  local c = card("qiao__chasing_near")
+  local targetCard = card("qiao__peach", Card.Heart, 4)
+  local supportCard = card("qiao__dismantlement")
   lu.assertEquals(A.getEntries(c)[1].condition, "zhuzhan")
   local data, chooseCalls
   local targetThrows, targetObtains = {}, {}
@@ -292,12 +292,12 @@ function Testhanjin_card_reuse:testChasingNearRealSupportAtDistanceOneDiscardsTh
   lu.assertEquals(record.support.card, supportCard.id)
 end
 
-function Testhanjin_card_reuse:testChasingNearRealSupportWithOnlyOneEquipmentDiscardsItToo()
+function Testqiao_card_reuse:testChasingNearRealSupportWithOnlyOneEquipmentDiscardsItToo()
   local room = FkTest.room
   local p, t, helper = room.players[1], room.players[2], room.players[3]
-  local c = card("hanjin__chasing_near")
-  local targetCard = card("hanjin__axe")
-  local supportCard = card("hanjin__dismantlement")
+  local c = card("qiao__chasing_near")
+  local targetCard = card("qiao__axe")
+  local supportCard = card("qiao__dismantlement")
   local data, chooseCalls
   local targetThrows, targetObtains = {}, {}
   FkTest.runInRoom(function()
@@ -344,17 +344,17 @@ function Testhanjin_card_reuse:testChasingNearRealSupportWithOnlyOneEquipmentDis
   lu.assertEquals(A.getResult(data).entries[1].support.player, helper.id)
 end
 
-function Testhanjin_card_reuse:testJinkActualUseObtainsTheRespondedCardNotItself()
+function Testqiao_card_reuse:testJinkActualUseObtainsTheRespondedCardNotItself()
   local room = FkTest.room
   local attacker, target, jink, slash, seen
   FkTest.runInRoom(function()
     clearAllAreas(room)
     attacker, target = room.players[1], room.players[2]
     setSingleKingdom(room, target)
-    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
-    slash = give(room, attacker, card("hanjin__slash"))
+    jink = give(room, target, card("qiao__jink", Card.Heart, 7))
+    slash = give(room, attacker, card("qiao__slash"))
     lu.assertTrue(A.isAdaptationCard(jink))
-    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_actual_use")
+    seen = observeAdaptationUse(room, "qiao__jink", "#qiao_test_jink_actual_use")
     FkTest.setNextReplies(target, { { card = jink.id } })
     for _, q in ipairs(room.players) do
       if q ~= target then FkTest.setNextReplies(q, { "" }) end
@@ -379,7 +379,7 @@ function Testhanjin_card_reuse:testJinkActualUseObtainsTheRespondedCardNotItself
   lu.assertTrue(A.isAdaptationCard(jink))
 end
 
-function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation()
+function Testqiao_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation()
   local room = FkTest.room
   local target, jink, seen
   local initial = {}
@@ -390,7 +390,7 @@ function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation(
     -- 无懈请求，再有为万箭准备的【闪】响应；两次回复分别对应这两次请求。
     target = room.players[2]
     skill_test.installDualGenerals(room, target, {
-      main = "hanjin__han004", deputy = "hanjin_test__han_2", kingdom = "han",
+      main = "qiao_heg__han004", deputy = "qiao_test__han_2", kingdom = "han",
     })
     target:hideGeneral(false)
     clearAllAreas(room)
@@ -400,22 +400,22 @@ function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation(
       table.insert(initial, { player.id, player.general, player.deputyGeneral,
         player:getMark("__heg_general"), player:getMark("__heg_deputy") })
     end
-    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
-    local archery = give(room, attacker, card("hanjin__archery_attack"))
+    jink = give(room, target, card("qiao__jink", Card.Heart, 7))
+    local archery = give(room, attacker, card("qiao__archery_attack"))
     lu.assertTrue(A.isAdaptationCard(jink))
-    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_pure_response")
+    seen = observeAdaptationUse(room, "qiao__jink", "#qiao_test_jink_pure_response")
     -- 必达探针：本用例的【闪】只能以「打出」进入 RespondCard，不能出现
     -- CardUsing；A.Triggered 为 0 是结果，探针负责区分路径。
-    local use_probe = fk.CreateSkill { name = "#hanjin_test_jink_use_probe" }
+    local use_probe = fk.CreateSkill { name = "#qiao_test_jink_use_probe" }
     use_probe:addEffect(fk.CardUsing, {
       can_refresh = function(self, event, target, player, data)
-        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+        return target == player and data.card ~= nil and data.card.name == "qiao__jink"
       end,
       on_refresh = function() jink_uses = jink_uses + 1 end,
     })
     use_probe:addEffect(fk.CardResponding, {
       can_refresh = function(self, event, target, player, data)
-        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+        return target == player and data.card ~= nil and data.card.name == "qiao__jink"
       end,
       on_refresh = function() jink_responses = jink_responses + 1 end,
     })
@@ -454,7 +454,7 @@ function Testhanjin_card_reuse:testJinkPlayedAsResponseDoesNotTriggerAdaptation(
   lu.assertTrue(A.isAdaptationCard(jink))
 end
 
-function Testhanjin_card_reuse:testJinkObtainsAllMaterialsOfAVirtualRespondedCard()
+function Testqiao_card_reuse:testJinkObtainsAllMaterialsOfAVirtualRespondedCard()
   local room = FkTest.room
   local target, jink, first, second, seen
   FkTest.runInRoom(function()
@@ -462,15 +462,15 @@ function Testhanjin_card_reuse:testJinkObtainsAllMaterialsOfAVirtualRespondedCar
     local attacker = room.players[1]
     target = room.players[2]
     setSingleKingdom(room, target)
-    first = give(room, attacker, card("hanjin__slash"))
-    second = give(room, attacker, card("hanjin__peach"))
-    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
-    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_virtual_materials")
+    first = give(room, attacker, card("qiao__slash"))
+    second = give(room, attacker, card("qiao__peach"))
+    jink = give(room, target, card("qiao__jink", Card.Heart, 7))
+    seen = observeAdaptationUse(room, "qiao__jink", "#qiao_test_jink_virtual_materials")
     FkTest.setNextReplies(target, { { card = jink.id } })
     for _, q in ipairs(room.players) do
       if q ~= target then FkTest.setNextReplies(q, { "" }) end
     end
-    room:useVirtualCard("hanjin__slash", { first.id, second.id }, attacker, target)
+    room:useVirtualCard("qiao__slash", { first.id, second.id }, attacker, target)
   end)
   lu.assertEquals(#seen, 1)
   local use = seen[1].use
@@ -485,7 +485,7 @@ function Testhanjin_card_reuse:testJinkObtainsAllMaterialsOfAVirtualRespondedCar
   lu.assertEquals(A.getResult(use).effects.obtain_response_card, 1)
 end
 
-function Testhanjin_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProcessingArea()
+function Testqiao_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProcessingArea()
   local room = FkTest.room
   local target, jink, slash, seen
   FkTest.runInRoom(function()
@@ -493,13 +493,13 @@ function Testhanjin_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProc
     local attacker = room.players[1]
     target = room.players[2]
     setSingleKingdom(room, target)
-    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
-    slash = give(room, attacker, card("hanjin__slash"))
-    local skel = fk.CreateSkill { name = "#hanjin_test_move_responded_card" }
+    jink = give(room, target, card("qiao__jink", Card.Heart, 7))
+    slash = give(room, attacker, card("qiao__slash"))
+    local skel = fk.CreateSkill { name = "#qiao_test_move_responded_card" }
     skel:addEffect(fk.AfterCardUseDeclared, {
       global = true, priority = 200,
       can_refresh = function(self, event, target, player, data)
-        return target == player and data.card ~= nil and data.card.name == "hanjin__jink"
+        return target == player and data.card ~= nil and data.card.name == "qiao__jink"
           and data.toCard ~= nil
       end,
       on_refresh = function(self, event, target, player, data)
@@ -510,7 +510,7 @@ function Testhanjin_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProc
       end,
     })
     room:addSkill(skel:createSkill())
-    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_left_processing")
+    seen = observeAdaptationUse(room, "qiao__jink", "#qiao_test_jink_left_processing")
     FkTest.setNextReplies(target, { { card = jink.id } })
     for _, q in ipairs(room.players) do
       if q ~= target then FkTest.setNextReplies(q, { "" }) end
@@ -524,7 +524,7 @@ function Testhanjin_card_reuse:testJinkDoesNotObtainAResponseCardThatLeftTheProc
   lu.assertEquals(A.getResult(seen[1].use).triggered_count, 1)
 end
 
-function Testhanjin_card_reuse:testJinkDoesNotFabricateACardForAnEmptyVirtualResponseCard()
+function Testqiao_card_reuse:testJinkDoesNotFabricateACardForAnEmptyVirtualResponseCard()
   local room = FkTest.room
   local target, jink, seen
   FkTest.runInRoom(function()
@@ -532,16 +532,16 @@ function Testhanjin_card_reuse:testJinkDoesNotFabricateACardForAnEmptyVirtualRes
     local attacker = room.players[1]
     target = room.players[2]
     setSingleKingdom(room, target)
-    jink = give(room, target, card("hanjin__jink", Card.Heart, 7))
-    seen = observeAdaptationUse(room, "hanjin__jink", "#hanjin_test_jink_no_material")
+    jink = give(room, target, card("qiao__jink", Card.Heart, 7))
+    seen = observeAdaptationUse(room, "qiao__jink", "#qiao_test_jink_no_material")
     FkTest.setNextReplies(target, { { card = jink.id } })
     for _, q in ipairs(room.players) do
       if q ~= target then FkTest.setNextReplies(q, { "" }) end
     end
-    room:useVirtualCard("hanjin__slash", nil, attacker, target)
+    room:useVirtualCard("qiao__slash", nil, attacker, target)
   end)
   lu.assertEquals(#seen, 1)
-  lu.assertEquals(card("hanjin__jink", Card.Heart, 7).id, jink.id)
+  lu.assertEquals(card("qiao__jink", Card.Heart, 7).id, jink.id)
   lu.assertEquals(#target:getCardIds("h"), 0)
   lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(seen[1].use.toCard), Card.Unknown)
@@ -549,7 +549,7 @@ function Testhanjin_card_reuse:testJinkDoesNotFabricateACardForAnEmptyVirtualRes
   lu.assertTrue(seen[1].entry.triggered)
 end
 
-function Testhanjin_card_reuse:testCollateralFujiaDisresponsiveBlocksBothRealResponseWindows()
+function Testqiao_card_reuse:testCollateralFujiaDisresponsiveBlocksBothRealResponseWindows()
   local room = FkTest.room
   local user, main, sub, nullifier
   local collateral, weapon, slash, nullification
@@ -557,12 +557,12 @@ function Testhanjin_card_reuse:testCollateralFujiaDisresponsiveBlocksBothRealRes
   FkTest.runInRoom(function()
     clearAllAreas(room)
     user, main, sub, nullifier = room.players[1], room.players[2], room.players[3], room.players[4]
-    collateral = card("hanjin__collateral")
-    weapon = card("hanjin__axe")
-    slash = card("hanjin__slash")
-    nullification = card("hanjin__nullification")
+    collateral = card("qiao__collateral")
+    weapon = card("qiao__axe")
+    slash = card("qiao__slash")
+    nullification = card("qiao__nullification")
     give(room, user, collateral)
-    give(room, user, card("hanjin__peach", Card.Heart, 4))
+    give(room, user, card("qiao__peach", Card.Heart, 4))
     give(room, main, slash)
     room:moveCardTo({ weapon.id }, Card.PlayerEquip, main, fk.ReasonPut, "test", nil, true, main)
     give(room, nullifier, nullification)
@@ -615,20 +615,20 @@ function Testhanjin_card_reuse:testCollateralFujiaDisresponsiveBlocksBothRealRes
   lu.assertTrue(result.entries[1].triggered)
 end
 
-function Testhanjin_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
+function Testqiao_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local bronze = card("hanjin__bronze_sparrow")
-  local physical = card("hanjin__slash", Card.Club, 4)
-  local slash = Fk:cloneCard("hanjin__slash")
+  local bronze = card("qiao__bronze_sparrow")
+  local physical = card("qiao__slash", Card.Club, 4)
+  local slash = Fk:cloneCard("qiao__slash")
   slash:addSubcard(physical.id)
-  local extra = card("hanjin__peach", Card.Heart, 4)
+  local extra = card("qiao__peach", Card.Heart, 4)
   A.setCardEntries(slash, { { id = "probe_draw", condition = "kongchao", effect = "draw" } })
   local data
   FkTest.runInRoom(function()
     give(room, p, bronze)
     use(room, p, { p }, bronze)
-    lu.assertTrue(p:hasSkill("hanjin__bronze_sparrow_skill"))
+    lu.assertTrue(p:hasSkill("qiao__bronze_sparrow_skill"))
     give(room, p, physical)
     give(room, p, extra) -- ensure 空巢 is false
     FkTest.setNextReplies(t, { "" })
@@ -636,45 +636,45 @@ function Testhanjin_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
     room:useCard(data)
   end)
   lu.assertTrue(A.hasEffect(data, "draw"))
-  lu.assertEquals(A.getResult(data).entries[1].ignored_by, "hanjin__bronze_sparrow_skill")
+  lu.assertEquals(A.getResult(data).entries[1].ignored_by, "qiao__bronze_sparrow_skill")
 end
 
-function Testhanjin_card_reuse:testAxeUnequipRemovesSkill()
+function Testqiao_card_reuse:testAxeUnequipRemovesSkill()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__axe")
+  local c = card("qiao__axe")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("hanjin__axe_skill"))
+    lu.assertTrue(p:hasSkill("qiao__axe_skill"))
     room:moveCardTo({ c.id }, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
       "test", nil, true, p)
   end)
-  lu.assertFalse(p:hasSkill("hanjin__axe_skill"))
+  lu.assertFalse(p:hasSkill("qiao__axe_skill"))
 end
 
-function Testhanjin_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
+function Testqiao_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
   local room = FkTest.room
   local p = room.players[1]
   local cases = {
-    { "hanjin__spear", "hanjin__spear_skill" },
-    { "hanjin__crossbow", "hanjin__crossbow_skill" },
-    { "hanjin__six_swords", "hanjin__six_swords_skill" },
-    { "hanjin__wooden_ox", "hanjin__wooden_ox_skill" },
-    { "hanjin__jade_seal", "hanjin__jade_seal_skill" },
-    { "hanjin__five_elements_fan", "hanjin__five_elements_fan_skill" },
-    { "hanjin__black_chain", "hanjin__black_chain_skill" },
-    { "hanjin__dark_armor", "hanjin__dark_armor_skill" },
-    { "hanjin__eight_diagram", "hanjin__eight_diagram_skill" },
-    { "hanjin__breastplate", "hanjin__breastplate_skill" },
-    { "hanjin__peace_spell", "hanjin__peace_spell_skill" },
-    { "hanjin__luminous_pearl", "hanjin__luminous_pearl_skill" },
-    { "hanjin__dragon_phoenix", "#dragon_phoenix_skill" },
-    { "hanjin__halberd", "hanjin__halberd_skill" },
-    { "hanjin__blade", "#sa__blade_skill" },
-    { "hanjin__liulongcanjia", "#liulongcanjia_skill" },
-    { "hanjin__taigong_tactics", "hanjin__taigong_tactics_skill" },
-    { "hanjin__wonder_map", "hanjin__wonder_map_skill" },
+    { "qiao__spear", "qiao__spear_skill" },
+    { "qiao__crossbow", "qiao__crossbow_skill" },
+    { "qiao__six_swords", "qiao__six_swords_skill" },
+    { "qiao__wooden_ox", "qiao__wooden_ox_skill" },
+    { "qiao__jade_seal", "qiao__jade_seal_skill" },
+    { "qiao__five_elements_fan", "qiao__five_elements_fan_skill" },
+    { "qiao__black_chain", "qiao__black_chain_skill" },
+    { "qiao__dark_armor", "qiao__dark_armor_skill" },
+    { "qiao__eight_diagram", "qiao__eight_diagram_skill" },
+    { "qiao__breastplate", "qiao__breastplate_skill" },
+    { "qiao__peace_spell", "qiao__peace_spell_skill" },
+    { "qiao__luminous_pearl", "qiao__luminous_pearl_skill" },
+    { "qiao__dragon_phoenix", "#dragon_phoenix_skill" },
+    { "qiao__halberd", "qiao__halberd_skill" },
+    { "qiao__blade", "#sa__blade_skill" },
+    { "qiao__liulongcanjia", "#liulongcanjia_skill" },
+    { "qiao__taigong_tactics", "qiao__taigong_tactics_skill" },
+    { "qiao__wonder_map", "qiao__wonder_map_skill" },
   }
   for _, case in ipairs(cases) do
     local c = card(case[1])
@@ -692,7 +692,7 @@ function Testhanjin_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
   end
 end
 
-function Testhanjin_card_reuse:testPassiveEquipmentSkillsAreHiddenButStayAttached()
+function Testqiao_card_reuse:testPassiveEquipmentSkillsAreHiddenButStayAttached()
   local passive, active = 0, 0
   for _, cardType in ipairs(CardData.types) do
     if cardType.type == "equip" and cardType.equip_skill then
@@ -706,44 +706,44 @@ function Testhanjin_card_reuse:testPassiveEquipmentSkillsAreHiddenButStayAttache
         lu.assertEquals(skill.visible, clickable, cardType.id)
         if clickable then active = active + 1 else passive = passive + 1 end
       else
-        lu.assertEquals(cardType.equip_skill, "hanjin__inert_equip")
+        lu.assertEquals(cardType.equip_skill, "qiao__inert_equip")
         lu.assertFalse(skill.visible)
       end
     end
   end
   lu.assertTrue(passive > 0)
   lu.assertTrue(active > 0)
-  lu.assertFalse(Fk.skills["hanjin__five_elements_fan_skill"].visible)
-  lu.assertTrue(Fk.skills["hanjin__spear_skill"].visible)
-  lu.assertTrue(Fk.skills["hanjin__luminous_pearl_skill"].visible)
-  lu.assertTrue(Fk.skills["hanjin__wooden_ox_skill"].visible)
-  lu.assertEquals(Fk:translate("hanjin__five_elements_fan"), "五行鹤翎扇")
+  lu.assertFalse(Fk.skills["qiao__five_elements_fan_skill"].visible)
+  lu.assertTrue(Fk.skills["qiao__spear_skill"].visible)
+  lu.assertTrue(Fk.skills["qiao__luminous_pearl_skill"].visible)
+  lu.assertTrue(Fk.skills["qiao__wooden_ox_skill"].visible)
+  lu.assertEquals(Fk:translate("qiao__five_elements_fan"), "五行鹤翎扇")
 end
 
-function Testhanjin_card_reuse:testFiveElementsFanStaysHiddenAfterEquip()
+function Testqiao_card_reuse:testFiveElementsFanStaysHiddenAfterEquip()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__five_elements_fan")
+  local c = card("qiao__five_elements_fan")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("hanjin__five_elements_fan_skill"))
-    lu.assertFalse(Fk.skills["hanjin__five_elements_fan_skill"].visible)
-    lu.assertFalse(table.contains(p:getSkillNameList(), "hanjin__five_elements_fan_skill"))
-    lu.assertEquals(Fk:translate("hanjin__five_elements_fan"), "五行鹤翎扇")
+    lu.assertTrue(p:hasSkill("qiao__five_elements_fan_skill"))
+    lu.assertFalse(Fk.skills["qiao__five_elements_fan_skill"].visible)
+    lu.assertFalse(table.contains(p:getSkillNameList(), "qiao__five_elements_fan_skill"))
+    lu.assertEquals(Fk:translate("qiao__five_elements_fan"), "五行鹤翎扇")
   end)
 end
 
-function Testhanjin_card_reuse:testBreastplateBPreventsNonLethalTwoDamage()
+function Testqiao_card_reuse:testBreastplateBPreventsNonLethalTwoDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__breastplate")
+  local c = card("qiao__breastplate")
   local hp = p.hp
   local attached, equipped
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    attached = p:hasSkill("hanjin__breastplate_skill")
+    attached = p:hasSkill("qiao__breastplate_skill")
     equipped = table.contains(p:getEquipments(), c.id)
     FkTest.setNextReplies(p, { "1" })
     room:damage { from = t, to = p, damage = 2, damageType = fk.NormalDamage }
@@ -754,12 +754,12 @@ function Testhanjin_card_reuse:testBreastplateBPreventsNonLethalTwoDamage()
   lu.assertFalse(table.contains(p:getEquipments(), c.id))
 end
 
-function Testhanjin_card_reuse:testDrowningARequiresEquipmentAndBothOnZhuzhan()
+function Testqiao_card_reuse:testDrowningARequiresEquipmentAndBothOnZhuzhan()
   local room = FkTest.room
   local p, t, bare = room.players[1], room.players[2], room.players[3]
-  local c = card("hanjin__drowning")
-  local weapon = card("hanjin__axe")
-  local treasure = card("hanjin__jade_seal")
+  local c = card("qiao__drowning")
+  local weapon = card("qiao__axe")
+  local treasure = card("qiao__jade_seal")
   local hp = t.hp
   local data
   local order = {}
@@ -776,11 +776,11 @@ function Testhanjin_card_reuse:testDrowningARequiresEquipmentAndBothOnZhuzhan()
       if area == "e" then table.insert(order, "discard") end
       return originalThrow(self, area)
     end
-    local skel = fk.CreateSkill { name = "#hanjin_probe_drowning_order" }
+    local skel = fk.CreateSkill { name = "#qiao_probe_drowning_order" }
     skel:addEffect(fk.DamageInflicted, {
       global = true,
       can_refresh = function(self, event, target, player, damage)
-        return target == t and damage.card and damage.card.name == "hanjin__drowning"
+        return target == t and damage.card and damage.card.name == "qiao__drowning"
       end,
       on_refresh = function()
         table.insert(order, "damage")
@@ -803,10 +803,10 @@ function Testhanjin_card_reuse:testDrowningARequiresEquipmentAndBothOnZhuzhan()
   lu.assertEquals(A.getResult(data).entries[1].effect, "execute_both")
 end
 
-function Testhanjin_card_reuse:testBreastplateBAllowsRejection()
+function Testqiao_card_reuse:testBreastplateBAllowsRejection()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__breastplate")
+  local c = card("qiao__breastplate")
   local hp = p.hp
   FkTest.runInRoom(function()
     give(room, p, c)
@@ -818,10 +818,10 @@ function Testhanjin_card_reuse:testBreastplateBAllowsRejection()
   lu.assertTrue(table.contains(p:getEquipments(), c.id))
 end
 
-function Testhanjin_card_reuse:testBreastplateBShieldCountsForLethalThreshold()
+function Testqiao_card_reuse:testBreastplateBShieldCountsForLethalThreshold()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__breastplate")
+  local c = card("qiao__breastplate")
   FkTest.runInRoom(function()
     p.hp = 1
     room:changeShield(p, 1)
@@ -836,12 +836,12 @@ function Testhanjin_card_reuse:testBreastplateBShieldCountsForLethalThreshold()
   lu.assertEquals(p.shield, 0)
 end
 
-function Testhanjin_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
+function Testqiao_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local equip = card("hanjin__dragon_phoenix")
-  local slash = card("hanjin__slash")
-  local victimCard = card("hanjin__peach", Card.Heart, 4)
+  local equip = card("qiao__dragon_phoenix")
+  local slash = card("qiao__slash")
+  local victimCard = card("qiao__peach", Card.Heart, 4)
   FkTest.runInRoom(function()
     give(room, p, equip)
     use(room, p, { p }, equip)
@@ -856,26 +856,26 @@ function Testhanjin_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
   lu.assertFalse(table.contains(t:getCardIds("he"), victimCard.id))
 end
 
-function Testhanjin_card_reuse:testHalberdUsesHanjinEquipSkill()
+function Testqiao_card_reuse:testHalberdUsesQiaoEquipSkill()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__halberd")
+  local c = card("qiao__halberd")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("hanjin__halberd_skill"))
+    lu.assertTrue(p:hasSkill("qiao__halberd_skill"))
     lu.assertFalse(p:hasSkill("#sa__halberd_skill"))
   end)
 end
 
-function Testhanjin_card_reuse:testHalberdExpansionFilterReusesFactionRule()
+function Testqiao_card_reuse:testHalberdExpansionFilterReusesFactionRule()
   local room = FkTest.room
   local p1, p2, p3, p4, p5, p6, p7 =
     room.players[1], room.players[2], room.players[3], room.players[4],
     room.players[5], room.players[6], room.players[7]
-  local slash = card("hanjin__slash")
+  local slash = card("qiao__slash")
   FkTest.runInRoom(function()
-    local skill = Fk.skills["#hanjin__halberd_active"]
+    local skill = Fk.skills["#qiao__halberd_active"]
     lu.assertNotNil(skill)
     p2.kingdom, p3.kingdom, p4.kingdom = "wei", "shu", "wei"
     p5.kingdom, p6.kingdom = "unknown", "shu"
@@ -894,12 +894,12 @@ function Testhanjin_card_reuse:testHalberdExpansionFilterReusesFactionRule()
   end)
 end
 
-function Testhanjin_card_reuse:testHalberdExpandedSlashNullifiesRemainingTargetsAfterJink()
+function Testqiao_card_reuse:testHalberdExpandedSlashNullifiesRemainingTargetsAfterJink()
   local room = FkTest.room
   local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
-  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
-  local p2Jink = card("hanjin__jink", Card.Heart, 2)
-  local p3Jink = card("hanjin__jink", Card.Diamond, 3)
+  local halberd, slash = card("qiao__halberd"), card("qiao__slash")
+  local p2Jink = card("qiao__jink", Card.Heart, 2)
+  local p3Jink = card("qiao__jink", Card.Diamond, 3)
   local used
   FkTest.runInRoom(function()
     p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
@@ -910,7 +910,7 @@ function Testhanjin_card_reuse:testHalberdExpandedSlashNullifiesRemainingTargets
     give(room, p3, p3Jink)
     local hp2, hp3 = p2.hp, p3.hp
     FkTest.setNextReplies(p1, {
-      FkTest.ReplyUseSkill("#hanjin__halberd_active", { p3 }),
+      FkTest.ReplyUseSkill("#qiao__halberd_active", { p3 }),
     })
     FkTest.setNextReplies(p2, { { card = p2Jink.id } })
     FkTest.setNextReplies(p3, { { card = p3Jink.id } })
@@ -923,10 +923,10 @@ function Testhanjin_card_reuse:testHalberdExpandedSlashNullifiesRemainingTargets
   lu.assertTrue(table.contains(used.tos, p3))
 end
 
-function Testhanjin_card_reuse:testHalberdExpandedSlashWithoutJinkDamagesAllTargets()
+function Testqiao_card_reuse:testHalberdExpandedSlashWithoutJinkDamagesAllTargets()
   local room = FkTest.room
   local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
-  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
+  local halberd, slash = card("qiao__halberd"), card("qiao__slash")
   FkTest.runInRoom(function()
     p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
     give(room, p1, halberd)
@@ -934,7 +934,7 @@ function Testhanjin_card_reuse:testHalberdExpandedSlashWithoutJinkDamagesAllTarg
     give(room, p1, slash)
     local hp2, hp3 = p2.hp, p3.hp
     FkTest.setNextReplies(p1, {
-      FkTest.ReplyUseSkill("#hanjin__halberd_active", { p3 }),
+      FkTest.ReplyUseSkill("#qiao__halberd_active", { p3 }),
     })
     FkTest.setNextReplies(p2, { "" })
     FkTest.setNextReplies(p3, { "" })
@@ -944,11 +944,11 @@ function Testhanjin_card_reuse:testHalberdExpandedSlashWithoutJinkDamagesAllTarg
   end)
 end
 
-function Testhanjin_card_reuse:testHalberdWithoutExpansionKeepsOtherTargets()
+function Testqiao_card_reuse:testHalberdWithoutExpansionKeepsOtherTargets()
   local room = FkTest.room
   local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
-  local halberd, slash = card("hanjin__halberd"), card("hanjin__slash")
-  local jink = card("hanjin__jink", Card.Heart, 2)
+  local halberd, slash = card("qiao__halberd"), card("qiao__slash")
+  local jink = card("qiao__jink", Card.Heart, 2)
   FkTest.runInRoom(function()
     p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
     give(room, p1, halberd)
@@ -964,10 +964,10 @@ function Testhanjin_card_reuse:testHalberdWithoutExpansionKeepsOtherTargets()
   end)
 end
 
-function Testhanjin_card_reuse:testBladeAUsesStrategicSkill()
+function Testqiao_card_reuse:testBladeAUsesStrategicSkill()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__blade")
+  local c = card("qiao__blade")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
@@ -976,10 +976,10 @@ function Testhanjin_card_reuse:testBladeAUsesStrategicSkill()
   end)
 end
 
-function Testhanjin_card_reuse:testLiulongAInstallsNationalMountLock()
+function Testqiao_card_reuse:testLiulongAInstallsNationalMountLock()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__liulongcanjia")
+  local c = card("qiao__liulongcanjia")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
@@ -988,33 +988,33 @@ function Testhanjin_card_reuse:testLiulongAInstallsNationalMountLock()
   end)
 end
 
-function Testhanjin_card_reuse:testLuminousAInstallsZhiheng()
+function Testqiao_card_reuse:testLuminousAInstallsZhiheng()
   local room = FkTest.room
   local p = room.players[1]
-  local c = card("hanjin__luminous_pearl")
+  local c = card("qiao__luminous_pearl")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("hanjin__luminous_pearl_skill"))
+    lu.assertTrue(p:hasSkill("qiao__luminous_pearl_skill"))
   end)
 end
 
-function Testhanjin_card_reuse:testPeaceAPreventsAttributeDamage()
+function Testqiao_card_reuse:testPeaceAPreventsAttributeDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
-  local c = card("hanjin__peace_spell")
+  local c = card("qiao__peace_spell")
   local hp = p.hp
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("hanjin__peace_spell_skill"))
+    lu.assertTrue(p:hasSkill("qiao__peace_spell_skill"))
     room:damage { from = t, to = p, damage = 2, damageType = fk.FireDamage }
   end)
   lu.assertEquals(p.hp, hp)
 end
 
 
-return { name = "hanjin_card_reuse" }
+return { name = "qiao_card_reuse" }
 
 
 

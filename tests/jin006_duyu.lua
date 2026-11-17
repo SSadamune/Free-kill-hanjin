@@ -2,12 +2,12 @@
 -- 数据片段尚未合入中央将池；这里按正式技能 id 和独立数据片段验证。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local U = require "packages.hanjin.pkg.hanjin_generals.util.zhen_shi_jin"
-local DATA = require "packages.hanjin.pkg.hanjin_generals.data.zhen_shi_jin"
+local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin"
 
-local SANCHEN = "hanjin__skill_jin006_1"
-local WUKU = "hanjin__skill_jin006_3"
-local HISTORY = "#hanjin_zhen_shi_jin_history"
+local SANCHEN = "qiao__skill_jin006_1"
+local WUKU = "qiao__skill_jin006_3"
+local HISTORY = "#qiao_zhen_shi_jin_history"
 
 local function inRoom(fn)
   local result
@@ -27,10 +27,10 @@ local function give(player, name, suit, number)
   return id
 end
 
-Testhanjin_jin006_duyu = {
+Testqiao_jin006_duyu = {
   setup = function()
     Fk.currentResponsePattern = nil
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function() skill_test.installBlankGenerals(room, "han") end)
   end,
   tearDown = function()
@@ -39,21 +39,21 @@ Testhanjin_jin006_duyu = {
   end,
 }
 
-function Testhanjin_jin006_duyu:testDataFragment()
+function Testqiao_jin006_duyu:testDataFragment()
   lu.assertEquals(DATA.generalCount, 2)
   lu.assertEquals(DATA.skillCount, 5)
   local duyu
   for _, general in ipairs(DATA.generals) do
-    if general.id == "hanjin__jin006" then duyu = general end
+    if general.id == "qiao_heg__jin006" then duyu = general end
   end
   lu.assertNotNil(duyu)
-  lu.assertNotNil(Fk.generals["hanjin__jin006"], "正式将池尚未合入 JIN006")
+  lu.assertNotNil(Fk.generals["qiao_heg__jin006"], "正式将池尚未合入 JIN006")
   lu.assertEquals(duyu.mainHpAdjust, -1)
   lu.assertEquals(duyu.skills[2].tags[1], "MainPlace")
   lu.assertEquals(duyu.skills[3].tags[1], "DeputyPlace")
 end
 
-function Testhanjin_jin006_duyu:testSanChenPhaseRestoreAndTargetLedger()
+function Testqiao_jin006_duyu:testSanChenPhaseRestoreAndTargetLedger()
   local me, target = p(1), p(2)
   inRoom(function()
     FkTest.room:handleAddLoseSkills(me, SANCHEN, nil, false, true)
@@ -75,7 +75,7 @@ function Testhanjin_jin006_duyu:testSanChenPhaseRestoreAndTargetLedger()
   end)
 end
 
-function Testhanjin_jin006_duyu:testSanChenDrawDiscardRestoreMainFlow()
+function Testqiao_jin006_duyu:testSanChenDrawDiscardRestoreMainFlow()
   local me, target = p(1), p(2)
   local ids = {}
   inRoom(function()
@@ -100,7 +100,7 @@ function Testhanjin_jin006_duyu:testSanChenDrawDiscardRestoreMainFlow()
   end)
 end
 
-function Testhanjin_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
+function Testqiao_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
   local me = p(1)
   inRoom(function()
     FkTest.room:addSkill(Fk.skills[HISTORY])
@@ -109,7 +109,7 @@ function Testhanjin_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
     lu.assertEquals(U.history(me)[1], "slash")
 
     FkTest.room:handleAddLoseSkills(me, WUKU, nil, false, true)
-    local treasure = FkTest.room:printCard("hanjin__bronze_sparrow", Card.Spade, 1)
+    local treasure = FkTest.room:printCard("qiao__bronze_sparrow", Card.Spade, 1)
     FkTest.room:obtainCard(me, treasure, false, fk.ReasonJustMove)
     local skill = Fk.skills[WUKU]
     local card = skill:viewAs(me, { treasure.id })
@@ -120,10 +120,10 @@ function Testhanjin_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
   end)
 end
 
-function Testhanjin_jin006_duyu:testWuKuReadsRealUseDeclaredAndStillAllowsResponseUse()
+function Testqiao_jin006_duyu:testWuKuReadsRealUseDeclaredAndStillAllowsResponseUse()
   local me, target = p(1), p(2)
-  local slash = give(me, "hanjin__slash", Card.Spade, 2)
-  local treasure = give(me, "hanjin__bronze_sparrow", Card.Heart, 3)
+  local slash = give(me, "qiao__slash", Card.Spade, 2)
+  local treasure = give(me, "qiao__bronze_sparrow", Card.Heart, 3)
   inRoom(function()
     FkTest.room:addSkill(Fk.skills[HISTORY])
     FkTest.room.current = me
@@ -142,4 +142,4 @@ function Testhanjin_jin006_duyu:testWuKuReadsRealUseDeclaredAndStillAllowsRespon
   end)
 end
 
-return { name = "hanjin_jin006_duyu" }
+return { name = "qiao_jin006_duyu" }

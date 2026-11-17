@@ -1,10 +1,10 @@
 -- 白马义从：同名多份实例各自触发；直接授予技能无实例时保留一份。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local R = require "packages.hanjin.pkg.hanjin_generals.util.retinue_instances"
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
-local SKILL = "hanjin__retinue_skill_baima_yicong"
-local GENERAL = "hanjin__retinue_baima_yicong"
+local SKILL = "qiao__retinue_skill_baima_yicong"
+local GENERAL = "qiao_heg__retinue_baima_yicong"
 
 local function inRoom(fn)
   local result
@@ -13,9 +13,9 @@ local function inRoom(fn)
 end
 local function p(n) return FkTest.room.players[n] end
 
-Testhanjin_retinue_multi_instance_baima = {
+Testqiao_retinue_multi_instance_baima = {
   setup = function()
-    local room = support.initHanjinRoom()
+    local room = support.initQiaoRoom()
     inRoom(function()
       skill_test.installBlankGenerals(room, "han")
       for _, player in ipairs(room.players) do
@@ -30,11 +30,11 @@ Testhanjin_retinue_multi_instance_baima = {
   tearDown = support.clearRoom,
 }
 
-function Testhanjin_retinue_multi_instance_baima:testTwoSharedInstancesEachTrigger()
+function Testqiao_retinue_multi_instance_baima:testTwoSharedInstancesEachTrigger()
   local player, source = p(1), p(2)
   inRoom(function()
     for i = 1, 2 do
-      local card = FkTest.room:printCard("hanjin__jink", Card.Heart, i)
+      local card = FkTest.room:printCard("qiao__jink", Card.Heart, i)
       FkTest.room:obtainCard(source, card, false, fk.ReasonJustMove)
     end
     R.grant(player, { general = GENERAL, skill = SKILL, origin = "shared", shared_from = source.id })
@@ -56,7 +56,7 @@ function Testhanjin_retinue_multi_instance_baima:testTwoSharedInstancesEachTrigg
   }, function()
     inRoom(function()
       FkTest.room.logic:trigger(fk.CardUsing, player, {
-        card = Fk:cloneCard("hanjin__jink"),
+        card = Fk:cloneCard("qiao__jink"),
         responseToEvent = { from = source },
       })
     end)
@@ -66,10 +66,10 @@ function Testhanjin_retinue_multi_instance_baima:testTwoSharedInstancesEachTrigg
   lu.assertEquals(gained, 2, "两份实例应各自获得一张牌")
 end
 
-function Testhanjin_retinue_multi_instance_baima:testDirectSkillWithoutInstanceActsOnce()
+function Testqiao_retinue_multi_instance_baima:testDirectSkillWithoutInstanceActsOnce()
   local player, source = p(1), p(2)
   inRoom(function()
-    local card = FkTest.room:printCard("hanjin__jink", Card.Heart, 3)
+    local card = FkTest.room:printCard("qiao__jink", Card.Heart, 3)
     FkTest.room:obtainCard(source, card, false, fk.ReasonJustMove)
     FkTest.room:handleAddLoseSkills(player, SKILL, nil, false, true)
   end)
@@ -86,7 +86,7 @@ function Testhanjin_retinue_multi_instance_baima:testDirectSkillWithoutInstanceA
   }, function()
     inRoom(function()
       FkTest.room.logic:trigger(fk.CardUsing, player, {
-        card = Fk:cloneCard("hanjin__jink"),
+        card = Fk:cloneCard("qiao__jink"),
         responseToEvent = { from = source },
       })
     end)
@@ -94,4 +94,4 @@ function Testhanjin_retinue_multi_instance_baima:testDirectSkillWithoutInstanceA
   lu.assertEquals(asked, 1, "直接授予技能无实例时保留本身一份")
 end
 
-return { name = "hanjin_retinue_multi_instance_baima" }
+return { name = "qiao_retinue_multi_instance_baima" }

@@ -27,7 +27,7 @@ if ((Test-Path -LiteralPath (Join-Path $runtimeRoot $clientUtil)) -and
   New-Item -ItemType Directory -Force -Path (Split-Path -Parent $fallback) | Out-Null
   Set-Content -LiteralPath $fallback -Encoding Ascii -Value 'return require "ltk.client.util"'
 }
-$packageRoot = Join-Path $runtimeRoot 'packages/hanjin'
+$packageRoot = Join-Path $runtimeRoot 'packages/qiao'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 # Copy every release file by its relative path. Copying a source directory onto
 # an existing package directory previously created pkg/pkg; per-file copying
@@ -46,7 +46,7 @@ foreach ($entry in @('init.lua', 'pkg', 'audio', 'image')) {
     Copy-Item -LiteralPath $_.FullName -Destination $destination -Force
   }
 }
-Write-Host "Synced hanjin -> $packageRoot"
+Write-Host "Synced qiao -> $packageRoot"
 if ($Action -eq 'play') {
   Start-Process -FilePath $executable -WorkingDirectory $runtimeRoot
 }

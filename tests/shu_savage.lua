@@ -2,11 +2,11 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local HUOSHOU = "hanjin__skill_shu014_1"
-local ZAIQI = "hanjin__skill_shu014_2"
-local JUXIANG = "hanjin__skill_shu015_1"
-local LIEHEN = "hanjin__skill_shu015_2"
-local NANMAN = "hanjin__savage_assault"
+local HUOSHOU = "qiao__skill_shu014_1"
+local ZAIQI = "qiao__skill_shu014_2"
+local JUXIANG = "qiao__skill_shu015_1"
+local LIEHEN = "qiao__skill_shu015_2"
+local NANMAN = "qiao__savage_assault"
 
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
 
@@ -30,18 +30,18 @@ local function clearCards(player)
 end
 local function prepare()
   Fk.currentResponsePattern = nil
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
   return r
 end
 local function teardown() Fk.currentResponsePattern = nil; support.clearRoom() end
 
-Testhanjin_shu_savage = { setup = prepare, tearDown = teardown }
+Testqiao_shu_savage = { setup = prepare, tearDown = teardown }
 
-function Testhanjin_shu_savage:testHuoshouNanmanSourceAndImmunity()
+function Testqiao_shu_savage:testHuoshouNanmanSourceAndImmunity()
   local p1, p2, p3 = p(1), p(2), p(3)
   inRoom(function()
-    skill_test.installDualGenerals(room(), p1, { main = "hanjin__shu014", deputy = "hanjin__shu002", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu014", deputy = "qiao_heg__shu002", kingdom = "shu" })
   end)
   clearCards(p1)
   clearCards(p2)
@@ -67,17 +67,17 @@ function Testhanjin_shu_savage:testHuoshouNanmanSourceAndImmunity()
   lu.assertIs(sources[1], p1) -- 伤害来源为祸首，而不是使用者 p2
 end
 
-function Testhanjin_shu_savage:testZaiqiRedDiscardChoices()
+function Testqiao_shu_savage:testZaiqiRedDiscardChoices()
   local p1, p2, p3 = p(1), p(2), p(3)
   inRoom(function()
-    skill_test.installDualGenerals(room(), p1, { main = "hanjin__shu014", deputy = "hanjin__shu002", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu014", deputy = "qiao_heg__shu002", kingdom = "shu" })
   end)
   for _, q in ipairs({ p1, p2, p3 }) do clearCards(q) end
-  local red1 = give(p3, "hanjin__jink", Card.Heart, 4)
-  local red2 = give(p3, "hanjin__peach", Card.Diamond, 5)
+  local red1 = give(p3, "qiao__jink", Card.Heart, 4)
+  local red2 = give(p3, "qiao__peach", Card.Diamond, 5)
   inRoom(function()
     room().current = p1
-    room():setPlayerMark(p1, "hanjin__shu_red_discard-turn", 0)
+    room():setPlayerMark(p1, "qiao__shu_red_discard-turn", 0)
     room():throwCard({ red1 }, "test", p3, p3)
     room():throwCard({ red2 }, "test", p3, p3)
     p1.hp = 2
@@ -91,8 +91,8 @@ function Testhanjin_shu_savage:testZaiqiRedDiscardChoices()
       return { p1, p2 }
     end,
     askToChoice = function(self, player, params, original)
-      if player == p2 then return "#hanjin__skill_shu014_2-recover:" .. p1.id end
-      return "#hanjin__skill_shu014_2-draw"
+      if player == p2 then return "#qiao__skill_shu014_2-recover:" .. p1.id end
+      return "#qiao__skill_shu014_2-draw"
     end,
   }, function()
     inRoom(function()
@@ -104,10 +104,10 @@ function Testhanjin_shu_savage:testZaiqiRedDiscardChoices()
   lu.assertEquals(#p2:getCardIds("h"), hand2) -- p2 选择回复，不摸牌
 end
 
-function Testhanjin_shu_savage:testJuxiangTakesNanmanAfterWholeResolution()
+function Testqiao_shu_savage:testJuxiangTakesNanmanAfterWholeResolution()
   local p1, p2, p3 = p(1), p(2), p(3)
   inRoom(function()
-    skill_test.installDualGenerals(room(), p1, { main = "hanjin__shu015", deputy = "hanjin__shu002", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu015", deputy = "qiao_heg__shu002", kingdom = "shu" })
   end)
   clearCards(p1)
   clearCards(p2)
@@ -123,16 +123,16 @@ function Testhanjin_shu_savage:testJuxiangTakesNanmanAfterWholeResolution()
   lu.assertTrue(table.contains(p1:getCardIds("h"), nanman))
 end
 
-function Testhanjin_shu_savage:testLiehenPindianWinGainsCard()
+function Testqiao_shu_savage:testLiehenPindianWinGainsCard()
   local p1, p2 = p(1), p(2)
   inRoom(function()
-    skill_test.installDualGenerals(room(), p1, { main = "hanjin__shu015", deputy = "hanjin__shu002", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu015", deputy = "qiao_heg__shu002", kingdom = "shu" })
   end)
   clearCards(p1)
   clearCards(p2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 8)
-  give(p1, "hanjin__jink", Card.Heart, 9)
-  give(p2, "hanjin__jink", Card.Heart, 10)
+  local slash = give(p1, "qiao__slash", Card.Spade, 8)
+  give(p1, "qiao__jink", Card.Heart, 9)
+  give(p2, "qiao__jink", Card.Heart, 10)
   inRoom(function() room().current = p1; p1.phase = Player.Play; p2.hp = p2.maxHp end)
   local oldPindian = p1.pindian
   p1.pindian = function() return { results = { [p2] = { winner = p1 } } } end
@@ -147,4 +147,4 @@ function Testhanjin_shu_savage:testLiehenPindianWinGainsCard()
   lu.assertTrue(#p1:getCardIds("he") >= 2)
 end
 
-return { name = "hanjin_shu_savage" }
+return { name = "qiao_shu_savage" }
