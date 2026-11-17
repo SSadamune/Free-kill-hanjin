@@ -349,6 +349,16 @@ function M.validate(room, first, second, options)
     return false, "same_position"
   end
 
+  -- EM(WEI001) 霸者求贤状：被限制的将牌不能交换。只在汉晋房间生效。
+  if type(room.getSettings) == "function" and room:getSettings("gameMode") == "qiao_heg_mode" then
+    local okWei, Wei = pcall(require, "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei")
+    if okWei and Wei.isPositionRestricted
+      and (Wei.isPositionRestricted(room, a.player, a.isDeputy)
+        or Wei.isPositionRestricted(room, b.player, b.isDeputy)) then
+      return false, "restricted_jianan"
+    end
+  end
+
   if a.player ~= b.player then
     local allowed = options.cross_kingdom == true
     if type(options.kingdom_allowed) == "function" then

@@ -54,6 +54,8 @@ function Testqiao_zhen_shi_registration:testAllReviewedGeneralsRegistered()
   local expected={
     "qiao_heg__em_shu001",
     "qiao_heg__em_qun010",
+    "qiao_heg__em_wu001",
+    "qiao_heg__em_wei001",
     "qiao_heg__han014",
     "qiao_heg__han015",
     "qiao_heg__han019",
@@ -79,7 +81,7 @@ function Testqiao_zhen_shi_registration:testAllReviewedGeneralsRegistered()
     "qiao_heg__wu020",
     "qiao_heg__wu023",
   }
-  lu.assertEquals(#expected,26)
+  lu.assertEquals(#expected,28)
   local zhen = {
     "qiao_heg__han014", "qiao_heg__han015", "qiao_heg__wei018", "qiao_heg__wei032",
     "qiao_heg__shu012", "qiao_heg__shu018b", "qiao_heg__wu017", "qiao_heg__wu020",
@@ -93,27 +95,39 @@ function Testqiao_zhen_shi_registration:testAllReviewedGeneralsRegistered()
     "qiao_heg__em_qun010",
   }
   lu.assertEquals(#zhen + #shi, 26)
+  local bian = { "qiao_heg__em_wu001" }
+  local quan = { "qiao_heg__em_wei001" }
   local prefix = {}
   for _, id in ipairs(zhen) do prefix[id] = "qiao_prefix_zhen" end
   for _, id in ipairs(shi) do prefix[id] = "qiao_prefix_shi" end
+  for _, id in ipairs(bian) do prefix[id] = "qiao_prefix_bian" end
+  for _, id in ipairs(quan) do prefix[id] = "qiao_prefix_quan" end
+  local prefixText = { qiao_prefix_zhen = "阵", qiao_prefix_shi = "势",
+    qiao_prefix_bian = "变", qiao_prefix_quan = "权" }
   local ClientUtil = require "ltk.client.util"
   for _,id in ipairs(expected) do
     local general=assert(Fk.generals[id],"missing reviewed general: "..id)
     local want=assert(prefix[id],"missing prefix expectation: "..id)
     lu.assertEquals(general.package.name,"qiao_zhenshi")
     lu.assertEquals(general.prefix, want)
-    lu.assertEquals(Fk:translate(general.prefix), want == "qiao_prefix_zhen" and "阵" or "势")
+    lu.assertEquals(Fk:translate(general.prefix), prefixText[want])
     lu.assertEquals(ClientUtil:getGeneralData(id).prefix, want)
   end
   local Versions=require "packages.qiao.pkg.qiao_mode.rules.general_versions"
   lu.assertTrue(Fk.generals["qiao_heg__em_shu001"].hidden)
   lu.assertTrue(Fk.generals["qiao_heg__em_qun010"].hidden)
+  lu.assertTrue(Fk.generals["qiao_heg__em_wu001"].hidden)
+  lu.assertTrue(Fk.generals["qiao_heg__em_wei001"].hidden)
   lu.assertNotNil(Versions.lords["qiao_heg__em_shu001"])
   lu.assertNotNil(Versions.lords["qiao_heg__em_qun010"])
+  lu.assertNotNil(Versions.lords["qiao_heg__em_wu001"])
+  lu.assertNotNil(Versions.lords["qiao_heg__em_wei001"])
 
   local lords = {
     { lord = "qiao_heg__em_shu001", normal = "qiao_heg__shu001", display = "君刘备", name = "刘备" },
     { lord = "qiao_heg__em_qun010", normal = "qiao_heg__qun010", display = "君张角", name = "张角" },
+    { lord = "qiao_heg__em_wu001", normal = "qiao_heg__wu001", display = "君孙权", name = "孙权" },
+    { lord = "qiao_heg__em_wei001", normal = "qiao_heg__wei001", display = "君曹操", name = "曹操" },
   }
   for _, entry in ipairs(lords) do
     local text = Fk:translate(entry.lord)
