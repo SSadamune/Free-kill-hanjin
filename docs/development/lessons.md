@@ -2,7 +2,7 @@
 
 本页保留触发条件、已确认根因、修复与回归入口，供定位同类问题；不是游戏规则，也不记录完整排障流水账。通用处理方法见[测试规范](testing.md)，最新验证结果见[开发状态](status.md)。
 
-## 客户端角色没有服务端房间字段（已修复）
+## 客户端房间查询（已修路径与防复发）
 
 - 现象：刘协搭配徐晃、明置副将后进入出牌阶段，密诏按钮检查报 `player.room` 为 nil。
 - 根因：可用性、交牌下限及提示会在 `ClientPlayer` 上计算，不能假定它有 `ServerPlayer.room`。
@@ -10,6 +10,7 @@
 - 回归：`tests/han001_liuxie.lua` 中 `testMZ31RealClientPlayerWithoutRoomComputesKnownFaction`、`testMZ32ClientWithoutRoomPredictsHiddenOwnFaction`。
 - 群包再次出现同类问题：张角／华佗进入出牌阶段，`ReqPlayCard.skillButtonValidity` 调用除疠 `can_use` 时访问 `player.room`。服务端效果用例通过不能证明客户端按钮可用；应沿调用链检查 `can_use`、目标筛选及它们调用的辅助函数。
 - 夹具也须使用客户端房间：仅换成 `ClientPlayer` 而让 `Fk:currentRoom()` 仍返回服务端房间，会混用两套角色和牌区。`tests/qun_basic.lua` 的 `withClientRoom` 展示成套客户端角色、独立牌区及异常后恢复上下文；测试同时断言合法场景可用、无候选和次数耗尽时禁用，避免用空列表掩盖错误。
+- 第三次复发：君曹操授荀彧驱虎后，`ReqPlayCard.skillButtonValidity` 由 `can_use` 调用 `eligibleTargets`，内部仍用 `player.room.alive_players`。已有规范明确要求客户端验证，但此前只修复密诏、除疠等已报技能，未对驱虎及其 helper 执行，属于审阅与验收遗漏；服务端 `on_use` 测试不能触达按钮路径。防复发：默认套件 `tests/client_active_skills.lua` 自动枚举正式武将与翼从的主动／转换技能，使用真实 `ClientPlayer` 查询按钮；驱虎、三陈、伪溃、强袭增加合法目标可用断言，驱虎另测无候选及次数耗尽。客户端夹具拒绝服务端私有字段。复杂选择入口另补代表性用例，静态审阅须跟随 `can_use`、目标／牌筛选等回调调用的 helper；服务端 `on_use`/trigger 不机械替换。按钮广覆盖不等于逐技能全部选择、转换和提示分支均已动态验收。
 
 ## 卡牌脚注泄漏富文本标签
 

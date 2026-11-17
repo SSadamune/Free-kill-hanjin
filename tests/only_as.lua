@@ -923,4 +923,43 @@ function Testqiao_only_as:testMovedCardCannotReviveRestrictedAuthorization()
   lu.assertNil(O.authorizationEntry(room(), player))
 end
 
+
+function Testqiao_only_as:testClientTurnSourceUsesSyncedMarkAndExpires()
+  local player = room().players[1]
+  enterBattleRoyal()
+  local peach = give(player, "qiao__peach", Card.Heart, 4)
+  local srv = room()
+  local serial
+  run(function()
+    O.advanceTurn(room())
+    serial = O.turnSerial(room())
+    O.addSource(room(), { def = "tuxi", holder = player, duration = "turn", cards = { peach.id } })
+  end)
+  lu.assertTrue(serial > 0, "turn serial 必须非 0")
+  local hasTurn, choices, selectable
+  FkTest.runInClient(function()
+    -- 测试后端不重放增量 mark；按真实同步载荷复制一次服务端公开 mark。
+    Self.player_cards[Player.Hand] = { peach.id }
+    Self.mark[O.SOURCE_MARK] = player:getMark(O.SOURCE_MARK)
+    for _, source in ipairs(O.activeSources(Self)) do
+      if source.def == "tuxi" then hasTurn = true end
+    end
+    ClientInstance:setupRequestHandler(Self, "PlayCard", nil)
+    choices = O.interactionChoices(Self, "tuxi")
+    selectable = O.cardSelectable(Self, peach.id, "qiao__slash", "tuxi")
+  end)
+  lu.assertTrue(hasTurn, "客户端应看到同步的 turn 来源")
+  lu.assertTrue(#choices > 0, "turn 来源应产生交互候选")
+  lu.assertTrue(selectable, "turn 来源的牌应可选并生成杀")
+  run(function() O.expireTurn(room()) end)
+  local stillTurn = false
+  FkTest.runInClient(function()
+    Self.player_cards[Player.Hand] = { peach.id }
+    Self.mark[O.SOURCE_MARK] = player:getMark(O.SOURCE_MARK)
+    for _, source in ipairs(O.activeSources(Self)) do
+      if source.def == "tuxi" then stillTurn = true end
+    end
+  end)
+  lu.assertFalse(stillTurn, "服务端清理并同步后客户端不得保留过期来源")
+end
 return { name = "qiao_only_as" }

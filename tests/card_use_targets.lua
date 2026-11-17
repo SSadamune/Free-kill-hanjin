@@ -1113,4 +1113,9 @@ function Testqiao_card_use_targets:testExplicitFixedTargetRejectsOtherTarget()
   lu.assertTrue(table.contains(p1:getCardIds("h"), slash.id))
 end
 
+function Testqiao_card_use_targets:testPolicyMarkRendersHidden()
+  local spec = assert(Fk.qml_marks["qiao_use_target_policy"], "策略标记缺少 QML renderer 注册")
+  lu.assertEquals(spec.how_to_show(), "#hidden", "内部策略栈不应显示程序键")
+end
+
 return { name = "qiao_card_use_targets" }

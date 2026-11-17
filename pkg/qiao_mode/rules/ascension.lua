@@ -166,8 +166,6 @@ function M.ascend(room, player, newMain, kingdom, options)
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
   local oldPairMax = M.pair_max_hp(oldMain, deputy)
-  local oldBothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
-    and player.deputyGeneral ~= ""
 
   -- 暗置主将换将不会自动清掉旧普通将的 fake/prelight；公共状态接口只清
   -- 离牌位置的来源，换将/体力/回将池仍由本升变入口负责。
@@ -221,19 +219,27 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   local bothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
     and player.deputyGeneral ~= ""
-  if not oldBothRevealed and bothRevealed and deputy ~= nil then
+  local newPairHalf = PairHp.half_hp(newMain, deputy)
+  -- 上游待领标记 >0 表示本次双亮从未发过；已归零表示已领取或已花掉。
+  local yinyangEligible = player:getMark(M.YINYANG_MARK) == 0
+  local companionEligible = player:getMark(M.COMPANION_MARK) == 0
+  if bothRevealed and deputy ~= nil then
     local mainGeneral = Fk.generals[newMain]
     local deputyGeneral = Fk.generals[deputy]
     if mainGeneral ~= nil and deputyGeneral ~= nil then
-      if mainGeneral:isCompanionWith(deputyGeneral) and player:getMark(M.COMPANION_MARK) == 0 then
+      if mainGeneral:isCompanionWith(deputyGeneral)
+        and player:getMark(M.COMPANION_MARK) == 0 and companionEligible then
         room:setPlayerMark(player, M.COMPANION_MARK, 1)
         H.addHegMark(player, "companion")
       end
-      local totalHp = PairHp.half_hp(newMain, deputy)
-      if totalHp ~= nil and totalHp % 2 == 1 and player:getMark(M.YINYANG_MARK) == 0 then
+      if newPairHalf ~= nil and newPairHalf % 2 == 1
+        and player:getMark(M.YINYANG_MARK) == 0 and yinyangEligible then
         room:setPlayerMark(player, M.YINYANG_MARK, 1)
         H.addHegMark(player, "yinyangfish")
       end
+      -- 已在本升变处理过奖励，清掉上游待领标记，避免下一次 reveal 再领一次。
+      room:setPlayerMark(player, "HalfMaxHpLeft", 0)
+      room:setPlayerMark(player, "CompanionEffect", 0)
     end
   end
   return true, { old_main = oldMain, old_pair_max = oldPairMax, new_pair_max = newPairMax }

@@ -10,7 +10,9 @@ skill.qiaoImplemented = true
 
 local function eligibleTargets(player)
   local result = {}
-  for _, p in ipairs(player.room.alive_players) do
+  local room = Fk:currentRoom()
+  if room == nil then return result end
+  for _, p in ipairs(room.alive_players) do
     if not p.dead and not p:isRemoved() and not U.sanChenTargeted(player, p) then
       table.insert(result, p)
     end

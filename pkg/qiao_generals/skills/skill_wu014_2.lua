@@ -19,7 +19,7 @@ local GRANT_MARK = "qiao_wu_dimeng_granted"
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room?
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 local function ensureExpiry(room)

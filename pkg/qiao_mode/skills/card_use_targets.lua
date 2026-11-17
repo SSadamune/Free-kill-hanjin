@@ -20,7 +20,7 @@ end
 skill:addEffect("filter", {
   card_skill_filter = function(self, card, player)
     if card == nil or card.skill == nil or player == nil then return nil end
-    if C.activePolicy(player.room, player, card) == nil then return nil end
+    if C.activePolicy(Fk:currentRoom(), player, card) == nil then return nil end
     return C.proxyNameFor(card.skill)
   end,
 })
@@ -28,7 +28,7 @@ skill:addEffect("filter", {
 skill:addEffect("targetmod", {
   bypass_distances = function(self, player, card_skill, card, to)
     if card == nil then return false end
-    local rec = C.activePolicy(player and player.room, player, card)
+    local rec = C.activePolicy(Fk:currentRoom(), player, card)
     return rec ~= nil and rec.kind == C.KIND_BYPASS_DISTANCE
   end,
 })

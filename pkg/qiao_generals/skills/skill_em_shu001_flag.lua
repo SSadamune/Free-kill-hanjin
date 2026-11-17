@@ -21,7 +21,7 @@ local CHOICES = {
 }
 
 local function lordFor(player)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   for _, p in ipairs(room.alive_players) do
     if p ~= player and not p.dead and not p:isRemoved()
       and p:hasShownSkill(ZHANGWU) and H.compareKingdomWith(p, player) then

@@ -30,6 +30,9 @@ skill:addEffect(fk.EventPhaseStart, {
 
 Fk:loadTranslationTable {
   [P.BANNER_SKILL] = "黄巾天兵符",
+  [P.PILE] = "天兵",
+  [":" .. P.BANNER_SKILL] = "准备阶段，若没有“天兵”，你可以将牌堆顶等同群势力角色数的牌置于此牌上，称为“天兵”。"
+    .. "有角色因技能或判断大小势力而计算角色数时，群势力角色数视为+X（X为“天兵”数）。",
   ["#qiao__em_qun010_banner-invoke"] = "黄巾天兵符：是否将牌堆顶等同群角色数的牌置于旗上作为天兵",
 }
 

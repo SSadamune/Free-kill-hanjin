@@ -75,7 +75,7 @@ end
 ---@param player Player
 ---@return Player[]
 local function others(player)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   if room == nil then return {} end
   return table.filter(room.alive_players, function(p)
     return p ~= player and not p:isRemoved()

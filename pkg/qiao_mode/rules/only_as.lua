@@ -516,7 +516,9 @@ local function clientSources(player)
         view_zones = rec.zones or def.view_zones,
         direct_zones = rec.direct_zones or def.direct_zones,
       }
-      if not expired(player.room, source) then table.insert(ret, source) end
+      -- 客户端不计算 turn serial：服务端已在到期时清理并同步 mark；
+      -- 信任已同步的有效来源，避免 nil room 被当作 serial 0 比较。
+      table.insert(ret, source)
     end
   end
   return ret
@@ -695,7 +697,7 @@ end
 function M.buildCard(player, cardId, target, skillName)
   if Fk.all_card_types[target] == nil then return nil end
   if skillName == nil then
-    for _, action in ipairs(M.actionsForCard(player.room, player, cardId, M.currentMode(player))) do
+    for _, action in ipairs(M.actionsForCard(Fk:currentRoom(), player, cardId, M.currentMode(player))) do
       if action.target == target then
         skillName = defOf(action.def).entry_skill or action.source.skill
         if skillName ~= nil then break end
@@ -746,7 +748,7 @@ function M.hasAvailable(player, mode, definition)
   mode = mode or M.currentMode(player)
   local extra_data = M.clientExtraData()
   for _, cardId in ipairs(player:getHandlyIds(true)) do
-    if #M.actionsForCard(player.room, player, cardId, mode,
+    if #M.actionsForCard(Fk:currentRoom(), player, cardId, mode,
       { check_legal = true, extra_data = extra_data, definition = definition }) > 0 then
       return true
     end
@@ -760,7 +762,7 @@ function M.interactionChoices(player, definition)
   local extra_data = M.clientExtraData()
   local choices, seen = {}, {}
   for _, cardId in ipairs(player:getHandlyIds(true)) do
-    for _, action in ipairs(M.actionsForCard(player.room, player, cardId, mode,
+    for _, action in ipairs(M.actionsForCard(Fk:currentRoom(), player, cardId, mode,
       { check_legal = true, extra_data = extra_data, definition = definition })) do
       if not seen[action.target] then
         seen[action.target] = true
@@ -775,7 +777,7 @@ function M.cardSelectable(player, cardId, target, definition)
   if not table.contains(player:getHandlyIds(true), cardId) then return false end
   local mode = M.currentMode(player)
   local extra_data = M.clientExtraData()
-  for _, action in ipairs(M.actionsForCard(player.room, player, cardId, mode,
+  for _, action in ipairs(M.actionsForCard(Fk:currentRoom(), player, cardId, mode,
     { check_legal = true, extra_data = extra_data, definition = definition })) do
     if action.target == target then return true end
   end

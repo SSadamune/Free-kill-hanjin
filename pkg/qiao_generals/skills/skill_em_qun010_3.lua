@@ -38,7 +38,7 @@ skill:addEffect("active", {
   max_phase_use_time = 1,
   can_use = function(self, player)
     return player.phase == Player.Play and not player.dead
-      and #redCards(player) > 0 and findPeace(player.room or Fk:currentRoom()) ~= nil
+      and #redCards(player) > 0 and findPeace(Fk:currentRoom()) ~= nil
   end,
   on_use = function(self, room, effect)
     local player = effect.from

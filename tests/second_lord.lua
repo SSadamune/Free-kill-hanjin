@@ -2,6 +2,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local V = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local H = require "packages.hegemony.util"
 
 local G = content.generals
 
@@ -301,15 +302,14 @@ function Testsecond_lord:testSuccessionHpAndConsumableMarks()
   local lord, candidate = player(1), player(2)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    room():changeHero(candidate, G.wei_normal.name, false, false, false, false, false)
-    room():setPlayerMark(candidate, "__heg_general", G.wei_normal.name)
-    room():changeHero(candidate, G.wei_deputy.name, false, true, false, false, false)
-    room():setPlayerMark(candidate, "__heg_deputy", G.wei_deputy.name)
-    candidate:hideGeneral(false) -- main hidden, deputy stays revealed
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    candidate.deputyGeneral = G.wei_deputy.name
+    room():setPlayerMark(candidate, "hasShownDeputyGeneral", 1)
     room():setPlayerProperty(candidate, "kingdom", "wei")
     room():setPlayerMark(candidate, "__heg_kingdom", "wei")
     room():setPlayerProperty(candidate, "maxHp", 3)
     room():setPlayerProperty(candidate, "hp", 3)
+    H.judegHegMark(candidate)
     room():setCurrent(candidate)
   end)
   FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
@@ -320,25 +320,41 @@ function Testsecond_lord:testSuccessionHpAndConsumableMarks()
   lu.assertEquals(candidate.hp, 4)
   lu.assertEquals(candidate:getMark("@!!companion"), 1)
   lu.assertEquals(candidate:getMark("@!!yinyangfish"), 1)
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
 end
-
 function Testsecond_lord:testSpentMarksAreNotGrantedAgainWhenAlreadyRevealed()
   local lord, candidate = player(1), player(2)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    revealed(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    H.judegHegMark(candidate)
+    candidate:revealGeneral(false)
+    candidate:revealGeneral(true)
+  end)
+  lu.assertEquals(candidate:getMark("@!!companion"), 1, "真实双亮应先领到珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 1, "真实双亮应先领到阴阳鱼")
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
+  FkTest.runInRoom(function()
+    H.removeHegMark(room(), candidate, "companion")
+    H.removeHegMark(room(), candidate, "yinyangfish")
+    candidate:hideGeneral(false)
+    room():setPlayerProperty(candidate, "kingdom", "wei")
+    room():setPlayerMark(candidate, "__heg_kingdom", "wei")
     room():setPlayerProperty(candidate, "maxHp", 3)
     room():setPlayerProperty(candidate, "hp", 3)
     room():setCurrent(candidate)
   end)
+  lu.assertEquals(candidate:getMark("@!!companion"), 0, "先实际花掉珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0, "先实际花掉阴阳鱼")
   FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
   FkTest.runInRoom(function() room():killPlayer { who = lord } end)
-  -- Both cards were already revealed before the ascension, so the ascension is
-  -- not the first full reveal and must not grant/spend a new mark.
-  lu.assertEquals(candidate:getMark("@!!companion"), 0)
-  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0)
+  lu.assertEquals(candidate:getMark("@!!companion"), 0, "已领过后花掉，升变不得重发珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0, "已领过后花掉，升变不得重发阴阳鱼")
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
 end
-
 function Testsecond_lord:testNoSuccessorConvertsFactionAndKeepsExistingWild()
   local lord, hiddenAlly, revealedAlly, wildAlly = player(1), player(2), player(3), player(4)
   FkTest.runInRoom(function()
@@ -689,4 +705,22 @@ function Testsecond_lord:testRealNoSuccessorMultipleWildsKeepGameRunning()
   lu.assertFalse(room().game_finished)
 end
 
+function Testsecond_lord:testAscensionGrantsYinyangWhenOldPairWasEven()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "qiao_heg__qun010", "qiao_heg__qun007", "qun")
+    for i = 2, 8 do
+      room():setPlayerProperty(player(i), "kingdom", "shu")
+      room():setPlayerMark(player(i), "__heg_kingdom", "shu")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun", "han", "jin" })
+    p.deputyGeneral = "qiao_heg__qun007"
+    room():setPlayerMark(p, "hasShownDeputyGeneral", 1)
+    room():setCurrent(p)
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+  lu.assertEquals(p.general, "qiao_heg__em_qun010")
+  lu.assertEquals(p.maxHp, 3, "君张角+贾诩体力上限仍为3，不因升变额外+1")
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 1, "旧组合偶数、新组合奇数，升变应补发阴阳鱼")
+end
 return { name = "second_lord" }

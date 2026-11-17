@@ -22,7 +22,7 @@ local OPTION_DECLINE = "#qiao__skill_han017_1-decline"
 local delay_skill
 
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 local function usedTargets(player)

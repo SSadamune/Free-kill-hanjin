@@ -35,7 +35,7 @@ end
 
 local function availableTargets(player)
   local used = player:getTableMark(TARGET_MARK)
-  local room = player.room or Fk:currentRoom()
+  local room = Fk:currentRoom()
   return table.filter(room.alive_players, function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
       and not table.contains(used, p.id)

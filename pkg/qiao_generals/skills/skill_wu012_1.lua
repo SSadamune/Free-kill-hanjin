@@ -18,7 +18,7 @@ local LOSE_MARK = "qiao_wu012_tianyi_lose-turn"
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room?
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 local function pindianTargets(player)

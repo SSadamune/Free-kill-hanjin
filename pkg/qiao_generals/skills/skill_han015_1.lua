@@ -12,7 +12,7 @@ skill.qiaoImplemented = true
 local IMPERIAL = "qiao__imperial_order"
 
 local function currentRoom(player)
-  return player.room or Fk:currentRoom()
+  return Fk:currentRoom()
 end
 
 --- 可支付成本的牌；客户端也可只读自己的牌区。
