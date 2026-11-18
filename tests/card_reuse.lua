@@ -856,6 +856,80 @@ function Testqiao_card_reuse:testDarkArmorNullifiesMultiTargetCardsOnly()
   end)
 end
 
+-- 藤甲：真实装备后，普通【杀】、南蛮入侵和万箭齐发对装备者无效；
+-- 火焰伤害 +1；多目标牌仍对其他目标正常结算。
+function Testqiao_card_reuse:testVineNullifiesNamedCardsAndAmplifiesFireDamage()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local armor = card("qiao__vine")
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, p, armor)
+    use(room, p, { p }, armor)
+    lu.assertTrue(table.contains(p:getEquipments(), armor.id), "藤甲未进入装备区")
+    lu.assertTrue(p:hasSkill("qiao__vine_skill"), "藤甲技能未随装备附上")
+
+    -- 普通【杀】：使用结算开始时即对装备者无效，无需响应【闪】。
+    local hp = p.hp
+    local slash = card("qiao__slash", Card.Spade, 5)
+    give(room, t, slash)
+    use(room, t, { p }, slash)
+    lu.assertEquals(p.hp, hp, "普通【杀】不应伤害藤甲装备者")
+
+    -- 南蛮入侵：装备者无效，另一目标正常结算且未打出【杀】。
+    hp = p.hp
+    local thp = t.hp
+    local nanman = card("qiao__savage_assault")
+    give(room, t, nanman)
+    FkTest.setNextReplies(t, { "" })
+    use(room, t, { p, t }, nanman)
+    lu.assertEquals(p.hp, hp, "南蛮入侵不应伤害藤甲装备者")
+    lu.assertEquals(t.hp, thp - 1, "南蛮入侵对其他目标仍应正常结算")
+
+    -- 万箭齐发：装备者无效，另一目标正常结算且未打出【闪】。
+    hp = p.hp
+    thp = t.hp
+    local archery = card("qiao__archery_attack")
+    give(room, t, archery)
+    FkTest.setNextReplies(t, { "" })
+    use(room, t, { p, t }, archery)
+    lu.assertEquals(p.hp, hp, "万箭齐发不应伤害藤甲装备者")
+    lu.assertEquals(t.hp, thp - 1, "万箭齐发对其他目标仍应正常结算")
+
+    -- 火杀不是普通【杀】，不被无效；火焰伤害 +1。
+    hp = p.hp
+    local fire = card("qiao__fire__slash", Card.Heart, 4)
+    give(room, t, fire)
+    use(room, t, { p }, fire)
+    lu.assertEquals(p.hp, hp - 2, "藤甲应将实际受到的火焰伤害 +1")
+  end)
+end
+
+-- 防具忽略机制：青釭剑令藤甲在该次【杀】结算中失效。
+function Testqiao_card_reuse:testQinggangSwordIgnoresVine()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local armor = card("qiao__vine")
+  local sword = card("qiao__qinggang_sword", Card.Spade, 6)
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, p, armor)
+    use(room, p, { p }, armor)
+    give(room, t, sword)
+    use(room, t, { t }, sword)
+    lu.assertTrue(t:hasSkill("#qinggang_sword_skill"), "青釭剑技能未随装备附上")
+
+    local hp = p.hp
+    local slash = card("qiao__slash", Card.Club, 3)
+    give(room, t, slash)
+    use(room, t, { p }, slash)
+    lu.assertEquals(p.hp, hp - 1, "青釭剑应令藤甲对该次普通【杀】失效")
+    -- 失效只限该次结算，藤甲与技能仍在。
+    lu.assertTrue(table.contains(p:getEquipments(), armor.id))
+    lu.assertTrue(p:hasSkill("qiao__vine_skill"))
+  end)
+end
+
 function Testqiao_card_reuse:testBreastplateBPreventsNonLethalTwoDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
@@ -1425,6 +1499,7 @@ function Testqiao_card_reuse:testTargetCardsUsePrintedDescriptionsAfterPostLoad(
     { "qiao__five_elements_fan", { "攻击范围</b>：4", "将一张属性【杀】", "任意一种其他属性【杀】" }, { "改为雷【杀】", "非普通【杀】" } },
     { "qiao__bronze_sparrow", { "每回合限一次", "使用应变牌时", "无视条件应变" }, { "锁定技", "无需强化条件" } },
     { "qiao__dark_armor", { "伤害牌或黑色非伤害锦囊牌", "唯一目标", "此牌对你无效" }, { "伤害锦囊或黑色锦囊" } },
+    { "qiao__vine", { "【南蛮入侵】、【万箭齐发】和普通【杀】对你无效", "当你受到火焰伤害时，此伤害+1" }, { "每当你受到火焰伤害时" } },
   }
   for _, case in ipairs(cases) do
     local description = Fk:translate(":" .. case[1])

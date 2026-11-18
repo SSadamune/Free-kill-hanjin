@@ -49,3 +49,5 @@
 最终验收运行 `python scripts/test.py --timeout 1800`，默认套件 1,133/1,133 通过。运行时仍输出既有的距离诊断警告。发布构建生成 `.dev/dist/qiao.zip` 共 1,101 个文件，检查了归档完整性和本批关键文件的发布接线。
 
 公共在场名单迁移后再次运行默认套件，1,136/1,136 通过。发布包重建为 1,102 个文件，核对了两端的正式加载入口和公共规则文件。
+
+藤甲改为汉晋独立防具技能。参照锁定的 `maneuvering/pkg/skills/vine.lua`，在 `PreCardEffect` 逐目标处理普通【杀】、【南蛮入侵】及【万箭齐发】的无效，在 `DamageInflicted` 增加火焰伤害，沿用防具无效机制。牌面依据[汉晋锦囊装备资料](../../../assets/bilibili%20articles/cards/锦囊装备.json)。`card_reuse` 58/58、`card_deck` 24/24、`shu_conversion` 22/22 通过，其中藤甲专项覆盖真实装上防具、多人锦囊、火【杀】和青釭剑无视防具。
