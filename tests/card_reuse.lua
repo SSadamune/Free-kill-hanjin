@@ -669,10 +669,10 @@ function Testqiao_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
     { "qiao__breastplate", "qiao__breastplate_skill" },
     { "qiao__peace_spell", "qiao__peace_spell_skill" },
     { "qiao__luminous_pearl", "qiao__luminous_pearl_skill" },
-    { "qiao__dragon_phoenix", "#dragon_phoenix_skill" },
+    { "qiao__dragon_phoenix", "qiao__dragon_phoenix_skill" },
     { "qiao__halberd", "qiao__halberd_skill" },
     { "qiao__blade", "#sa__blade_skill" },
-    { "qiao__liulongcanjia", "#liulongcanjia_skill" },
+    { "qiao__liulongcanjia", "qiao__liulongcanjia_skill" },
     { "qiao__taigong_tactics", "qiao__taigong_tactics_skill" },
     { "qiao__wonder_map", "qiao__wonder_map_skill" },
   }
@@ -845,7 +845,7 @@ function Testqiao_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
   FkTest.runInRoom(function()
     give(room, p, equip)
     use(room, p, { p }, equip)
-    lu.assertTrue(p:hasSkill("#dragon_phoenix_skill"))
+    lu.assertTrue(p:hasSkill("qiao__dragon_phoenix_skill"))
     give(room, p, slash)
     give(room, t, victimCard)
     FkTest.setNextReplies(p, { "1" })
@@ -976,15 +976,18 @@ function Testqiao_card_reuse:testBladeAUsesStrategicSkill()
   end)
 end
 
-function Testqiao_card_reuse:testLiulongAInstallsNationalMountLock()
+function Testqiao_card_reuse:testLiulongUsesHanJinDualMountSkill()
   local room = FkTest.room
   local p = room.players[1]
   local c = card("qiao__liulongcanjia")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("#liulongcanjia_skill"))
-    lu.assertEquals(p:getMark("@@liulongcanjia"), 1)
+    lu.assertTrue(p:hasSkill("qiao__liulongcanjia_skill"))
+    lu.assertFalse(p:hasSkill("#liulongcanjia_skill"),
+      "汉晋六龙骖驾不沿用上游固定±1坐骑技能")
+    lu.assertEquals(p:getMark("@@liulongcanjia"), 0,
+      "不再使用上游的坐骑封锁标记")
   end)
 end
 
@@ -1014,7 +1017,147 @@ function Testqiao_card_reuse:testPeaceAPreventsAttributeDamage()
 end
 
 
+function Testqiao_card_reuse:testDragonPhoenixDyingTakesActualTargetHand()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local equip = card("qiao__dragon_phoenix")
+  local slash = card("qiao__slash")
+  local victimCard = card("qiao__peach", Card.Heart, 4)
+  FkTest.runInRoom(function()
+    give(room, p, equip)
+    use(room, p, { p }, equip)
+    give(room, p, slash)
+    give(room, t, victimCard)
+    t.hp = 1
+    local save = card("qiao__peach", Card.Heart, 7)
+    give(room, p, save)
+    FkTest.setNextReplies(p, { "0", "1", victimCard.id, FkTest.ReplyCard(Fk:getCardById(save.id), { t }) })
+    use(room, p, { t }, slash)
+  end)
+  lu.assertTrue(table.contains(p:getCardIds("h"), victimCard.id),
+    "飞龙夺凤应在求桃前获得实际目标的一张手牌")
+  lu.assertFalse(t.dead, "求桃后目标存活")
+end
+
+function Testqiao_card_reuse:testDragonPhoenixIgnoresNonTargetChainDamage()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local equip = card("qiao__dragon_phoenix")
+  local slash = card("qiao__slash")
+  local victimCard = card("qiao__peach", Card.Heart, 4)
+  FkTest.runInRoom(function()
+    give(room, p, equip)
+    use(room, p, { p }, equip)
+    give(room, t, victimCard)
+    t.hp = 1
+    room:damage {
+      from = p, to = t, damage = 1, card = slash,
+      damageType = fk.NormalDamage, chain = true,
+    }
+  end)
+  lu.assertFalse(table.contains(p:getCardIds("h"), victimCard.id),
+    "连环传导波及的非实际目标不触发飞龙夺凤")
+end
+
+function Testqiao_card_reuse:testLuminousPearlIndependentDiscardDraw()
+  local room = FkTest.room
+  local p = room.players[1]
+  local pearl = card("qiao__luminous_pearl")
+  local c1 = card("qiao__jink")
+  local c2 = card("qiao__peach")
+  local handBefore
+  FkTest.runInRoom(function()
+    give(room, p, pearl)
+    use(room, p, { p }, pearl)
+    give(room, p, c1)
+    give(room, p, c2)
+    if Fk.skills["hs__zhiheng"] then
+      room:handleAddLoseSkills(p, { "hs__zhiheng" }, nil, false, true)
+    end
+    lu.assertTrue(p:hasSkill("qiao__luminous_pearl_skill"), "夜明珠技能与制衡并存")
+    local skill = Fk.skills["qiao__luminous_pearl_skill"]
+    lu.assertFalse(skill:cardFilter(p, pearl.id, {}, {}),
+      "提供技能的夜明珠本身不能用于该次弃置")
+    lu.assertTrue(skill:cardFilter(p, c1.id, {}, {}))
+    local data = { from = p, cards = { c1.id, c2.id }, tos = {} }
+    handBefore = #p:getCardIds("h")
+    room:useSkill(p, skill, function() skill:onUse(room, data) end, data)
+  end)
+  lu.assertEquals(room:getCardArea(c1.id), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(c2.id), Card.DiscardPile)
+  lu.assertEquals(#p:getCardIds("h"), handBefore, "弃置两张后摸两张")
+  lu.assertEquals(p:usedSkillTimes("qiao__luminous_pearl_skill", Player.HistoryPhase), 1)
+  if Fk.skills["hs__zhiheng"] then
+    lu.assertEquals(p:usedSkillTimes("hs__zhiheng", Player.HistoryPhase), 0,
+      "夜明珠与制衡分别计次")
+  end
+end
+
+function Testqiao_card_reuse:testPeaceSpellHandLimitUsesPublicQunCount()
+  local room = FkTest.room
+  local p, ally = room.players[1], room.players[2]
+  local peace = card("qiao__peace_spell")
+  local tianCard = card("qiao__peach", Card.Heart, 6)
+  local oldCard = card("qiao__peach", Card.Heart, 7)
+  FkTest.runInRoom(function()
+    for _, other in ipairs(room.players) do
+      if other == p or other == ally then
+        other.kingdom = "qun"
+      else
+        other.kingdom = "wei"
+      end
+      other.role = other.kingdom
+    end
+    give(room, p, peace)
+    use(room, p, { p }, peace)
+    lu.assertEquals(p:getMaxCards(), p.hp + 2, "同势力人数含装备者自己")
+    give(room, p, tianCard)
+    local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
+    Qun.add(p, { tianCard.id }, "test")
+    lu.assertEquals(p:getMaxCards(), p.hp + 3, "群天兵通过公共人数口径计入")
+    give(room, p, oldCard)
+    p:addToPile("heavenly_army", { oldCard.id }, true, "test")
+    lu.assertEquals(p:getMaxCards(), p.hp + 3, "旧 heavenly_army 不重复叠加")
+  end)
+end
+
+function Testqiao_card_reuse:testPeaceSpellLossDrawsThenLosesHp()
+  local room = FkTest.room
+  local p = room.players[1]
+  local peace = card("qiao__peace_spell")
+  local handBefore
+  FkTest.runInRoom(function()
+    give(room, p, peace)
+    use(room, p, { p }, peace)
+    p.hp = 3
+    handBefore = #p:getCardIds("h")
+    room:moveCardTo(peace.id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+      "test", nil, true, p)
+    lu.assertEquals(#p:getCardIds("h"), handBefore + 2, "失去太平要术后先摸两张")
+    lu.assertEquals(p.hp, 2, "摸牌后体力大于1则失去1点")
+  end)
+end
+
+function Testqiao_card_reuse:testLordEquipmentTemplateEntityAndDescriptionSync()
+  local pack = assert(Fk.packages.qiao_cards)
+  local cases = {
+    { "qiao__dragon_phoenix", "qiao__dragon_phoenix_skill", "武器" },
+    { "qiao__luminous_pearl", "qiao__luminous_pearl_skill", "宝物" },
+    { "qiao__peace_spell", "qiao__peace_spell_skill", "防具" },
+  }
+  for _, case in ipairs(cases) do
+    local name, skillName, label = case[1], case[2], case[3]
+    local template = assert(Fk.all_card_types[name], "missing template " .. name)
+    local entity = assert(table.find(pack.cards, function(c) return c.name == name end),
+      "missing entity " .. name)
+    lu.assertEquals(template.equip_skill.name, skillName)
+    lu.assertEquals(entity.equip_skill.name, skillName)
+    lu.assertEquals(template.skill.name, entity.skill.name)
+    local description = Fk:translate(":" .. name)
+    lu.assertTrue(description:find(label, 1, true) ~= nil, "牌面缺少类别 " .. name)
+    lu.assertNil(description:find("尚未实装", 1, true), "正式牌面不应仍是空壳 " .. name)
+  end
+end
+
 return { name = "qiao_card_reuse" }
-
-
 

@@ -4,6 +4,41 @@
 -- `derived` types are replacement materials and the seven faction tricks; they
 -- are never part of the 162-slot default draw pile.
 local M = {}
+local Heg = require "packages.hegemony.util"
+
+--- 州郡领兵印进入装备区后，按装备者的大／小势力类别逐个询问同类别角色交牌。
+local function zhoujunEnter(room, player)
+  local big = Heg.isBigKingdomPlayer(player)
+  local small = Heg.isSmallKingdomPlayer(player)
+  if not big and not small then return end
+  local same = big and Heg.isBigKingdomPlayer or Heg.isSmallKingdomPlayer
+  local candidates = {}
+  for _, other in ipairs(room.alive_players) do
+    if other ~= player and not other:isRemoved() and same(other)
+      and #other:getCardIds("he") > 0 then
+      table.insert(candidates, other)
+    end
+  end
+  room:sortByAction(candidates)
+  for _, other in ipairs(candidates) do
+    if not other.dead and not other:isRemoved() and #other:getCardIds("he") > 0 then
+      if room:askToSkillInvoke(other, {
+        skill_name = "qiao__zhoujun_lingbingyin_skill",
+        prompt = "#qiao__zhoujun-give:" .. player.id,
+      }) then
+        local card = room:askToChooseCard(other, {
+          target = other,
+          flag = "he",
+          skill_name = "qiao__zhoujun_lingbingyin_skill",
+          prompt = "#qiao__zhoujun-choose",
+        })
+        if card ~= nil and room:getCardOwner(card) == other then
+          room:obtainCard(player, card, false, fk.ReasonGive)
+        end
+      end
+    end
+  end
+end
 
 M.types = {
   -- Basic cards -----------------------------------------------------------
@@ -54,7 +89,9 @@ M.types = {
   { id = "qiao__collateral", display = "借刀杀人", type = "trick", is_damage = true, skill = "qiao__inert", inert = true },
   { id = "qiao__fire_attack", display = "火攻", type = "trick", is_damage = true, skill = "qiao__inert", inert = true },
   { id = "qiao__lightning", display = "闪电", type = "trick", delayed = true, is_damage = true, skill = "qiao__inert", inert = true },
-  { id = "qiao__sihai_liuqian", display = "四海流钱", type = "trick", skill = "qiao__inert", inert = true },
+  { id = "qiao__sihai_liuqian", display = "四海流钱", type = "equip",
+    subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
+    equip_skill = "qiao__sihai_liuqian_skill", inert = false },
 
   -- Faction tricks: outside the base deck, only special means may add them.
   { id = "qiao__danggu_zhihuo", display = "党锢之祸", type = "trick", kingdom = "han",
@@ -101,14 +138,18 @@ M.types = {
     subtype = Card.SubtypeWeapon, range = 3, skill = "default_equip_skill",
     equip_skill = "qiao__axe_skill", inert = false },
   { id = "qiao__chixiao_sword", display = "赤霄剑", type = "equip",
-    subtype = Card.SubtypeWeapon, range = 0, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeWeapon, range = 3, skill = "default_equip_skill",
+    equip_skill = "qiao__chixiao_sword_skill", inert = false },
   { id = "qiao__shenshou_sizhao", display = "神授思召", type = "equip",
-    subtype = Card.SubtypeWeapon, range = 0, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeWeapon, range = 2, skill = "default_equip_skill",
+    equip_skill = "qiao__shenshou_sizhao_skill", inert = false,
+    on_install = function(self, room, player)
+      Weapon.onInstall(self, room, player)
+      room:setPlayerMark(player, "qiao_shenshou_active", 1)
+    end },
   { id = "qiao__dragon_phoenix", display = "飞龙夺凤", type = "equip",
     subtype = Card.SubtypeWeapon, range = 2, skill = "default_equip_skill",
-    equip_skill = "qiao__inert_equip", inert = false },
+    equip_skill = "qiao__dragon_phoenix_skill", inert = false },
   { id = "qiao__double_swords", display = "雌雄双股剑", type = "equip",
     subtype = Card.SubtypeWeapon, range = 2, skill = "qiao__inert_equip",
     equip_skill = "qiao__inert_equip", inert = true, derived = true },
@@ -136,11 +177,11 @@ M.types = {
     subtype = Card.SubtypeArmor, skill = "default_equip_skill",
     equip_skill = "qiao__dark_armor_skill", inert = false, derived = true },
   { id = "qiao__zouyu_fan", display = "驺虞幡", type = "equip",
-    subtype = Card.SubtypeArmor, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeArmor, skill = "default_equip_skill",
+    equip_skill = "qiao__zouyu_fan_skill", inert = false },
   { id = "qiao__jinxiu_zhengpao", display = "锦绣征袍", type = "equip",
-    subtype = Card.SubtypeArmor, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeArmor, skill = "default_equip_skill",
+    equip_skill = "qiao__jinxiu_zhengpao_skill", inert = false },
   { id = "qiao__peace_spell", display = "太平要术", type = "equip",
     subtype = Card.SubtypeArmor, skill = "default_equip_skill",
     equip_skill = "qiao__peace_spell_skill", inert = false },
@@ -156,8 +197,9 @@ M.types = {
     subtype = Card.SubtypeOffensiveRide, skill = "qiao__inert_equip",
     equip_skill = "qiao__inert_equip", inert = true, derived = true },
   { id = "qiao__feiyun_gaihai", display = "飞云盖海", type = "equip",
-    subtype = Card.SubtypeOffensiveRide, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeOffensiveRide, skill = "default_equip_skill",
+    equip_skill = "qiao__feiyun_gaihai_skill", inert = false,
+    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide } },
   { id = "qiao__zhuahuangfeidian", display = "爪黄飞电", type = "equip",
     subtype = Card.SubtypeDefensiveRide, skill = "qiao__inert_equip",
     equip_skill = "qiao__inert_equip", inert = true, derived = true },
@@ -167,41 +209,11 @@ M.types = {
   { id = "qiao__liulongcanjia", display = "六龙骖驾", type = "equip",
     subtype = Card.SubtypeDefensiveRide, skill = "default_equip_skill",
     equip_skill = "qiao__liulongcanjia_skill", inert = false,
-    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide },
-    on_install = function(self, room, player)
-      for _, subtype in ipairs({ Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }) do
-        for _, id in ipairs(player:getEquipments(subtype)) do
-          if id ~= self.id then
-            room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
-              self.name, nil, true, player)
-          end
-        end
-      end
-    end },
+    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide } },
   { id = "qiao__linxiao_yuyu", display = "临筱玉舆", type = "equip",
     subtype = Card.SubtypeDefensiveRide, skill = "default_equip_skill",
     equip_skill = "qiao__linxiao_yuyu_skill", inert = false,
-    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide },
-    on_install = function(self, room, player)
-      local cleared = {}
-      for _, subtype in ipairs({ Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }) do
-        for _, id in ipairs(player:getEquipments(subtype)) do
-          if id ~= self.id then
-            room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
-              self.name, nil, true, player)
-            table.insert(cleared, id)
-          end
-        end
-      end
-      if #cleared > 0 then
-        -- 嵌套 MoveCards 的事实挂到实际父装备移动事件，供同一次 AfterCardsMove 使用。
-        local ev = room.logic:getCurrentEvent()
-        while ev ~= nil and ev.event ~= GameEvent.MoveCards do ev = ev.parent end
-        if ev ~= nil then
-          room:setTag("qiao_linxiao_replaced", { card = self.id, ids = cleared })
-        end
-      end
-    end },
+    subtypes = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide } },
 
   -- Treasures ------------------------------------------------------------
   { id = "qiao__bronze_sparrow", display = "铜雀", type = "equip",
@@ -209,17 +221,7 @@ M.types = {
     equip_skill = "qiao__bronze_sparrow_skill", inert = false },
   { id = "qiao__luminous_pearl", display = "定澜夜明珠", type = "equip",
     subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
-    equip_skill = "qiao__luminous_pearl_skill", inert = false,
-    on_install = function(self, room, player)
-      Treasure.onInstall(self, room, player)
-      if player:hasSkill("hs__zhiheng") or player:hasSkill("lord__zhiheng")
-        or player:hasSkill("wk_heg__zhiheng") then
-        room:handleAddLoseSkills(player, "-qiao__luminous_pearl_skill", nil, false, true)
-      end
-    end,
-    on_uninstall = function(self, room, player)
-      Treasure.onUninstall(self, room, player)
-    end },
+    equip_skill = "qiao__luminous_pearl_skill", inert = false },
   { id = "qiao__taigong_tactics", display = "太公阴符", type = "equip",
     subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
     equip_skill = "qiao__taigong_tactics_skill", inert = false, derived = true },
@@ -237,14 +239,18 @@ M.types = {
       player:setSkillUseHistory(self.equip_skill.name, 0, Player.HistoryPhase)
     end },
   { id = "qiao__zhoujun_lingbingyin", display = "州郡领兵印", type = "equip",
-    subtype = Card.SubtypeTreasure, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
+    equip_skill = "qiao__zhoujun_lingbingyin_skill", inert = false,
+    on_install = function(self, room, player)
+      Treasure.onInstall(self, room, player)
+      zhoujunEnter(room, player)
+    end },
   { id = "qiao__xuehai_mowangzun", display = "血海魔王樽", type = "equip",
-    subtype = Card.SubtypeTreasure, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
+    equip_skill = "qiao__xuehai_mowangzun_skill", inert = false },
   { id = "qiao__xuwang_zhimian", display = "虚妄之冕", type = "equip",
-    subtype = Card.SubtypeTreasure, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
+    equip_skill = "qiao__xuwang_zhimian_skill", inert = false },
 }
 
 return M

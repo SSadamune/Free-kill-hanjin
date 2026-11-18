@@ -7,10 +7,9 @@
 -- status = "missing":  no local implementation was found; the card remains a
 --                     shell until one is confirmed.
 --
--- Summary: 67 reused card types, 0 pending multiple-version types (the eight
--- previously pending types are resolved by the user's A/B choices below) and
--- 17 missing types (10 base lord-equipment positions + 7 faction tricks).
--- Missing types stay inert shells; no missing effect is invented.
+-- Summary: most base cards and implemented equipment reuse local code through
+-- the engine adapter. Lord-equipment/special-trick entries without a confirmed
+-- local implementation stay `missing` inert shells; no missing effect is invented.
 --
 -- kind = "skill"       install the named card skill at post-load; usually the
 --                      upstream skill, but HanJin wrappers may add structured
@@ -66,7 +65,7 @@ M.cards = {
   ["qiao__lightning"] = { status = "reused", kind = "skill", upstream = "lightning", skill = "lightning_skill" },
 
   -- Lord equipment and unique special tricks without a local implementation.
-  ["qiao__sihai_liuqian"] = { status = "missing" },
+  ["qiao__sihai_liuqian"] = { status = "reused", kind = "qiao_equip", upstream = "sihai_liuqian", skill = "qiao__sihai_liuqian_skill", desc = false },
   ["qiao__danggu_zhihuo"] = { status = "missing" },
   ["qiao__command_world"] = { status = "missing" },
   ["qiao__restore_heartland"] = { status = "missing" },
@@ -84,8 +83,9 @@ M.cards = {
   ["qiao__qinggang_sword"] = { status = "reused", kind = "equip", upstream = "qinggang_sword" },
   ["qiao__kylin_bow"] = { status = "reused", kind = "equip", upstream = "kylin_bow" },
   ["qiao__axe"] = { status = "reused", kind = "qiao_equip", upstream = "axe", skill = "qiao__axe_skill" },
-  ["qiao__chixiao_sword"] = { status = "missing" },
-  ["qiao__shenshou_sizhao"] = { status = "missing" },
+  ["qiao__chixiao_sword"] = { status = "reused", kind = "qiao_equip",
+    upstream = "chixiao_sword", skill = "qiao__chixiao_sword_skill", desc = false },
+  ["qiao__shenshou_sizhao"] = { status = "reused", kind = "qiao_equip", upstream = "shenshou_sizhao", skill = "qiao__shenshou_sizhao_skill", desc = false },
   ["qiao__double_swords"] = { status = "reused", kind = "equip", upstream = "double_swords" },
   ["qiao__six_swords"] = { status = "reused", kind = "qiao_equip", upstream = "six_swords", skill = "qiao__six_swords_skill" },
 
@@ -94,17 +94,21 @@ M.cards = {
   ["qiao__nioh_shield"] = { status = "reused", kind = "equip", upstream = "nioh_shield" },
   ["qiao__eight_diagram"] = { status = "reused", kind = "qiao_equip", upstream = "eight_diagram", skill = "qiao__eight_diagram_skill" },
   ["qiao__dark_armor"] = { status = "reused", kind = "qiao_equip", upstream = "dark_armor", skill = "qiao__dark_armor_skill" },
-  ["qiao__zouyu_fan"] = { status = "missing" },
-  ["qiao__jinxiu_zhengpao"] = { status = "missing" },
+  ["qiao__zouyu_fan"] = { status = "reused", kind = "qiao_equip", upstream = "zouyu_fan", skill = "qiao__zouyu_fan_skill", desc = false },
+  ["qiao__jinxiu_zhengpao"] = { status = "reused", kind = "qiao_equip",
+    upstream = "jinxiu_zhengpao", skill = "qiao__jinxiu_zhengpao_skill", desc = false },
 
   -- Mounts ----------------------------------------------------------------
   ["qiao__chitu"] = { status = "reused", kind = "equip", upstream = "chitu" },
   ["qiao__zixing"] = { status = "reused", kind = "equip", upstream = "zixing" },
   ["qiao__jingfan"] = { status = "reused", kind = "equip", upstream = "jingfan" },
-  ["qiao__feiyun_gaihai"] = { status = "missing" },
+  ["qiao__feiyun_gaihai"] = { status = "reused", kind = "qiao_equip",
+    upstream = "zixing", skill = "qiao__feiyun_gaihai_skill", desc = false },
   ["qiao__zhuahuangfeidian"] = { status = "reused", kind = "equip", upstream = "zhuahuangfeidian" },
   ["qiao__jueying"] = { status = "reused", kind = "equip", upstream = "jueying" },
-  ["qiao__linxiao_yuyu"] = { status = "missing" },
+  -- 双副类别坐骑：汉晋效果由本包技能实现，不套用上游单坐骑技能或安装钩子。
+  ["qiao__linxiao_yuyu"] = { status = "reused", kind = "qiao_equip",
+    upstream = "jueying", skill = "qiao__linxiao_yuyu_skill", desc = false },
 
   -- Treasures -------------------------------------------------------------
   ["qiao__bronze_sparrow"] = { status = "reused", kind = "qiao_equip", upstream = "bronze_sparrow", skill = "qiao__bronze_sparrow_skill" },
@@ -112,19 +116,21 @@ M.cards = {
   ["qiao__wonder_map"] = { status = "reused", kind = "qiao_equip", upstream = "wonder_map", skill = "qiao__wonder_map_skill" },
   ["qiao__jade_seal"] = { status = "reused", kind = "qiao_equip", upstream = "jade_seal", skill = "qiao__jade_seal_skill" },
   ["qiao__wooden_ox"] = { status = "reused", kind = "qiao_equip", upstream = "wooden_ox", skill = "qiao__wooden_ox_skill" },
-  ["qiao__zhoujun_lingbingyin"] = { status = "missing" },
-  ["qiao__xuehai_mowangzun"] = { status = "missing" },
-  ["qiao__xuwang_zhimian"] = { status = "missing" },
+  ["qiao__zhoujun_lingbingyin"] = { status = "reused", kind = "qiao_equip", upstream = "zhoujun_lingbingyin", skill = "qiao__zhoujun_lingbingyin_skill", desc = false },
+  ["qiao__xuehai_mowangzun"] = { status = "reused", kind = "qiao_equip", upstream = "xuehai_mowangzun", skill = "qiao__xuehai_mowangzun_skill", desc = false },
+  ["qiao__xuwang_zhimian"] = { status = "reused", kind = "qiao_equip", upstream = "xuwang_zhimian", skill = "qiao__xuwang_zhimian_skill", desc = false },
 
   -- Multiple local versions: wait for the user's choice. -------------------
   ["qiao__drowning"] = { status = "reused", kind = "qiao_skill", upstream = "sa__drowning", skill = "qiao__drowning_skill", chosen = "A" },
-  ["qiao__dragon_phoenix"] = { status = "reused", kind = "equip", upstream = "dragon_phoenix", chosen = "A" },
+  ["qiao__dragon_phoenix"] = { status = "reused", kind = "qiao_equip",
+    upstream = "dragon_phoenix", skill = "qiao__dragon_phoenix_skill", desc = false },
   ["qiao__halberd"] = { status = "reused", kind = "qiao_equip", upstream = "sa__halberd", skill = "qiao__halberd_skill", chosen = "A" },
   ["qiao__blade"] = { status = "reused", kind = "equip", upstream = "sa__blade", chosen = "A" },
   ["qiao__breastplate"] = { status = "reused", kind = "qiao_equip", upstream = "breastplate", skill = "qiao__breastplate_skill", chosen = "B" },
-  ["qiao__liulongcanjia"] = { status = "reused", kind = "equip", upstream = "liulongcanjia", chosen = "A" },
-  ["qiao__luminous_pearl"] = { status = "reused", kind = "qiao_equip", upstream = "luminous_pearl", skill = "qiao__luminous_pearl_skill", chosen = "A" },
-  ["qiao__peace_spell"] = { status = "reused", kind = "qiao_equip", upstream = "peace_spell", skill = "qiao__peace_spell_skill", chosen = "A" },
+  ["qiao__liulongcanjia"] = { status = "reused", kind = "qiao_equip",
+    upstream = "liulongcanjia", skill = "qiao__liulongcanjia_skill", desc = false, chosen = "A" },
+  ["qiao__luminous_pearl"] = { status = "reused", kind = "qiao_equip", upstream = "luminous_pearl", skill = "qiao__luminous_pearl_skill", desc = false, chosen = "A" },
+  ["qiao__peace_spell"] = { status = "reused", kind = "qiao_equip", upstream = "peace_spell", skill = "qiao__peace_spell_skill", desc = false, chosen = "A" },
 }
 
 return M

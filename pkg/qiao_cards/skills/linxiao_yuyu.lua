@@ -1,27 +1,25 @@
--- 临筱玉舆：进攻/防御双副类别坐骑。持有者距离-1、其他角色到其距离+1，
--- 持有期间不能使用其他坐骑。进入装备区后当前回合角色摸1；若本次确有坐骑被
--- 替换则改为回复1。从装备区置入非装备区后当前回合角色摸1。
+-- 临筱玉舆：进攻/防御双副类别坐骑。装备者到其他角色距离-1，其他角色到
+-- 装备者距离+1。进出装备区的当前回合者效果由模式规则 qiao__linxiao_yuyu_rule
+-- 统一结算；离开装备区时本装备技能已先卸下，不能放在这里。
 local skill = fk.CreateSkill {
   name = "qiao__linxiao_yuyu_skill",
+  tags = { Skill.Compulsory },
   attached_equip = "qiao__linxiao_yuyu",
 }
-
-local CARD = "qiao__linxiao_yuyu"
-
-local function isRide(card)
-  if card == nil or card.type ~= Card.TypeEquip then return false end
-  return card.sub_type == Card.SubtypeOffensiveRide
-    or card.sub_type == Card.SubtypeDefensiveRide
-end
-
-local function isLinxiao(id)
-  local card = Fk:getCardById(id, true)
-  return card ~= nil and card.name == CARD
-end
 
 Fk:loadTranslationTable {
   [skill.name] = "临筱玉舆",
   ["qiao__linxiao_yuyu"] = "临筱玉舆",
+  [":" .. skill.name] = "你到其他角色的距离-1，其他角色到你的距离+1。",
 }
+
+skill:addEffect("distance", {
+  correct_func = function(self, from, to)
+    local delta = 0
+    if from:hasSkill(skill.name) then delta = delta - 1 end
+    if to:hasSkill(skill.name) then delta = delta + 1 end
+    return delta
+  end,
+})
 
 return skill

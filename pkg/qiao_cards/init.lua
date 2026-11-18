@@ -141,6 +141,55 @@ local DESCRIPTION_OVERRIDES = {
     .. "<b>宝物技能</b>：出牌阶段开始时，你可以横置或重置一名角色；出牌阶段结束时，你可以重铸一张手牌。",
   ["qiao__wonder_map"] = "装备牌·宝物<br/>"
     .. "<b>宝物技能</b>：锁定技，此牌进入你的装备区时，弃置一张其他牌；此牌离开你的装备区时，你将手牌摸至五张。",
+  ["qiao__liulongcanjia"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：锁定技，其他角色到你的距离+X，你到其他角色的距离-X；"
+    .. "X为当前场上与你势力相同的角色装备区里的坐骑牌总张数，每张牌计一次"
+    .. "（双副类别坐骑也只计一张）。你全暗且势力尚未确定时只计自己的六龙骖驾，X=1。",
+  ["qiao__linxiao_yuyu"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：你到其他角色的距离-1，其他角色到你的距离+1。"
+    .. "此牌进入装备区，或由装备区进入非装备区后，当前回合角色摸一张牌；"
+    .. "若同次进出有坐骑因装备栏占用被实际替换，改为回复1点体力。",
+  ["qiao__feiyun_gaihai"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：锁定技，你未横置时，你到其他角色的距离-2；"
+    .. "你横置时，其他角色到你的距离+2。",
+  ["qiao__dragon_phoenix"] = "装备牌·武器<br/><b>攻击范围</b>：2<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】指定一个目标后，你可以令该目标弃置一张自己的牌。"
+    .. "当你使用的【杀】造成的伤害令其实际目标进入濒死状态时，"
+    .. "你可以在求桃前获得该目标的一张手牌。",
+  ["qiao__luminous_pearl"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：出牌阶段限一次，你可以弃置1至X张自己的合法手牌或装备"
+    .. "（X为你的体力上限，此牌本身不能用于该次弃置），然后摸等量的牌。",
+  ["qiao__peace_spell"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：锁定技，防止你受到属性伤害。你的手牌上限+X"
+    .. "（X为当前与你势力相同的角色数，含你自己；群势力按天兵人数修正）。"
+    .. "当你失去装备区里的此牌后，你摸两张牌，然后若你的体力值大于1，你失去1点体力。",
+  ["qiao__chixiao_sword"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】指定目标后，若你与该目标一个大势力、"
+    .. "另一个小势力，该目标须交给你一张红色手牌；未能交出时，"
+    .. "该目标不能抵消此【杀】对自己的结算。",
+  ["qiao__jinxiu_zhengpao"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：当你成为其他角色使用伤害牌的目标后，若此牌本次具有"
+    .. "标准花色且你的手牌中没有该花色，你可以展示所有手牌并获得本次来牌"
+    .. "对应、仍可获得的实体牌；然后若你的手牌具有四种花色，此牌对你无效。",
+  ["qiao__xuwang_zhimian"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：锁定技，你在自己的摸牌阶段多摸两张牌；你的手牌上限-1。",
+  ["qiao__sihai_liuqian"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：出牌阶段内的空闲时间点，你可以选择距离大于1的一名角色，"
+    .. "预先选择其恰好两张手牌或装备；将此牌交到其手牌区，并获得所选的两张牌。",
+  ["qiao__zhoujun_lingbingyin"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：此牌进入装备区后，与装备者同为一个大势力或同为一个小势力"
+    .. "的其他角色可各交给你一张手牌或装备。准备阶段，你可以令本回合的额定摸牌数、"
+    .. "使用【杀】次数上限、手牌上限中的一项增加1或2，并将等量扣减分配到另外两项。",
+  ["qiao__zouyu_fan"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：回合外每回合限一次，在需要使用或打出【杀】或【闪】时，"
+    .. "你可以视为使用或打出之；随后本回合下一次受到伤害后，失去1点体力，"
+    .. "若此牌仍在你的装备区且可弃置，弃置之。",
+  ["qiao__xuehai_mowangzun"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：当你需要合法使用【酒】时，同势力角色可打出黑桃牌协助；"
+    .. "首次协助成功后你视为使用【酒】。你脱离濒死时，将此牌交给伤害来源。",
+  ["qiao__shenshou_sizhao"] = "装备牌·武器 攻击范围2<br/>"
+    .. "<b>装备技能</b>：此牌进入装备区的回合中，若你仍装备此牌，你使用牌无距离限制，"
+    .. "并跳过弃牌阶段。后续回合，你可将此牌作为合纵牌与手牌一同交出。",
 }
 
 local function cardDescription(cardType)
@@ -568,6 +617,91 @@ function H.assertConsistent()
 end
 
 H.assertConsistent()
+
+-- 双副类别坐骑的公共栏位语义 ------------------------------------------------
+-- 一张双副类别坐骑同时占用进攻、防御两个坐骑栏。引擎只按 `sub_type` 检索
+-- 单个栏位，因此在这里把“占用”扩展为公共查询：两个坐骑栏都能检索到同一张
+-- 双副类别牌，且该牌只计为一处占用。正常用牌的替换仍由引擎按这些查询完成。
+local DUAL_MOUNTS = {
+  ["qiao__liulongcanjia"] = true,
+  ["qiao__linxiao_yuyu"] = true,
+  ["qiao__feiyun_gaihai"] = true,
+}
+local RIDE_SUBTYPES = {
+  [Card.SubtypeOffensiveRide] = true,
+  [Card.SubtypeDefensiveRide] = true,
+}
+
+local function isRideSubtype(subtype)
+  return RIDE_SUBTYPES[subtype] == true
+end
+
+function H.isDualMount(value)
+  local name = type(value) == "string" and value
+    or (type(value) == "table" and value.name)
+  return name ~= nil and DUAL_MOUNTS[name] == true
+end
+
+function H.isRideCard(card)
+  if card == nil or card.type ~= Card.TypeEquip then return false end
+  if isRideSubtype(card.sub_type) then return true end
+  for _, subtype in ipairs(card.subtypes or {}) do
+    if isRideSubtype(subtype) then return true end
+  end
+  return false
+end
+
+if not Player.__qiao_dual_mount_slots then
+  Player.__qiao_dual_mount_slots = true
+  local baseGetEquipments = Player.getEquipments
+  local baseGetEquipment = Player.getEquipment
+  local baseCanMoveIntoEquip = Player.canMoveCardIntoEquip
+  local baseCanMoveBoardTo = Player.canMoveCardInBoardTo
+
+  -- 双副类别坐骑同时出现在两个坐骑栏的检索结果中，但物理上仍是一张牌。
+  function Player:getEquipments(cardSubtype)
+    if not isRideSubtype(cardSubtype) then
+      return baseGetEquipments(self, cardSubtype)
+    end
+    local cardIds = {}
+    for _, cardId in ipairs(self.player_cards[Player.Equip]) do
+      local card = self:getVirtualEquip(cardId) or Fk:getCardById(cardId)
+      if card ~= nil and (card.sub_type == cardSubtype or H.isDualMount(card)) then
+        table.insert(cardIds, cardId)
+      end
+    end
+    return cardIds
+  end
+
+  function Player:getEquipment(cardSubtype)
+    if not isRideSubtype(cardSubtype) then
+      return baseGetEquipment(self, cardSubtype)
+    end
+    return self:getEquipments(cardSubtype)[1]
+  end
+
+  -- 直接置入双副类别坐骑必须两栏均空且可用（`convert` 为替换许可）。
+  function Player:canMoveCardIntoEquip(cardId, convert)
+    if not baseCanMoveIntoEquip(self, cardId, convert) then return false end
+    local card = type(cardId) == "number" and Fk:getCardById(cardId) or cardId
+    if card ~= nil and H.isDualMount(card) then
+      return self:hasEmptyEquipSlot(Card.SubtypeOffensiveRide)
+        and self:hasEmptyEquipSlot(Card.SubtypeDefensiveRide)
+    end
+    return true
+  end
+
+  function Player:canMoveCardInBoardTo(to, id)
+    if not baseCanMoveBoardTo(self, to, id) then return false end
+    local card = self:getVirtualEquip(id) or Fk:getCardById(id)
+    if card ~= nil and H.isDualMount(card) then
+      return to:hasEmptyEquipSlot(Card.SubtypeOffensiveRide)
+        and to:hasEmptyEquipSlot(Card.SubtypeDefensiveRide)
+    end
+    return true
+  end
+end
+
 extension.qiao_cards = H
 extension.qiao = H
 
@@ -671,8 +805,8 @@ Fk:addPostLoadFunc(function()
     local reuse = H.reuse[card.name]
     if not reuse or reuse.status ~= "reused" then return end
     patchReuseCard(card, reuse)
-    if reuse.kind == "skill" or reuse.kind == "equip"
-      or reuse.kind == "qiao_skill" or reuse.kind == "qiao_equip" then
+    if reuse.desc ~= false and (reuse.kind == "skill" or reuse.kind == "equip"
+      or reuse.kind == "qiao_skill" or reuse.kind == "qiao_equip") then
       copyUpstreamDescription(card.name, reuse.upstream)
     end
   end

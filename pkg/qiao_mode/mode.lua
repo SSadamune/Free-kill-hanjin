@@ -198,6 +198,10 @@ function M.create(base)
       self.room:addSkill("qiao__em_jin001_double_rule")
       self.room:addSkill("qiao__linxiao_yuyu_rule")
       self.room:addSkill("qiao__dual_mount_rule")
+      self.room:addSkill("qiao__zhoujun_turn_bonus")
+      for _, player in ipairs(self.room.players) do
+        player:addFakeSkill("qiao__alliance")
+      end
       -- 晋将公开用牌历史：仅汉晋模式安装，供武库及客户端公开读取。
       local JinHistory = Fk.skills["#qiao_zhen_shi_jin_history"]
       if JinHistory ~= nil then self.room:addSkill(JinHistory) end
