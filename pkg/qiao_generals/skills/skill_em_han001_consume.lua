@@ -52,9 +52,11 @@ skill:addEffect("active", {
       choice = available[1]
     else
       local names = table.map(available, function(e) return e.name end)
+      -- detailed：确认前按牌名显示当前正式牌面（':'..name）；选项仍是实体牌名。
       local name = room:askToChoice(holder, {
         choices = names, skill_name = skill.name,
         prompt = "#qiao__han001_pick_trick", cancelable = true,
+        detailed = true,
       })
       if name == nil then return end
       choice = table.find(available, function(e) return e.name == name end)

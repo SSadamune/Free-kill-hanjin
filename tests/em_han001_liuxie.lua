@@ -71,9 +71,21 @@ function Testqiao_em_han001_liuxie:testZhaoshuEntryAndFourSuitConsume()
     end
     lord.phase = Player.Play
   end)
+  local consumeAsked, consumeDetailed = false, false
   skill_test.withSkillRequests(room, P.CONSUME, {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == P.CONSUME then return params.choices[1] end
+      if params.skill_name == P.CONSUME then
+        consumeAsked = true
+        consumeDetailed = params.detailed == true
+        for _, name in ipairs(params.choices) do
+          -- 测试房间会登记 qiao_test__ 势力锦囊；正式牌面断言只覆盖正式牌。
+          if Cards.tricks[name] ~= nil and not name:startsWith("qiao_test__") then
+            lu.assertNotEquals(Fk:translate(":" .. name), ":" .. name,
+              "诏书锦囊选项应有正式牌面说明：" .. name)
+          end
+        end
+        return params.choices[1]
+      end
       return original(self, who, params)
     end,
   }, function()
@@ -81,6 +93,8 @@ function Testqiao_em_han001_liuxie:testZhaoshuEntryAndFourSuitConsume()
       Fk.skills[P.CONSUME]:onUse(room, { from = lord, tos = {} })
     end)
   end)
+  lu.assertTrue(consumeAsked, "多张势力锦囊时应询问取哪一张")
+  lu.assertTrue(consumeDetailed, "势力锦囊选项应带详细牌面")
   lu.assertEquals(P.count(lord), 0, "四花色消费应移去诏书所有牌")
   local trickFound = false
   for _, id in ipairs(lord:getCardIds("h")) do

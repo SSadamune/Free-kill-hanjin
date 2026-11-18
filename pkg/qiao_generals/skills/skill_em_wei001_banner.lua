@@ -123,11 +123,13 @@ skill:addEffect(fk.EventPhaseStart, {
     if #choices == 0 then return end
     local chosen = choices[1]
     if #choices > 1 then
+      -- 只有授技选项带 detailed，按技能 ID 显示正式说明；暗置位置选择仍是 m/d。
       chosen = room:askToChoice(target, {
         choices = choices,
         skill_name = skill.name,
         prompt = "#qiao__em_wei001_banner-choice",
         cancelable = false,
+        detailed = true,
       })
     end
     if chosen == nil then return end

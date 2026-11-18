@@ -76,6 +76,8 @@ skill:addEffect(fk.EventPhaseStart, {
       skill_name = skill.name,
       prompt = "#qiao__skill_em_wu001_flag-grant:::" .. count,
       cancelable = true,
+      -- 确认前按技能 ID 显示正式技能说明（':'..id），候选数与多选上限不变。
+      detailed = true,
     })
     if chosen == nil or #chosen == 0 then return false end
     event:setCostData(self, chosen)

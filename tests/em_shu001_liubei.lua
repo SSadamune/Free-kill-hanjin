@@ -93,7 +93,14 @@ function Testqiao_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   end)
   skill_test.withSkillRequests(room, FLAG, {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == FLAG then return "qiao__skill_shu002_1" end
+      if params.skill_name == FLAG then
+        lu.assertTrue(params.detailed, "授技选项应在确认前显示技能说明")
+        for _, skillName in ipairs(params.choices) do
+          lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
+            "授技选项应有正式技能说明：" .. skillName)
+        end
+        return "qiao__skill_shu002_1"
+      end
       return original(self, who, params)
     end,
   }, function()

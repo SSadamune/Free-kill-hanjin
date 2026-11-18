@@ -5,6 +5,7 @@
 -- 定向运行：
 --   python scripts/test.py --file tests/wei_phases.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 local QG = "qiao__skill_wei007_1"
 local LS = "qiao__skill_wei007_2"
@@ -285,6 +286,54 @@ function Testqiao_wei_phases:testShensuDoesNotConsumeAlreadySkippedPhase()
   lu.assertEquals(p1():usedSkillTimes(SS, Player.HistoryGame), 0)
 end
 
+--- 神速首次确认复用对应阶段的提示键，直接写明三种不同代价。
+function Testqiao_wei_phases:testShensuInvokePromptUsesCurrentPhase()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei008")
+  local cases = {
+    { phase = Player.Judge, key = "#qiao__skill_wei008_1-judge",
+      name = "判定阶段", cost = "摸牌阶段" },
+    { phase = Player.Play, key = "#qiao__skill_wei008_1-play",
+      name = "出牌阶段", cost = "装备牌" },
+    { phase = Player.Discard, key = "#qiao__skill_wei008_1-discard",
+      name = "弃牌阶段", cost = "失去1点体力" },
+  }
+  for _, case in ipairs(cases) do
+    setHand(room, p1(), {})
+    setHand(room, p2(), {})
+    if case.phase == Player.Play then
+      addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 5)
+    end
+    local prompt
+    skill_test.withSkillRequests(room, SS, {
+      askToSkillInvoke = function(self, who, params, original)
+        if params.skill_name ~= SS then return original(self, who, params) end
+        prompt = params.prompt
+        return false
+      end,
+    }, function()
+      if case.phase == Player.Judge then
+        inRoom(function()
+          GameEvent.Turn:create(TurnData:new(p1(), "game_rule", {
+            Player.Judge, Player.Draw,
+          })):exec()
+        end)
+      else
+        inRoom(function()
+          local data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+          room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+        end)
+      end
+    end)
+    lu.assertEquals(prompt, case.key, "首次确认应复用对应阶段的提示键")
+    local text = Fk:translate(prompt)
+    lu.assertTrue(text:find(case.name, 1, true) ~= nil,
+      "确认提示应点名阶段：" .. text)
+    lu.assertTrue(text:find(case.cost, 1, true) ~= nil,
+      "确认提示应说明该阶段代价：" .. text)
+  end
+end
+
 -- 设变 ---------------------------------------------------------------------
 
 function Testqiao_wei_phases:testShebianMovesBoardCardAfterHpLoss()
@@ -373,6 +422,55 @@ function Testqiao_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
   lu.assertTrue(data.skipped)
   lu.assertEquals(room:getCardOwner(equip).id, p1().id)
   lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 1)
+end
+
+--- 巧变确认与弃牌提示应点名当前阶段；摸牌/出牌阶段同时说明可选后效。
+function Testqiao_wei_phases:testQiaobianPromptsNamePhaseAndFollowUp()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei009")
+  local cases = {
+    { phase = Player.Judge, name = "判定阶段" },
+    { phase = Player.Draw, name = "摸牌阶段", follow = "各一张手牌", optional = true },
+    { phase = Player.Play, name = "出牌阶段", follow = "移动场上一张牌", optional = true },
+    { phase = Player.Discard, name = "弃牌阶段" },
+  }
+  for _, case in ipairs(cases) do
+    setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
+    local invokePrompt, discardPrompt
+    skill_test.withSkillRequests(room, QB, {
+      askToSkillInvoke = function(self, who, params, original)
+        if params.skill_name ~= QB then return original(self, who, params) end
+        invokePrompt = params.prompt
+        return true
+      end,
+      askToDiscard = function(self, who, params, original)
+        if params.skill_name ~= QB then return original(self, who, params) end
+        discardPrompt = params.prompt
+        return {}
+      end,
+    }, function()
+      inRoom(function()
+        local data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+        room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+      end)
+    end)
+    lu.assertNotNil(invokePrompt, "应有阶段确认提示")
+    lu.assertNotNil(discardPrompt, "应有弃牌提示")
+    local invokeText = Fk:translate(invokePrompt)
+    local discardText = Fk:translate(discardPrompt)
+    lu.assertTrue(invokeText:find(case.name, 1, true) ~= nil,
+      "确认提示应点名当前阶段 " .. case.name .. "：" .. invokeText)
+    lu.assertTrue(discardText:find(case.name, 1, true) ~= nil,
+      "弃牌提示应点名当前阶段 " .. case.name .. "：" .. discardText)
+    if case.follow ~= nil then
+      lu.assertTrue(invokeText:find(case.follow, 1, true) ~= nil,
+        "确认提示应说明可选后效：" .. invokeText)
+    end
+    if case.optional then
+      lu.assertTrue(invokeText:find("然后你可以", 1, true) ~= nil,
+        "后效应明确为可选项：" .. invokeText)
+    end
+  end
 end
 
 -- 断粮 ---------------------------------------------------------------------

@@ -2,6 +2,7 @@
 -- 首次双亮全局记账（无持旗者也记），持旗者在 GeneralRevealed 实际发动；
 -- “赐”按持有者公开表标记保存，客户端可读取自身赐与分支可用性。
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
@@ -136,6 +137,7 @@ local function positionName(player, isDeputy)
 end
 
 --- 只接受实际普通武将牌、同鱼数、非君主、未建安锁定的位置。
+--- 君主牌所在位置不能变更（含暗置牌），普通副将位置仍可选。
 local function matchingPosition(room, player, fish)
   local result = {}
   local okWei, Wei = pcall(require, "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei")
@@ -144,7 +146,8 @@ local function matchingPosition(room, player, fish)
     if type(name) == "string" and name ~= "" and name ~= "anjiang"
       and not Versions.is_lord(name) and not Commander.isSoldier(name) and not Commander.isRetinue(name)
       and Fk.generals[name] ~= nil and positionFish(name) == fish
-      and not (okWei and Wei.isPositionRestricted and Wei.isPositionRestricted(room, player, isDeputy)) then
+      and not (okWei and Wei.isPositionRestricted and Wei.isPositionRestricted(room, player, isDeputy))
+      and not Exchange.isLordPosition(player, isDeputy) then
       result[#result + 1] = isDeputy
     end
   end
@@ -175,14 +178,20 @@ skill:addEffect("active", {
     local fish = positionFish(chosen)
     if fish == nil then return end
     local changePositions = matchingPosition(room, player, fish)
-    local branches = { "resource" }
+    -- “提供资源”按所选赐的牌面单独阴阳鱼数显示实际效果，仍消耗同一枚赐。
+    local resource = fish <= 3
+      and "qiao__jin001_banner-resource-maxcard"
+      or "qiao__jin001_banner-resource-draw"
+    local branches = { resource }
     if #changePositions > 0 and player:getMark(USED_MARK) == 0 then table.insert(branches, "change") end
     table.insert(branches, "Cancel")
     local branch = room:askToChoice(player, {
       choices = branches, skill_name = skill.name,
       prompt = "#qiao__jin001_banner-branch", cancelable = true,
+      detailed = true,
     })
     if branch == "Cancel" then return end
+    if branch ~= "change" and branch ~= resource then return end
     if branch == "change" then
       local isDeputy
       if #changePositions == 1 then
@@ -221,6 +230,10 @@ Fk:loadTranslationTable {
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
   ["#qiao__jin001_banner-ci"] = "诸王敕封册：选择一枚赐",
   ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
+  ["qiao__jin001_banner-resource-maxcard"] = "本回合手牌上限+3",
+  [":qiao__jin001_banner-resource-maxcard"] = "消耗此赐：本回合你的手牌上限+3。",
+  ["qiao__jin001_banner-resource-draw"] = "将手牌摸至四张",
+  [":qiao__jin001_banner-resource-draw"] = "消耗此赐：你将手牌摸至四张。",
   ["#qiao__jin001_banner-position"] = "诸王敕封册：选择变更位置（main 主将 / deputy 副将）",
 }
 

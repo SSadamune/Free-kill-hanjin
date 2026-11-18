@@ -278,6 +278,11 @@ function Testqiao_em_wu001_sunquan:testPrepareGrantsGongxinAtThreeFenghuo()
   lu.assertEquals(asks, 1, "吴势力角色自己的准备阶段应询问一次")
   lu.assertEquals(#asked.choices, 3, "三张烽火时逐档累积为英姿、好施、攻心")
   lu.assertEquals(asked.max_num, 1, "不足五张时只能选一个技能")
+  lu.assertTrue(asked.detailed, "授技多选应在确认前显示技能说明")
+  for _, skillName in ipairs(asked.choices) do
+    lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
+      "授技选项应有正式技能说明：" .. skillName)
+  end
   lu.assertTrue(wu:hasSkill(GONGXIN), "应实际获得攻心")
   lu.assertFalse(lord:hasSkill(GONGXIN), "未选择的其他吴角色不获得")
   lu.assertFalse(target:hasSkill(GONGXIN), "异势力角色不获得")
@@ -369,6 +374,11 @@ function Testqiao_em_wu001_sunquan:testFiveFenghuoTwoSkillsKeepIndependentSource
   end)
   lu.assertEquals(asked.max_num, 2, "达到五张烽火时可多选一个不同技能")
   lu.assertEquals(#asked.choices, 4, "五张烽火时四项技能均可选")
+  lu.assertTrue(asked.detailed, "授技多选应在确认前显示技能说明")
+  for _, skillName in ipairs(asked.choices) do
+    lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
+      "授技选项应有正式技能说明：" .. skillName)
+  end
   lu.assertTrue(wu:hasSkill(P.YINGZI), "应获得英姿")
   lu.assertTrue(wu:hasSkill(GONGXIN), "应同时获得攻心")
 

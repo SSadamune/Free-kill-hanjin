@@ -122,7 +122,15 @@ function Testqiao_em_wei001_caocao:testBannerCostHideSkillAndCardBoundRestrictio
       end,
       askToChoice = function(self, who, params, original)
         if params.skill_name == W.BANNER then
-          if table.contains(params.choices, "m") then return "m" end
+          if table.contains(params.choices, "m") then
+            lu.assertTrue(params.detailed ~= true, "暗置位置选择不应带授技说明")
+            return "m"
+          end
+          lu.assertTrue(params.detailed, "授技选项应在确认前显示技能说明")
+          for _, skillName in ipairs(params.choices) do
+            lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
+              "授技选项应有正式技能说明：" .. skillName)
+          end
           return "qiao__skill_wei004_1"
         end
         return original(self, who, params)
