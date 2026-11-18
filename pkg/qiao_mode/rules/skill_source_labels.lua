@@ -79,6 +79,8 @@ function M.register(retinues)
   M.decorate(Wu.FLAG, LABELS.FLAG)
   M.decorate(Wu.ENTRY, LABELS.FLAG)
   M.decorate(Qun.BANNER_SKILL, LABELS.FLAG)
+  -- 黄巾天兵符的第二段入口由旗授予，不是武将牌技能；按钮名保持精简“天兵”。
+  M.decorate(Qun.ENTRY, LABELS.FLAG)
   -- 六师率义旗、诸王敕封册没有独立 util 常量；保持与技能文件同名。
   M.decorate("qiao__skill_em_shu001_flag", LABELS.FLAG)
   -- 诸王敕封册本体是旗，另管理“赐”的独立消费；太康等武将技不在此标。
