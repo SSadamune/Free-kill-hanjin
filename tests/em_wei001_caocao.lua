@@ -40,6 +40,14 @@ local function inRoom(fn, label)
 end
 local function p(n) return FkTest.room.players[n] end
 
+--- 公开势力未确定，但保留真实武将牌（用于验证不读取暗将牌面势力）。
+local function setUnknown(room, player)
+  player.kingdom = "unknown"
+  room:setPlayerProperty(player, "kingdom", "unknown")
+  room:setPlayerMark(player, "__heg_kingdom", nil)
+  room:setPlayerMark(player, "__heg_wild", 0)
+end
+
 local function ascendLord()
   local room = FkTest.room
   inRoom(function()
@@ -279,6 +287,167 @@ function Testqiao_em_wei001_caocao:testBannerPreservesIndependentRevealAndSkillS
   lu.assertTrue(user:hasSkill("qiao__skill_wei004_1"), "独立同名技能来源不应被到期删除")
 end
 
+-- 真实连续回合：自己的准备阶段发动 → 挟天子额外回合（默认阶段表含准备）再次
+-- 发动 → 下一次自己的回合开始时到期。两次后两张武将牌都已暗置，第三次没有
+-- “可合法暗置的武将牌”，不是整局限次；按常规流程明置后才可再次发动。
+function Testqiao_em_wei001_caocao:testBannerExtraTurnExpiresThenThirdNeedsPublicGeneral()
+  local room, user = FkTest.room, p(2)
+  local THREATEN = "qiao__threaten_emperor_skill"
+  local FIRST = "qiao__skill_wei004_1"
+  local threat, pay, junk1, junk2
+  local discards, secondActivations, thirdAsks, thirdActivations = 0, 0, 0, 0
+
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    threat = room:printCard("qiao__threaten_emperor", Card.Spade, 1)
+    pay = room:printCard("qiao__jink", Card.Heart, 2)
+    junk1 = room:printCard("qiao__jink", Card.Club, 3)
+    junk2 = room:printCard("qiao__jink", Card.Diamond, 4)
+    for _, card in ipairs({ threat, pay, junk1, junk2 }) do
+      room:obtainCard(user, card, false, fk.ReasonJustMove)
+    end
+    user.phase = Player.Start
+  end)
+
+  -- 挟天子的 gainAnExtraTurn 未传 phases；TurnData 默认阶段表包含准备阶段。
+  -- 不能按“仅出牌阶段的额外回合”假设，否则会误判第二次发动的时机。
+  local realExtra = TurnData:new(user, THREATEN)
+  lu.assertNotNil(table.find(realExtra.phase_table, function(phase)
+    return phase.phase == Player.Start
+  end), "挟天子的真实额外回合应包含准备阶段")
+
+  local function bannerHandlers(onDiscard, onChoice)
+    return {
+      askToDiscard = function(self, who, params, original)
+        if onDiscard ~= nil then onDiscard() end
+        local id = table.find(who:getCardIds("he"), function(cardId)
+          return cardId ~= threat.id and cardId ~= pay.id
+        end)
+        lu.assertNotNil(id, "霸者求贤状应有可弃置的牌")
+        self:throwCard({ id }, W.BANNER, who, who)
+        discards = discards + 1
+        return { id }
+      end,
+      askToChoice = function(self, who, params, original)
+        if onChoice ~= nil then onChoice(params) end
+        if table.contains(params.choices, "m") then return "m" end
+        lu.assertTrue(table.contains(params.choices, FIRST),
+          "授技候选应包含突袭：" .. table.concat(params.choices, ","))
+        return FIRST
+      end,
+    }
+  end
+
+  skill_test.withSkillRequests(room, W.BANNER, bannerHandlers(), function()
+    inRoom(function()
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+  end)
+  lu.assertEquals(discards, 1, "第一次应支付一张牌")
+  lu.assertEquals(user.general, "anjiang", "第一次应暗置主将")
+  lu.assertEquals(user.deputyGeneral, "qiao_test__wei_2")
+  lu.assertTrue(user:hasSkill(FIRST), "第一次应取得突袭")
+  lu.assertTrue(user:prohibitReveal(false), "被暗置的主将不能明置")
+  lu.assertFalse(user:prohibitReveal(true), "未被暗置的副将不受本次限制")
+  local firstRec = W.record(room, user)
+  lu.assertNotNil(firstRec, "第一次暗置应建立限制记录")
+  lu.assertFalse(firstRec.isDeputy)
+  lu.assertTrue(W.isPositionRestricted(room, user, false), "主将的移除/交换/变更应受限")
+  lu.assertFalse(W.isPositionRestricted(room, user, true), "副将不受本次限制")
+
+  -- 用真实挟天子结束本次出牌阶段，并在回合结束时支付、排队额外回合。
+  inRoom(function()
+    room:setCurrent(user)
+    user.phase = Player.Play
+  end)
+  FkTest.setNextReplies(user, { FkTest.ReplyCard(threat, { user }) })
+  inRoom(function()
+    GameEvent.Phase:create(PhaseData:new { who = user, phase = Player.Play }):exec()
+  end)
+  lu.assertEquals(user:getMark("qiao__threaten_emperor-turn"), 1,
+    "挟天子应实际结束本次出牌阶段")
+  skill_test.withSkillRequests(room, THREATEN, {
+    askToDiscard = function(self, who, params, original)
+      self:throwCard({ pay.id }, THREATEN, who, who)
+      return { pay.id }
+    end,
+  }, function()
+    inRoom(function()
+      room.logic:trigger(fk.TurnEnd, user, TurnData:new(user, "game_rule", { Player.Start }))
+    end)
+  end)
+  lu.assertEquals(#room.extra_turn_list, 1, "支付后应排队获得额外回合")
+  lu.assertIs(room.extra_turn_list[1].who, user)
+
+  -- 额外回合的回合开始明置询问确定取消：保持主将暗置，使第二次发动暗置副将。
+  FkTest.setNextReplies(user, { { "Cancel" } })
+  skill_test.withSkillRequests(room, W.BANNER, bannerHandlers(function()
+    secondActivations = secondActivations + 1
+    lu.assertFalse(user:hasSkill(FIRST), "额外回合开始时上一次授技应先到期")
+    lu.assertFalse(user:prohibitReveal(false), "额外回合开始时上一次禁明置应先到期")
+    lu.assertFalse(W.isPositionRestricted(room, user, false), "额外回合开始时上一次记录应先解除")
+    lu.assertTrue(user:insideExtraTurn(), "第二次发动应发生在真实额外回合")
+  end), function()
+    inRoom(function() room:actExtraTurn() end)
+  end)
+  lu.assertEquals(secondActivations, 1, "额外回合的准备阶段应能第二次发动")
+  lu.assertEquals(discards, 2, "两次发动各支付一张牌")
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user.deputyGeneral, "anjiang", "第二次应暗置副将")
+  lu.assertTrue(user:hasSkill(FIRST))
+  lu.assertFalse(user:prohibitReveal(false), "第一次的限制已到期")
+  lu.assertTrue(user:prohibitReveal(true), "第二次的限制绑定副将")
+  local secondRec = W.record(room, user)
+  lu.assertNotNil(secondRec)
+  lu.assertTrue(secondRec.isDeputy)
+  lu.assertTrue(W.isPositionRestricted(room, user, true), "副将的移除/交换/变更应受限")
+  lu.assertFalse(W.isPositionRestricted(room, user, false), "主将的限制已解除")
+
+  -- 下一次自己的回合：两张武将牌都已暗置，没有可合法暗置的武将牌。
+  -- 真实回合开始的明置询问确定取消，保证准备阶段两个公开将名仍为 anjiang。
+  FkTest.setNextReplies(user, { { "Cancel" } })
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToDiscard = function(self, who, params, original)
+      thirdAsks = thirdAsks + 1
+      error("两个位置均已暗置时不应第三次发动霸者求贤状")
+    end,
+    askToChoice = function(self, who, params, original)
+      thirdAsks = thirdAsks + 1
+      error("两个位置均已暗置时不应第三次发动霸者求贤状")
+    end,
+  }, function()
+    inRoom(function()
+      GameEvent.Turn:create(TurnData:new(user, "game_rule", { Player.Start })):exec()
+    end)
+  end)
+  lu.assertEquals(thirdAsks, 0, "没有可合法暗置的武将牌时不得发动")
+  lu.assertEquals(user.general, "anjiang", "第三个真实回合开始时主将应保持暗置")
+  lu.assertEquals(user.deputyGeneral, "anjiang", "第三个真实回合开始时副将应保持暗置")
+  lu.assertFalse(user:hasSkill(FIRST), "自己下回合开始应撤销第二次授技")
+  lu.assertFalse(user:prohibitReveal(true), "自己下回合开始应解除第二次限制")
+  lu.assertFalse(W.isPositionRestricted(room, user, true), "移除/交换/变更限制应同时解除")
+  lu.assertFalse(W.isPositionRestricted(room, user, false), "两个位置的限制都应解除")
+  lu.assertNil(W.record(room, user), "到期记录应清空")
+
+  -- 到期后按常规流程明置主将（不强制、不自动），下一回合才有第三个候选。
+  inRoom(function() user:revealGeneral(false) end)
+  lu.assertEquals(user.general, "qiao_heg__wei005", "期限届满后可按常规流程明置")
+  -- 主动明置主将后，回合开始的明置询问仍确定取消，保留副将暗置。
+  FkTest.setNextReplies(user, { { "Cancel" } })
+  skill_test.withSkillRequests(room, W.BANNER, bannerHandlers(function()
+    thirdActivations = thirdActivations + 1
+  end), function()
+    inRoom(function()
+      GameEvent.Turn:create(TurnData:new(user, "game_rule", { Player.Start })):exec()
+    end)
+  end)
+  lu.assertEquals(thirdActivations, 1, "无整局限次：常规明置后可第三次发动")
+  lu.assertEquals(user.general, "anjiang", "第三次应再次暗置主将")
+  lu.assertTrue(user:hasSkill(FIRST))
+end
+
 function Testqiao_em_wei001_caocao:testChangelingCommandBothBranches()
   local room, user, target = FkTest.room, p(2), p(4)
   local card
@@ -447,6 +616,234 @@ function Testqiao_em_wei001_caocao:testChangelingNotExecutedAddsDrawPhaseCards()
   local data = { n = 2 }
   inRoom(function() room.logic:trigger(fk.DrawNCards, user, data) end)
   lu.assertEquals(data.n, 5, "未执行军令时本回合摸牌阶段多摸三张")
+end
+
+-- 常令：真实准备阶段入口下，非持有者不进入选人/选牌/军令；持有者请求同时
+-- 包含公开势力未确定者并排除已公开魏者。注册沿用 handleAddLoseSkills。
+function Testqiao_em_wei001_caocao:testChangelingNonHolderAndTargetFilter()
+  local room, holder, nonholder, unknown = FkTest.room, p(2), p(4), p(5)
+  local card, targetCalls, cardCalls, commandCalls = nil, 0, 0, 0
+  local queriedTargets
+  inRoom(function()
+    skill_test.installDualGenerals(room, holder, {
+      main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    room:handleAddLoseSkills(holder, "qiao__skill_wei024_1", nil, false, true)
+    card = room:printCard("qiao__jink", Card.Heart, 5)
+    room:obtainCard(holder, card, false, fk.ReasonJustMove)
+    nonholder.phase = Player.Start
+  end)
+
+  local originalCommand = H.askToCommand
+  H.askToCommand = function(_, params)
+    commandCalls = commandCalls + 1
+    lu.assertEquals(params.skill_name, "qiao__skill_wei024_1")
+    return true, {}
+  end
+
+  local ok, err = pcall(function()
+    -- 负例：真实准备阶段事件，但当前角色不是常令持有者。
+    skill_test.withSkillRequests(room, "trigger", {
+      askToChoice = function(self, who, params, original)
+        local changling = table.find(params.choices, function(choice)
+          return tostring(choice):find("qiao__skill_wei024_1", 1, true) ~= nil
+        end)
+        lu.assertNil(changling, "非持有者准备阶段不应出现常令触发候选")
+        return original(self, who, params)
+      end,
+    }, function()
+      skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
+        askToChoosePlayers = function() targetCalls = targetCalls + 1; return {} end,
+        askToCards = function() cardCalls = cardCalls + 1; return {} end,
+      }, function()
+        inRoom(function()
+          room.logic:trigger(fk.EventPhaseStart, nonholder,
+            PhaseData:new { who = nonholder, phase = Player.Start })
+        end)
+      end)
+    end)
+    lu.assertEquals(targetCalls, 0, "非持有者不应进入常令选人")
+    lu.assertEquals(cardCalls, 0, "非持有者不应进入常令选牌")
+    lu.assertEquals(commandCalls, 0, "非持有者不应发起军令")
+    lu.assertFalse(table.contains(nonholder:getCardIds("h"), card.id),
+      "非持有者不应取得常令的牌")
+
+    -- 目标牌面为魏、公开势力未确定，仍应进入候选。先移除旗来源，隔离同一
+    -- 准备阶段的授技，避免旗的选人/选牌请求混入本用例。
+    inRoom(function()
+      room:handleAddLoseSkills(p(1), "-" .. W.BANNER, W.JIANAN, false, true)
+      skill_test.installDualGenerals(room, unknown, {
+        main = "qiao_test__wei_1", deputy = "qiao_test__wei_2", kingdom = "wei",
+      })
+      setUnknown(room, unknown)
+      holder.phase = Player.Start
+    end)
+    skill_test.withSkillRequests(room, "trigger", {
+      askToChoice = function(self, who, params, original)
+        local changling = table.find(params.choices, function(choice)
+          return tostring(choice):find("qiao__skill_wei024_1", 1, true) ~= nil
+        end)
+        if changling ~= nil then return changling end
+        return original(self, who, params)
+      end,
+    }, function()
+      skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
+        askToChoosePlayers = function(self, who, params, original)
+          if params.skill_name ~= "qiao__skill_wei024_1" then
+            return original(self, who, params)
+          end
+          queriedTargets = table.simpleClone(params.targets)
+          return { unknown }
+        end,
+        askToCards = function(self, who, params, original)
+          if params.skill_name ~= "qiao__skill_wei024_1" then
+            return original(self, who, params)
+          end
+          return { card.id }
+        end,
+      }, function()
+        inRoom(function()
+          room.logic:trigger(fk.EventPhaseStart, holder,
+            PhaseData:new { who = holder, phase = Player.Start })
+        end)
+      end)
+    end)
+  end)
+  H.askToCommand = originalCommand
+  if not ok then error(err, 0) end
+
+  lu.assertNotNil(queriedTargets, "持有者应进入常令选人")
+  local function has(player) return table.contains(queriedTargets, player) end
+  lu.assertTrue(has(unknown), "公开势力未确定者应进入候选")
+  lu.assertTrue(has(nonholder), "其他非魏势力应进入候选")
+  lu.assertFalse(has(p(1)), "已公开魏的君主应排除")
+  lu.assertFalse(has(p(3)), "其他已公开魏者应排除")
+  lu.assertFalse(has(holder), "自己不能通过交给取得自己的牌")
+  lu.assertEquals(commandCalls, 1, "持有者发动常令后应发起一次军令")
+  lu.assertTrue(table.contains(unknown:getCardIds("h"), card.id),
+    "常令应实际交给未确定势力目标")
+  lu.assertFalse(table.contains(holder:getCardIds("h"), card.id))
+end
+
+-- 常令：霸者求贤状在同一准备阶段事件内授予后即可发动；到期时授予技能与
+-- 旗限制同步解除，到期后的真实准备阶段不再发起常令询问。
+function Testqiao_em_wei001_caocao:testChangelingBannerSameEventThenExpiry()
+  local room, lord, user, target = FkTest.room, p(1), p(2), p(4)
+  local discardCard, giveCard
+  local commandCalls = 0
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    discardCard = room:printCard("qiao__jink", Card.Heart, 5)
+    giveCard = room:printCard("qiao__jink", Card.Club, 6)
+    room:obtainCard(user, discardCard, false, fk.ReasonJustMove)
+    room:obtainCard(user, giveCard, false, fk.ReasonJustMove)
+    user.phase = Player.Start
+  end)
+
+  local originalCommand = H.askToCommand
+  H.askToCommand = function(_, params)
+    commandCalls = commandCalls + 1
+    lu.assertEquals(params.skill_name, "qiao__skill_wei024_1")
+    return true, {}
+  end
+
+  local ok, err = pcall(function()
+    skill_test.withSkillRequests(room, "trigger", {
+      askToChoice = function(self, who, params, original)
+        local changling = table.find(params.choices, function(choice)
+          return tostring(choice):find("qiao__skill_wei024_1", 1, true) ~= nil
+        end)
+        if changling ~= nil then return changling end
+        local banner = table.find(params.choices, function(choice)
+          return tostring(choice):find("qiao__skill_em_wei001_banner", 1, true) ~= nil
+        end)
+        if banner ~= nil then return banner end
+        return original(self, who, params)
+      end,
+    }, function()
+      skill_test.withSkillRequests(room, W.BANNER, {
+        askToDiscard = function(self, who, params, original)
+          if params.skill_name ~= W.BANNER then
+            return original(self, who, params)
+          end
+          self:throwCard({ discardCard.id }, W.BANNER, who, who)
+          return { discardCard.id }
+        end,
+        askToChoice = function(self, who, params, original)
+          if params.skill_name ~= W.BANNER then
+            return original(self, who, params)
+          end
+          if table.contains(params.choices, "m") then return "m" end
+          lu.assertTrue(table.contains(params.choices, "qiao__skill_wei024_1"),
+            "授技候选应包含常令")
+          return "qiao__skill_wei024_1"
+        end,
+      }, function()
+        skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
+          askToChoosePlayers = function(self, who, params, original)
+            if params.skill_name ~= "qiao__skill_wei024_1" then
+              return original(self, who, params)
+            end
+            return { target }
+          end,
+          askToCards = function(self, who, params, original)
+            if params.skill_name ~= "qiao__skill_wei024_1" then
+              return original(self, who, params)
+            end
+            return { giveCard.id }
+          end,
+        }, function()
+          inRoom(function()
+            room.logic:trigger(fk.EventPhaseStart, user,
+              PhaseData:new { who = user, phase = Player.Start })
+          end)
+        end)
+      end)
+    end)
+    lu.assertTrue(user:hasSkill("qiao__skill_wei024_1"),
+      "旗在同一准备阶段事件内授予后应持有常令")
+    lu.assertEquals(commandCalls, 1, "旗同事件授予后常令应能实际发起军令")
+    lu.assertTrue(table.contains(target:getCardIds("h"), giveCard.id),
+      "旗同事件授予后常令应实际交牌")
+
+    -- 自己下回合开始：授予技能与旗限制同时到期。
+    inRoom(function() room.logic:trigger(fk.TurnStart, user, {}) end)
+    lu.assertFalse(user:hasSkill("qiao__skill_wei024_1"),
+      "自己下回合开始应撤销旗授予的常令")
+    lu.assertNil(W.record(room, user), "常令到期应与旗限制记录同步解除")
+    lu.assertFalse(user:prohibitReveal(false), "常令到期后不应残留明置限制")
+
+    -- 移除旗来源，避免到期负例再次通过同一准备阶段授予常令。
+    inRoom(function()
+      room:handleAddLoseSkills(lord, "-" .. W.BANNER, W.JIANAN, false, true)
+      user.phase = Player.Start
+    end)
+    local afterExpiryCommands = commandCalls
+    skill_test.withSkillRequests(room, "trigger", {
+      askToChoice = function(self, who, params, original)
+        local changling = table.find(params.choices, function(choice)
+          return tostring(choice):find("qiao__skill_wei024_1", 1, true) ~= nil
+        end)
+        lu.assertNil(changling, "到期后触发选择不应出现常令")
+        return original(self, who, params)
+      end,
+    }, function()
+      skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
+        askToChoosePlayers = function() error("到期后的常令不应再选人") end,
+        askToCards = function() error("到期后的常令不应再选牌") end,
+      }, function()
+        inRoom(function()
+          room.logic:trigger(fk.EventPhaseStart, user,
+            PhaseData:new { who = user, phase = Player.Start })
+        end)
+      end)
+    end)
+    lu.assertEquals(commandCalls, afterExpiryCommands, "到期后的常令不应再发起军令")
+  end)
+  H.askToCommand = originalCommand
+  if not ok then error(err, 0) end
 end
 
 function Testqiao_em_wei001_caocao:testQiceTargetLimitAndFormalPool()
