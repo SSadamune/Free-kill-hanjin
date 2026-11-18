@@ -5,6 +5,7 @@ local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
+local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -63,10 +64,35 @@ function QiaoPlayCard:feasible()
   return ReqPlayCard.feasible(self)
 end
 
+function QiaoPlayCard:canConsumeEdict(holderId)
+  return RemovedTargets.inMode(self.room) and self.player.id == holderId
+    and self.skill_name == nil and self.selected_card == nil
+    and self.player:hasSkill(Han.CONSUME) and self:skillButtonValidity(Han.CONSUME)
+end
+
+function QiaoPlayCard:update(elemType, id, action, data)
+  if elemType ~= "QiaoEdict" then
+    return ReqPlayCard.update(self, elemType, id, action, data)
+  end
+  if action ~= "click" or not self:canConsumeEdict(id) then return false end
+  self:selectSkill(Han.CONSUME, { selected = true })
+  if not self:feasible() then
+    self:doCancelButton()
+    return false
+  end
+  return ReqPlayCard.update(self, "Button", "OK", action, data)
+end
+
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
+end
+
+function QiaoClient:canConsumeEdict(holderId)
+  local request = self.current_request_handler
+  return not self.observing and not self.replaying and request ~= nil
+    and request:isInstanceOf(QiaoPlayCard) and request:canConsumeEdict(holderId)
 end
 
 -- ClientBase.serialize assumes the concrete class is a direct Client subclass and

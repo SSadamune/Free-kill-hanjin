@@ -31,7 +31,7 @@ local PUBLIC_PROMPTS = {
 }
 
 local PUBLIC_PILES = {
-  "qiao_em_han001_zhaoshu",
+  (require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han").PILE,
   "qiao_em_wu001_fenghuo",
   "qiao_em_qun010_tianbing",
 }

@@ -248,12 +248,54 @@ function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
     lord.phase = Player.Play
     P.syncTricks(room)
   end)
+  local reply
   withClientRoom(room, function(clients)
     local me = clients[1]
     lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
     lu.assertTrue(Fk.skills[P.BANNER]:canUse(me), "客户端诏书入口应可用")
     lu.assertTrue(Fk.skills[P.CONSUME]:canUse(me), "客户端四花色消费应可用")
+    lu.assertFalse(Fk.skills[P.CONSUME].visible, "取锦囊不应出现在技能按钮栏")
+
+    local mark = assert(Fk.qml_marks[P.PILE_MARK])
+    lu.assertEquals(mark.how_to_show(P.PILE, me:getPile(P.PILE), me), "4")
+    local popup = mark.qml(P.PILE, me:getPile(P.PILE), me)
+    lu.assertEquals(popup.url, "packages/qiao/pkg/qiao_mode/qml/EdictPile.qml")
+    lu.assertEquals(popup.prop.holderId, me.id)
+
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local client = board.client_klass:new(ClientInstance.client)
+    local play = client.request_handlers.PlayCard:new(me)
+    client.current_request_handler = play
+    lu.assertFalse(client:canConsumeEdict(clients[2].id), "他人的诏书不可操作")
+    me.phase = Player.Finish
+    lu.assertFalse(client:canConsumeEdict(me.id), "出牌阶段外不可操作")
+    me.phase = Player.Play
+    lu.assertTrue(client:canConsumeEdict(me.id))
+
+    local originalNotify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(self, cmd, data)
+      if cmd == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function()
+      play:update("QiaoEdict", me.id, "click", {})
+    end)
+    ClientInstance.notifyUI = originalNotify
+    if not ok then error(err, 0) end
+    lu.assertNotNil(reply, "点击弹窗按钮应直接产生标准技能回包")
+    lu.assertEquals(reply.card.skill, P.CONSUME)
+    lu.assertEquals(reply.card.subcards, {})
+    lu.assertEquals(reply.targets, {})
+    lu.assertFalse(client:canConsumeEdict(me.id), "请求提交后不可重复点击")
+    play:_finish()
   end)
+
+  skill_test.withSkillRequests(room, P.CONSUME, {
+    askToChoice = function(_, _, params) return params.choices[1] end,
+  }, function()
+    inRoom(function() room:handleUseCardReply(lord, reply) end)
+  end)
+  lu.assertEquals(P.count(lord), 0, "标准回包应支付诏书上的所有牌")
+  lu.assertEquals(lord:usedSkillTimes(P.CONSUME, Player.HistoryPhase), 1)
 end
 
 

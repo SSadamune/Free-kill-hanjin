@@ -48,9 +48,28 @@ skill:addEffect("active", {
   end,
 })
 
+-- GetQmlMark reads the actual pile by name, including during reconnect.
+Fk:addQmlMark {
+  name = P.PILE_MARK,
+  how_to_show = function(_, cards)
+    return type(cards) == "table" and tostring(#cards) or ""
+  end,
+  qml = function(_, cards, holder)
+    if type(cards) ~= "table" or holder == nil then return nil end
+    return {
+      url = "packages/qiao/pkg/qiao_mode/qml/EdictPile.qml",
+      prop = {
+        ids = table.filter(cards, function(id) return Self:cardVisible(id) end),
+        holderId = holder.id,
+      },
+    }
+  end,
+}
+
 Fk:loadTranslationTable {
   [P.BANNER] = "诏书",
   [P.PILE] = "诏书",
+  ["qiao_em_han001_zhaoshu"] = "诏书", -- 旧录像的默认牌堆查看器
   [":" .. P.BANNER] = "与你势力相同的角色出牌阶段限一次，其可以将一张（若为小势力则改为至多两张）手牌置于此牌上。",
   ["#qiao__han001_zhaoshu-entry"] = "诏书：将手牌置于诏书上",
 }
