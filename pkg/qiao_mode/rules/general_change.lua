@@ -6,6 +6,7 @@ local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local CardState = require "packages.qiao.pkg.qiao_mode.rules.general_card_state"
 local CardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
 local function kingdomOf(player)
   local kingdom = player:getMark("__heg_kingdom")
@@ -32,6 +33,8 @@ end
 --- 合法候选：本局将池内同（牌面/客将）势力普通武将，排除当前主副将、君主版、
 --- 天然野心家、禁用牌及重复。
 function M.candidates(room, player, isDeputy)
+  -- 君主武将牌不能被选择或实际变更，包括暗置的牌；该位置没有变更候选。
+  if Exchange.isLordPosition(player, isDeputy) then return {} end
   local kingdom = kingdomOf(player)
   local currentMain = positionName(player, false)
   local currentDeputy = positionName(player, true)
@@ -53,6 +56,8 @@ end
 function M.change(room, player, isDeputy, options)
   options = options or {}
   if player == nil or player.dead or player:isRemoved() then return false end
+  -- 先于候选、选将询问及任何离牌状态清理拒绝；君主牌所在位置不可变更。
+  if Exchange.isLordPosition(player, isDeputy == true) then return false, "restricted_lord" end
   local okWei, Wei = pcall(require, "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei")
   if okWei and Wei.isPositionRestricted and Wei.isPositionRestricted(room, player, isDeputy == true) then
     return false, "restricted"

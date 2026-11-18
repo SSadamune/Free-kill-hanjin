@@ -10,6 +10,8 @@
 -- Public surface:
 --   Exchange.validate(room, first, second, options) -> true | false, reason
 --   Exchange.exchange(room, first, second, options) -> context | false, reason
+--   Exchange.isLordPosition(player, isDeputy)       -- actual lord-card identity
+--   Exchange.installLordProtection()                -- upstream entry guard
 --   Exchange.addCompletionListener(fn)              -- commander integration
 --   Exchange.recordSkillEffect(player, data)        -- called by the mode recorder
 --   Exchange.clearLedgerScope(room, scope)          -- called by the mode recorder
@@ -190,6 +192,17 @@ function M.isLordGeneral(name)
   return false
 end
 
+--- The position currently holds a lord general card.  Uses the actual card
+-- identity, so a hidden (anjiang) position is protected too.  Server-only:
+-- `actualGeneral` reads the private `__heg_*` card record.
+---@param player ServerPlayer
+---@param isDeputy boolean
+---@return boolean
+function M.isLordPosition(player, isDeputy)
+  if player == nil then return false end
+  return M.isLordGeneral(M.actualGeneral(player, isDeputy))
+end
+
 ---@param name string
 ---@return boolean
 function M.isWildGeneral(name)
@@ -325,7 +338,6 @@ end
 ---@class QiaoExchangeOptions
 ---@field cross_kingdom? boolean Explicit future permission for different kingdom players.
 ---@field kingdom_allowed? fun(from: ServerPlayer, to: ServerPlayer): boolean
----@field allow_lord? boolean Explicit permission for lord generals.
 ---@field allow_wild? boolean Explicit permission for wild-exclusive generals.
 ---@field allowed_generals? table<string, boolean> Per-card explicit permissions.
 
@@ -369,16 +381,19 @@ function M.validate(room, first, second, options)
     end
   end
 
+  -- 君主武将牌不能被选择或实际交换，包括暗置的牌。此限制没有例外选项，
+  -- 只检查所选位置实际持有的牌；另一位置仍按其自身条件判断。
+  for _, side in ipairs({ a, b }) do
+    if M.isLordPosition(side.player, side.isDeputy) then
+      return false, "restricted_lord"
+    end
+  end
+
   local allowedGenerals = options.allowed_generals or {}
   for _, side in ipairs({ a, b }) do
     local name = M.publicGeneral(side.player, side.isDeputy)
-    if not allowedGenerals[name] then
-      if M.isWildGeneral(name) and not options.allow_wild then
-        return false, "restricted_wild"
-      end
-      if M.isLordGeneral(name) and not options.allow_lord then
-        return false, "restricted_lord"
-      end
+    if not allowedGenerals[name] and M.isWildGeneral(name) and not options.allow_wild then
+      return false, "restricted_wild"
     end
   end
 
@@ -963,9 +978,9 @@ end
 --- Exchange two revealed general positions in one atomic rule resolution.
 ---
 -- Both selected cards must be publicly revealed.  The default policy only
--- allows players of the same current national-war kingdom and rejects lord and
--- wild-exclusive cards; `options` is the explicit place for a future special
--- rule to relax those restrictions.
+-- allows players of the same current national-war kingdom.  Lord cards can
+-- never be exchanged; wild-exclusive cards are rejected unless `options`
+-- explicitly relaxes them (the explicit options only cover the wild rule).
 ---
 ---@param room Room
 ---@param first table
@@ -1085,6 +1100,81 @@ function M.exchange(room, first, second, options)
   notifyCompletion(room, context)
   return context
 end
+
+----------------------------------------------------------------------------
+-- Lord-card protection at upstream mutation entries
+----------------------------------------------------------------------------
+
+local function isQiaoRoom(room)
+  return room ~= nil and type(room.getSettings) == "function"
+    and room:getSettings("gameMode") == "qiao_heg_mode"
+end
+
+local protection_installed = false
+
+--- Reject upstream general mutations that would take a lord card away from its
+-- position.  The upstream remove/transform events reveal a hidden card, lose
+-- skills, clear state and return the old card to the general pile before the
+-- engine's `changeHero` could be checked, so the guard is installed on the
+-- entry wrappers instead: no event is created and no upstream side effect runs.
+-- Ascension (a lord card arriving at a normal position) and the death-time flip
+-- (the same actual card) are not blocked; reveal/hide never use these entries.
+-- The wrappers are scoped to the HanJin mode and leave ordinary modes alone.
+function M.installLordProtection()
+  if protection_installed then return end
+  protection_installed = true
+
+  local util = heg()
+  pcall(require, "packages.hegemony.utilevent.core.remove_general")
+  pcall(require, "packages.hegemony.utilevent.core.transform_general")
+
+  local originalRemove = util.removeGeneral
+  if type(originalRemove) == "function" then
+    util.removeGeneral = function(player, isDeputy)
+      local room = player and player.room
+      if isQiaoRoom(room) and M.isLordPosition(player, isDeputy == true) then
+        return false
+      end
+      return originalRemove(player, isDeputy)
+    end
+  end
+
+  local originalTransform = util.transformGeneral
+  if type(originalTransform) == "function" then
+    util.transformGeneral = function(room, player, isMain, ...)
+      if isQiaoRoom(room) and M.isLordPosition(player, not isMain) then
+        return false
+      end
+      return originalTransform(room, player, isMain, ...)
+    end
+  end
+
+  local function serverRoom()
+    local ok, Room = pcall(require, "ltk.server.room")
+    if ok and Room ~= nil then return Room end
+    return rawget(_G, "Room")
+  end
+
+  local function installChangeHero()
+    local Room = serverRoom()
+    local originalChange = Room and Room.changeHero
+    if type(originalChange) ~= "function" then return false end
+    Room.changeHero = function(self, player, newGeneral, full, isDeputy, ...)
+      local deputy = isDeputy == true
+      if isQiaoRoom(self) and M.isLordPosition(player, deputy)
+        and newGeneral ~= M.actualGeneral(player, deputy) then
+        return false
+      end
+      return originalChange(self, player, newGeneral, full, isDeputy, ...)
+    end
+    return true
+  end
+  if not installChangeHero() then
+    Fk:addPostLoadFunc(installChangeHero)
+  end
+end
+
+M.installLordProtection()
 
 Fk:loadTranslationTable {
   ["#QiaoGeneralExchange"] = "%from 与 %to 交换了武将 %arg 与 %arg2",

@@ -77,6 +77,33 @@ function Testqiao_qun024_zhangren:testChuanxinSoldierMustUseOtherwise()
  lu.assertEquals(victim.deputyGeneral,"qiao_heg__retinue_xiyuanjun")
  lu.assertEquals(R.count(me),1)
 end
+function Testqiao_qun024_zhangren:testChuanxinLordDeputyUsesOtherwise()
+ local room=FkTest.room
+ local me,victim=p(1),p(2)
+ local LORD="qiao_heg__em_shu001"
+ inRoom(function()
+  room:handleAddLoseSkills(me,"qiao__skill_qun024_1",nil,false,true)
+  room:changeHero(victim,LORD,false,true,false,false,false)
+  room:setPlayerMark(victim,"__heg_deputy",LORD)
+  victim:hideGeneral(true)
+ end)
+ local Transform=require "packages.qiao.pkg.qiao_generals.util.zhen_shi_chuanxin"
+ inRoom(function()
+  lu.assertFalse(Transform.replaceDeputy(room,victim,"qiao_heg__retinue_xiyuanjun","test"))
+  lu.assertEquals(victim.deputyGeneral,"anjiang")
+  lu.assertEquals(victim:getMark("__heg_deputy"),LORD)
+ end)
+ skill_test.withSkillRequests(room,"qiao__skill_qun024_1",{
+  askToSkillInvoke=function() return true end,
+  askToChoice=function(self,who,params) return params.choices[1] end,
+ },function()
+  inRoom(function() room:damage{from=me,to=victim,damage=1,card=Fk:cloneCard("qiao__slash")} end)
+ end)
+ lu.assertEquals(victim.hp,victim.maxHp-2)
+ lu.assertEquals(victim.deputyGeneral,"anjiang")
+ lu.assertEquals(victim:getMark("__heg_deputy"),LORD)
+ lu.assertEquals(R.count(me),1)
+end
 function Testqiao_qun024_zhangren:testHiddenDeputyChangesWithoutReveal()
  local room=FkTest.room
  local victim=p(2)

@@ -1,6 +1,8 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/general_exchange_content.lua")
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
+local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local H = require "packages.hegemony.util"
 
 local G = content.generals
@@ -249,21 +251,12 @@ function Testgeneral_exchange:testUnselectedHiddenPositionDoesNotBlock()
   end)
 end
 
-function Testgeneral_exchange:testLordWildAndCrossKingdomNeedExplicitExceptions()
+function Testgeneral_exchange:testLordCardsCannotBeExchangedWhileWildAndCrossKingdomNeedExceptions()
   local room, a, b = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   FkTest.runInRoom(function()
-    content.setup(room, a, G.lord.name, G.plain.name, "wei")
-    content.setup(room, b, G.plain2.name, G.plain.name, "wei")
-    local ok, reason = Exchange.exchange(room, main(a), main(b))
-    lu.assertFalse(ok)
-    lu.assertEquals(reason, "restricted_lord")
-    lu.assertNotNil(Exchange.exchange(room, main(a), main(b), { allow_lord = true }))
-    lu.assertEquals(a.general, G.plain2.name)
-    lu.assertEquals(b.general, G.lord.name)
-
     content.setup(room, a, G.wild.name, G.plain.name, "wei")
     content.setup(room, b, G.plain2.name, G.plain.name, "wei")
-    ok, reason = Exchange.exchange(room, main(a), main(b))
+    local ok, reason = Exchange.exchange(room, main(a), main(b))
     lu.assertFalse(ok)
     lu.assertEquals(reason, "restricted_wild")
     lu.assertNotNil(Exchange.exchange(room, main(a), main(b), { allow_wild = true }))
@@ -277,6 +270,24 @@ function Testgeneral_exchange:testLordWildAndCrossKingdomNeedExplicitExceptions(
     lu.assertNotNil(Exchange.exchange(room, main(a), main(b), { cross_kingdom = true }))
     lu.assertEquals(a.general, G.shu.name)
     lu.assertEquals(b.general, G.plain.name)
+
+    -- A lord card is protected by its actual identity.  No option may relax it,
+    -- and the other position is still judged by its own card.
+    content.setup(room, a, G.lord.name, G.plain.name, "wei")
+    content.setup(room, b, G.plain2.name, G.plain.name, "wei")
+    ok, reason = Exchange.exchange(room, main(a), main(b))
+    lu.assertFalse(ok)
+    lu.assertEquals(reason, "restricted_lord")
+    ok, reason = Exchange.exchange(room, main(a), main(b), { allow_lord = true })
+    lu.assertFalse(ok)
+    lu.assertEquals(reason, "restricted_lord")
+    ok, reason = Exchange.exchange(room, main(a), main(b),
+      { allowed_generals = { [G.lord.name] = true } })
+    lu.assertFalse(ok)
+    lu.assertEquals(reason, "restricted_lord")
+    lu.assertEquals(a.general, G.lord.name)
+    lu.assertEquals(b.general, G.plain2.name)
+    lu.assertFalse(Exchange.exchange(room, main(a), deputy(a)))
   end)
 end
 
@@ -293,20 +304,20 @@ function Testgeneral_exchange:testWildExclusiveCannotMoveToDeputyPosition()
   end)
 end
 
-function Testgeneral_exchange:testPerCardExceptionAndStaleSelection()
+function Testgeneral_exchange:testLordPerCardExceptionIsIgnoredAndStaleSelection()
   local room, a, b = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   FkTest.runInRoom(function()
     content.setup(room, a, G.lord.name, G.plain.name, "wei")
     content.setup(room, b, G.plain2.name, G.plain.name, "wei")
     local ok, reason = Exchange.exchange(room, main(a), main(b),
       { allowed_generals = { [G.lord.name] = true } })
-    lu.assertNotNil(ok, reason)
-    lu.assertEquals(b.general, G.lord.name)
+    lu.assertFalse(ok)
+    lu.assertEquals(reason, "restricted_lord")
+    lu.assertEquals(a.general, G.lord.name)
+    lu.assertEquals(b.general, G.plain2.name)
 
-    content.setup(room, a, G.plain.name, G.plain.name, "wei")
-    content.setup(room, b, G.plain2.name, G.plain.name, "wei")
     ok, reason = Exchange.exchange(room,
-      { player = a, isDeputy = false, general = G.wei_a.name }, main(b))
+      { player = b, isDeputy = false, general = G.wei_a.name }, deputy(b))
     lu.assertFalse(ok)
     lu.assertEquals(reason, "stale_selection")
   end)
@@ -415,6 +426,67 @@ function Testgeneral_exchange:testHistoryWrittenOutsideRecorderFallsBackSymmetri
     assert(Exchange.exchange(room, main(b), main(a)))
     lu.assertEquals(a:usedSkillTimes(S.limited, Player.HistoryGame), 1)
     lu.assertEquals(b:usedSkillTimes(S.limited, Player.HistoryGame), 0)
+  end)
+end
+
+function Testgeneral_exchange:testHiddenLordPositionIsProtectedWithoutSideEffects()
+  local room, a, b = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local LORD = "qiao_heg__em_shu001"
+  FkTest.runInRoom(function()
+    content.setup(room, a, "qiao_heg__shu001", G.plain.name, "shu")
+    content.setup(room, b, G.shu.name, G.plain.name, "shu")
+    assert(A.ascend(room, a, LORD, "shu", { kind = "lord" }))
+    lu.assertEquals(a.general, LORD)
+    a:hideGeneral(false)
+    lu.assertEquals(a.general, "anjiang")
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
+    lu.assertTrue(Exchange.isLordPosition(a, false))
+    lu.assertFalse(Exchange.isLordPosition(a, true))
+
+    -- The hidden lord position cannot be exchanged; the normal deputy position
+    -- is judged on its own and can still be exchanged.
+    local ok, reason = Exchange.exchange(room, main(a), deputy(a))
+    lu.assertFalse(ok)
+    lu.assertEquals(reason, "not_revealed")
+    lu.assertNotNil(Exchange.exchange(room, deputy(a), main(b)))
+    lu.assertEquals(a.general, "anjiang")
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
+    lu.assertEquals(a.deputyGeneral, G.shu.name)
+    lu.assertEquals(b.general, G.plain.name)
+
+    -- Removal/transform/changeHero must reject before the card is revealed,
+    -- loses skills or returns to the general pile.
+    lu.assertFalse(H.removeGeneral(a, false))
+    lu.assertFalse(H.transformGeneral(room, a, true))
+    lu.assertFalse(room:changeHero(a, G.plain.name, false, false, false, false, false))
+    lu.assertEquals(a.general, "anjiang")
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
+    lu.assertFalse(table.contains(room.general_pile, LORD))
+
+    -- Candidate display and settlement agree: no candidate and no selection.
+    lu.assertEquals(#Change.candidates(room, a, false), 0)
+    lu.assertFalse(Change.change(room, a, false, { num = 3 }))
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
+
+    -- The other position keeps normal removal behavior.
+    lu.assertNil(H.removeGeneral(a, true))
+    lu.assertTrue(a.deputyGeneral ~= G.shu.name)
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
+  end)
+end
+
+function Testgeneral_exchange:testAscensionAndLordDeathFlipStillWork()
+  local room, a = FkTest.room, FkTest.room.players[1]
+  local LORD, NORMAL = "qiao_heg__em_shu001", "qiao_heg__shu001"
+  FkTest.runInRoom(function()
+    content.setup(room, a, NORMAL, G.plain.name, "shu")
+    lu.assertTrue(A.ascend(room, a, LORD, "shu", { kind = "lord" }))
+    lu.assertEquals(a.general, LORD)
+    a:hideGeneral(false)
+    lu.assertEquals(a.general, "anjiang")
+    A.flip_lord_for_death(room, a)
+    lu.assertEquals(a.general, LORD)
+    lu.assertEquals(a:getMark("__heg_general"), LORD)
   end)
 end
 

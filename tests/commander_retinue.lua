@@ -386,6 +386,30 @@ function Testqiao_commander_retinue:testCostExcludesTheProvidingCommander()
   lu.assertEquals(user.general, "qiao_test__commander_alpha")
 end
 
+function Testqiao_commander_retinue:testLordCardIsNotACostButOtherPositionStillIs()
+  local sourceHolder, user = room().players[1], room().players[2]
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  -- 暗置的真实君主牌在主将位，副将位是普通武将；势力已由副将确定。
+  setHidden(user, "qiao_heg__em_shu001", "qiao_test__wei_1", "wei")
+  reveal(sourceHolder, false)
+  reveal(user, true)
+  FkTest.runInRoom(function() room():setPlayerProperty(user, "kingdom", "wei") end)
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local source = sourceOf("qiao_test__commander_alpha")
+  lu.assertEquals(C.costCandidates(user, source), { true })
+  lu.assertFalse(C.payCost(user, source, false))
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local paid
+  FkTest.runInRoom(function() paid = C.payCost(user, source, true) end)
+  lu.assertTrue(paid)
+  lu.assertNotEquals(user.deputyGeneral, "qiao_test__wei_1")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+end
+
 function Testqiao_commander_retinue:testPayCostRemovesGeneralAndUsesMarkedCard()
   local sourceHolder, user, target = room().players[1], room().players[2], room().players[3]
   setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
