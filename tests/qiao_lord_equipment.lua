@@ -139,13 +139,15 @@ function Testqiao_lord_equipment:testXuwangDrawAndHandLimitFollowEquipment()
   lu.assertFalse(owner:hasSkill("qiao__xuwang_zhimian_skill"))
 end
 
-function Testqiao_lord_equipment:testSihaiSwapsTreasureForTwoPrechosenCards()
+function Testqiao_lord_equipment:testSihaiPoxiKeepsHiddenHandAndSwapsChosenTwo()
   local room = FkTest.room
   local user = p(1)
   local target
   local treasure = card("qiao__sihai_liuqian")
-  local first = card("qiao__peach", Card.Heart, 7)
-  local second = card("qiao__slash", Card.Club, 4)
+  local mount = card("qiao__linxiao_yuyu")
+  local hidden = card("qiao__peach", Card.Heart, 7)
+  local kept = card("qiao__slash", Card.Club, 4)
+  local request
   FkTest.runInRoom(function()
     give(room, user, treasure)
     use(room, user, { user }, treasure)
@@ -156,17 +158,44 @@ function Testqiao_lord_equipment:testSihaiSwapsTreasureForTwoPrechosenCards()
       end
     end
     assert(target ~= nil)
-    give(room, target, first)
-    give(room, target, second)
+    -- 目标装备区里有一张公开的临筱玉舆，手牌两张未公开。
+    room:moveCardTo(mount.id, Card.PlayerEquip, target, fk.ReasonJustMove,
+      "test", nil, true, target)
+    give(room, target, hidden)
+    give(room, target, kept)
+    -- 真实 AskForPoxi 请求：记录引擎实际下发的可见性与固定候选分组。
+    FkTest.setRoomBreakpoint(user, "AskForPoxi", function(data)
+      request = data
+      return false
+    end)
     local skill = Fk.skills["qiao__sihai_liuqian_skill"]
     local data = { from = user, cards = {}, tos = { target } }
-    FkTest.setNextReplies(user, { first.id, second.id })
+    FkTest.setNextReplies(user, { { mount.id, hidden.id } })
     skill:onUse(room, data)
   end)
+  lu.assertNotNil(request, "三张可获得牌应发出真实 AskForPoxi 请求")
+  lu.assertEquals(request.type, "AskForCardsChosen")
+  lu.assertEquals(request.extra_data.to, target.id)
+  lu.assertEquals(request.extra_data.min, 2)
+  lu.assertEquals(request.extra_data.max, 2)
+  lu.assertEquals(request.extra_data.skillName, "qiao__sihai_liuqian_skill")
+  local visible = request.extra_data.visible_data
+  lu.assertNotNil(visible, "未公开手牌必须附带 visible_data")
+  lu.assertFalse(visible[tostring(hidden.id)], "未公开手牌应标为不可见")
+  lu.assertFalse(visible[tostring(kept.id)], "未公开手牌应标为不可见")
+  lu.assertNotEquals(visible[tostring(mount.id)], false, "公开装备不应被隐藏")
+  local groups = {}
+  for _, group in ipairs(request.data) do groups[group[1]] = group[2] end
+  lu.assertEquals(#request.data, 2, "固定候选头为手牌与装备两组")
+  lu.assertTableContains(groups["$Hand"], hidden.id)
+  lu.assertTableContains(groups["$Hand"], kept.id)
+  lu.assertTableContains(groups["$Equip"], mount.id)
   lu.assertEquals(room:getCardArea(treasure.id), Card.PlayerHand)
   lu.assertEquals(room:getCardOwner(treasure.id).id, target.id)
-  lu.assertTrue(table.contains(user:getCardIds("h"), first.id))
-  lu.assertTrue(table.contains(user:getCardIds("h"), second.id))
+  lu.assertTrue(table.contains(user:getCardIds("h"), mount.id), "取得所选公开装备")
+  lu.assertTrue(table.contains(user:getCardIds("h"), hidden.id), "取得所选手牌")
+  lu.assertTrue(table.contains(target:getCardIds("h"), kept.id), "未选中的手牌保留")
+  lu.assertFalse(table.contains(user:getCardIds("h"), kept.id))
   lu.assertFalse(user:hasSkill("qiao__sihai_liuqian_skill"))
 end
 
@@ -363,10 +392,11 @@ function Testqiao_lord_equipment:testXuehaiLeavingDyingGivesPotToDamageSource()
 end
 function Testqiao_lord_equipment:testSihaiAllOrNoneWhenTargetTreasureProtected()
   local room = FkTest.room
-  local user, target = p(1), p(2)
+  local user, target = p(1), p(3)
   local treasure = card("qiao__sihai_liuqian")
   local pearl = card("qiao__luminous_pearl")
   local other = card("qiao__peach", Card.Heart, 4)
+  local asked
   FkTest.runInRoom(function()
     give(room, user, treasure)
     use(room, user, { user }, treasure)
@@ -375,15 +405,21 @@ function Testqiao_lord_equipment:testSihaiAllOrNoneWhenTargetTreasureProtected()
     give(room, target, other)
     room:handleAddLoseSkills(target, { "qiao__skill_em_wu001_3" }, nil, false, true)
     lu.assertTrue(target:hasSkill("qiao__skill_em_wu001_3"))
+    -- 目标恰好两张可获得牌时引擎直接返回全部，不再发出选牌请求。
+    FkTest.setRoomBreakpoint(user, "AskForPoxi", function()
+      asked = true
+      return false
+    end)
     local skill = Fk.skills["qiao__sihai_liuqian_skill"]
     local data = { from = user, cards = {}, tos = { target } }
-    FkTest.setNextReplies(user, { pearl.id, other.id })
+    FkTest.setNextReplies(user, { { pearl.id, other.id } })
     skill:onUse(room, data)
-    lu.assertEquals(room:getCardOwner(treasure.id).id, user.id, "整次交换不成：宝物未交出")
-    lu.assertEquals(room:getCardArea(treasure.id), Card.PlayerEquip)
-    lu.assertEquals(room:getCardOwner(pearl.id).id, target.id, "受保护宝物未被拿走")
-    lu.assertTrue(table.contains(target:getCardIds("h"), other.id), "另一张牌也未被拿走")
   end)
+  lu.assertNil(asked, "恰两张时原生直接返回，不应再询问")
+  lu.assertEquals(room:getCardOwner(treasure.id).id, user.id, "整次交换不成：宝物未交出")
+  lu.assertEquals(room:getCardArea(treasure.id), Card.PlayerEquip)
+  lu.assertEquals(room:getCardOwner(pearl.id).id, target.id, "受保护宝物未被拿走")
+  lu.assertTrue(table.contains(target:getCardIds("h"), other.id), "另一张牌也未被拿走")
 end
 function Testqiao_lord_equipment:testLuminousDrawsActualDiscardedCount()
   local room = FkTest.room
