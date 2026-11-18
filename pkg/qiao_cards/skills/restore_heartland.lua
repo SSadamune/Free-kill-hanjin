@@ -32,16 +32,16 @@ skill:addEffect("cardskill", {
   min_target_num = 1,
   max_target_num = function(self, player, card)
     local room = Fk:currentRoom()
-    return #room:getAlivePlayers()
+    return #room:getPresentPlayers()
   end,
+  -- cardskill 的默认 targetFilter 恒为 false；接回共用入口后，客户端按同一
+  -- mod_target_filter 条件点亮目标。
+  target_filter = Util.CardTargetFilter,
   mod_target_filter = function(self, player, to_select, selected, card, extra_data)
     return to_select ~= nil and to_select:isAlive() and not to_select:isRemoved()
   end,
   can_use = function(self, player)
-    for _, other in ipairs(Fk:currentRoom():getAlivePlayers()) do
-      if other:isAlive() and not other:isRemoved() then return true end
-    end
-    return false
+    return #Fk:currentRoom():getPresentPlayers() > 0
   end,
   on_effect = function(self, room, effect)
     local target = effect.to
@@ -90,10 +90,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "克复中原",
-  [":" .. skill.name] = "出牌阶段，对一名或多名角色使用。每名目标依次选择：视为使用"
-    .. "一张【杀】（按【杀】的正常目标条件选择目标）或摸一张牌；没有合法用杀对象时"
-    .. "只能摸牌。若你使用此牌时已确定为蜀势力，蜀势力目标的该次【杀】伤害 +1，"
-    .. "选择摸牌则改为摸两张。",
   ["#qiao__restore_heartland_skill"] = "克复中原：每名目标选择视为使用【杀】或摸牌",
   ["#qiao__restore_heartland-choice"] = "克复中原：选择视为使用一张【杀】或摸一张牌",
   ["#qiao__restore_heartland-slash"] = "克复中原：视为使用一张【杀】",

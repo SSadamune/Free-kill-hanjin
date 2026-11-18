@@ -11,6 +11,9 @@ local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 local Data = require "packages.qiao.pkg.qiao_generals.data.standard"
+local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
+local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
 local SIX = { "han", "wei", "shu", "wu", "qun", "jin" }
 local LEGACY_IMPLEMENTED = {
@@ -473,6 +476,73 @@ function Teststandard_generals:testNineteenCommanderSourcesUseOnlyFormalCards()
   for _ in pairs(retinues) do retinueCount = retinueCount + 1 end
   lu.assertEquals(retinueCount, 14)
   for _, data in ipairs(Data.retinues) do lu.assertTrue(retinues[data.id]) end
+end
+
+--- 非武将来源标签在真实 postLoad 注册后进入 Fk:getDescription；
+--- 与客户端 getPlayerSkills 使用同一调用形态（技能名 + 观察者）。
+function Teststandard_generals:testSourceLabelsDescribeNonGeneralSkills()
+  local room = create { formalOnly = true }
+  local player = room.players[1]
+  local function labeled(name, label)
+    local text = Fk:getDescription(name, nil, player)
+    return type(text) == "string" and text:find("〔" .. label .. "〕", 1, true) ~= nil
+  end
+
+  -- 诏书入口与消费、君主旗：非武将牌来源。
+  lu.assertTrue(labeled(Han.BANNER, "诏书"), "诏书入口应带来源标签")
+  lu.assertTrue(labeled(Han.CONSUME, "诏书"), "诏书消费应带来源标签")
+  lu.assertTrue(labeled(Wei.BANNER, "君主旗"), "霸者求贤状应带旗标签")
+  lu.assertTrue(labeled(Wu.FLAG, "君主旗"), "缘江烽火图应带旗标签")
+  lu.assertTrue(labeled("qiao__skill_em_jin001_banner", "君主旗"),
+    "诸王敕封册应带旗标签")
+  lu.assertTrue(labeled("qiao__skill_em_jin001_banner", "赐"),
+    "诸王敕封册应另标赐的消费入口")
+
+  -- 太康在武将牌上，诸王敕封册由太康授予，不是牌上技能。
+  local simayan = assert(Fk.generals["qiao_heg__em_jin001"])
+  lu.assertTrue(table.contains(simayan:getSkillNameList(), "qiao__skill_em_jin001_1"),
+    "太康应是 EM(JIN001) 的牌上技能")
+  lu.assertFalse(table.contains(simayan:getSkillNameList(), "qiao__skill_em_jin001_banner"),
+    "诸王敕封册是太康授予的旗，不是牌上技能")
+
+  -- 统领：标签包裹现有动态描述，不替换来源/翼从内容。
+  local source = Data.commanders[1]
+  lu.assertNotNil(Commander.commanders[source.general])
+  FkTest.runInRoom(function()
+    room:setPlayerMark(player, "qiao_commander_descriptions", {
+      { key = source.general, retinues = { source.retinue }, active = true },
+    })
+  end)
+  local dynamic = Commander.description(player, nil, nil)
+  lu.assertTrue(#dynamic > 0, "统领动态描述应有内容")
+  local ability = assert(Fk:getDescription(Commander.ABILITY_SKILL, nil, player))
+  local skel = assert(Fk.skill_skels[Commander.ABILITY_SKILL], "统领技能骨架应已注册")
+  lu.assertNotNil(skel.qiaoSourceLabel, "统领技能骨架应有来源标签标记")
+  lu.assertTrue(labeled(Commander.ABILITY_SKILL, "统领"), "统领技能应带来源标签")
+  -- 带 dynamic_desc 的骨架有两个取值入口；两条路径都必须保留标签与动态内容。
+  local skeletonText = skel:getDynamicDescription(player, nil)
+  lu.assertTrue(type(skeletonText) == "string" and skeletonText:find("〔统领〕", 1, true) ~= nil,
+    "骨架动态描述应含标签")
+  lu.assertTrue(ability:find(dynamic, 1, true) ~= nil,
+    "标签应包裹而非替换统领动态描述：" .. ability)
+  lu.assertTrue(skeletonText:find(dynamic, 1, true) ~= nil,
+    "骨架动态描述不应丢失来源/翼从内容：" .. skeletonText)
+
+  -- 翼从技能来自翼从牌，不是武将牌技能。
+  local retinue = Data.retinues[1]
+  lu.assertTrue(labeled(retinue.skill.id, "翼从"), "翼从技能应带翼从标签")
+
+  -- 武将牌技能与装备技能不带来源标签。
+  local taikang = assert(Fk:getDescription("qiao__skill_em_jin001_1", nil, player))
+  lu.assertNil(taikang:find("〔", 1, true), "武将牌技能不应带来源标签：" .. taikang)
+  local equip = assert(Fk:getDescription("qiao__liulongcanjia_skill", nil, player))
+  lu.assertNil(equip:find("〔", 1, true), "装备技能不应带来源标签：" .. equip)
+
+  -- 标签只进描述，不进入技能名（SkillButton 宽度不受影响）。
+  for _, name in ipairs({ Han.BANNER, Commander.ABILITY_SKILL }) do
+    local shown = Fk:getSkillName(name, nil, player)
+    lu.assertNil(shown:find("〔", 1, true), "技能名不应含来源标签：" .. shown)
+  end
 end
 
 function Teststandard_generals:testModeIsFeasibleFromFormalContentOnly()

@@ -52,9 +52,11 @@ skill:addEffect("active", {
       choice = available[1]
     else
       local names = table.map(available, function(e) return e.name end)
+      -- detailed：确认前按牌名显示当前正式牌面（':'..name）；选项仍是实体牌名。
       local name = room:askToChoice(holder, {
         choices = names, skill_name = skill.name,
         prompt = "#qiao__han001_pick_trick", cancelable = true,
+        detailed = true,
       })
       if name == nil then return end
       choice = table.find(available, function(e) return e.name == name end)
@@ -68,8 +70,15 @@ skill:addEffect("active", {
   end,
 })
 
+-- The mark popup invokes the ordinary active skill. Hide its separate
+-- dashboard button both on acquisition and when the dashboard is rebuilt.
+Fk:addPostLoadFunc(function()
+  Fk.skills[P.CONSUME].visible = false
+end)
+
 Fk:loadTranslationTable {
   [P.CONSUME] = "诏书·取锦囊",
+  ["qiao__edict_take_trick"] = "取锦囊",
   [":" .. P.CONSUME] = "出牌阶段限一次，若诏书上的牌包含四种花色，你可以移去所有牌，然后获得一张势力锦囊。",
   ["#qiao__han001_zhaoshu-consume"] = "诏书：四花色齐，移去所有牌并获得势力锦囊",
   ["#qiao__han001_pick_trick"] = "诏书：选择一张势力锦囊",

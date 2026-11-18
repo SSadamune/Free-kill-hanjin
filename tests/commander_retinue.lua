@@ -386,6 +386,30 @@ function Testqiao_commander_retinue:testCostExcludesTheProvidingCommander()
   lu.assertEquals(user.general, "qiao_test__commander_alpha")
 end
 
+function Testqiao_commander_retinue:testLordCardIsNotACostButOtherPositionStillIs()
+  local sourceHolder, user = room().players[1], room().players[2]
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  -- 暗置的真实君主牌在主将位，副将位是普通武将；势力已由副将确定。
+  setHidden(user, "qiao_heg__em_shu001", "qiao_test__wei_1", "wei")
+  reveal(sourceHolder, false)
+  reveal(user, true)
+  FkTest.runInRoom(function() room():setPlayerProperty(user, "kingdom", "wei") end)
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local source = sourceOf("qiao_test__commander_alpha")
+  lu.assertEquals(C.costCandidates(user, source), { true })
+  lu.assertFalse(C.payCost(user, source, false))
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local paid
+  FkTest.runInRoom(function() paid = C.payCost(user, source, true) end)
+  lu.assertTrue(paid)
+  lu.assertNotEquals(user.deputyGeneral, "qiao_test__wei_1")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+end
+
 function Testqiao_commander_retinue:testPayCostRemovesGeneralAndUsesMarkedCard()
   local sourceHolder, user, target = room().players[1], room().players[2], room().players[3]
   setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
@@ -1563,7 +1587,9 @@ function Testqiao_commander_retinue:testFormalSourceDescriptionNamesCardAndRetin
   lu.assertTrue(description:find("若你没有士兵，你可以移除一张不为赵云的武将牌，视为使用【无懈可击】。", 1, true) ~= nil)
   lu.assertTrue(description:find("「白马义从」", 1, true) ~= nil)
   lu.assertFalse(description:find("其标注的牌", 1, true) ~= nil)
-  lu.assertEquals(C.description(user, "qiao_heg__shu005"), description)
+  -- 头像详情经 skill_source_labels 包裹〔统领〕标签；规则/UI 原始描述不带标签。
+  local original = C.description(user, "qiao_heg__shu005")
+  lu.assertEquals(description, "<b>〔统领〕</b> " .. original)
   local skill = Fk.skills[C.ABILITY_SKILL]
   local previous = skill.interaction.data
   skill.interaction.data = "qiao_heg__shu005"

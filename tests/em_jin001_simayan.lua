@@ -13,6 +13,15 @@ local TAIKANG = "qiao__skill_em_jin001_1"
 local BANNER = "qiao__skill_em_jin001_banner"
 local CAIXING = "qiao__skill_em_jin001_2"
 local DINGFEI = "qiao__skill_em_jin001_3"
+local RESOURCE_MAXCARD = "qiao__jin001_banner-resource-maxcard"
+local RESOURCE_DRAW = "qiao__jin001_banner-resource-draw"
+
+--- 资源分支按所选赐的牌面单独阴阳鱼数二选一，不再使用笼统的 resource 项。
+local function resourceChoice(params)
+  if table.contains(params.choices, RESOURCE_MAXCARD) then return RESOURCE_MAXCARD end
+  if table.contains(params.choices, RESOURCE_DRAW) then return RESOURCE_DRAW end
+  return nil
+end
 
 local function inRoom(fn, label)
   local room = FkTest.room
@@ -113,7 +122,10 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   inRoom(function() lord.phase = Player.Play end)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == BANNER and table.contains(params.choices, "resource") then return "resource" end
+      if params.skill_name == BANNER then
+        local resource = resourceChoice(params)
+        if resource ~= nil then return resource end
+      end
       return original(self, who, params)
     end,
   }, function()
@@ -163,7 +175,8 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     if table.contains(params.choices, "main") and table.contains(params.choices, "deputy") then
       return "deputy"
     end
-    if table.contains(params.choices, "resource") then return "resource" end
+    local resource = resourceChoice(params)
+    if resource ~= nil then return resource end
     if params.prompt == "#qiao__jin001_banner-pick" then return params.choices[1] end
     chosen = params.choices[1]
     return chosen
@@ -205,9 +218,13 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   end)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == BANNER and table.contains(params.choices, "resource") then
-        branches = table.simpleClone(params.choices)
-        return "resource"
+      if params.skill_name == BANNER then
+        local resource = resourceChoice(params)
+        if resource ~= nil then
+          branches = table.simpleClone(params.choices)
+          lu.assertTrue(params.detailed, "资源分支应在确认前显示实际效果说明")
+          return resource
+        end
       end
       return original(self, who, params)
     end,
@@ -217,6 +234,9 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     end)
   end)
   lu.assertNotNil(branches)
+  local expected = Fk.generals["qiao_heg__jin004"].maxHp <= 3 and RESOURCE_MAXCARD or RESOURCE_DRAW
+  lu.assertTrue(table.contains(branches, expected),
+    "资源分支应按所选赐显示“本回合手牌上限+3”或“将手牌摸至四张”")
   lu.assertFalse(table.contains(branches, "change"), "整局限一次后不应再提供变更分支")
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "资源分支应消耗赐")
 end
@@ -278,7 +298,8 @@ function Testqiao_em_jin001_simayan:testResourceCiAndCaixingAndDingfei()
   skill_test.withSkillRequests(room, BANNER, {
     askToChoice = function(self, who, params, original)
       if params.skill_name == BANNER then
-        if table.contains(params.choices, "resource") then return "resource" end
+        local resource = resourceChoice(params)
+        if resource ~= nil then return resource end
       end
       return original(self, who, params)
     end,

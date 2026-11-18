@@ -77,6 +77,8 @@ skill:addEffect("active", {
       skill_name = skill.name,
       prompt = "#qiao__skill_em_shu001_flag-choose",
       cancelable = false,
+      -- 确认前按技能 ID 显示正式技能说明（':'..id），候选与单选不变。
+      detailed = true,
     })
     ensureRule(room)
     room:handleAddLoseSkills(player, chosen, skill.name, false, true)

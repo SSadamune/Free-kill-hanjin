@@ -5,6 +5,9 @@
 -- 定向运行：
 --   python scripts/test.py --file tests/wei_phases.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local QG = "qiao__skill_wei007_1"
 local LS = "qiao__skill_wei007_2"
@@ -285,6 +288,54 @@ function Testqiao_wei_phases:testShensuDoesNotConsumeAlreadySkippedPhase()
   lu.assertEquals(p1():usedSkillTimes(SS, Player.HistoryGame), 0)
 end
 
+--- 神速首次确认复用对应阶段的提示键，直接写明三种不同代价。
+function Testqiao_wei_phases:testShensuInvokePromptUsesCurrentPhase()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei008")
+  local cases = {
+    { phase = Player.Judge, key = "#qiao__skill_wei008_1-judge",
+      name = "判定阶段", cost = "摸牌阶段" },
+    { phase = Player.Play, key = "#qiao__skill_wei008_1-play",
+      name = "出牌阶段", cost = "装备牌" },
+    { phase = Player.Discard, key = "#qiao__skill_wei008_1-discard",
+      name = "弃牌阶段", cost = "失去1点体力" },
+  }
+  for _, case in ipairs(cases) do
+    setHand(room, p1(), {})
+    setHand(room, p2(), {})
+    if case.phase == Player.Play then
+      addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 5)
+    end
+    local prompt
+    skill_test.withSkillRequests(room, SS, {
+      askToSkillInvoke = function(self, who, params, original)
+        if params.skill_name ~= SS then return original(self, who, params) end
+        prompt = params.prompt
+        return false
+      end,
+    }, function()
+      if case.phase == Player.Judge then
+        inRoom(function()
+          GameEvent.Turn:create(TurnData:new(p1(), "game_rule", {
+            Player.Judge, Player.Draw,
+          })):exec()
+        end)
+      else
+        inRoom(function()
+          local data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+          room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+        end)
+      end
+    end)
+    lu.assertEquals(prompt, case.key, "首次确认应复用对应阶段的提示键")
+    local text = Fk:translate(prompt)
+    lu.assertTrue(text:find(case.name, 1, true) ~= nil,
+      "确认提示应点名阶段：" .. text)
+    lu.assertTrue(text:find(case.cost, 1, true) ~= nil,
+      "确认提示应说明该阶段代价：" .. text)
+  end
+end
+
 -- 设变 ---------------------------------------------------------------------
 
 function Testqiao_wei_phases:testShebianMovesBoardCardAfterHpLoss()
@@ -339,7 +390,6 @@ function Testqiao_wei_phases:testQiaobianDrawPhaseSkipGainsOneHandCard()
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Draw }
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyDiscard({ mine[1] }),
     FkTest.ReplyChoosePlayer({ p2() }),
   })
@@ -362,7 +412,6 @@ function Testqiao_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Play }
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyDiscard({ mine[1] }),
     { card = { skill = "choose_players_to_move_card_in_board", subcards = {} },
       targets = { p1().id, p2().id } },
@@ -373,6 +422,56 @@ function Testqiao_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
   lu.assertTrue(data.skipped)
   lu.assertEquals(room:getCardOwner(equip).id, p1().id)
   lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 1)
+end
+
+--- 弃牌请求同时作为巧变的发动选择：每阶段只发起一次，提示点名阶段并保留
+--- 摸牌/出牌阶段的可选后效；取消弃牌则不跳过、不支付。
+function Testqiao_wei_phases:testQiaobianDiscardRequestNamesPhaseAndCancelDoesNotSkip()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei009")
+  local cases = {
+    { phase = Player.Judge, name = "判定阶段" },
+    { phase = Player.Draw, name = "摸牌阶段", follow = "各一张手牌", optional = true },
+    { phase = Player.Play, name = "出牌阶段", follow = "移动场上一张牌", optional = true },
+    { phase = Player.Discard, name = "弃牌阶段" },
+  }
+  for _, case in ipairs(cases) do
+    local mine = setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
+    local discardPrompt
+    local asked = 0
+    local data
+    FkTest.setNextReplies(p1(), { "" })
+    skill_test.withSkillRequests(room, QB, {
+      askToDiscard = function(self, who, params, original)
+        if params.skill_name ~= QB then return original(self, who, params) end
+        discardPrompt = params.prompt
+        asked = asked + 1
+        return original(self, who, params)
+      end,
+    }, function()
+      inRoom(function()
+        data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+        room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+      end)
+    end)
+    lu.assertEquals(asked, 1, "每个阶段应只发起一次弃牌请求")
+    lu.assertNotNil(discardPrompt, "应有弃牌请求提示")
+    lu.assertFalse(not not data.skipped, "取消弃牌后不得跳过阶段")
+    lu.assertEquals(room:getCardArea(mine[1]), Card.PlayerHand, "取消弃牌后不应支付牌")
+    lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 0,
+      "取消弃牌不应计为发动巧变")
+    local discardText = Fk:translate(discardPrompt)
+    lu.assertTrue(discardText:find(case.name, 1, true) ~= nil,
+      "弃牌提示应点名当前阶段 " .. case.name .. "：" .. discardText)
+    if case.follow ~= nil then
+      lu.assertTrue(discardText:find(case.follow, 1, true) ~= nil,
+        "弃牌提示应说明可选后效：" .. discardText)
+    end
+    if case.optional then
+      lu.assertTrue(discardText:find("然后你可以", 1, true) ~= nil,
+        "后效应明确为可选项：" .. discardText)
+    end
+  end
 end
 
 -- 断粮 ---------------------------------------------------------------------
@@ -388,6 +487,90 @@ function Testqiao_wei_phases:testDuanliangTriggersOnAnyOthersDrawPhaseSkipped()
   triggerPhase(room, p2(), Player.Draw, fk.EventPhaseSkipped)
 
   lu.assertEquals(#p1():getCardIds("h"), 1)
+  lu.assertEquals(p1():usedSkillTimes(DL, Player.HistoryGame), 1)
+end
+
+--- 断粮转化素材筛选的聚焦回归。真实房间临时授予技能后，以真实 ClientPlayer
+--- 走 ReqPlayCard→selectSkill→cardValidity/targetValidity/feasible；确认键产生的
+--- 回包交给服务端 handleUseCardReply 完成一次真实使用。
+--- 根因：filter_pattern 的第 4、5 字段留空时，exppattern.parseMatcher 会把它们
+--- 解析成空匹配表，位置和完整牌名永远不匹配；必须显式写通配符 "."。
+function Testqiao_wei_phases:testDuanliangClientMaterialFilterAndConfirmedUse()
+  local room = FkTest.room
+  -- 纯客户端选牌查询不继承任何残留的响应窗口 pattern。
+  Fk.currentResponsePattern = nil
+  inRoom(function()
+    room:handleAddLoseSkills(p1(), DL, nil, false, true)
+    room.current = p1()
+    p1().phase = Player.Play
+  end)
+  setHand(room, p2(), {})
+  setHand(room, p3(), {})
+
+  local ids = setHand(room, p1(), {
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__chixiao_sword", Card.Club, 5 },
+    { "qiao__duel", Card.Club, 7 },
+    { "qiao__peach", Card.Heart, 3 },
+  })
+  local blackBasic, blackEquip, blackTrick, redBasic =
+    ids[1], ids[2], ids[3], ids[4]
+  -- 装备区的黑色装备也应可选；ReqActiveSkill.expandPiles 在没有 include_equip
+  -- 时会依据 cardValidity 自动展开装备区。
+  local equipped = addEquip(room, p1(), "qiao__jueying", Card.Spade, 6)
+  lu.assertEquals(p1():distanceTo(p2()), 1)
+  lu.assertTrue(p1():distanceTo(p3()) > 1)
+
+  local confirmed
+  client_room.run(room, function(clients)
+    local me = clients[1]
+    local handler = ReqPlayCard:new(me)
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(DL), "断粮按钮应可用")
+    handler:selectSkill(DL, { selected = true })
+    lu.assertEquals(handler.skill_name, DL)
+
+    -- 正向：黑色基本牌、手牌中的黑色装备牌、装备区的黑色装备牌。
+    lu.assertTrue(handler:cardValidity(blackBasic), "黑色基本牌应可选")
+    lu.assertTrue(handler:cardValidity(blackEquip), "黑色装备牌应可选")
+    lu.assertTrue(handler:cardValidity(equipped), "装备区黑色装备牌应可选")
+    lu.assertTrue(
+      table.contains(handler.expanded_piles["_equip"] or {}, equipped),
+      "装备区应经展开后进入候选")
+    -- 反向：黑色锦囊不是非锦囊牌；红色基本牌不满足黑色。
+    lu.assertFalse(handler:cardValidity(blackTrick), "黑色锦囊牌不应可选")
+    lu.assertFalse(handler:cardValidity(redBasic), "红色基本牌不应可选")
+
+    handler:selectCard(blackBasic, { selected = true })
+    lu.assertTrue(handler:targetValidity(p2().id), "距离 1 的目标应合法")
+    lu.assertFalse(handler:targetValidity(p1().id), "不能指定自己")
+    lu.assertFalse(handler:targetValidity(p3().id), "距离大于 1 的目标不应合法")
+    handler:selectTarget(p2().id, { selected = true })
+    lu.assertTrue(handler:feasible(), "素材与合法目标齐全时确认应可用")
+
+    -- 捕获确认键实际产生的回包，其形状与线上 ReqActiveSkill.doOKButton 一致。
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, name, data)
+      if name == "ReplyToServer" then
+        confirmed = data
+        return
+      end
+      return notify(_, name, data)
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ClientInstance.notifyUI = notify
+    if not ok then error(err, 0) end
+    handler:_finish()
+  end)
+
+  lu.assertNotNil(confirmed, "确认键应产生服务端回包")
+  lu.assertEquals(confirmed.card.skill, DL)
+  lu.assertEquals(confirmed.card.subcards, { blackBasic })
+  lu.assertEquals(confirmed.targets, { p2().id })
+
+  inRoom(function() room:handleUseCardReply(p1(), confirmed, nil) end)
+  lu.assertEquals(room:getCardArea(blackBasic), Card.PlayerJudge)
+  lu.assertEquals(room:getCardOwner(blackBasic).id, p2().id)
   lu.assertEquals(p1():usedSkillTimes(DL, Player.HistoryGame), 1)
 end
 

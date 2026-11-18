@@ -22,7 +22,14 @@ skill:addEffect("filter", {
     return isJudgeEvent or ownedByPlayer(player, card.id)
   end,
   view_as = function(self, player, card)
-    return card:clone(Card.Heart, card.number)
+    -- 与上游红颜同样按注册牌型克隆，保留实体牌所属包及技能／装备特性。
+    -- 逐实体汉晋信息（牌位、应变、合纵等）只挂在 extra_data 上，不随牌型
+    -- 注册：显式复制一份，锁视牌读取时不触及原实体。
+    local newCard = Fk:cloneCard(card.name, Card.Heart, card.number)
+    if card.extra_data then
+      newCard.extra_data = table.simpleClone(card.extra_data)
+    end
+    return newCard
   end,
 })
 

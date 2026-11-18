@@ -2,6 +2,7 @@
 -- 汉晋内容包独立创建。上游 hegemony 仅用于移将、明置和势力流程。
 local H = require "packages.hegemony.util"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local M = {}
 
 M.RULE_SKILL = "#qiao_commander_rule"
@@ -495,7 +496,10 @@ function M.costCandidates(player, source)
   local result = {}
   for _, isDeputy in ipairs({ false, true }) do
     local general = positionName(player, isDeputy)
-    if type(general) == "string" and general ~= "" and not M.isSoldier(general) then
+    if type(general) == "string" and general ~= "" and not M.isSoldier(general)
+      -- 君主武将牌不能被选择或实际移除，包括作为统领能力的代价；另一位置
+      -- 仍按其自身条件判断。暗置时按实际牌身份排除。
+      and not Exchange.isLordPosition(player, isDeputy) then
       -- 代价不得是本次提供能力的统领本身；自己的其他统领可以作为代价。
       if not (source.holder_id == player.id and source.general == general) then
         table.insert(result, isDeputy)

@@ -46,8 +46,8 @@
 #### 红颜（WU011 小乔）
 
 - **标识与依据**：运行时 ID `qiao__skill_wu011_2`；源码 [skill_wu011_2.lua](../../../../pkg/qiao_generals/skills/skill_wu011_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)吴区 WU011。同将天香见[伤害、体力与死亡](damage.md#wu011-1)。
-- **实现与接口**：覆盖手牌、装备牌及判定牌的锁视过滤；供天香等按有效花色判定。
-- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖天香／红颜组合；历史 22/22，见[共享验证证据](verification-evidence.md#wu_damage)。
+- **实现与接口**：手牌区、装备区及当次判定牌按有效花色处理，判定区里的牌维持原花色，见[自己的牌](../../../../rulebook/terms/description-terms/limit_card.md)。锁视入口与锁定国战包 `pkg/standard/skills/hongyan.lua` 一致，使用 `Fk:cloneCard` 保留注册包，并复制汉晋实体牌的 `extra_data`，保留应变、牌位等信息。汉晋牌面只规定花色变化。
+- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 专项 23/23，覆盖天香／红颜组合，以及正常回复使用实体黑桃 9 雷【杀】时的红桃花色、牌包音效、实体应变信息、雷伤害及弃牌。
 - **未完成与边界**：红颜失技／交换后的实际客户端刷新、少见红颜／禁弃组合未独立验收；客户端点击、联网／重连未人工验证。
 
 ### 群

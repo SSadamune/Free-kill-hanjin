@@ -3,9 +3,10 @@
 -- 出牌阶段限一次，你可以观看一名其他角色的手牌，然后你可以展示其中一张♥牌，
 -- 弃置之或将此牌置于牌堆顶。
 --
--- 观看只对发动者开放（viewCards），不等同于展示其全部手牌；选牌候选只列
--- 当前手牌区的红桃，可不选或取消。展示后再按弃置／置顶各自正常移动原因处理，
--- 弃置仍受禁止弃置效果约束。移动前复核该牌仍在原角色手牌区且花色仍为红桃。
+-- 观看、选牌与去向合并在同一个私密原生面板（AskForCardsAndChoice）完成：面板
+-- 只发给发动者并显示目标全部手牌，只有当前有效红桃可选。结束观看始终可用且为
+-- 默认项；禁止弃置的红桃仍可置顶，但弃置按钮由服务器下发的禁令快照关闭。
+-- 展示与移动之间在服务端复核原手牌位置、当前有效花色及弃置禁令。
 local skill = fk.CreateSkill {
   name = "qiao__gongxin",
 }
@@ -13,7 +14,23 @@ skill.qiaoImplemented = true
 
 local DISCARD = "#qiao__gongxin-discard"
 local ON_TOP = "#qiao__gongxin-top"
-local HEARTS = "#qiao__gongxin-hearts"
+local END_CHOICE = "#qiao__gongxin-end"
+
+-- 面板按钮的客户端筛选：只读取随本次请求下发的快照（extra_data），
+-- 不访问房间或客户端私有状态。结束项由 QML 固定为始终可用，这里也直接放行。
+skill.extra = {
+  choiceFilter = function(cards, choice, extra_data)
+    if choice == END_CHOICE then return true end
+    if type(cards) ~= "table" or #cards ~= 1 then return false end
+    local id = cards[1]
+    local data = type(extra_data) == "table" and extra_data or {}
+    if not table.contains(data.hearts or {}, id) then return false end
+    if choice == DISCARD then
+      return not table.contains(data.prohibited or {}, id)
+    end
+    return choice == ON_TOP
+  end,
+}
 
 --- 客户端没有 player.room；与服务端共用 Fk:currentRoom() 的只读房间。
 ---@param player ServerPlayer | ClientPlayer
@@ -58,59 +75,51 @@ skill:addEffect("active", {
       or target:isRemoved() or target == player then
       return
     end
-
-    -- 私看：只发给发动者；不是 showCards 的全体展示。
+    -- 快照：目标全部手牌、当前有效红桃、其中被禁止弃置者。
+    -- 这些快照只随本次私密请求发给发动者，面板不从客户端房间自行取牌。
     local hand = target:getCardIds(Player.Hand)
-    if #hand > 0 then
-      room:viewCards(player, {
-        cards = hand,
-        skill_name = skill.name,
-        prompt = "#qiao__gongxin-view:" .. target.id,
-      })
-    end
-    if player.dead or target.dead or target:isRemoved() then return end
-
-    -- 观看后按当前手牌重新取候选；无红桃时只完成观看。
     local hearts = heartsOf(target)
-    if #hearts == 0 then return end
-    local chosen = room:askToChooseCards(player, {
-      target = target,
-      flag = { card_data = { { HEARTS, hearts } } },
-      min = 0,
-      max = 1,
+    local prohibited = table.filter(hearts, function(id)
+      return target:prohibitDiscard(id)
+    end)
+
+    local chosen, choice = room:askToChooseCardsAndChoice(player, {
+      cards = hearts,
+      all_cards = hand,
+      choices = { END_CHOICE, DISCARD, ON_TOP },
+      default_choice = END_CHOICE,
+      min_num = 0,
+      max_num = 1,
       skill_name = skill.name,
-      prompt = "#qiao__gongxin-show:" .. target.id,
-      cancelable = true,
+      prompt = "#qiao__gongxin-panel:" .. target.id,
+      filter_skel_name = skill.name,
+      extra_data = { hearts = hearts, prohibited = prohibited },
     })
-    local id = chosen and chosen[1]
-    if id == nil or not table.contains(hearts, id) then return end
+    -- 结束、超时或无答复：不展示、不移动。
+    if choice == nil or choice == END_CHOICE then return end
+    if choice ~= DISCARD and choice ~= ON_TOP then return end
+    if type(chosen) ~= "table" or #chosen ~= 1 then return end
+    local id = chosen[1]
+    if not table.contains(hearts, id) then return end
 
-    -- 展示前复核：仍是该角色的手牌，花色仍为红桃。
-    if room:getCardArea(id) ~= Card.PlayerHand
-      or room:getCardOwner(id) ~= target then
-      return
+    --- 展示前后共用：仍是该角色手牌区的当前有效红桃。
+    local function stillValidHeart()
+      if room:getCardArea(id) ~= Card.PlayerHand or room:getCardOwner(id) ~= target then
+        return false
+      end
+      local card = Fk:getCardById(id)
+      return card ~= nil and card.suit == Card.Heart
     end
-    local card = Fk:getCardById(id)
-    if card == nil or card.suit ~= Card.Heart then return end
 
-    -- 展示所选红桃，然后选择弃置或置于牌堆顶。
+    -- 展示前复核卡牌与动作；弃置分支还须当前无弃置禁令。
+    if not stillValidHeart() then return end
+    if choice == DISCARD and target:prohibitDiscard(id) then return end
+
+    -- 只公开选中的这一张红桃，其余手牌不展示。
     room:showCards({ id }, target, player)
-    local choice = ON_TOP
-    if not target:prohibitDiscard(id) then
-      choice = room:askToChoice(player, {
-        choices = { DISCARD, ON_TOP },
-        skill_name = skill.name,
-        prompt = "#qiao__gongxin-move:" .. target.id,
-      })
-    end
 
-    -- 移动前再次复核原手牌与花色；弃置与置顶分别按真实移动原因处理。
-    if room:getCardArea(id) ~= Card.PlayerHand
-      or room:getCardOwner(id) ~= target then
-      return
-    end
-    card = Fk:getCardById(id)
-    if card == nil or card.suit ~= Card.Heart then return end
+    -- 移动前再次复核原手牌位置、有效花色和弃置禁令。
+    if not stillValidHeart() then return end
     if choice == DISCARD then
       if target:prohibitDiscard(id) then return end
       room:throwCard({ id }, skill.name, target, player)
@@ -124,10 +133,8 @@ Fk:loadTranslationTable {
   ["qiao__gongxin"] = "攻心",
   [":qiao__gongxin"] = "出牌阶段限一次，你可以观看一名其他角色的手牌，然后你可以展示其中一张♥牌，弃置之或将此牌置于牌堆顶。",
   ["#qiao__gongxin-prompt"] = "攻心：观看一名其他角色的手牌",
-  ["#qiao__gongxin-view"] = "攻心：观看 %src 的手牌",
-  ["#qiao__gongxin-show"] = "攻心：可展示 %src 的一张♥手牌",
-  ["#qiao__gongxin-move"] = "攻心：展示的♥牌弃置或置于牌堆顶",
-  [HEARTS] = "红桃手牌",
+  ["#qiao__gongxin-panel"] = "攻心：观看 %src 的手牌，选择一张♥牌的处置",
+  [END_CHOICE] = "结束观看",
   [DISCARD] = "弃置",
   [ON_TOP] = "置于牌堆顶",
 }

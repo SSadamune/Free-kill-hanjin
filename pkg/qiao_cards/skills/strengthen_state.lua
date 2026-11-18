@@ -119,9 +119,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "固国安邦",
-  [":" .. skill.name] = "出牌阶段，对你使用。你摸八张牌，然后弃置至少六张手牌"
-    .. "（可弃手牌不足则全弃）；若你使用此牌时已确定为吴势力，你可以将本次"
-    .. "实际弃置且仍在弃牌堆的牌交给其他吴势力角色，每名角色至多两张。",
   ["#qiao__strengthen_state_skill"] = "固国安邦：摸八张牌，然后弃置至少六张手牌",
   ["#qiao__strengthen_state-discard"] = "固国安邦：请弃置至少 %arg 张手牌",
   ["#qiao__strengthen_state-distribute"] =

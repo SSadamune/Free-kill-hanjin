@@ -1086,6 +1086,10 @@ function Testqiao_han001:testMZ18BMayUseReceivedOrOriginalCard()
   lu.assertEquals(#log, 1)
   lu.assertEquals(log[1].fromCard.subcards[1], ids[1])
 
+  -- 进入下一个出牌阶段：按引擎 Phase:clear 的契约清除阶段历史，
+  -- 只清阶段范围，保留回合/整局历史。
+  inRoom(function() room:clearHistory(Player.HistoryPhase) end)
+
   -- 另一个出牌阶段：B 使用原有手牌。
   local bcard = setHand(room, p2(), { { "qiao__slash", Card.Spade, 3 } })[1]
   ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
@@ -1145,6 +1149,10 @@ function Testqiao_han001:testMZ19bTieHasNoSlashAndReverseWinnerSlash()
   FkTest.setNextReplies(p3(), { FkTest.ReplyChooseCards({ ccards[1] }), "" })
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })
   lu.assertEquals(#uses, 0)
+
+  -- 进入下一个出牌阶段：按引擎 Phase:clear 的契约清除阶段历史，
+  -- 只清阶段范围，保留回合/整局历史。
+  inRoom(function() room:clearHistory(Player.HistoryPhase) end)
 
   ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   ccards = setHand(room, p3(), { { "qiao__jink", Card.Heart, 10 }, { "qiao__jink", Card.Heart, 10 } })

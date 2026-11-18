@@ -47,6 +47,13 @@ local function timingPhase(phase)
   return phase == Player.Judge or phase == Player.Play or phase == Player.Discard
 end
 
+--- 首次确认直接复用对应阶段的提示键，避免三种不同代价都显示“跳过此阶段”。
+local PHASE_PROMPT = {
+  [Player.Judge] = "#qiao__skill_wei008_1-judge",
+  [Player.Play] = "#qiao__skill_wei008_1-play",
+  [Player.Discard] = "#qiao__skill_wei008_1-discard",
+}
+
 skill:addEffect(fk.EventPhaseChanging, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
@@ -59,9 +66,11 @@ skill:addEffect(fk.EventPhaseChanging, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
+    local prompt = PHASE_PROMPT[data.phase]
+    if prompt == nil then return false end
     if not room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_wei008_1-invoke",
+      prompt = prompt,
     }) then
       return false
     end
@@ -138,7 +147,6 @@ skill:addEffect(fk.EventPhaseChanging, {
 Fk:loadTranslationTable {
   ["qiao__skill_wei008_1"] = "神速",
   [":qiao__skill_wei008_1"] = "你可以选择以下任意项：1.跳过判定阶段和摸牌阶段；2.跳过出牌阶段并弃置一张装备牌；3.跳过弃牌阶段并失去1点体力。每执行一项，你视为使用一张无距离限制的【杀】。",
-  ["#qiao__skill_wei008_1-invoke"] = "神速：你可以跳过此阶段，视为使用一张无距离限制的【杀】",
   ["#qiao__skill_wei008_1-judge"] = "神速：跳过判定阶段和摸牌阶段，视为使用一张无距离限制的【杀】",
   ["#qiao__skill_wei008_1-play"] = "神速：跳过出牌阶段并弃置一张装备牌，视为使用一张无距离限制的【杀】",
   ["#qiao__skill_wei008_1-discard"] = "神速：跳过弃牌阶段并失去1点体力，视为使用一张无距离限制的【杀】",

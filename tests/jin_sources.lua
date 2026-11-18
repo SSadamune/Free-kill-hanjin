@@ -3,6 +3,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local ReqUseCard = require "ltk.core.request_type.use_card"
 
 local SHANGSHI = "qiao__skill_jin010_1"
 local EJUE = "qiao__skill_jin010_2"
@@ -188,6 +189,53 @@ function Testqiao_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()
     handler.skill_name = "qiao__skill_jin016_2"
     handler:setup()
     lu.assertTrue(handler:skillButtonValidity("qiao__skill_jin016_2"))
+    handler:_finish()
+  end)
+end
+
+function Testqiao_jin_sources:testFengwuFreeUseHidesPassiveCardsAndRejectsInjectedJink()
+  local room = prepare("qiao_heg__jin016")
+  local owner, user = p1(), p2()
+  inRoom(function() owner.hp = owner.maxHp end)
+  local jink = give(room, user, { { "qiao__jink", Card.Spade, 6 } })[1]
+  local equip = give(room, user, { { "qinggang_sword", Card.Diamond, 4 } })[1]
+  local ownerHand, userHand = #owner:getCardIds("h"), #user:getCardIds("h")
+
+  -- 风物请求：目标回复一张【闪】（无响应时机），服务端必须拒绝并视为放弃。
+  local captured
+  skill_test.withSkillRequests(room, "qiao__skill_jin016_2", {
+    askToUseCard = function(self, player, params, original)
+      captured = params
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(user, { FkTest.ReplyCard(Fk:getCardById(jink, true), {}) })
+    runPlayPhase(room, owner, {
+      FkTest.ReplyUseSkill("qiao__skill_jin016_2", { user }, {}),
+    })
+  end)
+
+  lu.assertNotNil(captured, "风物必须发出真实的自由用牌请求")
+  lu.assertEquals(captured.pattern, ".")
+  lu.assertTrue(captured.extra_data ~= nil and captured.extra_data.not_passive == true,
+    "自由用牌请求必须声明 not_passive")
+  lu.assertTrue(table.contains(user:getCardIds("h"), jink),
+    "服务端应拒绝注入的【闪】，牌不得被使用")
+  lu.assertTrue(table.contains(user:getCardIds("h"), equip), "合法牌不受影响")
+  lu.assertEquals(#user:getCardIds("h"), userHand)
+  lu.assertEquals(#owner:getCardIds("h"), ownerHand,
+    "被拒绝的用牌不得计入风物花色检查")
+
+  -- 真实客户端按同一请求数据判断：无响应时机的被动牌不可选，合法牌仍可选。
+  withClientRoom(room, function(clients)
+    local me = clients[2]
+    local handler = ReqUseCard:new(me, {
+      nil, captured.pattern, "", true, captured.extra_data,
+    })
+    handler:setup()
+    lu.assertFalse(handler:cardValidity(jink),
+      "客户端不应允许直接选中无响应时机的【闪】")
+    lu.assertTrue(handler:cardValidity(equip), "客户端仍应允许合法牌")
     handler:_finish()
   end)
 end

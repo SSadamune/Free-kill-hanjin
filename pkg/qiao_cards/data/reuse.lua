@@ -97,7 +97,8 @@ M.cards = {
   ["qiao__six_swords"] = { status = "reused", kind = "qiao_equip", upstream = "six_swords", skill = "qiao__six_swords_skill" },
 
   -- Armor -----------------------------------------------------------------
-  ["qiao__vine"] = { status = "reused", kind = "equip", upstream = "vine" },
+  ["qiao__vine"] = { status = "reused", kind = "qiao_equip",
+    upstream = "vine", skill = "qiao__vine_skill", desc = false },
   ["qiao__nioh_shield"] = { status = "reused", kind = "equip", upstream = "nioh_shield" },
   ["qiao__eight_diagram"] = { status = "reused", kind = "qiao_equip", upstream = "eight_diagram", skill = "qiao__eight_diagram_skill" },
   ["qiao__dark_armor"] = { status = "reused", kind = "qiao_equip", upstream = "dark_armor", skill = "qiao__dark_armor_skill" },

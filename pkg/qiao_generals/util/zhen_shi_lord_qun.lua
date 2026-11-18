@@ -6,7 +6,47 @@ local M = {}
 
 M.PILE = "qiao_em_qun010_tianbing"
 M.BANNER_SKILL = "qiao__em_qun010_banner"
+-- 旗第二段的视技入口：当前群势力角色可将一张“天兵”当雷【杀】使用或打出。
+M.ENTRY = "qiao__skill_em_qun010_tianbing"
 M.listeners = {}
+
+--- 当前持旗且仍在场的角色。默认 hasSkill 会同时排除死亡与技能失效状态。
+--- 只读技能、在场与势力状态，客户端与服务端共用。
+---@param room Room|Client
+---@return Player[]
+function M.flagHolders(room)
+  local holders = {}
+  if room == nil then return holders end
+  for _, player in ipairs(room.players) do
+    if not player:isRemoved() and player:hasSkill(M.BANNER_SKILL) then
+      holders[#holders + 1] = player
+    end
+  end
+  return holders
+end
+
+--- 旗上全部“天兵”的公开 id 表；旗不存在时为空。
+---@param room Room|Client
+---@return integer[]
+function M.tianbingIds(room)
+  local ids = {}
+  for _, holder in ipairs(M.flagHolders(room)) do
+    table.insertTable(ids, holder:getPile(M.PILE))
+  end
+  return ids
+end
+
+--- 该牌当前是否仍是某面旗上的“天兵”。
+---@param room Room|Client
+---@param id integer
+---@return boolean
+function M.isTianbing(room, id)
+  if room == nil or id == nil then return false end
+  for _, holder in ipairs(M.flagHolders(room)) do
+    if table.contains(holder:getPile(M.PILE), id) then return true end
+  end
+  return false
+end
 
 function M.addListener(listener)
   assert(type(listener) == "function", "天兵 listener must be a function")
@@ -39,13 +79,19 @@ function M.add(player, ids, skillName)
   notify(player.room, old, M.count(player))
 end
 
---- 从旗移除天兵；仅供后续减少天兵的技能/规则调用。
+--- 从旗移除天兵；只移动当前确在旗牌堆中的牌。
+--- 返回是否确有牌离开旗牌堆；取消、重定向未生效或传入牌不在旗上时不通知监听。
 function M.remove(player, ids, skillName)
-  if player == nil or ids == nil or #ids == 0 then return end
+  if player == nil or ids == nil or #ids == 0 then return false end
   local old = M.count(player)
-  player.room:moveCardTo(ids, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+  local pile = player:getPile(M.PILE)
+  local moving = table.filter(ids, function(id) return table.contains(pile, id) end)
+  if #moving == 0 then return false end
+  player.room:moveCardTo(moving, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
     skillName or M.BANNER_SKILL, nil, true, player)
-  notify(player.room, old, M.count(player))
+  local new = M.count(player)
+  if new ~= old then notify(player.room, old, new) end
+  return new < old
 end
 
 --- 旗使群势力角色数视为 +天兵数；用于大小势力判断/悟心。

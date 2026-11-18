@@ -146,9 +146,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "文和乱武",
-  [":" .. skill.name] = "出牌阶段，对所有角色使用。你逐目标展示其手牌，然后选择一项："
-    .. "1.该目标弃置两张类别不同的手牌；2.你弃置其一张手牌。若你使用此牌时已确定为"
-    .. "群势力，群势力目标结算后手牌为零则补至其当前体力值。",
   ["#qiao__luanwu_chaos_skill"] = "文和乱武：逐目标展示手牌并弃置",
   ["#qiao__luanwu_chaos-choose"] = "文和乱武：选择对 %dest 执行的一项",
   ["#qiao__luanwu_chaos-target-discard"] = "文和乱武：弃置两张类别不同的手牌",

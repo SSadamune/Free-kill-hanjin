@@ -72,8 +72,8 @@ skill:addEffect("active", {
         prompt = "#qiao__skill_wei012_1-weapon",
         cancelable = false,
       })
+      -- askToDiscard 默认已经实际执行弃牌；不能再 throwCard 二次移牌。
       if cards == nil or #cards == 0 then return end
-      room:throwCard(cards, skill.name, player, player)
       if player.dead then return end
     else
       room:loseHp(player, 1, skill.name)

@@ -4,6 +4,7 @@
 -- 由 Codex 统一并入默认国战套件前，可先定向运行：
 --   python scripts/test.py --file tests/wei_damage.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 local JIANXIONG = "qiao__skill_wei001_1"
 local LANGGU = "qiao__skill_wei002_1"
@@ -197,7 +198,8 @@ function Testqiao_wei_damage:testLuoyiBonusSurvivesSkillLoss()
   setHand(room, p(2), {})
   grant(p(1), LUOYI)
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ discard }) })
+  -- 弃牌请求本身就是发动确认，没有单独的 askToSkillInvoke 回复。
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ discard }) })
   triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
   lu.assertEquals(p(1):getCardIds(Player.Hand)[1], slash)
 
@@ -210,6 +212,66 @@ function Testqiao_wei_damage:testLuoyiBonusSurvivesSkillLoss()
     room:useCard { from = p(1), tos = { p(2) }, card = Fk:getCardById(slash) }
   end)
   lu.assertEquals(p(2).hp, hp2 - 2)
+end
+
+-- 裸衣：取消唯一弃牌请求即不发动；请求提示写明消耗与加伤 -----------------
+function Testqiao_wei_damage:testLuoyiCancelDoesNotActivate()
+  local room = FkTest.room
+  local ids = setHand(room, p(1), {
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 3 },
+  })
+  local peach, slash = ids[1], ids[2]
+  setHand(room, p(2), {})
+  grant(p(1), LUOYI)
+
+  FkTest.setNextReplies(p(1), { "" })
+  triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
+
+  lu.assertEquals(p(1):usedSkillTimes(LUOYI, Player.HistoryGame), 0)
+  lu.assertEquals(room:getCardArea(peach), Card.PlayerHand)
+
+  -- 未发动则本回合的【杀】仍是原伤害。
+  local hp2 = p(2).hp
+  inRoom(function()
+    room:useCard { from = p(1), tos = { p(2) }, card = Fk:getCardById(slash) }
+  end)
+  lu.assertEquals(p(2).hp, hp2 - 1)
+end
+
+function Testqiao_wei_damage:testLuoyiCostRequestExplainsBonus()
+  local room = FkTest.room
+  setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })
+  setHand(room, p(2), {})
+  grant(p(1), LUOYI)
+
+  local request
+  skill_test.withSkillRequests(room, LUOYI, {
+    askToSkillInvoke = function()
+      error("裸衣不应再单独询问是否发动")
+    end,
+    askToDiscard = function(self, who, params, original)
+      if who.id ~= p(1).id then return original(self, who, params) end
+      request = params
+      return {}
+    end,
+  }, function()
+    triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
+  end)
+
+  lu.assertNotNil(request, "裸衣应发起一次弃牌请求")
+  lu.assertEquals(request.cancelable, true)
+  lu.assertEquals(request.skip, true)
+  lu.assertEquals(request.min_num, 1)
+  lu.assertEquals(request.max_num, 1)
+  lu.assertEquals(request.prompt, "#qiao__skill_wei005_1-discard")
+  local text = Fk:translate(request.prompt)
+  lu.assertTrue(text:find("弃置一张牌发动", 1, true) ~= nil,
+    "请求提示应写明弃牌是发动消耗：" .. text)
+  lu.assertTrue(text:find("伤害+1", 1, true) ~= nil,
+    "请求提示应写明本回合加伤：" .. text)
+  -- 请求返回空（无合法成本）不发动。
+  lu.assertEquals(p(1):usedSkillTimes(LUOYI, Player.HistoryGame), 0)
 end
 
 -- 遗计：一次伤害事件发动一次，先1~2张给一人，其余给一人 -----------------
@@ -314,7 +376,8 @@ function Testqiao_wei_damage:testXiaoguoDamageVersusDraw()
   local equip = addEquip(room, p(2), "qiao__chixiao_sword", Card.Heart, 9)
   local hp2 = p(2).hp
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ b1, b2 }) })
+  -- 弃牌请求本身就是发动确认，没有单独的 askToSkillInvoke 回复。
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ b1, b2 }) })
   triggerPhase(room, p(2), Player.Start)
   lu.assertEquals(p(2).hp, hp2 - 1)
   lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
@@ -324,11 +387,71 @@ function Testqiao_wei_damage:testXiaoguoDamageVersusDraw()
   local equipA = addEquip(room, p(3), "qiao__chixiao_sword", Card.Heart, 9)
   addEquip(room, p(3), "qiao__linxiao_yuyu", Card.Spade, 5)
   local basic = setHand(room, p(1), { { "qiao__slash", Card.Spade, 10 } })[1]
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ basic }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ basic }) })
   FkTest.setNextReplies(p(3), { FkTest.ReplyDiscard({ equipA }) })
   triggerPhase(room, p(3), Player.Start)
   lu.assertEquals(#p(1):getCardIds(Player.Hand), 1)
   lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 2)
+end
+
+-- 骁果：取消唯一弃牌请求即不发动，不弃基本牌、不弃装备、不造成伤害 ------
+function Testqiao_wei_damage:testXiaoguoCancelDoesNotActivate()
+  local room = FkTest.room
+  grant(p(1), XIAOGUO)
+  local basic = setHand(room, p(1), { { "qiao__slash", Card.Spade, 8 } })[1]
+  clearCards(room, p(2), "h")
+  local equip = addEquip(room, p(2), "qiao__chixiao_sword", Card.Heart, 9)
+  local hp2 = p(2).hp
+
+  FkTest.setNextReplies(p(1), { "" })
+  triggerPhase(room, p(2), Player.Start)
+
+  lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 0)
+  lu.assertEquals(room:getCardArea(basic), Card.PlayerHand)
+  lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
+  lu.assertEquals(p(2).hp, hp2)
+end
+
+function Testqiao_wei_damage:testXiaoguoCostRequestNamesTargetAndFollowUp()
+  local room = FkTest.room
+  grant(p(1), XIAOGUO)
+  setHand(room, p(1), {
+    { "qiao__slash", Card.Spade, 8 },
+    { "qiao__peach", Card.Heart, 9 },
+  })
+  clearCards(room, p(2), "he")
+
+  local request
+  skill_test.withSkillRequests(room, XIAOGUO, {
+    askToSkillInvoke = function()
+      error("骁果不应再单独询问是否发动")
+    end,
+    askToDiscard = function(self, who, params, original)
+      if who.id ~= p(1).id then return original(self, who, params) end
+      request = params
+      return {}
+    end,
+  }, function()
+    triggerPhase(room, p(2), Player.Start)
+  end)
+
+  lu.assertNotNil(request, "骁果应发起一次弃牌请求")
+  lu.assertEquals(request.cancelable, true)
+  lu.assertEquals(request.skip, true)
+  lu.assertEquals(request.min_num, 1)
+  lu.assertEquals(request.max_num, 2)
+  -- Ltk.processPrompt 的参数位依次是 #键:来源:目标:参数；%dest 取第 3 段目标。
+  lu.assertEquals(request.prompt,
+    "#qiao__skill_wei016_1-discard:" .. p(1).id .. ":" .. p(2).id .. ":2")
+  local text = Fk:translate("#qiao__skill_wei016_1-discard")
+  lu.assertTrue(text:find("%dest", 1, true) ~= nil,
+    "提示应使用 %dest 指向目标：" .. text)
+  lu.assertTrue(text:find("造成1点伤害", 1, true) ~= nil,
+    "提示应写明后续伤害：" .. text)
+  lu.assertTrue(text:find("摸一张牌", 1, true) ~= nil,
+    "提示应写明另一后续：" .. text)
+  -- 请求返回空（无合法成本）不发动。
+  lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 0)
 end
 
 return { name = "qiao_wei_damage" }

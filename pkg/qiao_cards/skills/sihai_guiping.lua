@@ -11,6 +11,7 @@
 --     角色是否使用一张实体牌，走真实用牌入口并只使用一次，沿用牌本身的
 --     目标规则，不额外放宽距离或次数。
 local FactionTricks = require "packages.qiao.pkg.qiao_mode.rules.faction_tricks"
+local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
 
 local skill = fk.CreateSkill {
   name = "qiao__sihai_guiping_skill",
@@ -153,9 +154,10 @@ skill:addEffect("cardskill", {
     room:sortByAction(jin)
     for _, other in ipairs(jin) do
       if not other.dead and not other:isRemoved() then
-        -- 普通可选用牌请求（含已确认合法的转化牌）；选择后只执行一次，
-        -- 不额外放宽次数或目标条件。
-        local use = room:askToUseCard(other, {
+        -- 普通可选用牌请求（含已确认合法的转化牌）；请求声明 not_passive，
+        -- 不提供【闪】【无懈可击】等被动牌。选择后只执行一次，不额外放宽
+        -- 次数或目标条件；服务端公共入口按本次请求复核后再返回待执行数据。
+        local use = FreeUse.askToUseCard(other, {
           pattern = ".",
           skill_name = skill.name,
           prompt = "#qiao__sihai_guiping-use",
@@ -173,10 +175,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "四海归平",
-  [":" .. skill.name] = "出牌阶段，对你使用。结束本次出牌阶段的自由出牌入口，"
-    .. "继续完成当前锦囊及后续阶段。从本阶段置入弃牌堆且仍在弃牌堆的牌中，"
-    .. "每种花色各获得一张。若你使用此牌时已确定为晋势力，你可以将本次获得的牌"
-    .. "交给其他晋势力角色（每名一张），然后按座次询问所有晋势力角色是否使用一张牌。",
   ["#qiao__sihai_guiping_skill"] = "四海归平：结束自由出牌入口并按花色回收本阶段弃牌",
   ["#qiao__sihai_guiping-suit"] = "四海归平：选择一张%arg花色的牌",
   ["#qiao__sihai_guiping-give"] = "四海归平：可将本次获得的牌交给其他晋势力角色",

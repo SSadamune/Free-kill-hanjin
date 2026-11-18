@@ -150,10 +150,6 @@ skill:addEffect(fk.Death, {
 
 Fk:loadTranslationTable {
   [skill.name] = "党锢之祸",
-  [":" .. skill.name] = "出牌阶段，对所有其他角色使用。你逐目标选择其一张可暗置的"
-    .. "明置武将牌并暗置；此牌对该目标生效后，其不能明置，持续到你的下回合开始或"
-    .. "你死亡。若你使用此牌时已确定为汉势力，汉势力目标可以交给你一张自己的手牌或"
-    .. "装备，如此做则此牌仅对其无效。",
   ["#qiao__danggu_zhihuo_skill"] = "党锢之祸：暗置每名其他角色一张武将牌",
   ["#qiao__danggu_zhihuo-give"] = "党锢之祸：你可以交给使用者一张手牌或装备，令此牌对你无效",
   ["#qiao__danggu_zhihuo-choose"] = "党锢之祸：选择交给使用者的一张牌",

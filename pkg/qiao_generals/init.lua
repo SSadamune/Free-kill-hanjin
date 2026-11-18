@@ -238,6 +238,8 @@ Fk:addPostLoadFunc(function()
     })
     Sources.registerRetinue(retinue.id, retinue.skill.id)
   end
+  -- 非武将来源标签：只包裹既有 skeleton.dynamic_desc，不改技能名或可见性。
+  require("packages.qiao.pkg.qiao_mode.rules.skill_source_labels").register(Data.retinues)
   local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
   for _, source in ipairs(sources) do
     for _, version in ipairs(source.data.versions or {}) do Versions.register(version) end

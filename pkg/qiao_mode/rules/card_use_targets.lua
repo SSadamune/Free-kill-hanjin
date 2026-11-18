@@ -784,8 +784,19 @@ function M.validateUse(room, player, use, policy, context, opts)
   if rec == nil then return false, "missing-policy" end
   -- Passive response cards (闪/无懈) target a card, not role targets; their
   -- response legality is handled by the response pipeline, but independent
-  -- prohibit rules still apply.
+  -- prohibit rules still apply.  A free-use request explicitly declares
+  -- not_passive: there is no response window, so an injected passive card is
+  -- rejected early instead of being accepted by the response exception here.
   if use.card.is_passive or use.toCard ~= nil then
+    -- `opts.not_passive` is the request's independent free-use marker; the
+    -- original context (use.extra_data or an explicitly supplied opts extra
+    -- data) may also carry it for callers that validate outside askToUseCard.
+    local extra_data = opts.extra_data or use.extra_data
+    local free_use = opts.not_passive == true
+      or (type(extra_data) == "table" and extra_data.not_passive == true)
+    if free_use then
+      return false, "passive-card"
+    end
     if player:prohibitUse(use.card) or player:prohibitResponse(use.card) then
       return false, "prohibit-response"
     end
@@ -845,8 +856,15 @@ function M.askToUseCard(room, player, params)
   if not ok then error(use, 0) end
   if use == nil then return nil end
   M.attachUse(room, use, rec)
-  if not M.validateUse(room, player, use, rec, params.context,
-    { require_trusted = true, stage = "selection" }) then
+  -- Forward the free-use marker independently: opts.not_passive is consumed only
+  -- by validateUse's passive branch, so validateTargets keeps resolving extra
+  -- data as before (use.extra_data unless a caller explicitly supplies it).
+  local validation_opts = {
+    require_trusted = true,
+    stage = "selection",
+    not_passive = ask.extra_data.not_passive == true or nil,
+  }
+  if not M.validateUse(room, player, use, rec, params.context, validation_opts) then
     M.releaseToken(room, use)
     return nil
   end

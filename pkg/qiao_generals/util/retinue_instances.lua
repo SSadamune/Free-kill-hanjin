@@ -417,4 +417,9 @@ function M.recordUse(instance)
   instance.uses = (instance.uses or 0) + 1
 end
 
+Fk:loadTranslationTable {
+  [M.PUBLIC_MARK] = "翼从",
+  [M.PUBLIC_MARK:sub(3)] = "翼从",
+}
+
 return M

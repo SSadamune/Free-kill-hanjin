@@ -30,7 +30,7 @@
 - `Exchange.validate(room, first, second, options)`：只校验，返回 `true` 或 `false, reason`。
 - `Exchange.exchange(room, first, second, options)`：成功返回结算上下文；失败返回 `false, reason`，且双方都不移动。
 - 位置参数为 `{ player = ServerPlayer, isDeputy = boolean, general = 可选预期牌名 }`。可选 `general` 用于拒绝过期的选择结果。
-- 默认策略只允许当前国战关系下互为同势力的两名角色；同一角色的主副将交换自然满足。未来的特殊说明通过 `options.cross_kingdom = true` 或 `options.kingdom_allowed(from, to)` 明示放宽。君主武将、野心家专属武将默认拒绝，通过 `options.allow_lord`、`options.allow_wild` 或 `options.allowed_generals[generalName]` 明示放宽。未传例外时不会自行放宽。
+- 默认策略只允许当前国战关系下互为同势力的两名角色；同一角色的主副将交换自然满足。特殊说明可通过 `options.cross_kingdom` 或 `options.kingdom_allowed` 放宽势力关系限制，通过 `options.allow_wild` 或 `options.allowed_generals` 放宽野心家专属牌限制。君主牌按实际身份一律排除。
 - `Exchange.registerSoldierGeneral(name, "white"|"retinue")` 供统领模块登记独立翼从；普通士兵默认识别 `blank_shibing` / `blank_nvshibing`，不按 `blank_` 前缀推定所有独立翼从 ID。
 - `Exchange.registerLordGeneral(name)` 允许未来使用不含 `lord` 字样的独立君主武将 ID 参与类别校验；默认会识别牌名/真名含 `lord`、显式 `general.is_lord`、上游 `HegUtil.lordGenerals` 映射及带主公技标签的武将。
 - `Exchange.registerSkillMarks(skillName, marks)` 登记需要随牌移动的自定义技能标记。引擎转换技/使命技标记和 `<skill>-<suffix>` 形式的标记自动识别，不整批迁移角色标记。
@@ -104,7 +104,9 @@
 
 - 同人主副互换、跨角色同位与跨位互换；失败时双方位置、技能与牌堆均不移动。
 - 敌方、被选牌暗置、同一位置重复选择、过期牌名、非法角色和非法位置参数被拒绝；未选位置暗置不阻塞。
-- 君主、野心家专属、跨势力默认拒绝，显式 `allow_lord` / `allow_wild` / `allowed_generals` / `cross_kingdom` 放宽。
+- 君主武将牌一律拒绝。野心家专属牌及跨势力交换按各自的显式例外处理。
+
+君主牌保护由 `Exchange.isLordPosition` 按实际将牌身份查询。普通变更、穿心和统领能力在候选或支付前查询保护状态，国战移除、变更和底层替换入口也在改变状态前保护汉晋房间的目标位置。真实君主的交换与拒绝后状态、统领代价及穿心兜底分别通过 `general_exchange` 19/19、`commander_retinue` 58/58、`qun024_zhangren` 5/5；`qun_dying` 5/5、`retinue_instance_sources` 7/7。
 - 体力贡献不同的牌交换后 `maxHp`、`hp` 原样保留。
 - 限定技整局次数、轮次技与分支技的轮次次数、转换技标记随牌移动；换回、再换、按原重置点重置时不重置或重复扣次。
 - 主将技/副将技到错误位置不激活，但其次数保留，换回后继续生效。

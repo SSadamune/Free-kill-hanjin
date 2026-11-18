@@ -19,9 +19,10 @@ local PUBLIC_PROMPTS = {
   "#qiao__skill_em_wu001_flag-grant",
   "#qiao__skill_em_wu001_flag-remove",
   "#qiao__gongxin-prompt",
-  "#qiao__gongxin-view",
-  "#qiao__gongxin-show",
-  "#qiao__gongxin-move",
+  "#qiao__gongxin-panel",
+  "#qiao__gongxin-discard",
+  "#qiao__gongxin-top",
+  "#qiao__gongxin-end",
   "#qiao_adaptation_add_target",
   "#qiao_adaptation_remove_target",
   "#qiao_adaptation_discard_equip",
@@ -30,7 +31,7 @@ local PUBLIC_PROMPTS = {
 }
 
 local PUBLIC_PILES = {
-  "qiao_em_han001_zhaoshu",
+  (require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han").PILE,
   "qiao_em_wu001_fenghuo",
   "qiao_em_qun010_tianbing",
 }
@@ -55,6 +56,9 @@ function Testqiao_translation_completeness:testPublicPilesAndMarksHaveReadableTe
   for _, name in ipairs(PUBLIC_PILES) do
     lu.assertNotEquals(Fk:translate(name), name, "公开牌堆缺本地化：" .. name)
   end
+  local retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+  lu.assertEquals(Fk:translate(retinues.PUBLIC_MARK, "zh_CN"), "翼从")
+  lu.assertEquals(Fk:translate(retinues.PUBLIC_MARK:sub(3), "zh_CN"), "翼从")
   for _, name in ipairs({ "qiao_use_target_policy", "qiao_commander_sources" }) do
     local spec = assert(Fk.qml_marks[name], "缺少 QML 标记注册：" .. name)
     lu.assertEquals(spec.how_to_show(), "#hidden", "内部标记应隐藏：" .. name)

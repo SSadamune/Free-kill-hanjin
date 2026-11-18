@@ -233,7 +233,7 @@ function Testqiao_jin_basic:testCiweiSecondRealUseNullifiesBasicTarget()
   local hp = victim.hp
 
   FkTest.setNextReplies(p, {
-    "1", FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
+    FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
   })
   runTurnStart(room, user, function()
     -- 已在 TurnStart 的房间协程内，直接执行真实用牌事件，不再嵌套 runInRoom。
@@ -259,7 +259,7 @@ function Testqiao_jin_basic:testCiweiCommonTrickTargetNullified()
   local hp = victim.hp
 
   FkTest.setNextReplies(p, {
-    "1", FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
+    FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
   })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { user }, card = Fk:getCardById(equipped) }
@@ -278,7 +278,7 @@ function Testqiao_jin_basic:testCiweiEquipmentBranchChainsUser()
   local equip = give(room, user, { { "jueying" } })[1]
   local cost = give(room, p, { { "peach" } })[1]
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ cost }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ cost }) })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { p3() }, card = Fk:getCardById(first) }
     room:useCard { from = user, tos = { user }, card = Fk:getCardById(equip) }
@@ -296,7 +296,7 @@ function Testqiao_jin_basic:testCiweiDelayedTrickBranchChainsUser()
   local delayed = give(room, user, { { "indulgence" } })[1]
   local cost = give(room, p, { { "peach" } })[1]
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ cost }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ cost }) })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { victim }, card = Fk:getCardById(first) }
     room:useCard { from = user, tos = { victim }, card = Fk:getCardById(delayed) }

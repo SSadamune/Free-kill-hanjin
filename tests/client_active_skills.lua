@@ -3,6 +3,12 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
+
+local YONGLIANG = "qiao__skill_han015_1"   -- 效果声明：出牌阶段限一次
+local FENYUE = "qiao__skill_han013_1"      -- 骨架声明：函数（席面势力数）
+local POZHU = "qiao__skill_jin006_2"       -- 效果声明：函数（三陈复原数）
+local CRUISE = "qiao__skill_jin017_2"      -- 限定技：本局限一次
 
 
 local EXPECTED_TRUE = {
@@ -27,6 +33,19 @@ local function inRoom(fn)
   local result
   FkTest.runInRoom(function() result = fn() end)
   return result
+end
+
+--- 正式客户端的普通出牌请求类：由 board.client_klass 注册的 QiaoPlayCard。
+local function qiaoPlayCardClass()
+  local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+  local client = board.client_klass:new(ClientInstance.client)
+  return client.request_handlers.PlayCard
+end
+
+--- 服务端按正常出牌回包（params == nil）入口执行。
+local function serverReply(room, player, skillName, targets, cards)
+  return room:handleUseCardReply(
+    player, FkTest.ReplyUseSkill(skillName, targets or {}, cards or {}), nil)
 end
 
 Testqiao_client_active_skills = {
@@ -139,6 +158,123 @@ function Testqiao_client_active_skills:testAllFormalSkillButtonsUseClientRoom()
     "可用按钮数量不得少于已知合法技能（可用 " .. available .. " / " .. tested .. "）")
   lu.assertEquals(entered, available, "每个可用按钮都必须实际进入技能选择")
   lu.assertEquals(filtered, available, "每个可用按钮都必须走选牌/目标筛选")
+end
+
+-- 正式客户端 QiaoPlayCard：按钮可用性与确认键共用同一条次数声明检查。
+-- 用良的效果声明为出牌阶段限一次，但 can_use 本身不检查次数；这里只用声明，
+-- 不复制技能自己的可用性策略。
+function Testqiao_client_active_skills:testQiaoPlayCardBlocksExhaustedDeclaration()
+  local room = FkTest.room
+  local user, target = room.players[1], room.players[2]
+  inRoom(function()
+    room:handleAddLoseSkills(user, YONGLIANG, nil, false, true)
+    user.phase = Player.Play
+    room.current = user
+  end)
+  local skill = assert(Fk.skills[YONGLIANG])
+  lu.assertTrue(ActiveSkillLimits.appliesTo(skill), "正式主主动效果应进入共享检查")
+  lu.assertFalse(ActiveSkillLimits.appliesTo(Fk.skills["#qiao__skill_han007_1_aux"]),
+    "辅助主动技不进入共享检查")
+
+  client_room.run(room, function(clients)
+    local me = clients[1]
+    local handler = qiaoPlayCardClass():new(me)
+    handler.skill_name = YONGLIANG
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(YONGLIANG), "未发动时按钮应可用")
+
+    handler:selectSkill(YONGLIANG, { selected = true })
+    local clientTarget = clients[2]
+    lu.assertTrue(handler:targetValidity(clientTarget.id), "合法目标应可点击")
+    handler:selectTarget(clientTarget.id, { selected = true })
+    lu.assertTrue(handler:feasible(), "未发动时应可确认")
+
+    me:setSkillUseHistory(YONGLIANG, 1, Player.HistoryPhase)
+    lu.assertFalse(handler:skillButtonValidity(YONGLIANG), "声明次数用尽后按钮应禁用")
+    lu.assertFalse(handler:feasible(), "声明次数用尽后确认键应禁用")
+    handler:_finish()
+  end)
+end
+
+-- 正常服务端入口（params == nil）用同一份声明覆盖多种声明形态：
+-- 固定效果声明、标记驱动的动态效果声明、动态骨架声明与限定技。
+-- 每个场景只验证共享入口在计次前拒绝且不增加历史，不重复技能自身结算。
+function Testqiao_client_active_skills:testServerNormalPlaySharedDeclarationScenarios()
+  local room = FkTest.room
+  local user, target = room.players[1], room.players[2]
+
+  local function resolveLimit(owner, declarations, scope)
+    local limit = declarations[scope]
+    if type(limit) == "function" then limit = limit(owner, user) end
+    return limit
+  end
+
+  local scenarios = {
+    {
+      name = "固定效果声明（用良）",
+      skill = YONGLIANG,
+      scope = Player.HistoryPhase,
+      prepare = function()
+        local card = room:printCard("qiao__jink", Card.Heart, 4)
+        room:obtainCard(user, card, false, fk.ReasonJustMove)
+      end,
+      limit = function() return 1 end,
+    },
+    {
+      name = "动态骨架声明（奋钺）",
+      skill = FENYUE,
+      scope = Player.HistoryPhase,
+      prepare = function() end,
+      limit = function()
+        local skeleton = assert(Fk.skills[FENYUE]:getSkeleton())
+        return resolveLimit(skeleton, skeleton.max_use_time, Player.HistoryPhase)
+      end,
+    },
+    {
+      name = "标记驱动的动态效果声明（破竹）",
+      skill = POZHU,
+      scope = Player.HistoryPhase,
+      prepare = function()
+        local card = room:printCard("qiao__jink", Card.Heart, 5)
+        room:obtainCard(user, card, false, fk.ReasonJustMove)
+        room:setPlayerMark(user, "qiao_jin006_1_phase", { uses = 0, restored = 1 })
+      end,
+      limit = function()
+        local effect = assert(Fk.skills[POZHU])
+        return resolveLimit(effect, effect.max_use_time, Player.HistoryPhase)
+      end,
+    },
+    {
+      name = "限定技（遄征）",
+      skill = CRUISE,
+      scope = Player.HistoryGame,
+      prepare = function() end,
+      limit = function() return 1 end,
+    },
+  }
+
+  for _, case in ipairs(scenarios) do
+    local expected
+    inRoom(function()
+      room:handleAddLoseSkills(user, case.skill, nil, false, true)
+      user.phase = Player.Play
+      room.current = user
+      case.prepare()
+      local limit = case.limit()
+      lu.assertTrue(type(limit) == "number" and limit >= 1,
+        case.name .. " 应有次数声明")
+      user:setSkillUseHistory(case.skill, limit, case.scope)
+      expected = limit
+    end)
+
+    local result
+    inRoom(function() result = serverReply(room, user, case.skill, { target }) end)
+    lu.assertNil(result, case.name .. " 次数用尽后应拒绝回包")
+    inRoom(function()
+      lu.assertEquals(user:usedSkillTimes(case.skill, case.scope), expected,
+        case.name .. " 被拒绝时不得增加技能历史")
+    end)
+  end
 end
 
 return { name = "qiao_client_active_skills" }

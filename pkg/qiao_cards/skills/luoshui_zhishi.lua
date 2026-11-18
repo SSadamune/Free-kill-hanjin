@@ -128,14 +128,14 @@ end
 skill:addEffect("cardskill", {
   prompt = "#qiao__luoshui_zhishi_skill",
   target_num = 1,
+  -- cardskill 的默认 targetFilter 恒为 false；接回共用入口后，客户端按同一
+  -- mod_target_filter 条件点亮目标。
+  target_filter = Util.CardTargetFilter,
   mod_target_filter = function(self, player, to_select, selected, card, extra_data)
     return to_select ~= nil and to_select:isAlive() and not to_select:isRemoved()
   end,
   can_use = function(self, player)
-    for _, other in ipairs(Fk:currentRoom():getAlivePlayers()) do
-      if other:isAlive() and not other:isRemoved() then return true end
-    end
-    return false
+    return #Fk:currentRoom():getPresentPlayers() > 0
   end,
   on_use = function(self, room, use)
     -- 用牌时记录本次用牌的势力快照；立即结算推迟到目标事件之后。
@@ -227,10 +227,6 @@ skill:addEffect(fk.CardUseFinished, {
 
 Fk:loadTranslationTable {
   [skill.name] = "洛水之誓",
-  [":" .. skill.name] = "延时锦囊，对一名角色使用。判定为黑桃 2～9 且该目标在此时"
-    .. "为野心家时，其选择一名角色并造成 3 点雷电伤害；若判定不是黑桃 2～9 且本回合"
-    .. "仍有后续阶段，把该阶段改为判定阶段并重新判定。若你使用此牌时已确定为野心家"
-    .. "且目标为你，则立即判定生效。",
   ["#qiao__luoshui_zhishi_skill"] = "洛水之誓：选择一名角色。判定为黑桃 2～9 且其为野心家时，其对一名角色造成 3 点雷电伤害",
   ["#qiao__luoshui_zhishi-damage"] = "洛水之誓：选择一名角色，对其造成 3 点雷电伤害",
 }

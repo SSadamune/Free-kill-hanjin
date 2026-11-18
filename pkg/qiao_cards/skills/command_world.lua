@@ -21,13 +21,12 @@ local SLASH = "qiao__slash"
 local CHOICE_OWN = "command_world_own"
 local CHOICE_TARGET = "command_world_target"
 
---- 存活且未移出游戏的角色中的最低体力值。
-local function lowestHp(room)
+--- 给定在场名单（存活且未移出游戏）中的最低体力值。
+--- 名单由调用方取得：客户端房间没有服务端 getAlivePlayers。
+local function lowestHp(players)
   local min
-  for _, player in ipairs(room:getAlivePlayers()) do
-    if player:isAlive() and not player:isRemoved() then
-      if min == nil or player.hp < min then min = player.hp end
-    end
+  for _, player in ipairs(players) do
+    if min == nil or player.hp < min then min = player.hp end
   end
   return min
 end
@@ -141,20 +140,22 @@ skill:addEffect("cardskill", {
   prompt = "#qiao__command_world_skill",
   target_num = 1,
   -- 可用目标条件集中在 mod_target_filter：引擎的可用目标查询与界面点亮
-  -- 都经 Util.CardTargetFilter 走同一入口。
+  -- 都经 Util.CardTargetFilter 走同一入口；cardskill 的默认 targetFilter 恒为
+  -- false，须显式接回同一函数，客户端才按本条件点亮目标。
+  target_filter = Util.CardTargetFilter,
   mod_target_filter = function(self, player, to_select, selected, card, extra_data)
     if to_select == nil then return false end
     if not to_select:isAlive() or to_select:isRemoved() then return false end
-    local min = lowestHp(Fk:currentRoom())
+    local min = lowestHp(Fk:currentRoom():getPresentPlayers())
     if min == nil or to_select.hp <= min then return false end
     return not player:isProhibited(to_select, card)
   end,
   can_use = function(self, player)
-    local room = Fk:currentRoom()
-    local min = lowestHp(room)
+    local present = Fk:currentRoom():getPresentPlayers()
+    local min = lowestHp(present)
     if min == nil then return false end
-    for _, other in ipairs(room:getAlivePlayers()) do
-      if other:isAlive() and not other:isRemoved() and other.hp > min then return true end
+    for _, other in ipairs(present) do
+      if other.hp > min then return true end
     end
     return false
   end,
@@ -181,10 +182,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "号令天下",
-  [":" .. skill.name] = "出牌阶段，对一名体力值高于场上最小值的角色使用。除目标外的"
-    .. "角色按座次决定是否参与：参与者可以弃置一张手牌，视为对目标使用一张【杀】；"
-    .. "或弃置目标的一张手牌或装备。若你使用此牌时已确定为魏势力，魏势力参与者跳过"
-    .. "弃牌步骤，并取得第二项中实际弃置且仍可取得的牌。",
   ["#qiao__command_world_skill"] = "号令天下：对一名体力值高于场上最小值的角色使用",
   ["#qiao__command_world-participate"] = "号令天下：是否参与（目标为 %dest）",
   ["#qiao__command_world-choice"] = "号令天下：选择对 %dest 执行的一项",

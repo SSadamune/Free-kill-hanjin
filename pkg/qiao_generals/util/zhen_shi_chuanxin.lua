@@ -6,6 +6,9 @@ local C=require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local M={}
 function M.replaceDeputy(room,player,retinue,skillName)
   local old=E.actualGeneral(player,true)
+  -- 君主武将牌不能被实际变更，包括暗置的牌；拒绝后由调用方执行“否则”。
+  -- 在任何事件、离牌状态清理或将池移动之前返回。
+  if E.isLordPosition(player,true) then return false end
   if not Fk.generals[old] or C.isSoldier(old) or not C.isRetinue(retinue)
     or C.limitedRetinueTaken(room,retinue) then return false end
   local data=H.GeneralTransformedData:new{

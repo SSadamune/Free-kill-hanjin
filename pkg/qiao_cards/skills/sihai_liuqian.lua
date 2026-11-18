@@ -1,5 +1,7 @@
 -- 四海流钱：出牌阶段空闲时，选择距离终值大于1且至少有两张可获得牌的角色，
--- 预先选定其恰好两张手牌/装备，然后将此宝物交到其手牌区，并取得所选牌。
+-- 通过一次原生选牌请求预先选定其恰好两张手牌/装备，然后将此宝物交到其手牌区，
+-- 并取得所选牌。选牌交给引擎的 askToChooseCards，隐藏手牌由它按询问者可见性
+-- 打乱并附带 visible_data，客户端不会把未公开手牌当作已知牌。
 -- 两个转移在同一次 moveCards 中完成，分别保留给牌／获得原因。
 local skill = fk.CreateSkill {
   name = "qiao__sihai_liuqian_skill",
@@ -14,7 +16,6 @@ local function treasureId(player)
     if card ~= nil and card.name == skill.attached_equip then return id end
   end
 end
-
 
 -- BeforeCardsMove 的普通触发可以逐张取消本次移动；late_refresh 在所有普通
 -- 触发之后复核同一动作的三张牌，任一已不在原区域就把本次三张全部过滤掉。
@@ -45,13 +46,12 @@ skill:addEffect(fk.BeforeCardsMove, {
       end
     end
   end,
-})local function chooseCard(room, player, target, prompt)
-  return room:askToChooseCard(player, {
-    target = target,
-    flag = "he",
-    skill_name = skill.name,
-    prompt = prompt,
-  })
+})
+
+local function isSelectable(room, target, id)
+  if room:getCardOwner(id) ~= target then return false end
+  local area = room:getCardArea(id)
+  return area == Card.PlayerHand or area == Card.PlayerEquip
 end
 
 skill:addEffect("active", {
@@ -74,27 +74,27 @@ skill:addEffect("active", {
     local treasure = treasureId(player)
     if treasure == nil or target:isHandAreaSealed() then return end
 
-    -- 先固定恰好两张牌；两次选择都在任何移动之前完成。
-    local first = chooseCard(room, player, target, "#qiao__sihai_liuqian-first")
-    if first == nil then return end
-    local hand, equip = {}, {}
-    for _, id in ipairs(target:getCardIds(Player.Hand)) do
-      if id ~= first then table.insert(hand, id) end
-    end
-    for _, id in ipairs(target:getCardIds(Player.Equip)) do
-      if id ~= first then table.insert(equip, id) end
-    end
-    if #hand + #equip < 1 then return end
-    local second = room:askToChooseCard(player, {
+    -- 一次请求选完两张：flag 用 "he" 让引擎按询问者可见性生成
+    -- visible_data 并按手牌、装备分组。恰好两张时引擎直接返回唯一组合。
+    local chosen = room:askToChooseCards(player, {
       target = target,
-      flag = { card_data = { { "$Hand", hand }, { "$Equip", equip } } },
+      flag = "he",
+      min = 2,
+      max = 2,
       skill_name = skill.name,
-      prompt = "#qiao__sihai_liuqian-second",
+      prompt = "#qiao__sihai_liuqian-choose",
     })
-    if second == nil or second == first then return end
-    if room:getCardOwner(first) ~= target or room:getCardOwner(second) ~= target then return end
-    if player:distanceTo(target) <= 1 or target:isHandAreaSealed()
-      or player:isHandAreaSealed() then return end
+    if type(chosen) ~= "table" or #chosen ~= 2 then return end
+    local first, second = chosen[1], chosen[2]
+    if first == second then return end
+    -- 只接受目标当前手牌区或装备区的牌：判定区、私人牌堆及第三张都不合法。
+    if not isSelectable(room, target, first) then return end
+    if not isSelectable(room, target, second) then return end
+
+    -- 询问期间状态可能改变，移动前重新核对距离、手牌区与宝物。
+    if treasureId(player) ~= treasure or target.dead or target:isRemoved()
+      or player.dead or player:isRemoved() or player:distanceTo(target) <= 1
+      or target:isHandAreaSealed() or player:isHandAreaSealed() then return end
 
     -- “并”：一次移动同时完成交给与取得，原因分别保留。
     room:setTag(EXCHANGE_TAG, true)
@@ -124,8 +124,7 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   [skill.name] = "四海流钱",
-  ["#qiao__sihai_liuqian-first"] = "四海流钱：选择目标一张手牌或装备",
-  ["#qiao__sihai_liuqian-second"] = "四海流钱：再选择目标一张手牌或装备",
+  ["#qiao__sihai_liuqian-choose"] = "四海流钱：选择目标两张手牌或装备",
   [":qiao__sihai_liuqian_skill"] = "出牌阶段内的空闲时间点，你可以选择距离大于1的一名角色，"
     .. "将其两张手牌或装备与装备区里的此牌交换。",
 }

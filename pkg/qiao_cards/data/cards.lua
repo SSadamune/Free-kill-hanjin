@@ -166,8 +166,8 @@ M.types = {
 
   -- Armor ----------------------------------------------------------------
   { id = "qiao__vine", display = "藤甲", type = "equip",
-    subtype = Card.SubtypeArmor, skill = "qiao__inert_equip",
-    equip_skill = "qiao__inert_equip", inert = true },
+    subtype = Card.SubtypeArmor, skill = "default_equip_skill",
+    equip_skill = "qiao__vine_skill", inert = false },
   { id = "qiao__nioh_shield", display = "仁王盾", type = "equip",
     subtype = Card.SubtypeArmor, skill = "qiao__inert_equip",
     equip_skill = "qiao__inert_equip", inert = true },

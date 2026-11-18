@@ -5,6 +5,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 
 local WEIKUI = "qiao__skill_wei011_1"
 local QIANGXI = "qiao__skill_wei012_1"
+local QIANGXI_OPT_DISCARD = "#qiao__skill_wei012_1-discard"
 local QUHU = "qiao__skill_wei013_1"
 local H = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
 
@@ -136,6 +137,39 @@ function Testqiao_wei_active:testQiangxiPaysHpAndDamagesOncePerTargetPerPhase()
   activate(p1, QIANGXI, { p2 })
   lu.assertEquals(p1.hp, p1.maxHp - 1)
   lu.assertEquals(p2.hp, before - 1)
+  lu.assertTrue(table.contains(p1:getTableMark("qiao__skill_wei012_1-targets-phase"), p2.id))
+end
+
+function Testqiao_wei_active:testQiangxiDiscardHandWeaponPaysOnce()
+  local p1, p2 = p(1), p(2)
+  grant(p1, QIANGXI)
+  clearCards(p1)
+  clearCards(p2)
+  -- 两张手牌武器，确保走真实选牌请求而不是 askToDiscard 的自动全弃分支。
+  local first = give(p1, "qiao__axe", Card.Spade, 5)
+  local second = give(p1, "qiao__axe", Card.Diamond, 5)
+  setPlayPhase(p1)
+  inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp end)
+
+  -- 真实弃牌请求：选“弃置武器牌”，再选择一张手牌武器支付。
+  local moved = 0
+  local originalMove = room().moveCards
+  room().moveCards = function(self, ...)
+    for _, move in ipairs({ ... }) do
+      if table.contains(move.ids or {}, first) then moved = moved + 1 end
+    end
+    return originalMove(self, ...)
+  end
+  FkTest.setNextReplies(p1, { { QIANGXI_OPT_DISCARD }, FkTest.ReplyDiscard({ first }) })
+  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }) end)
+  room().moveCards = originalMove
+  assert(ok, err)
+
+  lu.assertEquals(p1.hp, p1.maxHp, "弃武器支付不消耗体力")
+  lu.assertEquals(p2.hp, p2.maxHp - 1, "弃武器后正常造成1点伤害")
+  lu.assertEquals(room():getCardArea(first), Card.DiscardPile)
+  lu.assertEquals(moved, 1, "武器只应实际移动一次")
+  lu.assertTrue(table.contains(p1:getCardIds("h"), second))
   lu.assertTrue(table.contains(p1:getTableMark("qiao__skill_wei012_1-targets-phase"), p2.id))
 end
 

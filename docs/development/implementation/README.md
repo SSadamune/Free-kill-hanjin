@@ -25,6 +25,7 @@
 - [客将](guest-factions.md)
 - [“X 只能当 Y 使用／打出”](only-as.md)
 - [第二君主](second-lord.md)
+- [技能选项、按钮与头像详情](skill-ui.md)
 - [野心家效忠](wild-allegiance.md)
 - [应变规范](adaptation.md)
 - [基础牌表](card-deck.md)
