@@ -15,6 +15,9 @@
 -- 死亡时“翻至正面”不是明置（rules/rulebook 死亡流程；ascension 的
 -- flip_lord_for_death 直接 changeHero），本模块只写禁明置标记，不拦截该动作。
 local H = require "packages.hegemony.util"
+local U = require "packages.utility.utility"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
 local M = {}
 
@@ -77,8 +80,7 @@ end
 
 --- 来源当前是否生效：持有者存活，是其本人的回合，且祸水已明置。
 --- 失去技能 / 暗置武将牌后 hasShownSkill 为假，来源随之撤销。
-local function sourceActive(room, holder, skill)
-  if holder == nil or holder.dead or not holder:isAlive() or holder:isRemoved() then
+local function sourceActive(room, holder, skill)  if holder == nil or holder.dead or not holder:isAlive() or holder:isRemoved() then
     return false
   end
   if room:getCurrent() ~= holder then return false end
@@ -145,6 +147,77 @@ function M.expireTurn(room)
     end
   end
   room:setTag(M.SOURCE_TAG, nil)
+end
+
+--- 公开已明置的武将牌真名；未明置（anjiang/空）返回 nil。
+---@return string|nil
+function M.publicGeneralName(target, isDeputy)
+  if target == nil then return nil end
+  local name = isDeputy and target.deputyGeneral or target.general
+  if type(name) ~= "string" or name == "" or name == "anjiang" then return nil end
+  return name
+end
+
+--- 该武将牌是否可被暗置：排除君主（含汉晋独立君主）、专属野心家、士兵、
+--- 翼从（含偏将）及可识别的臣属占位牌。
+---@return boolean
+function M.isHideableGeneral(name)
+  if type(name) ~= "string" or name == "" or name == "anjiang" then return false end
+  if Exchange.isLordGeneral(name) then return false end
+  if Exchange.isWildGeneral(name) then return false end
+  if name:startsWith("blank_") then return false end
+  if Commander.isRetinue(name) or Commander.isSoldier(name) then return false end
+  return true
+end
+
+--- 目标当前公开已明置且可被暗置的位置列表（主将/副将）。
+---@return { isDeputy: boolean, name: string }[]
+function M.hideablePositions(target)
+  local list = {}
+  for _, isDeputy in ipairs({ false, true }) do
+    local name = M.publicGeneralName(target, isDeputy)
+    if name ~= nil and M.isHideableGeneral(name) then
+      table.insert(list, { isDeputy = isDeputy, name = name })
+    end
+  end
+  return list
+end
+
+--- 按公开已明置的真实位置选择并暗置一张武将牌；无可暗位置返回 false。
+--- 回复按服务器候选复核，最终走公共 `target:hideGeneral` 流程保留武将牌事件。
+---@return boolean 是否确实暗置
+function M.hideRevealedGeneral(room, actor, target, skillName)
+  if not isServer(room) or actor == nil or target == nil then return false end
+  if actor.dead or target.dead or target:isRemoved() then return false end
+  local positions = M.hideablePositions(target)
+  if #positions == 0 then return false end
+  local chosen = positions[1]
+  if #positions > 1 then
+    local names = table.map(positions, function(position) return position.name end)
+    local cards = U.askToChooseGeneralsAndChoice(actor, {
+      skill_name = skillName,
+      prompt = "#hide_general-ask::" .. target.id .. ":" .. skillName,
+      generals = names,
+      all_generals = names,
+      min_num = 1,
+      max_num = 1,
+    })
+    local picked = cards and cards[1]
+    for _, position in ipairs(positions) do
+      if position.name == picked then chosen = position; break end
+    end
+  end
+  room:setPlayerMark(target,
+    chosen.isDeputy and "__heg_deputy" or "__heg_general", chosen.name)
+  target:hideGeneral(chosen.isDeputy)
+  room:sendLog {
+    type = "#HideOtherGeneral",
+    from = actor.id,
+    to = { target.id },
+    arg = chosen.isDeputy and "deputyGeneral" or "mainGeneral",
+    arg2 = chosen.name,
+  }
+  return true
 end
 
 return M

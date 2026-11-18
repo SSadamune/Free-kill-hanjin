@@ -65,7 +65,7 @@ skill:addEffect(fk.CardUseFinished, {
     local cardId = chosen and chosen[1]
     if cardId == nil then return false end
     local targets = {}
-    for _, p in ipairs(room.alive_players) do
+    for _, p in ipairs(room:getPresentPlayers()) do
       if p ~= player and not table.contains(data.tos, p) and not p:isRemoved() then
         table.insert(targets, p)
       end

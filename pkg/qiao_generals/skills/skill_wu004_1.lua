@@ -8,7 +8,7 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local function otherPlayers(player)
-  return table.filter(player.room.alive_players, function(p)
+  return table.filter(player.room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
 end

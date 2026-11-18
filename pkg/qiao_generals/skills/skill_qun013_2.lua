@@ -25,7 +25,7 @@ skill:addEffect("active", {
   end,
   on_use = function(self, room, effect)
     local player = effect.from
-    local targets = table.filter(room.alive_players, function(p)
+    local targets = table.filter(room:getPresentPlayers(), function(p)
       return not p.dead and H.compareKingdomWith(p, player)
     end)
     for _, p in ipairs(targets) do

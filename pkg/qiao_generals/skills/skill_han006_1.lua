@@ -31,7 +31,7 @@ local function eligibleTargets(player)
   if room == nil then return {} end
   local ret = {}
   local given = player:getTableMark(USED_TARGETS)
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and p:isAlive() and not p:isRemoved()
       and not table.contains(given, p.id) then
       table.insert(ret, p)

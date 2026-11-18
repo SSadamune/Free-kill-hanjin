@@ -28,7 +28,7 @@ skill:addEffect("active", {
   can_use = function(self, player)
     if player == nil or player.dead or player.phase ~= Player.Play then return false end
     local room = Fk:currentRoom()
-    local wounded = table.find(room.alive_players, function(p)
+    local wounded = table.find(room:getPresentPlayers(), function(p)
       return isWei(p) and p:isWounded()
     end)
     return wounded ~= nil

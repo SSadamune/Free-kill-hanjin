@@ -53,7 +53,7 @@ local function optionEquipLegal(room, player)
   if #ownEquipments(player) == 0 then return false end
   local peach = Fk:cloneCard(PEACH)
   if player:prohibitUse(peach) then return false end
-  for _, target in ipairs(room.alive_players) do
+  for _, target in ipairs(room:getPresentPlayers()) do
     if target:isAlive() and not target:isRemoved() and not player:isProhibited(target, peach) then
       return true
     end

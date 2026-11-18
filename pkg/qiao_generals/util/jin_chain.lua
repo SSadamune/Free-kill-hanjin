@@ -50,7 +50,7 @@ end
 ---@return Player[]
 function M.alivePlayers(room)
   if room == nil then return {} end
-  local players = room.alive_players
+  local players = room:getPresentPlayers()
   if players == nil and type(room.getAlivePlayers) == "function" then
     players = room:getAlivePlayers()
   end

@@ -34,7 +34,7 @@ skill:addEffect(fk.Damaged, {
       max_num = 1,
       min_card_num = 1,
       max_card_num = math.min(2, #ids),
-      targets = room.alive_players,
+      targets = room:getPresentPlayers(),
       pattern = tostring(Exppattern { id = ids }),
       skill_name = skill.name,
       prompt = "#qiao__skill_wei006_2-give",
@@ -57,7 +57,7 @@ skill:addEffect(fk.Damaged, {
     local rest = room:askToChoosePlayers(player, {
       min_num = 1,
       max_num = 1,
-      targets = room.alive_players,
+      targets = room:getPresentPlayers(),
       skill_name = skill.name,
       prompt = "#qiao__skill_wei006_2-rest",
       cancelable = false,

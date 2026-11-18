@@ -12,7 +12,7 @@ local OPT_RECOVER = "#qiao__skill_shu016_1-recover"
 local OPT_DRAW = "#qiao__skill_shu016_1-draw"
 
 local function others(player)
-  return table.filter(player.room.alive_players, function(p)
+  return table.filter(player.room:getPresentPlayers(), function(p)
     return p ~= player and not p:isRemoved()
   end)
 end

@@ -403,6 +403,35 @@ function Testqiao_extra_targets:testCollateralMainCandidateNeedsItsOwnLegalSubTa
   end)
 end
 
+function Testqiao_extra_targets:testCollateralAllowsExtraMainWithoutAttackRangeTarget()
+  setKingdoms(groupKingdoms)
+  local p = room().players
+  equip(p[2], "qiao__qinggang_sword")
+  -- 只给 p6 一把攻击范围 1 的武器，并让相邻角色都 +1 距离：
+  -- 此时 p6 的攻击范围内没有其他角色，仍可作为额外主目标。
+  equip(p[6], "qiao__crossbow")
+  equip(p[5], "qiao__jueying")
+  equip(p[7], "qiao__jueying")
+  emptyHand(p[1])
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", addTargetEntry())
+  FkTest.runInRoom(function()
+    use.card.skill:onUse(room(), use)
+    lu.assertFalse(p[6]:inMyAttackRange(p[5]))
+    lu.assertFalse(p[6]:inMyAttackRange(p[7]))
+    local main = E.candidates(room(), use, {})
+    lu.assertTrue(table.contains(main, p[6]))
+  end)
+  FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[6] }) })
+  local added, subs
+  FkTest.runInRoom(function()
+    added = E.addTarget(room(), use, {})
+    subs = use:getSubTos(p[6])
+  end)
+  lu.assertTrue(added)
+  lu.assertTrue(table.contains(use.tos, p[6]))
+  lu.assertEquals(#(subs or {}), 0)
+end
+
 function Testqiao_extra_targets:testCollateralAddsAnIndependentSubTarget()
   setKingdoms(groupKingdoms)
   local p = room().players

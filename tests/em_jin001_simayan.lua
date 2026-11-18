@@ -73,6 +73,15 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   local pileBefore
   inRoom(function()
     content.setupHidden(room, target, "qiao_heg__jin002", "qiao_heg__jin003", "jin")
+    -- 固定剩余将池：放入两张真实晋势力候选（非君主/士兵/翼从），使“赐”的
+    -- 选将请求必然发生且结果由本夹具确定，而不是依赖随机将池里恰好有晋将。
+    for _, name in ipairs({ "qiao_heg__jin004", "qiao_heg__jin005" }) do
+      table.removeOne(room.general_pile, name)
+      table.insert(room.general_pile, 1, name)
+      if type(room.disabled_generals) == "table" then
+        table.removeOne(room.disabled_generals, name)
+      end
+    end
     pileBefore = #room.general_pile
   end)
   local invokes, picks = 0, 0
@@ -211,6 +220,53 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   lu.assertFalse(table.contains(branches, "change"), "整局限一次后不应再提供变更分支")
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "资源分支应消耗赐")
 end
+function Testqiao_em_jin001_simayan:testCaixingMultipleMountsOpensClientCardChooser()
+  local room, lord, other = FkTest.room, p(1), p(2)
+  local field, discarded
+  inRoom(function()
+    field = room:printCard("qiao__chitu", Card.Heart, 5)
+    discarded = room:printCard("qiao__linxiao_yuyu", Card.Spade, 5)
+    room:moveCardIntoEquip(other, field.id, CAIXING, false, lord)
+    room:moveCardTo(discarded.id, Card.DiscardPile, nil, fk.ReasonJustMove, CAIXING)
+  end)
+
+  local wire
+  FkTest.setRoomBreakpoint(lord, "AskForCardChosen", function(data)
+    wire = cbor.encode(data)
+    return false
+  end)
+  FkTest.setNextReplies(lord, { discarded.id })
+  local phase = { phase = Player.Play, skipped = false }
+  skill_test.withSkillRequests(room, CAIXING, {
+    askToSkillInvoke = function(self, who, params, original)
+      if params.skill_name == CAIXING then return true end
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function() room.logic:trigger(fk.EventPhaseChanging, lord, phase) end)
+  end)
+
+  lu.assertNotNil(wire, "两张合法坐骑应发出真实选牌请求")
+  FkTest.runInClient(function()
+    local client = ClientInstance
+    local data = cbor.decode(wire)
+    lu.assertIs(data[1], client:getPlayerById(lord.id))
+    local shown
+    local notify = client.notifyUI
+    client.notifyUI = function(_, name, payload)
+      if name == "AskForCardChosen" then shown = payload end
+    end
+    local ok, err = pcall(client.askForCardChosen, client, data)
+    client.notifyUI = notify
+    lu.assertTrue(ok, tostring(err))
+    lu.assertEquals(shown.card_data, { { "$Equip", { field.id } }, { "弃牌堆", { discarded.id } } })
+  end)
+  lu.assertTrue(phase.skipped)
+  lu.assertEquals(room:getCardArea(discarded.id), Card.PlayerEquip)
+  lu.assertIs(room:getCardOwner(discarded.id), lord)
+  lu.assertIs(room:getCardOwner(field.id), other)
+end
+
 function Testqiao_em_jin001_simayan:testResourceCiAndCaixingAndDingfei()
   local room, lord = FkTest.room, p(1)
   inRoom(function()

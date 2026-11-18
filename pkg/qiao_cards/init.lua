@@ -122,25 +122,193 @@ local DESCRIPTION_OVERRIDES = {
     .. "<b>目标</b>：你<br/>"
     .. "<b>效果</b>：目标角色卜算2（观看牌堆顶的两张牌，将其中任意张以任意顺序置于牌堆顶，其余以任意顺序置于牌堆底），然后摸两张牌。",
   ["qiao__chasing_near"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
-    .. "<b>目标</b>：一名区域里有牌的其他角色<br/>"
-    .. "<b>效果</b>：若你与目标角色距离为1，你获得其区域里一张牌；若你与目标角色距离大于1，你弃置其区域里一张牌。",
+    .. "<b>目标</b>：一名其他角色<br/>"
+    .. "<b>效果</b>：若你与其的距离大于1，你弃置其区域里一张牌；"
+    .. "若你与其的距离为1，你获得其区域里一张牌。",
+  ["qiao__befriend_attacking"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名与你势力不同的其他角色<br/>"
+    .. "<b>效果</b>：目标角色摸一张牌。若此牌对任意目标生效过，你摸三张牌。",
+  ["qiao__alliance_feast"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你和一个不同势力的所有角色<br/>"
+    .. "<b>效果</b>：目标角色各摸一张牌且重置。对你的效果改为选择X次"
+    .. "（X为除你以外的目标数）：1.回复1点体力；2.摸一张牌。",
   ["qiao__unexpectation"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
     .. "<b>目标</b>：一名有手牌的其他角色<br/>"
     .. "<b>效果</b>：你展示目标角色的一张手牌，若该牌与此【出其不意】花色不同，你对其造成1点伤害。",
+  ["qiao__lure_tiger"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一至两名其他角色<br/><b>效果</b>：目标角色本回合移出游戏。",
+  ["qiao__threaten_emperor"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：若你是大势力角色且此时是你额定回合，对你使用<br/>"
+    .. "<b>效果</b>：目标角色结束其出牌阶段，然后于此回合结束时弃置一张手牌并获得一个额外的回合。",
+  ["qiao__imperial_order"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有未确定势力的角色<br/>"
+    .. "<b>效果</b>：目标角色各选择一项：1.明置一张武将牌并摸一张牌；2.弃置一张装备牌；3.失去1点体力。"
+    .. "此牌置入弃牌堆的回合结束时：若此牌未触发效果，未确定势力的角色执行此牌的效果；"
+    .. "若所有角色均确定势力，此牌移出游戏，当前回合角色获得“诏书”。",
+  ["qiao__jade_seal"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：锁定技，若你已确定势力：装备着【玉玺】的角色的势力视为大势力，"
+    .. "其余势力视为小势力；摸牌阶段，你多摸一张牌；出牌阶段开始时，你视为使用一张【知己知彼】。",
+  ["qiao__iron_chain"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一至两名角色<br/>"
+    .. "<b>效果</b>：目标角色横置或重置。<br/>"
+    .. "<b>重铸</b>：出牌阶段，将此牌置入弃牌堆，然后摸一张牌。",
+  ["qiao__known_both"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名有手牌或暗置武将牌的其他角色<br/>"
+    .. "<b>效果</b>：你观看目标角色手牌或一张暗置武将牌。<br/>"
+    .. "<b>重铸</b>：出牌阶段，将此牌置入弃牌堆，然后摸一张牌。",
+  ["qiao__fight_together"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有大势力角色或所有小势力角色<br/>"
+    .. "<b>效果</b>：目标角色横置，若其已横置，则摸一张牌。<br/>"
+    .. "<b>重铸</b>：出牌阶段，将此牌置入弃牌堆，然后摸一张牌。",
+  ["qiao__snatch"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名距离1且区域里有牌的其他角色<br/>"
+    .. "<b>效果</b>：你获得目标角色区域里的一张牌。",
+  ["qiao__savage_assault"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有其他角色<br/>"
+    .. "<b>效果</b>：目标角色依次选择一项：1.打出一张【杀】；2.你对其造成1点伤害。",
+  ["qiao__archery_attack"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有其他角色<br/>"
+    .. "<b>效果</b>：目标角色依次选择一项：1.打出一张【闪】；2.你对其造成1点伤害。",
+  ["qiao__lightning"] = "延时锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你<br/>"
+    .. "<b>效果</b>：目标角色判定，若为黑桃2～9，其受到3点无来源雷电伤害；"
+    .. "若不为黑桃2～9或此牌被抵消，此牌移动给其下家。",
   ["qiao__five_elements_fan"] = "装备牌·武器<br/><b>攻击范围</b>：4<br/>"
-    .. "<b>武器技能</b>：当你声明使用非普通【杀】后，你可以将此【杀】改为雷【杀】、火【杀】、冰【杀】或任意其他非普通【杀】。",
+    .. "<b>武器技能</b>：你可以将一张属性【杀】当任意一种其他属性【杀】使用。",
+  ["qiao__blade"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
+    .. "<b>武器技能</b>：锁定技，你使用【杀】指定一个目标时，你令其不能明置武将牌且"
+    .. "不能使用此【杀】花色的手牌，直到此【杀】结算结束。",
   ["qiao__black_chain"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：当你使用【杀】指定目标后，横置目标角色的武将牌。",
+    .. "<b>武器技能</b>：锁定技，当你使用【杀】指定一个目标后，你令其横置。",
+  ["qiao__qinggang_sword"] = "装备牌·武器<br/><b>攻击范围</b>：2<br/>"
+    .. "<b>武器技能</b>：锁定技，你使用【杀】指定一个目标后，你令其防具无效，"
+    .. "直到此【杀】结算结束。",
+  ["qiao__halberd"] = "装备牌·武器<br/><b>攻击范围</b>：4<br/>"
+    .. "<b>武器技能</b>：你使用【杀】可以额外指定任意名不与其余目标势力相同的角色。"
+    .. "若如此做，此【杀】被【闪】抵消后对剩余目标无效。",
   ["qiao__bronze_sparrow"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：锁定技，你每回合首次使用具有应变效果的牌无需强化条件直接发动应变效果。",
+    .. "<b>宝物技能</b>：每回合限一次，你使用应变牌时，你可以无视条件应变。",
   ["qiao__dark_armor"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：当你成为【杀】、伤害锦囊或黑色锦囊牌的目标后，若你不是唯一目标，此牌对你无效。",
+    .. "<b>防具技能</b>：锁定技，当你成为伤害牌或黑色非伤害锦囊牌的目标后，"
+    .. "若你不是此牌的唯一目标，此牌对你无效。",
   ["qiao__breastplate"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：当你受到大于1点的伤害或致命伤害时，你可以将装备区里的【护心镜】置入弃牌堆，防止此伤害。",
+    .. "<b>防具技能</b>：出牌阶段，你可以将手牌中的此牌置于其他角色的装备区。"
+    .. "当你受到致命伤害或大于1点的伤害时，你可以将装备区里的此牌置入弃牌堆，然后防止此伤害。",
+  ["qiao__collateral"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名装备着武器牌的其他角色<br/>"
+    .. "<b>效果</b>：除非目标角色对其攻击范围内由你选择的另一名角色使用一张【杀】，"
+    .. "否则其将装备区里的一张武器牌交给你。",
+  ["qiao__axe"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】被目标角色使用【闪】抵消后，"
+    .. "你可以弃置两张牌并令此【杀】依然生效。",
+  ["qiao__triblade"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】对目标角色造成伤害后，你可以弃置一张手牌，"
+    .. "并对其距离1的另一名其他角色造成1点伤害。",
   ["qiao__taigong_tactics"] = "装备牌·宝物<br/>"
     .. "<b>宝物技能</b>：出牌阶段开始时，你可以横置或重置一名角色；出牌阶段结束时，你可以重铸一张手牌。",
   ["qiao__wonder_map"] = "装备牌·宝物<br/>"
     .. "<b>宝物技能</b>：锁定技，此牌进入你的装备区时，弃置一张其他牌；此牌离开你的装备区时，你将手牌摸至五张。",
+  ["qiao__liulongcanjia"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：锁定技，其他角色到你的距离+X，你到其他角色的距离-X；"
+    .. "X为当前场上与你势力相同的角色装备区里的坐骑牌总张数，每张牌计一次"
+    .. "（双副类别坐骑也只计一张）。你全暗且势力尚未确定时只计自己的六龙骖驾，X=1。",
+  ["qiao__linxiao_yuyu"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：你到其他角色的距离-1，其他角色到你的距离+1。"
+    .. "此牌进入装备区，或由装备区进入非装备区后，当前回合角色摸一张牌；"
+    .. "若同次进出有坐骑因装备栏占用被实际替换，改为回复1点体力。",
+  ["qiao__feiyun_gaihai"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
+    .. "<b>坐骑技能</b>：锁定技，你未横置时，你到其他角色的距离-2；"
+    .. "你横置时，其他角色到你的距离+2。",
+  ["qiao__dragon_phoenix"] = "装备牌·武器<br/><b>攻击范围</b>：2<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】指定一个目标后，你可以令该目标弃置一张自己的牌。"
+    .. "当你使用的【杀】造成的伤害令其实际目标进入濒死状态时，"
+    .. "你可以在求桃前获得该目标的一张手牌。",
+  ["qiao__luminous_pearl"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：出牌阶段限一次，你可以弃置1至X张自己的合法手牌或装备"
+    .. "（X为你的体力上限，此牌本身不能用于该次弃置），然后摸等量的牌。",
+  ["qiao__peace_spell"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：锁定技，防止你受到属性伤害。你的手牌上限+X"
+    .. "（X为当前与你势力相同的角色数，含你自己；群势力按天兵人数修正）。"
+    .. "当你失去装备区里的此牌后，你摸两张牌，然后若你的体力值大于1，你失去1点体力。",
+  ["qiao__chixiao_sword"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
+    .. "<b>武器技能</b>：当你使用【杀】指定目标后，若你与该目标一个大势力、"
+    .. "另一个小势力，该目标须交给你一张红色手牌；未能交出时，"
+    .. "该目标不能抵消此【杀】对自己的结算。",
+  ["qiao__jinxiu_zhengpao"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：当你成为其他角色使用伤害牌的目标后，若此牌本次具有"
+    .. "标准花色且你的手牌中没有该花色，你可以展示所有手牌并获得本次来牌"
+    .. "对应、仍可获得的实体牌；然后若你的手牌具有四种花色，此牌对你无效。",
+  ["qiao__xuwang_zhimian"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：锁定技，你在自己的摸牌阶段多摸两张牌；你的手牌上限-1。",
+  ["qiao__sihai_liuqian"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：出牌阶段内的空闲时间点，你可以选择距离大于1的一名角色，"
+    .. "预先选择其恰好两张手牌或装备；将此牌交到其手牌区，并获得所选的两张牌。",
+  ["qiao__zhoujun_lingbingyin"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：此牌进入装备区后，与装备者同为一个大势力或同为一个小势力"
+    .. "的其他角色可各交给你一张手牌或装备。准备阶段，你可以令本回合的额定摸牌数、"
+    .. "使用【杀】次数上限、手牌上限中的一项增加1或2，并将等量扣减分配到另外两项。",
+  ["qiao__zouyu_fan"] = "装备牌·防具<br/>"
+    .. "<b>防具技能</b>：回合外每回合限一次，在需要使用或打出【杀】或【闪】时，"
+    .. "你可以视为使用或打出之；随后本回合下一次受到伤害后，失去1点体力，"
+    .. "若此牌仍在你的装备区且可弃置，弃置之。",
+  ["qiao__xuehai_mowangzun"] = "装备牌·宝物<br/>"
+    .. "<b>宝物技能</b>：当你需要合法使用【酒】时，同势力角色可打出黑桃牌协助；"
+    .. "首次协助成功后你视为使用【酒】。你脱离濒死时，将此牌交给伤害来源。",
+  ["qiao__shenshou_sizhao"] = "装备牌·武器 攻击范围2<br/>"
+    .. "<b>装备技能</b>：此牌进入装备区的回合中，若你仍装备此牌，你使用牌无距离限制，"
+    .. "并跳过弃牌阶段。后续回合，你可将此牌作为合纵牌与手牌一同交出。",
+  ["qiao__strengthen_state"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你<br/>"
+    .. "<b>效果</b>：你摸八张牌，然后从现有手牌中选择至少六张合法牌弃置"
+    .. "（可弃手牌不足六张时弃尽，为零时无牌可弃）。若你使用此牌时已确定为吴势力，"
+    .. "你可以将本次实际弃置且仍可从弃牌堆取得的牌交给其他吴势力角色，"
+    .. "每名角色至多两张。<br/>"
+    .. "<b>势力</b>：吴<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__danggu_zhihuo"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有其他角色<br/>"
+    .. "<b>效果</b>：你逐目标选择其一张可暗置的明置武将牌并暗置。此牌对该目标生效后，"
+    .. "其不能明置，持续到你的下回合开始或你死亡。若你使用此牌时已确定为汉势力，"
+    .. "汉势力目标可以交给你一张自己的手牌或装备，如此做则此牌仅对其无效。<br/>"
+    .. "<b>势力</b>：汉<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__luanwu_chaos"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有角色<br/>"
+    .. "<b>效果</b>：你逐目标展示其手牌，然后选择一项：1.该目标弃置两张类别不同的手牌；"
+    .. "2.你弃置其一张手牌。若你使用此牌时已确定为群势力，群势力目标结算后手牌为零时"
+    .. "补至其当前体力值。<br/>"
+    .. "<b>势力</b>：群<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__command_world"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名体力值高于场上最小值的角色<br/>"
+    .. "<b>效果</b>：除目标外的角色按座次决定是否参与：参与者可以弃置一张手牌，"
+    .. "视为对目标使用一张【杀】；或弃置目标的一张手牌或装备。若你使用此牌时已确定为"
+    .. "魏势力，魏势力参与者跳过弃牌步骤，并取得第二项中实际弃置且仍可取得的牌。<br/>"
+    .. "<b>势力</b>：魏<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__restore_heartland"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名或多名角色<br/>"
+    .. "<b>效果</b>：每名目标依次选择：视为使用一张【杀】（按【杀】的正常目标条件"
+    .. "选择目标）或摸一张牌；没有合法用杀对象时只能摸牌。若你使用此牌时已确定为蜀"
+    .. "势力，蜀势力目标的该次【杀】伤害 +1，选择摸牌则改为摸两张。<br/>"
+    .. "<b>势力</b>：蜀<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__sihai_guiping"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你<br/>"
+    .. "<b>效果</b>：结束本次出牌阶段的自由出牌入口，继续完成当前锦囊及后续阶段。"
+    .. "从本阶段置入弃牌堆且仍在弃牌堆的牌中，每种花色各获得一张。若你使用此牌时"
+    .. "已确定为晋势力，你可以将本次获得的牌交给其他晋势力角色（每名一张），然后"
+    .. "按座次询问所有晋势力角色是否使用一张牌。<br/>"
+    .. "<b>势力</b>：晋<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__luoshui_zhishi"] = "延时锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名角色<br/>"
+    .. "<b>效果</b>：判定为黑桃 2～9 且该目标在此时为野心家时，其选择一名角色，"
+    .. "对该角色造成 3 点雷电伤害；若判定不为黑桃 2～9 且本回合仍有后续阶段，"
+    .. "在下个阶段开始前将此牌置回判定区，并将该阶段改为判定阶段。"
+    .. "若你使用此牌时已确定为野心家且目标为你，则立即判定生效。<br/>"
+    .. "<b>势力</b>：野心家<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
 }
 
 local function cardDescription(cardType)
@@ -191,6 +359,7 @@ for _, cardType in ipairs(CardData.types) do
     spec.type = Card.TypeTrick
     if cardType.delayed then spec.sub_type = Card.SubtypeDelayedTrick end
     spec.is_damage_card = cardType.is_damage == true
+    spec.multiple_targets = cardType.multiple_targets == true
   else
     spec.type = Card.TypeEquip
     spec.sub_type = cardType.subtype
@@ -200,6 +369,7 @@ for _, cardType in ipairs(CardData.types) do
     spec.on_uninstall = cardType.on_uninstall
   end
   if cardType.skill then spec.skill = cardType.skill end
+  if cardType.special_skills then spec.special_skills = cardType.special_skills end
   if not cardType.fixed_desc then spec.dynamic_desc = dynamicDescription end
   table.insert(prototypes, fk.CreateCard(spec))
 end
@@ -379,6 +549,7 @@ end
 
 for _, row in ipairs(SlotData.factionTricks) do
   local s, n = suit(row.suit), rank(row.number)
+  local implemented = H.reuse[row.card] and H.reuse[row.card].status == "reused"
   local extra = {
     qiao_package = "qiao_cards",
     qiao_slot = "faction_trick/" .. row.suit .. "/" .. row.number,
@@ -390,7 +561,7 @@ for _, row in ipairs(SlotData.factionTricks) do
     qiao_national = true,
     qiao_guozhan = true,
     qiao_variant = "faction_trick",
-    qiao_inert = true,
+    qiao_inert = not implemented,
     qiao_deck_policy = "special_only",
     qiao_faction_trick = row.kingdom,
     qiao_kingdom = row.kingdom,
@@ -405,7 +576,7 @@ for _, row in ipairs(SlotData.factionTricks) do
     rank = row.number,
     display = row.display,
     card = row.card,
-    inert = true,
+    inert = not implemented,
     kingdom = row.kingdom,
     extra = extra,
   }
@@ -568,6 +739,91 @@ function H.assertConsistent()
 end
 
 H.assertConsistent()
+
+-- 双副类别坐骑的公共栏位语义 ------------------------------------------------
+-- 一张双副类别坐骑同时占用进攻、防御两个坐骑栏。引擎只按 `sub_type` 检索
+-- 单个栏位，因此在这里把“占用”扩展为公共查询：两个坐骑栏都能检索到同一张
+-- 双副类别牌，且该牌只计为一处占用。正常用牌的替换仍由引擎按这些查询完成。
+local DUAL_MOUNTS = {
+  ["qiao__liulongcanjia"] = true,
+  ["qiao__linxiao_yuyu"] = true,
+  ["qiao__feiyun_gaihai"] = true,
+}
+local RIDE_SUBTYPES = {
+  [Card.SubtypeOffensiveRide] = true,
+  [Card.SubtypeDefensiveRide] = true,
+}
+
+local function isRideSubtype(subtype)
+  return RIDE_SUBTYPES[subtype] == true
+end
+
+function H.isDualMount(value)
+  local name = type(value) == "string" and value
+    or (type(value) == "table" and value.name)
+  return name ~= nil and DUAL_MOUNTS[name] == true
+end
+
+function H.isRideCard(card)
+  if card == nil or card.type ~= Card.TypeEquip then return false end
+  if isRideSubtype(card.sub_type) then return true end
+  for _, subtype in ipairs(card.subtypes or {}) do
+    if isRideSubtype(subtype) then return true end
+  end
+  return false
+end
+
+if not Player.__qiao_dual_mount_slots then
+  Player.__qiao_dual_mount_slots = true
+  local baseGetEquipments = Player.getEquipments
+  local baseGetEquipment = Player.getEquipment
+  local baseCanMoveIntoEquip = Player.canMoveCardIntoEquip
+  local baseCanMoveBoardTo = Player.canMoveCardInBoardTo
+
+  -- 双副类别坐骑同时出现在两个坐骑栏的检索结果中，但物理上仍是一张牌。
+  function Player:getEquipments(cardSubtype)
+    if not isRideSubtype(cardSubtype) then
+      return baseGetEquipments(self, cardSubtype)
+    end
+    local cardIds = {}
+    for _, cardId in ipairs(self.player_cards[Player.Equip]) do
+      local card = self:getVirtualEquip(cardId) or Fk:getCardById(cardId)
+      if card ~= nil and (card.sub_type == cardSubtype or H.isDualMount(card)) then
+        table.insert(cardIds, cardId)
+      end
+    end
+    return cardIds
+  end
+
+  function Player:getEquipment(cardSubtype)
+    if not isRideSubtype(cardSubtype) then
+      return baseGetEquipment(self, cardSubtype)
+    end
+    return self:getEquipments(cardSubtype)[1]
+  end
+
+  -- 直接置入双副类别坐骑必须两栏均空且可用（`convert` 为替换许可）。
+  function Player:canMoveCardIntoEquip(cardId, convert)
+    if not baseCanMoveIntoEquip(self, cardId, convert) then return false end
+    local card = type(cardId) == "number" and Fk:getCardById(cardId) or cardId
+    if card ~= nil and H.isDualMount(card) then
+      return self:hasEmptyEquipSlot(Card.SubtypeOffensiveRide)
+        and self:hasEmptyEquipSlot(Card.SubtypeDefensiveRide)
+    end
+    return true
+  end
+
+  function Player:canMoveCardInBoardTo(to, id)
+    if not baseCanMoveBoardTo(self, to, id) then return false end
+    local card = self:getVirtualEquip(id) or Fk:getCardById(id)
+    if card ~= nil and H.isDualMount(card) then
+      return to:hasEmptyEquipSlot(Card.SubtypeOffensiveRide)
+        and to:hasEmptyEquipSlot(Card.SubtypeDefensiveRide)
+    end
+    return true
+  end
+end
+
 extension.qiao_cards = H
 extension.qiao = H
 
@@ -671,8 +927,8 @@ Fk:addPostLoadFunc(function()
     local reuse = H.reuse[card.name]
     if not reuse or reuse.status ~= "reused" then return end
     patchReuseCard(card, reuse)
-    if reuse.kind == "skill" or reuse.kind == "equip"
-      or reuse.kind == "qiao_skill" or reuse.kind == "qiao_equip" then
+    if reuse.desc ~= false and (reuse.kind == "skill" or reuse.kind == "equip"
+      or reuse.kind == "qiao_skill" or reuse.kind == "qiao_equip") then
       copyUpstreamDescription(card.name, reuse.upstream)
     end
   end

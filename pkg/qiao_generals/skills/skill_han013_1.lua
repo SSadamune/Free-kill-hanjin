@@ -51,7 +51,7 @@ local function factionCount(player)
   if room == nil then return 1 end
   local own = currentKingdom(player)
   local seen, count = {}, 0
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     local kingdom = (p == player) and own or p.kingdom
     if kingdom == "wild" then
       count = count + 1
@@ -74,7 +74,7 @@ local function canPindianTargets(player)
   local room = currentRoom(player)
   if room == nil then return {} end
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and p:isAlive() and not p:isRemoved() and player:canPindian(p) then
       table.insert(ret, p)
     end

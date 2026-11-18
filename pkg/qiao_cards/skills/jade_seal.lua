@@ -10,6 +10,7 @@ skill:addEffect(fk.EventPhaseStart, {
   anim_type = "control",
   can_trigger = function(self, event, target, player)
     return target == player and player:hasSkill(skill.name)
+      and not player:isRemoved()
       and player.phase == Player.Play and H.isBigKingdomPlayer(player)
   end,
   on_cost = function(self, event, target, player)
@@ -39,7 +40,8 @@ skill:addEffect(fk.EventPhaseStart, {
 skill:addEffect(fk.DrawNCards, {
   anim_type = "drawcard",
   can_trigger = function(self, event, target, player)
-    return target == player and player:hasSkill(skill.name) and H.isBigKingdomPlayer(player)
+    return target == player and player:hasSkill(skill.name)
+      and not player:isRemoved() and H.isBigKingdomPlayer(player)
   end,
   on_cost = Util.TrueFunc,
   on_use = function(self, event, target, player, data)
@@ -49,7 +51,9 @@ skill:addEffect(fk.DrawNCards, {
 
 skill:addEffect("bigkingdom", {
   fixed_func = function(self, player)
-    return player:hasSkill(skill.name) and player.kingdom ~= "unknown"
+    local kingdom = H.getKingdom(player)
+    return player:hasSkill(skill.name) and not player:isRemoved()
+      and kingdom ~= nil and kingdom ~= "" and kingdom ~= "unknown"
   end,
 })
 

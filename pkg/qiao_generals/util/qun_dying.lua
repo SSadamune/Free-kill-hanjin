@@ -208,7 +208,7 @@ function M.exchangeRescue(room, dying, entry)
     general = entry.general,
   }
 
-  local order = table.simpleClone(room.alive_players)
+  local order = table.simpleClone(room:getPresentPlayers())
   room:sortByAction(order)
   for _, candidate in ipairs(order) do
     if candidate ~= owner and not candidate.dead and not candidate:isRemoved()

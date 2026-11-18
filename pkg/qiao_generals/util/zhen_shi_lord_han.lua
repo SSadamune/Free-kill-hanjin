@@ -13,6 +13,7 @@ M.PILE = "qiao_em_han001_zhaoshu"
 M.MARK = "qiao_em_han001_zhaoshu_mark"
 M.TRICK_BANNER = "qiao_han001_tricks"
 
+--- 君刘协本人（君主专用查询；天授等君主身份效果使用）。
 function M.lord(room)
   if room == nil then return nil end
   for _, p in ipairs(room.alive_players) do
@@ -20,6 +21,73 @@ function M.lord(room)
       and p:getMark(M.MARK) == 1 then return p end
   end
   return nil
+end
+
+--- 诏书持有者：持有诏书标记的角色。初平与【敕令】都通过 M.grant 取得同一
+--- 唯一指示物，因此不按武将身份识别。唯一性只排除死者；被【调虎离山】等
+--- 暂时移出游戏的角色仍拥有诏书，不能据“不可见/不可用”再发一份。
+function M.holder(room)
+  if room == nil then return nil end
+  for _, p in ipairs(room.alive_players) do
+    if not p.dead and p:getMark(M.MARK) == 1 then
+      return p
+    end
+  end
+  return nil
+end
+
+--- 入口可用的持有者：在场（未被移出游戏）的诏书持有者。
+--- 与唯一性查询分开：暂离期间诏书仍归其所有，但其入口不向同势力角色开放。
+function M.availableHolder(room)
+  local holder = M.holder(room)
+  if holder ~= nil and not holder:isRemoved() then return holder end
+  return nil
+end
+
+local function addSkill(room, player, name, source)
+  room:handleAddLoseSkills(player, name, source, false, true)
+end
+
+local function removeSkill(room, player, name)
+  -- 先按初平来源移除；非初平取得的入口以顶层技能形式挂载，再按无来源移除。
+  room:handleAddLoseSkills(player, "-" .. name, M.JIANPING, false, true)
+  if player:hasSkill(name) then
+    room:handleAddLoseSkills(player, "-" .. name, nil, false, true)
+  end
+end
+
+--- 诏书入口同步：持有者同势力角色（含持有者）获得交牌入口，持有者本人获得
+--- 四花色消费入口。来源为君刘协时沿用初平作为技能来源，其余持有者按顶层技能。
+function M.sync(room)
+  if room == nil then return end
+  local holder = M.availableHolder(room)
+  local source = holder ~= nil and holder:hasSkill(M.JIANPING) and M.JIANPING or nil
+  for _, p in ipairs(room.players) do
+    local eligible = holder ~= nil and p:isAlive() and not p:isRemoved()
+      and M.isSameKingdom(holder, p)
+    if eligible then
+      if not p:hasSkill(M.BANNER) then addSkill(room, p, M.BANNER, source) end
+      if p == holder and not p:hasSkill(M.CONSUME) then
+        addSkill(room, p, M.CONSUME, source)
+      end
+    else
+      if p:hasSkill(M.BANNER) then removeSkill(room, p, M.BANNER) end
+      if p:hasSkill(M.CONSUME) then removeSkill(room, p, M.CONSUME) end
+    end
+  end
+end
+
+--- 令角色获得诏书（特殊标记，唯一指示物）。已有持有者时不重复建立；
+--- 先到者保持，不转移已存在的诏书及其上的实体牌。
+function M.grant(room, player)
+  if room == nil or player == nil or player.dead or player:isRemoved() then
+    return false
+  end
+  local holder = M.holder(room)
+  if holder ~= nil then return holder == player end
+  room:setPlayerMark(player, M.MARK, 1)
+  M.sync(room)
+  return true
 end
 
 function M.count(lord)
@@ -34,18 +102,24 @@ function M.isSameKingdom(lord, player)
   return type(kingdom) == "string" and player.kingdom == kingdom
 end
 
---- 现有正式牌堆中被移出游戏的势力锦囊实体；按本模式允许势力过滤。
-function M.availableTricks(room)
+--- 本局不可用的常规势力集合（候选外与禁选合并）。
+function M.unavailableKingdoms(room)
   local allowed = room:getBanner("all_kingdoms") or {}
   local unavailable = {}
   for _, kingdom in ipairs(Ban.kingdoms or {}) do
     if not table.contains(allowed, kingdom) then unavailable[kingdom] = true end
   end
+  return unavailable
+end
+
+--- 现有正式牌堆中被移出游戏的势力锦囊实体；按本模式允许势力与池门槛过滤。
+function M.availableTricks(room)
+  local unavailable = M.unavailableKingdoms(room)
   local result = {}
   for _, id in ipairs(room.void or {}) do
     local card = Fk:getCardById(id, true)
     if card ~= nil and Cards.tricks[card.name] ~= nil
-      and Cards.trickAllowed(card.name, unavailable) then
+      and Cards.trickAllowed(card.name, unavailable, room) then
       result[#result + 1] = { id = id, name = card.name, kingdom = Cards.tricks[card.name] }
     end
   end
@@ -69,9 +143,15 @@ function M.trickNames(room)
   return room and room:getBanner(M.TRICK_BANNER) or {}
 end
 
---- 取得实际移出游戏的实体牌；不新建同名牌。
+--- 取得实际移出游戏的实体牌；不新建同名牌。服务器按与候选相同的过滤复核，
+--- 避免过期/伪造候选绕过势力禁选或洛水之誓的池门槛。
 function M.obtainTrick(room, player, entry)
-  if entry == nil then return nil end
+  if entry == nil or type(entry.name) ~= "string" then return nil end
+  local unavailable = M.unavailableKingdoms(room)
+  if Cards.tricks[entry.name] == nil
+    or not Cards.trickAllowed(entry.name, unavailable, room) then
+    return nil
+  end
   local id = table.find(room.void or {}, function(candidate)
     local card = Fk:getCardById(candidate, true)
     return card ~= nil and card.name == entry.name

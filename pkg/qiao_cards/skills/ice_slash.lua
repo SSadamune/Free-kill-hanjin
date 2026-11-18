@@ -15,7 +15,7 @@ skill:addEffect("cardskill", {
     card:addSubcards(selected_cards)
     local max_num = self:getMaxTargetNum(player, card)
     if max_num > 1 then
-      local num = #table.filter(Fk:currentRoom().alive_players, function(p)
+      local num = #table.filter(Fk:currentRoom():getPresentPlayers(), function(p)
         return p ~= player and not player:isProhibited(p, card)
       end)
       max_num = math.min(num, max_num)

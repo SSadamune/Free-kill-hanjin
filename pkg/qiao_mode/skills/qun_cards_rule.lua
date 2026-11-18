@@ -46,7 +46,7 @@ skill:addEffect(fk.CardRespondFinished, {
   can_trigger = function(self, event, target, player, data)
     -- 房间级技能会在每名角色的触发轮次中被考察；显式只在 target 本人轮次
     -- 执行一次，避免对同一响应/用牌向所有角色重复询问。
-    if target == nil or target ~= player or target.dead then return false end
+    if target == nil or target ~= player or target.dead or target:isRemoved() then return false end
     if data.card == nil or data.card.trueName ~= "jink" then return false end
     local response = data.responseToEvent
     if response == nil or response.from == nil or response.card == nil then return false end
@@ -57,7 +57,7 @@ skill:addEffect(fk.CardRespondFinished, {
     return Heg.compareKingdomWith(target, response.from)
   end,
   on_trigger = function(self, event, target, player, data)
-    if target.dead then return end
+    if target.dead or target:isRemoved() then return end
     if target.room:askToSkillInvoke(target, {
       skill_name = LUANJI,
       prompt = "#qiao__qun_cards_rule_luanji_draw",
@@ -85,7 +85,7 @@ skill:addEffect(fk.CardUseFinished, {
     -- 清除标记，保证同一张牌只结算一次。
     data.extra_data[KUANGFU_MARK] = nil
     local user = room:getPlayerById(mark.user)
-    if user == nil or user.dead then return end
+    if user == nil or user.dead or user:isRemoved() then return end
     local dealt = damageDealt(data)
     if mark.self then
       if dealt then user:drawCards(2, KUANGFU) end
@@ -119,7 +119,7 @@ skill:addEffect(fk.CardUseFinished, {
     if type(mark) ~= "table" then return end
     data.extra_data[XIAONI_MARK] = nil
     local user = room:getPlayerById(mark.user)
-    if user == nil or user.dead then return end
+    if user == nil or user.dead or user:isRemoved() then return end
     local eligible = table.filter(data.tos or {}, function(p)
       return p:isAlive() and not p:isRemoved() and not damagedBy(data, p)
         and #p:getCardIds("he") > 0

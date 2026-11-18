@@ -16,7 +16,7 @@ end
 
 local function giveToAllies(room, target)
   if target == nil or target.dead then return end
-  local allies = table.filter(room.alive_players, function(p)
+  local allies = table.filter(room:getPresentPlayers(), function(p)
     return p ~= target and not p:isRemoved() and H.compareKingdomWith(p, target)
   end)
   room:sortByAction(allies)
@@ -50,7 +50,7 @@ local useSpec = {
   on_use = function(self, event, target, player, data)
     local room = player.room
     local chosen = room:askToChoosePlayers(player, {
-      targets = room.alive_players,
+      targets = room:getPresentPlayers(),
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,

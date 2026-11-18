@@ -27,7 +27,7 @@ skill:addEffect(fk.EventPhaseEnd, {
     local room = player.room
     local x = redDiscardedThisTurn(room, player)
     local targets = {}
-    for _, p in ipairs(room.alive_players) do
+    for _, p in ipairs(room:getPresentPlayers()) do
       if not p:isRemoved() then table.insert(targets, p) end
     end
     local tos = room:askToChoosePlayers(player, {

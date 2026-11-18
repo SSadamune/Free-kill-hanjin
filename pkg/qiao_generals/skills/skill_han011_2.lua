@@ -47,7 +47,7 @@ end
 ---@param owner ServerPlayer
 ---@return ServerPlayer[]
 local function candidates(dying, owner)
-  return table.filter(owner.room.alive_players, function(p)
+  return table.filter(owner.room:getPresentPlayers(), function(p)
     return p ~= dying and p:isAlive() and not p:isRemoved()
       and sameKingdom(owner, p)
   end)

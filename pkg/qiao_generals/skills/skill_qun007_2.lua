@@ -31,7 +31,7 @@ end
 --- 距离最近的其他存活角色（可能有并列）及最小距离。
 local function nearestTargets(player)
   local others = {}
-  for _, p in ipairs(player.room.alive_players) do
+  for _, p in ipairs(player.room:getPresentPlayers()) do
     if p ~= player and not p:isRemoved() then table.insert(others, p) end
   end
   local min
@@ -140,8 +140,8 @@ skill:addEffect("active", {
     -- 客户端也会执行 can_use（ReqPlayCard.skillButtonValidity）：ClientPlayer
     -- 没有 room 字段，经公开的 Fk:currentRoom() 取与客户端同源的存活角色。
     local room = Fk:currentRoom()
-    if room == nil or room.alive_players == nil then return false end
-    for _, p in ipairs(room.alive_players) do
+    if room == nil then return false end
+    for _, p in ipairs(room:getPresentPlayers()) do
       if p ~= player and not p:isRemoved() then return true end
     end
     return false

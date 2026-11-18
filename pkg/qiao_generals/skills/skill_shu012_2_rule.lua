@@ -9,7 +9,7 @@ skill:addEffect("atkrange", {
   correct_func = function(self, from)
     local room = Fk:currentRoom()
     if room == nil or room.current == nil then return 0 end
-    for _, holder in ipairs(room.alive_players) do
+    for _, holder in ipairs(room:getPresentPlayers()) do
       if not holder.dead and not holder:isRemoved()
         and holder:hasShownSkill(TIANFU)
         and H.inFormationRelation(holder, room.current) then

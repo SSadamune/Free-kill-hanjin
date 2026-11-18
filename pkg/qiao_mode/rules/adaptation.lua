@@ -251,7 +251,9 @@ end
 function A.conditionSatisfied(room, player, condition)
   local H = require "packages.hegemony.util"
   if condition == "fujia" then
-    return table.every(room.alive_players, function(p) return player:getHandcardNum() >= p:getHandcardNum() end)
+    return table.every(room:getPresentPlayers(), function(p)
+      return player:getHandcardNum() >= p:getHandcardNum()
+    end)
   elseif condition == "canqu" then
     return player.hp == 1
   elseif condition == "kongchao" then
@@ -326,7 +328,8 @@ function A.registerEffect(name, spec)
 end
 
 local function validSupportCard(player, use, reply)
-  if player.dead or player == use.from or table.contains(use.tos or {}, player) then return end
+  if player.dead or player:isRemoved() or player == use.from
+    or table.contains(use.tos or {}, player) then return end
   if type(reply) ~= "table" then return end
   local ids = type(reply.card) == "table" and reply.card.subcards or reply
   if type(ids) ~= "table" or #ids ~= 1 or type(ids[1]) ~= "number" then return end
@@ -336,7 +339,7 @@ local function validSupportCard(player, use, reply)
 end
 
 function A.askForSupport(room, use)
-  local candidates = table.filter(room.alive_players, function(p)
+  local candidates = table.filter(room:getPresentPlayers(), function(p)
     return p ~= use.from and not table.contains(use.tos or {}, p)
       and table.find(p:getCardIds("h"), function(id)
         return Fk:getCardById(id).type == use.card.type and not p:prohibitDiscard(id)
@@ -502,7 +505,9 @@ function A.hasEffect(use, name) return ((A.getResult(use) or {}).effects or {})[
 function A.clear(use) states[use] = nil end
 
 A.registerEffect("draw", { apply = function(room, use)
-  if not use.from.dead then use.from:drawCards(1, "#qiao_adaptation_rule") end
+  if not use.from.dead and not use.from:isRemoved() then
+    use.from:drawCards(1, "#qiao_adaptation_rule")
+  end
 end })
 A.registerEffect("damage", { apply = function(room, use) use.additionalDamage = (use.additionalDamage or 0) + 1 end })
 -- The actual exemption is fixed in A.lockIgnoreTimes before the use is counted.
@@ -510,14 +515,16 @@ A.registerEffect("damage", { apply = function(room, use) use.additionalDamage = 
 A.registerEffect("ignore_times", { apply = function(room, use) use.extraUse = true end })
 A.registerEffect("disresponsive", { apply = function(room, use)
   use.disresponsiveList = use.disresponsiveList or {}
-  table.insertTableIfNeed(use.disresponsiveList, room.alive_players)
+  table.insertTableIfNeed(use.disresponsiveList, room:getPresentPlayers())
 end })
 A.registerEffect("execute_both", { apply = function(room, use)
   -- Card implementations inspect hasEffect(use, 'execute_both'); this is not an extra card-resolution count.
   extra(use).qiao_execute_both = (extra(use).qiao_execute_both or 0) + 1
 end })
 A.registerEffect("obtain_response_card", { apply = function(room, use)
-  if not use.from.dead and use.responseToEvent and use.toCard and room:getCardArea(use.toCard) == Card.Processing then
+  if not use.from.dead and not use.from:isRemoved()
+    and use.responseToEvent and use.toCard
+    and room:getCardArea(use.toCard) == Card.Processing then
     room:obtainCard(use.from, use.toCard, true, fk.ReasonJustMove, use.from, "#qiao_adaptation_rule")
   end
 end })

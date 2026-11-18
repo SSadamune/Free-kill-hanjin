@@ -10,7 +10,7 @@ local skill = fk.CreateSkill {
 ---@param room Room
 ---@return ServerPlayer[]
 local function woundedPlayers(room)
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return not p:isRemoved() and p:isWounded()
   end)
 end

@@ -17,7 +17,7 @@ end
 
 local function hasTwoEquipped(room, player)
   local count = 0
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() and #equipIds(p) > 0 then
       count = count + 1
     end

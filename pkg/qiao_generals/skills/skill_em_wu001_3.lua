@@ -26,7 +26,7 @@ end
 
 local function pearlOnField(room)
   if table.find(room.discard_pile, isPearl) ~= nil then return true end
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() then
       for _, id in ipairs(p:getCardIds("ej")) do
         if isPearl(id) then return true end
@@ -74,7 +74,7 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     player:drawCards(1, skill.name)
     if player.dead then return end
-    local targets = table.filter(room.alive_players, function(p)
+    local targets = table.filter(room:getPresentPlayers(), function(p)
       return not p.dead and not p:isRemoved() and #equippedPearlIds(p) > 0
     end)
     if #targets == 0 then return end

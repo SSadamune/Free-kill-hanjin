@@ -77,7 +77,7 @@ end
 local function others(player)
   local room = Fk:currentRoom()
   if room == nil then return {} end
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and not p:isRemoved()
   end)
 end

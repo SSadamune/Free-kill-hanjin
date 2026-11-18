@@ -17,7 +17,7 @@ end
 
 local function candidates(room, player)
   local list = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     for _, id in ipairs(p:getCardIds(Player.Equip)) do
       if isRide(id) and player:canMoveCardIntoEquip(id, false) then table.insert(list, id) end
     end
@@ -56,14 +56,23 @@ skill:addEffect(fk.EventPhaseChanging, {
     if #list == 1 then
       chosen = list[1]
     else
+      local field, discarded = {}, {}
+      for _, id in ipairs(list) do
+        local group = room:getCardArea(id) == Card.DiscardPile and discarded or field
+        table.insert(group, id)
+      end
+      local groups = {}
+      if #field > 0 then table.insert(groups, { "$Equip", field }) end
+      if #discarded > 0 then table.insert(groups, { "弃牌堆", discarded }) end
       chosen = room:askToChooseCard(player, {
-        flag = { card_data = { { "e", list } } },
+        -- The client requires a player even when displaying explicit card lists.
+        target = player,
+        flag = { card_data = groups },
         skill_name = skill.name,
         prompt = "#qiao__jin001_caixing-card",
       })
     end
-    if chosen == nil then return end
-    if not player:canMoveCardIntoEquip(chosen, false) then return end
+    if not table.contains(list, chosen) or not table.contains(candidates(room, player), chosen) then return end
     room:moveCardIntoEquip(player, chosen, skill.name, false, player)
   end,
 })

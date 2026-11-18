@@ -31,9 +31,9 @@ installProviderFilter()
 --- 处于至少一名吴势力角色攻击范围内的存活、未移除角色并集人数。
 local function rangeUnionCount(room)
   local covered = {}
-  for _, wu in ipairs(room.alive_players) do
+  for _, wu in ipairs(room:getPresentPlayers()) do
     if P.isWu(wu) then
-      for _, target in ipairs(room.alive_players) do
+      for _, target in ipairs(room:getPresentPlayers()) do
         if not target.dead and not target:isRemoved() and wu:inMyAttackRange(target) then
           covered[target.id] = true
         end
@@ -48,7 +48,7 @@ end
 --- 场上存活、未移除的角色数（“达到角色数”的判定口径）。
 local function aliveCount(room)
   local count = 0
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() then count = count + 1 end
   end
   return count

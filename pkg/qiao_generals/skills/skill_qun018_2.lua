@@ -15,7 +15,7 @@ skill.qiaoImplemented = true
 local function candidates(room, player)
   if room == nil then return {} end
   local handCount = #player:getCardIds("h")
-  return table.filter(room.alive_players or {}, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and not p.dead and not p:isRemoved() and p:isMale()
       and #p:getCardIds("h") <= handCount
   end)

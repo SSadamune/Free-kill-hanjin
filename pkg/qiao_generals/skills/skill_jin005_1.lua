@@ -57,7 +57,7 @@ local function ensureFollowListener(room)
       end,
       on_use = function(self, event, target, player, data)
         local room = player.room
-        local candidates = table.filter(room.alive_players, function(p)
+        local candidates = table.filter(room:getPresentPlayers(), function(p)
           return p ~= nil and not p.dead and not p:isRemoved()
         end)
         if #candidates == 0 then return end

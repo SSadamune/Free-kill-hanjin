@@ -70,7 +70,7 @@ helper:addEffect(fk.TurnEnd, {
 local function sameKingdomCount(player)
   local kingdom = player.kingdom
   local count = 0
-  for _, other in ipairs(player.room.alive_players) do
+  for _, other in ipairs(player.room:getPresentPlayers()) do
     if other == player then
       count = count + 1
     elseif kingdom ~= "unknown" and kingdom ~= "wild" and other.kingdom == kingdom then

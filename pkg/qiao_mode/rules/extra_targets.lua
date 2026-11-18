@@ -39,7 +39,10 @@ end
 ---   filter(room, use, target, context) -> boolean     -- replaces modTargetFilter
 ---   sub_candidates(room, use, main, context) -> ServerPlayer[]
 ---       -- attached targets this main target can legally choose; when present a
----       -- candidate main target must have at least one.
+---       -- candidate main target must have at least one, unless the card opts out
+---       -- with allow_no_sub.
+---   allow_no_sub boolean                             -- a main target with no legal
+---       attached target is still a candidate; adding it skips the sub request.
 function E.attach(skill, rule)
   assert(skill ~= nil, "ExtraTargets.attach needs a concrete card skill")
   assert(type(rule) == "table", "ExtraTargets.attach needs a rule table")
@@ -47,6 +50,8 @@ function E.attach(skill, rule)
     assert(rule[key] == nil or type(rule[key]) == "function",
       "ExtraTargets rule field must be a function: " .. key)
   end
+  assert(rule.allow_no_sub == nil or type(rule.allow_no_sub) == "boolean",
+    "ExtraTargets allow_no_sub must be a boolean")
   rules[skill] = rule
   return rule
 end
@@ -181,7 +186,7 @@ function E.candidates(room, use, opts)
   end
 
   local result = {}
-  for _, target in ipairs(room.alive_players) do
+  for _, target in ipairs(room:getPresentPlayers()) do
     if commonLegal(use, target) then
       local legal
       if explicit ~= nil then
@@ -191,7 +196,7 @@ function E.candidates(room, use, opts)
       else
         legal = use.card.skill:modTargetFilter(use.from, target, selected, use.card, use.extra_data) == true
       end
-      if legal and rule ~= nil and rule.sub_candidates ~= nil then
+      if legal and rule ~= nil and rule.sub_candidates ~= nil and not rule.allow_no_sub then
         legal = #subCandidates(room, use, target, rule, context) > 0
       end
       if legal then table.insert(result, target) end
@@ -267,7 +272,7 @@ function E.targetLegal(room, use, target, opts)
 
   local rule = E.ruleFor(use.card)
   local context = ruleContext(rule, room, use)
-  if rule ~= nil and rule.sub_candidates ~= nil then
+  if rule ~= nil and rule.sub_candidates ~= nil and not rule.allow_no_sub then
     return #subCandidates(room, use, target, rule, context) > 0
   end
   return true
@@ -315,7 +320,16 @@ function E.addTarget(room, use, entry)
 
   if rule ~= nil and rule.sub_candidates ~= nil then
     local subs = E.subCandidates(room, use, main, entry)
-    if #subs == 0 then return false end
+    if #subs == 0 then
+      if rule.allow_no_sub then
+        -- No legal attached target: add the main target alone and never inherit
+        -- another main target's sub targets.
+        use:addTarget(main)
+        use.subTos[#use.tos] = {}
+        return true
+      end
+      return false
+    end
     local subChosen = room:askToChoosePlayers(use.from, {
       min_num = 1, max_num = 1, targets = subs,
       skill_name = "#qiao_adaptation_rule",

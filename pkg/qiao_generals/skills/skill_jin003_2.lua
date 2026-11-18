@@ -34,7 +34,7 @@ skill:addEffect("active", {
   end,
   can_use = function(self, player)
     return player:usedSkillTimes(skill.name, Player.HistoryGame) == 0
-      and not player.dead and #Fk:currentRoom().alive_players >= 2
+      and not player.dead and #Fk:currentRoom():getPresentPlayers() >= 2
   end,
   on_use = function(self, room, effect)
     local player = effect.from

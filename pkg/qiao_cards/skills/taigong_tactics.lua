@@ -12,14 +12,19 @@ Fk:loadTranslationTable {
 skill:addEffect(fk.EventPhaseStart, {
   mute = true,
   can_trigger = function(self, event, target, player)
-    return target == player and player:hasSkill(skill.name) and player.phase == Player.Play
+    return target == player and player:hasSkill(skill.name)
+      and not player:isRemoved() and player.phase == Player.Play
   end,
   on_cost = function(self, event, target, player)
     local room = player.room
+    -- 移出游戏的角色视为不存在，不能成为“一名角色”的候选。
+    local targets = table.filter(room:getPresentPlayers(), function(p)
+      return not p:isRemoved()
+    end)
     local to = room:askToChoosePlayers(player, {
       min_num = 1,
       max_num = 1,
-      targets = room.alive_players,
+      targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__taigong_tactics-choose",
       cancelable = true,
@@ -31,6 +36,7 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_use = function(self, event, target, player)
     local to = event:getCostData(self).tos[1]
+    if to == nil or to.dead or to:isRemoved() then return end
     to:setChainState(not to.chained)
   end,
 })
@@ -38,7 +44,8 @@ skill:addEffect(fk.EventPhaseStart, {
 skill:addEffect(fk.EventPhaseEnd, {
   mute = true,
   can_trigger = function(self, event, target, player)
-    return target == player and player:hasSkill(skill.name) and player.phase == Player.Play
+    return target == player and player:hasSkill(skill.name)
+      and not player:isRemoved() and player.phase == Player.Play
       and not player:isKongcheng()
   end,
   on_cost = function(self, event, target, player)

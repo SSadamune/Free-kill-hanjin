@@ -24,7 +24,7 @@ local function eligible(player)
   local used = player:getTableMark(USED)
   local room = Fk:currentRoom()
   if room == nil then return false end
-  return table.find(room.alive_players, function(p)
+  return table.find(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
       and player:inMyAttackRange(p) and not table.contains(used, p.id)
   end) ~= nil

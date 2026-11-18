@@ -22,7 +22,7 @@ end)
 
 local function condition(room)
   local lost, hp = 0, 0
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() and p.kingdom == "jin" then
       lost = lost + math.max(0, p.maxHp - p.hp)
       hp = hp + math.max(0, p.hp)

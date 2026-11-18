@@ -427,12 +427,35 @@ function M.equipmentAllowed(spec, unavailable)
   return false
 end
 
-function M.trickAllowed(name, unavailable)
+function M.trickAllowed(name, unavailable, room)
   local kingdom = M.tricks[name]
   if not kingdom then return false end
-  -- 野心家 never belongs to the regular allowed set and is not therefore banned.
-  if kingdom == "wild" then return true end
+  -- 野心家锦囊不由常规势力禁选判定；洛水之誓另受本局池门槛约束。
+  if kingdom == "wild" then
+    return M.trickPoolAllowed(name, room)
+  end
   return not unavailable[kingdom]
+end
+
+-- 洛水之誓的池门槛（BAN-004 第 12 点）：本局首次有角色公开成为野心家后，
+-- 才纳入可取得的势力锦囊池。只用公开的 player.kingdom 判定，并记录本局
+-- 曾出现的事实；角色死亡或势力变化不重置。显式 include_tricks 同样复核。
+M.WILD_SEEN_TAG = "qiao_wild_seen"
+
+function M.wildSeen(room)
+  return room ~= nil and room:getTag(M.WILD_SEEN_TAG) == true
+end
+
+--- 记录“本局曾公开出现野心家”；首次记录返回 true。
+function M.markWildSeen(room)
+  if room == nil or room:getTag(M.WILD_SEEN_TAG) == true then return false end
+  room:setTag(M.WILD_SEEN_TAG, true)
+  return true
+end
+
+function M.trickPoolAllowed(name, room)
+  if name == "qiao__luoshui_zhishi" then return M.wildSeen(room) end
+  return true
 end
 
 -- Number of base positions that become empty because a no-replacement lord
@@ -500,7 +523,8 @@ function M.apply(room, draw, void, unavailable, options)
     local card = Fk:getCardById(id)
     if suppressed[id] then
       -- The independent special equipment already occupies this slot.
-    elseif M.tricks[card.name] and not (includedTricks[card.name] and M.trickAllowed(card.name, unavailable)) then
+    elseif M.tricks[card.name] and not (includedTricks[card.name]
+      and M.trickAllowed(card.name, unavailable, room)) then
       -- All seven faction tricks stay outside the default draw pile even when
       -- their faction is allowed. A special effect may explicitly include one.
       addVoid(id)

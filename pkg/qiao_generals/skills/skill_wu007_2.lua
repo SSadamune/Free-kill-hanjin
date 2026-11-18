@@ -22,7 +22,7 @@ local BURNING = "qiao__burning_camps"
 local function burningTargetsFor(player)
   local prev = player:getNextAlive()
   if prev == nil or prev == player then return {} end
-  return table.filter(player.room.alive_players, function(p)
+  return table.filter(player.room:getPresentPlayers(), function(p)
     return not p:isRemoved() and (p == prev or Heg.inFormationRelation(prev, p))
   end)
 end
@@ -73,7 +73,7 @@ skill:addEffect("viewas", {
     if player == nil or player.dead or use == nil or use.card == nil then return end
     if not H.allSuits(player) then return end
     local room = player.room
-    local minors = table.filter(room.alive_players, function(p)
+    local minors = table.filter(room:getPresentPlayers(), function(p)
       return not p:isRemoved() and W.isSmallKingdom(p)
     end)
     if #minors == 0 then return end

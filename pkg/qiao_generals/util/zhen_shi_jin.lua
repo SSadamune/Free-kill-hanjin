@@ -116,7 +116,7 @@ end
 --- 攻击范围内距离最远的其他角色；并列全返回。
 function U.farthestInRange(player)
   local best, result = -1, {}
-  for _, p in ipairs(player.room.alive_players) do
+  for _, p in ipairs(player.room:getPresentPlayers()) do
     if p ~= player and not p.dead and not p:isRemoved() and player:inMyAttackRange(p) then
       local distance = player:distanceTo(p)
       if distance > best then

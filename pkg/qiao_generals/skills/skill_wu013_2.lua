@@ -43,7 +43,7 @@ skill:addEffect(fk.AfterCardsMove, {
 })
 
 local function candidates(player)
-  return table.filter(player.room.alive_players, function(p)
+  return table.filter(player.room:getPresentPlayers(), function(p)
     return p:isAlive() and not p:isRemoved() and p:getMark(LOST_MARK) > 0
   end)
 end

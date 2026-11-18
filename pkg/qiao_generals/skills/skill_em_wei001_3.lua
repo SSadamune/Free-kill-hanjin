@@ -18,7 +18,7 @@ local function candidates(room)
   for _, id in ipairs(room.discard_pile) do
     if isZhulong(id) then table.insert(list, id) end
   end
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     for _, id in ipairs(p:getCardIds(Player.Equip)) do
       if isZhulong(id) then table.insert(list, id) end
     end

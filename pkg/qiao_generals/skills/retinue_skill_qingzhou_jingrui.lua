@@ -21,7 +21,7 @@ local OPT_DAMAGE = "#qiao__retinue_skill_qingzhou_jingrui-option-damage"
 ---@param room Room|ClientRoom|nil
 ---@return ServerPlayer[]|ClientPlayer[]
 local function alivePlayers(room)
-  return (room and room.alive_players) or {}
+  return room and room:getPresentPlayers() or {}
 end
 
 --- 全场最小公开手牌数；包含自己，允许并列。

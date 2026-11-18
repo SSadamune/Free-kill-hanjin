@@ -631,12 +631,56 @@ function Testqiao_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
     lu.assertTrue(p:hasSkill("qiao__bronze_sparrow_skill"))
     give(room, p, physical)
     give(room, p, extra) -- ensure 空巢 is false
+    -- 铜雀：先确认发动，再选择本次无视的条目；两次询问都按新交互回复。
+    FkTest.setNextReplies(p, {
+      "1",
+      { "qiao__bronze_sparrow_option:::1:qiao_condition_kongchao" },
+    })
     FkTest.setNextReplies(t, { "" })
     data = UseCardData:new { from = p, tos = { t }, card = slash, extra_data = {} }
     room:useCard(data)
+    -- 同一回合第二次使用应变牌时不再提供铜雀。
+    lu.assertEquals(p:usedSkillTimes("qiao__bronze_sparrow_skill", Player.HistoryTurn), 1)
   end)
   lu.assertTrue(A.hasEffect(data, "draw"))
   lu.assertEquals(A.getResult(data).entries[1].ignored_by, "qiao__bronze_sparrow_skill")
+end
+
+-- 铜雀取消发动不消耗本回合次数，次数保留给之后的牌。
+function Testqiao_card_reuse:testBronzeSparrowCancelKeepsTheTurnUse()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local bronze = card("qiao__bronze_sparrow")
+  local firstCard = card("qiao__slash", Card.Club, 4)
+  local secondPhysical = card("qiao__slash", Card.Club, 5)
+  local first = Fk:cloneCard("qiao__slash")
+  first:addSubcard(firstCard.id)
+  local second = Fk:cloneCard("qiao__slash")
+  second:addSubcard(secondPhysical.id)
+  A.setCardEntries(first, { { id = "cancel_probe", condition = "kongchao", effect = "draw" } })
+  A.setCardEntries(second, { { id = "later_probe", condition = "kongchao", effect = "draw" } })
+  local laterData
+  FkTest.runInRoom(function()
+    give(room, p, bronze)
+    use(room, p, { p }, bronze)
+    give(room, p, firstCard)
+    give(room, p, secondPhysical)
+    give(room, p, card("qiao__peach", Card.Heart, 4))
+    FkTest.setNextReplies(p, { "n" }) -- 取消发动
+    FkTest.setNextReplies(t, { "" })
+    local firstData = UseCardData:new { from = p, tos = { t }, card = first, extra_data = {} }
+    room:useCard(firstData)
+    lu.assertNil(A.getResult(firstData).entries[1].ignored_by)
+    -- 之后的应变牌仍可发动铜雀，说明次数没有被取消消耗。
+    FkTest.setNextReplies(p, {
+      "1",
+      { "qiao__bronze_sparrow_option:::1:qiao_condition_kongchao" },
+    })
+    FkTest.setNextReplies(t, { "" })
+    laterData = UseCardData:new { from = p, tos = { t }, card = second, extra_data = {} }
+    room:useCard(laterData)
+  end)
+  lu.assertEquals(A.getResult(laterData).entries[1].ignored_by, "qiao__bronze_sparrow_skill")
 end
 
 function Testqiao_card_reuse:testAxeUnequipRemovesSkill()
@@ -669,10 +713,10 @@ function Testqiao_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
     { "qiao__breastplate", "qiao__breastplate_skill" },
     { "qiao__peace_spell", "qiao__peace_spell_skill" },
     { "qiao__luminous_pearl", "qiao__luminous_pearl_skill" },
-    { "qiao__dragon_phoenix", "#dragon_phoenix_skill" },
+    { "qiao__dragon_phoenix", "qiao__dragon_phoenix_skill" },
     { "qiao__halberd", "qiao__halberd_skill" },
-    { "qiao__blade", "#sa__blade_skill" },
-    { "qiao__liulongcanjia", "#liulongcanjia_skill" },
+    { "qiao__blade", "qiao__blade_skill" },
+    { "qiao__liulongcanjia", "qiao__liulongcanjia_skill" },
     { "qiao__taigong_tactics", "qiao__taigong_tactics_skill" },
     { "qiao__wonder_map", "qiao__wonder_map_skill" },
   }
@@ -713,14 +757,15 @@ function Testqiao_card_reuse:testPassiveEquipmentSkillsAreHiddenButStayAttached(
   end
   lu.assertTrue(passive > 0)
   lu.assertTrue(active > 0)
-  lu.assertFalse(Fk.skills["qiao__five_elements_fan_skill"].visible)
+  lu.assertTrue(Fk.skills["qiao__five_elements_fan_skill"].visible)
+  lu.assertTrue(Fk.skills["qiao__five_elements_fan_skill"]:isInstanceOf(ViewAsSkill))
   lu.assertTrue(Fk.skills["qiao__spear_skill"].visible)
   lu.assertTrue(Fk.skills["qiao__luminous_pearl_skill"].visible)
   lu.assertTrue(Fk.skills["qiao__wooden_ox_skill"].visible)
   lu.assertEquals(Fk:translate("qiao__five_elements_fan"), "五行鹤翎扇")
 end
 
-function Testqiao_card_reuse:testFiveElementsFanStaysHiddenAfterEquip()
+function Testqiao_card_reuse:testFiveElementsFanIsClickableViewAsAfterEquip()
   local room = FkTest.room
   local p = room.players[1]
   local c = card("qiao__five_elements_fan")
@@ -728,9 +773,86 @@ function Testqiao_card_reuse:testFiveElementsFanStaysHiddenAfterEquip()
     give(room, p, c)
     use(room, p, { p }, c)
     lu.assertTrue(p:hasSkill("qiao__five_elements_fan_skill"))
-    lu.assertFalse(Fk.skills["qiao__five_elements_fan_skill"].visible)
-    lu.assertFalse(table.contains(p:getSkillNameList(), "qiao__five_elements_fan_skill"))
+    lu.assertTrue(Fk.skills["qiao__five_elements_fan_skill"].visible)
     lu.assertEquals(Fk:translate("qiao__five_elements_fan"), "五行鹤翎扇")
+  end)
+end
+
+-- 五行鹤翎扇：单张实体属性【杀】的 ViewAs；结果属性不能与材料相同，实体牌登记为
+-- 转化材料的 subcard；普通【杀】、多牌材料与已转化牌都不能作为材料。
+function Testqiao_card_reuse:testFiveElementsFanViewAsUsesSingleAttributeSlash()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local fan = card("qiao__five_elements_fan")
+  local fire = card("qiao__fire__slash")
+  local plain = card("qiao__slash")
+  local skill = Fk.skills["qiao__five_elements_fan_skill"]
+  local converted
+  FkTest.runInRoom(function()
+    give(room, p, fan)
+    use(room, p, { p }, fan)
+    give(room, p, fire)
+    give(room, p, plain)
+    p.phase = Player.Play
+    skill.interaction.data = "qiao__thunder__slash"
+    lu.assertTrue(skill:cardFilter(p, fire.id, {}))
+    converted = skill:viewAs(p, { fire.id })
+    lu.assertNotNil(converted)
+    lu.assertEquals(converted.name, "qiao__thunder__slash")
+    lu.assertEquals(converted.damage_type, fk.ThunderDamage)
+    lu.assertTrue(converted:isVirtual())
+    lu.assertEquals(Card:getIdList(converted), { fire.id })
+    -- 不能选材料自身的属性。
+    skill.interaction.data = "qiao__fire__slash"
+    lu.assertNil(skill:viewAs(p, { fire.id }))
+    lu.assertFalse(skill:cardFilter(p, fire.id, {}))
+    -- 普通【杀】不是属性【杀】，不能转化。
+    skill.interaction.data = "qiao__thunder__slash"
+    lu.assertNil(skill:viewAs(p, { plain.id }))
+    lu.assertFalse(skill:cardFilter(p, plain.id, {}))
+    -- 多张材料不是“一张属性【杀】”。
+    local fire2 = card("qiao__fire__slash", Card.Diamond, 4)
+    give(room, p, fire2)
+    lu.assertNil(skill:viewAs(p, { fire.id, fire2.id }))
+    -- 真实使用：实体材料随转化牌进入处理区并最终进入弃牌堆。
+    FkTest.setNextReplies(t, { "" })
+    use(room, p, { t }, converted)
+  end)
+  lu.assertEquals(room:getCardArea(fire.id), Card.DiscardPile)
+end
+
+-- 黑光铠：多目标伤害牌与黑色非伤害锦囊令此牌对装备者无效；单目标不触发。
+function Testqiao_card_reuse:testDarkArmorNullifiesMultiTargetCardsOnly()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local armor = card("qiao__dark_armor")
+  local slash = card("qiao__slash")
+  local archery = card("qiao__archery_attack")
+  local chain = card("qiao__iron_chain")
+  FkTest.runInRoom(function()
+    give(room, p, armor)
+    use(room, p, { p }, armor)
+    lu.assertTrue(p:hasSkill("qiao__dark_armor_skill"))
+    -- 单目标【杀】不是“多目标”，此牌不无效。
+    local hp = p.hp
+    give(room, t, slash)
+    FkTest.setNextReplies(p, { "" })
+    use(room, t, { p }, slash)
+    lu.assertEquals(p.hp, hp - 1)
+    -- 多目标伤害牌：对装备者无效，其他目标照常结算。
+    hp = p.hp
+    local thp = t.hp
+    give(room, t, archery)
+    FkTest.setNextReplies(t, { "" })
+    use(room, t, { p, t }, archery)
+    lu.assertEquals(p.hp, hp)
+    lu.assertEquals(t.hp, thp - 1)
+    -- 黑色非伤害锦囊：对装备者无效，其他目标照常横置。
+    give(room, t, chain)
+    FkTest.setNextReplies(t, { "" })
+    use(room, t, { p, t }, chain)
+    lu.assertFalse(p.chained)
+    lu.assertTrue(t.chained)
   end)
 end
 
@@ -818,7 +940,7 @@ function Testqiao_card_reuse:testBreastplateBAllowsRejection()
   lu.assertTrue(table.contains(p:getEquipments(), c.id))
 end
 
-function Testqiao_card_reuse:testBreastplateBShieldCountsForLethalThreshold()
+function Testqiao_card_reuse:testBreastplateLethalUsesCurrentHpNotShield()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
   local c = card("qiao__breastplate")
@@ -827,13 +949,55 @@ function Testqiao_card_reuse:testBreastplateBShieldCountsForLethalThreshold()
     room:changeShield(p, 1)
     give(room, p, c)
     use(room, p, { p }, c)
-    -- 1 damage is not lethal while shield is counted (hp+shield = 2), and is
-    -- not >1, so 护心镜 must not ask or trigger.
+    -- 1 点伤害已达到当前体力值，按“致命伤害”口径可以发动；护甲不参与阈值。
+    FkTest.setNextReplies(p, { "1" })
     room:damage { from = t, to = p, damage = 1, damageType = fk.NormalDamage }
   end)
-  lu.assertTrue(table.contains(p:getEquipments(), c.id))
+  lu.assertFalse(table.contains(p:getEquipments(), c.id))
   lu.assertEquals(p.hp, 1)
-  lu.assertEquals(p.shield, 0)
+  lu.assertEquals(p.shield, 1)
+end
+
+function Testqiao_card_reuse:testBreastplatePlaceRequiresEmptyArmorSlot()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local c = card("qiao__breastplate")
+  local armor = card("qiao__eight_diagram")
+  local skill = Fk.skills["qiao__breastplate_place"]
+  local cardType = table.find(CardData.types, function(entry) return entry.id == "qiao__breastplate" end)
+  FkTest.runInRoom(function()
+    give(room, p, c)
+    lu.assertNotNil(skill)
+    lu.assertTrue(skill:isInstanceOf(ActiveSkill))
+    lu.assertTrue(table.contains(cardType.special_skills or {}, "qiao__breastplate_place"))
+    lu.assertTrue(table.contains(c.special_skills or {}, "qiao__breastplate_place"))
+    lu.assertTrue(skill.targetFilter(skill, p, t, {}, { c.id }, nil, {}))
+    room:moveCardTo({ armor.id }, Card.PlayerEquip, t, fk.ReasonPut, "test", nil, true, t)
+    lu.assertFalse(skill.targetFilter(skill, p, t, {}, { c.id }, nil, {}))
+  end)
+end
+
+function Testqiao_card_reuse:testTribladeFollowsRealSlashDamageTarget()
+  local room = FkTest.room
+  local p, t, other = room.players[1], room.players[2], room.players[3]
+  local equipCard = card("qiao__triblade")
+  local slash = card("qiao__slash")
+  local costCard = card("qiao__peach", Card.Heart, 7)
+  local hp = other.hp
+  FkTest.runInRoom(function()
+    give(room, p, equipCard)
+    use(room, p, { p }, equipCard)
+    give(room, p, slash)
+    give(room, p, costCard)
+    local original = room.askToChooseCardsAndPlayers
+    room.askToChooseCardsAndPlayers = function()
+      return { other }, { costCard.id }, true
+    end
+    room:useCard(UseCardData:new { from = p, tos = { t }, card = slash, extra_data = {} })
+    room.askToChooseCardsAndPlayers = original
+  end)
+  lu.assertEquals(other.hp, hp - 1)
+  lu.assertFalse(table.contains(p:getCardIds("h"), costCard.id))
 end
 
 function Testqiao_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
@@ -845,7 +1009,7 @@ function Testqiao_card_reuse:testDragonPhoenixADiscardsOnSlashTarget()
   FkTest.runInRoom(function()
     give(room, p, equip)
     use(room, p, { p }, equip)
-    lu.assertTrue(p:hasSkill("#dragon_phoenix_skill"))
+    lu.assertTrue(p:hasSkill("qiao__dragon_phoenix_skill"))
     give(room, p, slash)
     give(room, t, victimCard)
     FkTest.setNextReplies(p, { "1" })
@@ -964,27 +1128,111 @@ function Testqiao_card_reuse:testHalberdWithoutExpansionKeepsOtherTargets()
   end)
 end
 
-function Testqiao_card_reuse:testBladeAUsesStrategicSkill()
+function Testqiao_card_reuse:testBladeUsesHanJinSkill()
   local room = FkTest.room
   local p = room.players[1]
   local c = card("qiao__blade")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("#sa__blade_skill"))
-    lu.assertFalse(p:hasSkill("#blade_skill"))
+    lu.assertTrue(p:hasSkill("qiao__blade_skill"))
+    lu.assertFalse(p:hasSkill("#sa__blade_skill"))
+    lu.assertEquals(Fk:translate("qiao__blade_skill"), "青龙偃月刀")
   end)
 end
 
-function Testqiao_card_reuse:testLiulongAInstallsNationalMountLock()
+-- 青龙偃月刀：指定目标时逐目标建立限制；目标不能明置、不能使用该花色的手牌；
+-- 使用结束后清除。
+function Testqiao_card_reuse:testBladeRestrictsTargetRevealAndSuitHand()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local blade = card("qiao__blade")
+  local slash = card("qiao__slash", Card.Spade, 5)
+  local probe = card("qiao__slash", Card.Spade, 9)
+  local seen = {}
+  local skel = fk.CreateSkill { name = "#test_blade_probe" }
+  skel:addEffect(fk.TargetConfirmed, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == t and player == target
+        and data.card ~= nil and data.card.name == "qiao__slash"
+    end,
+    on_refresh = function(self, event, target, player, data)
+      table.insert(seen, {
+        reveal = target:prohibitReveal(),
+        deputy = target:prohibitReveal(true),
+        banned = target:prohibitUse(probe),
+      })
+    end,
+  })
+  FkTest.runInRoom(function()
+    room:addSkill(skel:createSkill())
+    give(room, p, blade)
+    use(room, p, { p }, blade)
+    give(room, p, slash)
+    give(room, t, probe)
+    FkTest.setNextReplies(t, { "" })
+    use(room, p, { t }, slash)
+  end)
+  lu.assertEquals(#seen, 1)
+  lu.assertTrue(seen[1].reveal)
+  lu.assertTrue(seen[1].deputy)
+  lu.assertTrue(seen[1].banned)
+  -- 结算结束后限制解除，目标不再被禁止。
+  lu.assertFalse(t:prohibitReveal())
+  lu.assertFalse(t:prohibitUse(probe))
+end
+
+-- 无花色【杀】只禁明置，不建立花色限制。
+function Testqiao_card_reuse:testBladeWithoutSuitOnlyRestrictsReveal()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local blade = card("qiao__blade")
+  local probe = card("qiao__slash", Card.Spade, 9)
+  local seen
+  local skel = fk.CreateSkill { name = "#test_blade_nosuit_probe" }
+  skel:addEffect(fk.TargetConfirmed, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == t and player == target
+        and data.card ~= nil and data.card.name == "qiao__slash"
+    end,
+    on_refresh = function(self, event, target, player, data)
+      seen = { reveal = target:prohibitReveal(), banned = target:prohibitUse(probe) }
+    end,
+  })
+  FkTest.runInRoom(function()
+    room:addSkill(skel:createSkill())
+    give(room, p, blade)
+    use(room, p, { p }, blade)
+    local first = card("qiao__slash", Card.Heart, 10)
+    local second = card("qiao__peach", Card.Heart, 4)
+    give(room, p, first)
+    give(room, p, second)
+    local slash = Fk:cloneCard("qiao__slash")
+    slash:addSubcards { first.id, second.id }
+    lu.assertEquals(slash.suit, Card.NoSuit)
+    give(room, t, probe)
+    FkTest.setNextReplies(t, { "" })
+    use(room, p, { t }, slash)
+  end)
+  lu.assertNotNil(seen)
+  lu.assertTrue(seen.reveal)
+  lu.assertFalse(seen.banned)
+end
+
+function Testqiao_card_reuse:testLiulongUsesHanJinDualMountSkill()
   local room = FkTest.room
   local p = room.players[1]
   local c = card("qiao__liulongcanjia")
   FkTest.runInRoom(function()
     give(room, p, c)
     use(room, p, { p }, c)
-    lu.assertTrue(p:hasSkill("#liulongcanjia_skill"))
-    lu.assertEquals(p:getMark("@@liulongcanjia"), 1)
+    lu.assertTrue(p:hasSkill("qiao__liulongcanjia_skill"))
+    lu.assertFalse(p:hasSkill("#liulongcanjia_skill"),
+      "汉晋六龙骖驾不沿用上游固定±1坐骑技能")
+    lu.assertEquals(p:getMark("@@liulongcanjia"), 0,
+      "不再使用上游的坐骑封锁标记")
   end)
 end
 
@@ -1014,7 +1262,378 @@ function Testqiao_card_reuse:testPeaceAPreventsAttributeDamage()
 end
 
 
+function Testqiao_card_reuse:testDragonPhoenixDyingTakesActualTargetHand()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local equip = card("qiao__dragon_phoenix")
+  local slash = card("qiao__slash")
+  local victimCard = card("qiao__peach", Card.Heart, 4)
+  FkTest.runInRoom(function()
+    give(room, p, equip)
+    use(room, p, { p }, equip)
+    give(room, p, slash)
+    give(room, t, victimCard)
+    t.hp = 1
+    local save = card("qiao__peach", Card.Heart, 7)
+    give(room, p, save)
+    FkTest.setNextReplies(p, { "0", "1", victimCard.id, FkTest.ReplyCard(Fk:getCardById(save.id), { t }) })
+    use(room, p, { t }, slash)
+  end)
+  lu.assertTrue(table.contains(p:getCardIds("h"), victimCard.id),
+    "飞龙夺凤应在求桃前获得实际目标的一张手牌")
+  lu.assertFalse(t.dead, "求桃后目标存活")
+end
+
+function Testqiao_card_reuse:testDragonPhoenixIgnoresNonTargetChainDamage()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local equip = card("qiao__dragon_phoenix")
+  local slash = card("qiao__slash")
+  local victimCard = card("qiao__peach", Card.Heart, 4)
+  FkTest.runInRoom(function()
+    give(room, p, equip)
+    use(room, p, { p }, equip)
+    give(room, t, victimCard)
+    t.hp = 1
+    room:damage {
+      from = p, to = t, damage = 1, card = slash,
+      damageType = fk.NormalDamage, chain = true,
+    }
+  end)
+  lu.assertFalse(table.contains(p:getCardIds("h"), victimCard.id),
+    "连环传导波及的非实际目标不触发飞龙夺凤")
+end
+
+function Testqiao_card_reuse:testLuminousPearlIndependentDiscardDraw()
+  local room = FkTest.room
+  local p = room.players[1]
+  local pearl = card("qiao__luminous_pearl")
+  local c1 = card("qiao__jink")
+  local c2 = card("qiao__peach")
+  local handBefore
+  FkTest.runInRoom(function()
+    give(room, p, pearl)
+    use(room, p, { p }, pearl)
+    give(room, p, c1)
+    give(room, p, c2)
+    if Fk.skills["hs__zhiheng"] then
+      room:handleAddLoseSkills(p, { "hs__zhiheng" }, nil, false, true)
+    end
+    lu.assertTrue(p:hasSkill("qiao__luminous_pearl_skill"), "夜明珠技能与制衡并存")
+    local skill = Fk.skills["qiao__luminous_pearl_skill"]
+    lu.assertFalse(skill:cardFilter(p, pearl.id, {}, {}),
+      "提供技能的夜明珠本身不能用于该次弃置")
+    lu.assertTrue(skill:cardFilter(p, c1.id, {}, {}))
+    local data = { from = p, cards = { c1.id, c2.id }, tos = {} }
+    handBefore = #p:getCardIds("h")
+    room:useSkill(p, skill, function() skill:onUse(room, data) end, data)
+  end)
+  lu.assertEquals(room:getCardArea(c1.id), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(c2.id), Card.DiscardPile)
+  lu.assertEquals(#p:getCardIds("h"), handBefore, "弃置两张后摸两张")
+  lu.assertEquals(p:usedSkillTimes("qiao__luminous_pearl_skill", Player.HistoryPhase), 1)
+  if Fk.skills["hs__zhiheng"] then
+    lu.assertEquals(p:usedSkillTimes("hs__zhiheng", Player.HistoryPhase), 0,
+      "夜明珠与制衡分别计次")
+  end
+end
+
+function Testqiao_card_reuse:testPeaceSpellHandLimitUsesPublicQunCount()
+  local room = FkTest.room
+  local p, ally = room.players[1], room.players[2]
+  local peace = card("qiao__peace_spell")
+  local tianCard = card("qiao__peach", Card.Heart, 6)
+  local oldCard = card("qiao__peach", Card.Heart, 7)
+  FkTest.runInRoom(function()
+    for _, other in ipairs(room.players) do
+      if other == p or other == ally then
+        other.kingdom = "qun"
+      else
+        other.kingdom = "wei"
+      end
+      other.role = other.kingdom
+    end
+    give(room, p, peace)
+    use(room, p, { p }, peace)
+    lu.assertEquals(p:getMaxCards(), p.hp + 2, "同势力人数含装备者自己")
+    give(room, p, tianCard)
+    local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
+    Qun.add(p, { tianCard.id }, "test")
+    lu.assertEquals(p:getMaxCards(), p.hp + 3, "群天兵通过公共人数口径计入")
+    give(room, p, oldCard)
+    p:addToPile("heavenly_army", { oldCard.id }, true, "test")
+    lu.assertEquals(p:getMaxCards(), p.hp + 3, "旧 heavenly_army 不重复叠加")
+  end)
+end
+
+function Testqiao_card_reuse:testPeaceSpellLossDrawsThenLosesHp()
+  local room = FkTest.room
+  local p = room.players[1]
+  local peace = card("qiao__peace_spell")
+  local handBefore
+  FkTest.runInRoom(function()
+    give(room, p, peace)
+    use(room, p, { p }, peace)
+    p.hp = 3
+    handBefore = #p:getCardIds("h")
+    room:moveCardTo(peace.id, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
+      "test", nil, true, p)
+    lu.assertEquals(#p:getCardIds("h"), handBefore + 2, "失去太平要术后先摸两张")
+    lu.assertEquals(p.hp, 2, "摸牌后体力大于1则失去1点")
+  end)
+end
+
+function Testqiao_card_reuse:testLordEquipmentTemplateEntityAndDescriptionSync()
+  local pack = assert(Fk.packages.qiao_cards)
+  local cases = {
+    { "qiao__dragon_phoenix", "qiao__dragon_phoenix_skill", "武器" },
+    { "qiao__luminous_pearl", "qiao__luminous_pearl_skill", "宝物" },
+    { "qiao__peace_spell", "qiao__peace_spell_skill", "防具" },
+  }
+  for _, case in ipairs(cases) do
+    local name, skillName, label = case[1], case[2], case[3]
+    local template = assert(Fk.all_card_types[name], "missing template " .. name)
+    local entity = assert(table.find(pack.cards, function(c) return c.name == name end),
+      "missing entity " .. name)
+    lu.assertEquals(template.equip_skill.name, skillName)
+    lu.assertEquals(entity.equip_skill.name, skillName)
+    lu.assertEquals(template.skill.name, entity.skill.name)
+    local description = Fk:translate(":" .. name)
+    lu.assertTrue(description:find(label, 1, true) ~= nil, "牌面缺少类别 " .. name)
+    lu.assertNil(description:find("尚未实装", 1, true), "正式牌面不应仍是空壳 " .. name)
+  end
+end
+
+function Testqiao_card_reuse:testTargetCardsUsePrintedDescriptionsAfterPostLoad()
+  -- 初始化后的上游复制曾覆盖本地翻译；这批牌必须以汉晋印刷牌面为准。
+  local cases = {
+    { "qiao__iron_chain", { "一至两名角色", "目标角色横置或重置", "重铸" }, { "武将牌" } },
+    { "qiao__known_both", { "有手牌或暗置武将牌", "手牌或一张暗置武将牌", "重铸" }, { "或其手牌" } },
+    { "qiao__fight_together", { "所有大势力角色或所有小势力角色", "若其已横置", "重铸" }, { "不处于连环状态" } },
+    { "qiao__snatch", { "距离1且区域里有牌", "区域里的一张牌" }, { "区域内有牌" } },
+    { "qiao__savage_assault", { "依次选择一项", "打出一张【杀】" }, { "否则受到" } },
+    { "qiao__archery_attack", { "依次选择一项", "打出一张【闪】" }, { "否则受到" } },
+    { "qiao__lightning", { "延时锦囊牌", "黑桃2～9", "移动给其下家" }, { "判定区内" } },
+    { "qiao__qinggang_sword", { "攻击范围</b>：2", "防具无效", "直到此【杀】结算结束" }, { "无视目标角色的防具" } },
+    { "qiao__black_chain", { "攻击范围</b>：3", "你令其横置" }, { "武将牌" } },
+    { "qiao__halberd", { "攻击范围</b>：4", "不与其余目标势力相同", "对剩余目标无效" }, { "最后的手牌" } },
+    { "qiao__befriend_attacking", { "一名与你势力不同的其他角色", "若此牌对任意目标生效过，你摸三张牌" }, { "有明置武将" } },
+    { "qiao__alliance_feast", { "你和一个不同势力的所有角色", "选择X次", "回复1点体力" }, { "X为该势力存活角色数" } },
+    { "qiao__chasing_near", { "一名其他角色", "距离大于1", "距离为1" }, { "区域里有牌的其他角色" } },
+    -- 本批四张：牌面按《锦囊装备》印刷文字，不能沿用上游措辞或空壳说明。
+    { "qiao__blade", { "攻击范围</b>：3", "不能明置武将牌", "不能使用此【杀】花色的手牌", "直到此【杀】结算结束" }, { "武将牌横置" } },
+    { "qiao__five_elements_fan", { "攻击范围</b>：4", "将一张属性【杀】", "任意一种其他属性【杀】" }, { "改为雷【杀】", "非普通【杀】" } },
+    { "qiao__bronze_sparrow", { "每回合限一次", "使用应变牌时", "无视条件应变" }, { "锁定技", "无需强化条件" } },
+    { "qiao__dark_armor", { "伤害牌或黑色非伤害锦囊牌", "唯一目标", "此牌对你无效" }, { "伤害锦囊或黑色锦囊" } },
+  }
+  for _, case in ipairs(cases) do
+    local description = Fk:translate(":" .. case[1])
+    for _, expected in ipairs(case[2]) do
+      lu.assertNotNil(description:find(expected, 1, true), case[1] .. " 缺少：" .. expected)
+    end
+    for _, unexpected in ipairs(case[3] or {}) do
+      lu.assertNil(description:find(unexpected, 1, true), case[1] .. " 仍含上游措辞：" .. unexpected)
+    end
+    lu.assertNil(description:find("尚未实装", 1, true), case[1] .. " 不应是空壳牌面")
+  end
+end
+
+function Testqiao_card_reuse:testRecastEntrySurvivesForPrintedRecastCards()
+  local pack = assert(Fk.packages.qiao_cards)
+  for _, name in ipairs({ "qiao__iron_chain", "qiao__known_both", "qiao__fight_together" }) do
+    local template = assert(Fk.all_card_types[name], "missing template " .. name)
+    lu.assertTrue(table.contains(template.special_skills or {}, "recast"), name .. " 模板缺少重铸入口")
+    local entity = assert(table.find(pack.cards, function(c) return c.name == name end),
+      "missing entity " .. name)
+    lu.assertTrue(table.contains(entity.special_skills or {}, "recast"), name .. " 实体缺少重铸入口")
+  end
+end
+
+function Testqiao_card_reuse:testDynamicAdaptationAndAllianceDescriptionsRemain()
+  local snatch = card("qiao__snatch", Card.Diamond, 3)
+  local snatchDescription = snatch:getDynamicDescription()
+  lu.assertNotNil(snatchDescription:find("<b>合纵</b>", 1, true), "顺手牵羊·合缺少合纵标记")
+  lu.assertNotNil(snatchDescription:find("距离1且区域里有牌", 1, true), "动态描述丢失基础牌面")
+
+  local savage = card("qiao__savage_assault", Card.Club, 7)
+  local savageDescription = savage:getDynamicDescription()
+  lu.assertNotNil(savageDescription:find("<b>应变·富甲</b>：目标-1", 1, true),
+    "南蛮入侵·富甲缺少动态应变")
+end
+
+function Testqiao_card_reuse:testBefriendAttackingDrawsThreeOnlyOnceForMultipleTargets()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local data
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    local clone = Fk:cloneCard("qiao__befriend_attacking")
+    A.setCardEntries(clone, { { id = "probe_add", condition = "kongchao", effect = "add_target" } })
+    local original = room.askToChoosePlayers
+    room.askToChoosePlayers = function(self, player, params)
+      if params.skill_name == "#qiao_adaptation_rule" then return { p3 } end
+      return original(self, player, params)
+    end
+    for _, q in ipairs(room.players) do FkTest.setNextReplies(q, { "" }) end
+    data = UseCardData:new { from = p1, tos = { p2 }, card = clone, extra_data = {} }
+    room:useCard(data)
+    room.askToChoosePlayers = original
+  end)
+  lu.assertTrue(table.contains(data.tos, p3), "额外目标应已加入")
+  lu.assertEquals(#p1:getCardIds("h"), 3, "多目标远交近攻只摸三张一次")
+  lu.assertEquals(#p2:getCardIds("h"), 1)
+  lu.assertEquals(#p3:getCardIds("h"), 1)
+end
+
+function Testqiao_card_reuse:testBefriendAttackingStillDrawsOnceWhenFirstTargetIsNullified()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    local skel = fk.CreateSkill { name = "#qiao_test_nullify_befriend_first" }
+    skel:addEffect(fk.PreCardEffect, {
+      global = true,
+      priority = 100,
+      can_trigger = function(self, event, target, player, data)
+        return data.card ~= nil and data.card.name == "qiao__befriend_attacking"
+          and data.to == p2
+      end,
+      on_cost = Util.TrueFunc,
+      on_use = function(self, event, target, player, data)
+        data:setNullified(data.to)
+      end,
+    })
+    local probe = skel:createSkill()
+    Fk.skills[probe.name] = probe
+    for _, related in ipairs(probe.related_skills or {}) do
+      Fk.skills[related.name] = related
+    end
+    room:addSkill(probe)
+    local clone = Fk:cloneCard("qiao__befriend_attacking")
+    A.setCardEntries(clone, { { id = "probe_add", condition = "kongchao", effect = "add_target" } })
+    local original = room.askToChoosePlayers
+    room.askToChoosePlayers = function(self, player, params)
+      if params.skill_name == "#qiao_adaptation_rule" then return { p3 } end
+      return original(self, player, params)
+    end
+    for _, q in ipairs(room.players) do FkTest.setNextReplies(q, { "" }) end
+    room:useCard(UseCardData:new { from = p1, tos = { p2 }, card = clone, extra_data = {} })
+    room.askToChoosePlayers = original
+  end)
+  lu.assertEquals(#p1:getCardIds("h"), 3, "首名目标被抵消后仍应在首个生效目标摸三张一次")
+  lu.assertEquals(#p2:getCardIds("h"), 0)
+  lu.assertEquals(#p3:getCardIds("h"), 1)
+end
+
+function Testqiao_card_reuse:testBefriendAttackingDrawsNothingWhenAllTargetsAreNullified()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "wei", "shu"
+    local skel = fk.CreateSkill { name = "#qiao_test_nullify_befriend_all" }
+    skel:addEffect(fk.PreCardEffect, {
+      global = true,
+      priority = 100,
+      can_trigger = function(self, event, target, player, data)
+        return data.card ~= nil and data.card.name == "qiao__befriend_attacking"
+      end,
+      on_cost = Util.TrueFunc,
+      on_use = function(self, event, target, player, data)
+        data:setNullified(data.to)
+      end,
+    })
+    local probe = skel:createSkill()
+    Fk.skills[probe.name] = probe
+    for _, related in ipairs(probe.related_skills or {}) do
+      Fk.skills[related.name] = related
+    end
+    room:addSkill(probe)
+    local clone = Fk:cloneCard("qiao__befriend_attacking")
+    A.setCardEntries(clone, { { id = "probe_add", condition = "kongchao", effect = "add_target" } })
+    local original = room.askToChoosePlayers
+    room.askToChoosePlayers = function(self, player, params)
+      if params.skill_name == "#qiao_adaptation_rule" then return { p3 } end
+      return original(self, player, params)
+    end
+    for _, q in ipairs(room.players) do FkTest.setNextReplies(q, { "" }) end
+    room:useCard(UseCardData:new { from = p1, tos = { p2 }, card = clone, extra_data = {} })
+    room.askToChoosePlayers = original
+  end)
+  lu.assertEquals(#p1:getCardIds("h"), 0, "全部被抵消时使用者不摸")
+  lu.assertEquals(#p2:getCardIds("h"), 0)
+  lu.assertEquals(#p3:getCardIds("h"), 0)
+end
+
+function Testqiao_card_reuse:testAllianceFeastResolvesUserMixedChoicesBeforeOtherTargets()
+  local room = FkTest.room
+  local p1, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local seen = {}
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    p1.hp = p1.maxHp - 1
+    for _, q in ipairs(room.players) do
+      q.kingdom, q.role = "wei", "wei"
+    end
+    p1.kingdom, p2.kingdom, p3.kingdom = "han", "shu", "shu"
+    p2:setChainState(true)
+    p3:setChainState(true)
+    local c = give(room, p1, card("qiao__alliance_feast"))
+    local original = room.askToChoice
+    local answers = { "alliance_feast_recover:::1", "alliance_feast_draw:::1" }
+    room.askToChoice = function(self, player, params)
+      if params.skill_name == "alliance_feast_skill" then
+        table.insert(seen, {
+          hand2 = #p2:getCardIds("h"),
+          hand3 = #p3:getCardIds("h"),
+        })
+        return table.remove(answers, 1)
+      end
+      return original(self, player, params)
+    end
+    for _, q in ipairs(room.players) do FkTest.setNextReplies(q, { "" }) end
+    room:useCard(UseCardData:new { from = p1, tos = { p2 }, card = c, extra_data = {} })
+    room.askToChoice = original
+  end)
+  lu.assertEquals(#seen, 2, "使用者应按其他最终目标数选择两次")
+  lu.assertEquals(seen[1].hand2, 0, "使用者结算时其他目标尚未摸牌")
+  lu.assertEquals(seen[1].hand3, 0, "使用者结算时其他目标尚未摸牌")
+  lu.assertEquals(seen[2].hand2, 0, "逐次选择期间其他目标仍未结算")
+  lu.assertEquals(seen[2].hand3, 0, "逐次选择期间其他目标仍未结算")
+  lu.assertEquals(p1.hp, p1.maxHp, "第一次选择回复1点体力")
+  lu.assertEquals(#p1:getCardIds("h"), 1, "第二次选择摸一张牌")
+  lu.assertEquals(#p2:getCardIds("h"), 1, "其他目标各摸一张")
+  lu.assertEquals(#p3:getCardIds("h"), 1, "其他目标各摸一张")
+  lu.assertFalse(p2.chained, "其他目标重置")
+  lu.assertFalse(p3.chained, "其他目标重置")
+end
+
+function Testqiao_card_reuse:testChasingNearCanTargetAnEmptyOtherRole()
+  local room = FkTest.room
+  local p1, p2 = room.players[1], room.players[2]
+  local c
+  local asked = 0
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    c = give(room, p1, card("qiao__chasing_near"))
+    lu.assertTrue(p2:isAllNude(), "前置：目标区域无牌")
+    lu.assertEquals(p1:distanceTo(p2), 1)
+    lu.assertTrue(p1:canUseTo(c, p2), "逐近弃远可以指定无牌的其他角色")
+    local original = room.askToChooseCard
+    room.askToChooseCard = function(...)
+      asked = asked + 1
+      return original(...)
+    end
+    for _, q in ipairs(room.players) do FkTest.setNextReplies(q, { "" }) end
+    room:useCard(UseCardData:new { from = p1, tos = { p2 }, card = c, extra_data = {} })
+    room.askToChooseCard = original
+  end)
+  lu.assertEquals(asked, 0, "目标区域无牌时不发起选牌")
+  lu.assertTrue(p2:isAllNude())
+  lu.assertEquals(room:getCardArea(c.id), Card.DiscardPile)
+end
+
 return { name = "qiao_card_reuse" }
-
-
 

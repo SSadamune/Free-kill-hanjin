@@ -3,7 +3,7 @@ local skill = fk.CreateSkill { name = "qiao__chasing_near_skill" }
 
 Fk:loadTranslationTable {
   ["qiao__chasing_near_skill"] = "逐近弃远",
-  ["#qiao__chasing_near_skill"] = "选择一名区域里有牌的其他角色，若距离为1则获得其区域里一张牌，若距离大于1则弃置其区域里一张牌",
+  ["#qiao__chasing_near_skill"] = "选择一名其他角色",
   ["#qiao__chasing_near-prey"] = "获得牌",
   ["#qiao__chasing_near-discard"] = "弃置牌",
 }
@@ -25,7 +25,7 @@ skill:addEffect("cardskill", {
     end
   end,
   mod_target_filter = function(self, player, to_select)
-    return to_select ~= player and not to_select:isAllNude()
+    return to_select ~= player
   end,
   target_filter = Util.CardTargetFilter,
   on_effect = function(self, room, effect)

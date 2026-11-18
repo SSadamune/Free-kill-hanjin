@@ -22,7 +22,7 @@ skill:addEffect("active", {
       return Fk:getCardById(id).name == self.attached_equip
     end)
     if ox then
-      local targets = table.filter(room.alive_players, function(p)
+      local targets = table.filter(room:getPresentPlayers(), function(p)
         return p ~= player and p:hasEmptyEquipSlot(Card.SubtypeTreasure)
       end)
       if #targets > 0 then

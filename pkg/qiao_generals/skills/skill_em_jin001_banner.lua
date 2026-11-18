@@ -15,7 +15,7 @@ local USED_MARK = "qiao_jin001_change_used"
 
 local function lord(room)
   if room == nil then return nil end
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     local kingdom = p.kingdom
     if kingdom ~= "jin" and p:getMark("__heg_kingdom") == "jin" then kingdom = "jin" end
     if not p.dead and not p:isRemoved() and kingdom == "jin"

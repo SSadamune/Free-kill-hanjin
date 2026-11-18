@@ -24,7 +24,7 @@ end
 ---@return boolean
 local function hasMostHandCards(player)
   local own = handCount(player)
-  for _, p in ipairs(player.room.alive_players) do
+  for _, p in ipairs(player.room:getPresentPlayers()) do
     if p ~= player and handCount(p) > own then return false end
   end
   return true
@@ -38,7 +38,7 @@ local function candidateTargets(room, player)
   local garden = Fk:cloneCard(PEACH_GARDEN)
   local harvest = Fk:cloneCard(HARVEST)
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p:isAlive() and not p:isRemoved()
       and not player:isProhibited(p, garden)
       and not player:isProhibited(p, harvest) then

@@ -29,7 +29,7 @@ skill:addEffect(fk.EventPhaseStart, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     local x = revealedCount(room)
-    local targets = table.filter(room.alive_players, function(p)
+    local targets = table.filter(room:getPresentPlayers(), function(p)
       return p:isAlive() and not p:isRemoved()
     end)
     if #targets == 0 or x <= 0 then return end

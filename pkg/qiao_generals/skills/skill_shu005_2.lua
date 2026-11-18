@@ -21,7 +21,7 @@ skill:addEffect(fk.CardEffectCancelledOut, {
     if data.card.color ~= Card.Red then return false end
     local by = S.canceller(player.room, data)
     if by == nil or by ~= data.to then return false end
-    return table.find(player.room.alive_players, function(p)
+    return table.find(player.room:getPresentPlayers(), function(p)
       return p ~= player and p ~= data.to and not p:isRemoved()
     end) ~= nil
   end,
@@ -33,7 +33,7 @@ skill:addEffect(fk.CardEffectCancelledOut, {
     }) then
       return false
     end
-    local candidates = table.filter(room.alive_players, function(p)
+    local candidates = table.filter(room:getPresentPlayers(), function(p)
       return p ~= player and p ~= data.to and not p:isRemoved()
     end)
     if #candidates == 0 then return false end

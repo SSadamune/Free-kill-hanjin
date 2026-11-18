@@ -14,7 +14,7 @@ skill.qiaoImplemented = true
 ---@param player ServerPlayer
 ---@return ServerPlayer[]
 local function candidates(player)
-  return table.filter(player.room.alive_players, function(p)
+  return table.filter(player.room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
       and player:distanceTo(p) == 1
   end)

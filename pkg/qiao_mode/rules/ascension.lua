@@ -85,7 +85,7 @@ end
 
 function M.other_unknown(room, player)
   return table.find(room.alive_players, function(other)
-    return other ~= player and other.kingdom == "unknown"
+    return other ~= player and not other:isRemoved() and other.kingdom == "unknown"
   end) ~= nil
 end
 
@@ -96,7 +96,7 @@ end
 --- 死亡继位候选人：主将（明置或暗置）能升变为死者所属势力的君主，
 --- 且不会因加入后超员而转为野心家。
 function M.lord_candidate(room, player, deadKingdom)
-  if player == nil or player.dead then return nil end
+  if player == nil or player.dead or player:isRemoved() then return nil end
   local main = M.actual_main(player)
   if main == nil then return nil end
   if player.general ~= "anjiang" and Versions.is_lord(main) then return nil end
@@ -111,7 +111,7 @@ end
 
 --- 准备阶段的野心家效忠候选。每个合法势力分别检查配将、人数与时机条件。
 function M.wild_candidates(room, player)
-  if player == nil or player.dead or player.general ~= "anjiang" then return {} end
+  if player == nil or player.dead or player:isRemoved() or player.general ~= "anjiang" then return {} end
   if player:getMark(M.WILD_ASCENDED_MARK) ~= 0 then return {} end
   local main = M.actual_main(player)
   if main == nil or Fk.generals[main] == nil or Fk.generals[main].kingdom ~= "wild" then return {} end

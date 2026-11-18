@@ -12,7 +12,7 @@ local skill = fk.CreateSkill { name = "qiao__han019_venom_rule" }
 ---@return ServerPlayer?, boolean?
 local function locateSource(room, source)
   if type(source) ~= "string" or source == "" or Exchange.isSoldier(source) then return nil end
-  for _, owner in ipairs(room.alive_players) do
+  for _, owner in ipairs(room:getPresentPlayers()) do
     for _, isDeputy in ipairs({ false, true }) do
       local current = Exchange.actualGeneral(owner, isDeputy)
       if current == source and not Exchange.isSoldier(current) then

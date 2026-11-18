@@ -69,14 +69,14 @@ skill:addEffect(fk.EventPhaseStart, {
     if not sameKingdom(player, target) then return false end
     if #R.instancesForSkill(player, skill.name) == 0 then
       -- 直接来源授予技能时仍保留本身一份语义。
-      for _, p in ipairs(player.room.alive_players) do
+      for _, p in ipairs(player.room:getPresentPlayers()) do
         if not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0 then
           return true
         end
       end
       return false
     end
-    for _, p in ipairs(player.room.alive_players) do
+    for _, p in ipairs(player.room:getPresentPlayers()) do
       if not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0 then
         return true
       end
@@ -100,7 +100,7 @@ skill:addEffect(fk.EventPhaseStart, {
     end
 
     -- 全场有手牌的合法角色均可选，包括敌方角色。
-    local candidates = table.filter(room.alive_players, function(p)
+    local candidates = table.filter(room:getPresentPlayers(), function(p)
       return not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0
     end)
     if #candidates == 0 then return false end
