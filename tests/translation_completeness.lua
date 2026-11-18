@@ -56,6 +56,9 @@ function Testqiao_translation_completeness:testPublicPilesAndMarksHaveReadableTe
   for _, name in ipairs(PUBLIC_PILES) do
     lu.assertNotEquals(Fk:translate(name), name, "公开牌堆缺本地化：" .. name)
   end
+  local retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+  lu.assertEquals(Fk:translate(retinues.PUBLIC_MARK, "zh_CN"), "翼从")
+  lu.assertEquals(Fk:translate(retinues.PUBLIC_MARK:sub(3), "zh_CN"), "翼从")
   for _, name in ipairs({ "qiao_use_target_policy", "qiao_commander_sources" }) do
     local spec = assert(Fk.qml_marks[name], "缺少 QML 标记注册：" .. name)
     lu.assertEquals(spec.how_to_show(), "#hidden", "内部标记应隐藏：" .. name)
