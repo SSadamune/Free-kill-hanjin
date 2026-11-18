@@ -4,6 +4,7 @@ local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
+local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -43,6 +44,24 @@ end
 local QiaoPlayCard = recipientRequest(ReqPlayCard, "QiaoPlayCard")
 local QiaoActiveSkill = recipientRequest(ReqActiveSkill, "QiaoActiveSkill")
 local QiaoClient = BaseClient:subclass("QiaoClient")
+
+--- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
+--- 辅助/额外发动、ViewAs 与牌使用由 M.appliesTo 排除，其他模式由 M.exhausted 排除。
+local function exhaustedActiveSkill(request, name)
+  return ActiveSkillLimits.exhausted(Fk.skills[name], request.player, Fk:currentRoom())
+end
+
+function QiaoPlayCard:skillButtonValidity(name)
+  if exhaustedActiveSkill(self, name) then return false end
+  return ReqPlayCard.skillButtonValidity(self, name)
+end
+
+function QiaoPlayCard:feasible()
+  if self.skill_name and exhaustedActiveSkill(self, self.skill_name) then
+    return false
+  end
+  return ReqPlayCard.feasible(self)
+end
 
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
