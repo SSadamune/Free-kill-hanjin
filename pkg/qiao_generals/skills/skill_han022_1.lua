@@ -30,7 +30,7 @@ end
 
 local function orderFrom(start)
   local room = start.room
-  local alive = table.filter(room.alive_players, function(p)
+  local alive = table.filter(room:getPresentPlayers(), function(p)
     return p:isAlive() and not p:isRemoved()
   end)
   table.sort(alive, function(a, b) return a.seat < b.seat end)

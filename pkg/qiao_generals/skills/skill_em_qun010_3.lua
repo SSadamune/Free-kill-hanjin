@@ -13,7 +13,7 @@ local function findPeace(room)
   for _, id in ipairs(room.discard_pile or {}) do
     if Fk:getCardById(id) ~= nil and Fk:getCardById(id).name == PEACE then return id end
   end
-  for _, player in ipairs(room.alive_players) do
+  for _, player in ipairs(room:getPresentPlayers()) do
     for _, area in ipairs({ Player.Equip, Player.Judge }) do
       for _, id in ipairs(player:getCardIds(area)) do
         local card = Fk:getCardById(id)

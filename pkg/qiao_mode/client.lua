@@ -3,6 +3,7 @@ local BaseClient = require "ltk.client.client"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
+local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -18,6 +19,8 @@ local function recipientRequest(base, name)
   local request = base:subclass(name)
 
   function request:targetValidity(pid)
+    if RemovedTargets.inMode(self.room)
+      and RemovedTargets.isRemoved(self.room:getPlayerById(pid)) then return false end
     if not isQiaoMZ(self) then return base.targetValidity(self, pid) end
     local to = self.room:getPlayerById(pid)
     -- 其他合法角色保持可点击；每次点击都是替换收牌者，而非追加目标。

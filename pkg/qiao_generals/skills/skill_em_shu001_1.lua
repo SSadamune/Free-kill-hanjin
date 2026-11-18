@@ -12,7 +12,7 @@ local FLAG = "qiao__skill_em_shu001_flag"
 local SYNCING = "qiao_em_shu001_flag_syncing"
 
 local function lordOf(room)
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() and p:hasShownSkill(skill.name) then return p end
   end
   return nil

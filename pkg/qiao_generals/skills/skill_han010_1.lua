@@ -20,7 +20,7 @@ local ARMOR_MARK = "qiao_skill_han010_1_ignore_armor"
 local function pindianTargets(player)
   local room = player.room
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and p:isAlive() and not p:isRemoved() and player:canPindian(p) then
       table.insert(ret, p)
     end

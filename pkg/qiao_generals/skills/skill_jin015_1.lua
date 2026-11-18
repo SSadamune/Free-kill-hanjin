@@ -36,7 +36,7 @@ end
 local function hasPossibleUser(player)
   if player == nil or player.dead then return false end
   if #player:getCardIds("he") == 0 then return false end
-  return table.find(player.room.alive_players, function(p)
+  return table.find(player.room:getPresentPlayers(), function(p)
     return p ~= player and not p.dead and not p:isRemoved()
   end) ~= nil
 end

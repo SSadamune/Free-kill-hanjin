@@ -15,7 +15,7 @@ local H = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
 local function eligible(player)
   local room = Fk:currentRoom()
   if room == nil then return false end
-  return table.find(room.alive_players, function(p)
+  return table.find(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end) ~= nil
 end

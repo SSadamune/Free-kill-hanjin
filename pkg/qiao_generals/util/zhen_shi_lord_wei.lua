@@ -95,7 +95,7 @@ end
 --- 当前持旗君主：建安已明置有效，且霸者求贤状来源存在。
 function M.lord(room)
   if room == nil then return nil end
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() and p.kingdom == "wei"
       and p:hasShownSkill(M.JIANAN) and p:hasSkill(M.BANNER) then
       return p

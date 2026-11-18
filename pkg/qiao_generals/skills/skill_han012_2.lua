@@ -93,7 +93,7 @@ end
 ---@return ServerPlayer[]
 local function otherTargets(player)
   local room = player.room
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
 end
@@ -132,7 +132,7 @@ skill:addEffect(fk.CardUseFinished, {
   anim_type = "support",
   is_delay_effect = true,
   can_trigger = function(self, event, target, player, data)
-    if target ~= player then return false end
+    if target ~= player or player:isRemoved() then return false end
     if data.card == nil then return false end
     if data.card.skillName ~= skill.name
       and not table.contains(data.card.skillNames or {}, skill.name) then

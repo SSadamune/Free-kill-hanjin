@@ -12,7 +12,7 @@ local function eligibleTargets(player)
   local result = {}
   local room = Fk:currentRoom()
   if room == nil then return result end
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if not p.dead and not p:isRemoved() and not U.sanChenTargeted(player, p) then
       table.insert(result, p)
     end

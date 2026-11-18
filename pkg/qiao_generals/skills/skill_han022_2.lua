@@ -25,7 +25,7 @@ skill:addEffect(fk.Damaged, {
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local tos = table.filter(room.alive_players, function(p)
+    local tos = table.filter(room:getPresentPlayers(), function(p)
       return p:isAlive() and not p:isRemoved() and H.compareKingdomWith(player, p)
     end)
     room:sortByAction(tos)

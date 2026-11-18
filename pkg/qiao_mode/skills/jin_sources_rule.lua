@@ -43,7 +43,7 @@ local function resolvePromises(room, target)
   for _, promise in ipairs(mine) do
     if target.dead or target:isRemoved() or #target:getCardIds("h") == 0 then return end
     local source = room:getPlayerById(promise.source)
-    if source == nil or source.dead then
+    if source == nil or source.dead or source:isRemoved() then
       -- 来源已离场：仍按已展示的承诺处理限用，但没有可交给的对象。
       local id = room:askToChooseCard(target, {
         target = target, flag = "h", skill_name = FULI,

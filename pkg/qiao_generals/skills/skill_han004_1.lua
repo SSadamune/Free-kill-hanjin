@@ -105,7 +105,7 @@ local function ensureDelaySkill(player)
           -- 不决定结算轮数；结算前清空记录，避免同一次回合结束重复收牌。
           if p:getMark(ACT_MARK) > 0 then
             room:setPlayerMark(p, ACT_MARK, 0)
-            if not p.dead then settle(room, p) end
+            if not p.dead and not p:isRemoved() then settle(room, p) end
           end
         end
         room:setTag(SETTLING_TAG, false)
@@ -125,7 +125,7 @@ end
 settle = function(room, player)
   local ids = player:getTableMark(TARGET_MARK)
   local targets = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and table.contains(ids, p.id) then table.insert(targets, p) end
   end
   room:sortByAction(targets)

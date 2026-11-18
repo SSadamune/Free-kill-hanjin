@@ -33,7 +33,7 @@ end
 skill.qiaoPools = { high = HIGH, low = LOW }
 
 local function onField(room, id)
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p:hasShownSkill(id) then return true end
   end
   return false

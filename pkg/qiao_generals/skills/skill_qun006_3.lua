@@ -15,7 +15,7 @@ local LOSE_MAX = "qiao__skill_qun006_3-lose-max"
 ---@return boolean
 local function notMinimumHp(player)
   local min = math.huge
-  for _, p in ipairs(player.room.alive_players) do
+  for _, p in ipairs(player.room:getPresentPlayers()) do
     if p:isAlive() and not p:isRemoved() then min = math.min(min, p.hp) end
   end
   return min < math.huge and player.hp > min

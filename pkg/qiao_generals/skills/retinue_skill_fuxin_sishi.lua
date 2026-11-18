@@ -33,7 +33,7 @@ end
 local function slashCandidates(anchor, player)
   local room = player.room
   if room == nil then return {} end
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p ~= anchor and not p.dead and not p:isRemoved()
       and anchor:inMyAttackRange(p)
       and not player:isProhibited(p, Fk:cloneCard(SLASH))

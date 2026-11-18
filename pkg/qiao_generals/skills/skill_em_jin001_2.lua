@@ -17,7 +17,7 @@ end
 
 local function candidates(room, player)
   local list = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     for _, id in ipairs(p:getCardIds(Player.Equip)) do
       if isRide(id) and player:canMoveCardIntoEquip(id, false) then table.insert(list, id) end
     end

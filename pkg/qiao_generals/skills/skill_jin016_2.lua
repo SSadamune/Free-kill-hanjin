@@ -38,7 +38,7 @@ skill:addEffect("active", {
   can_use = function(self, player)
     local room = Fk:currentRoom()
     return self:withinTimesLimit(player, Player.HistoryPhase)
-      and room ~= nil and #room.alive_players > 0
+      and room ~= nil and #room:getPresentPlayers() > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from

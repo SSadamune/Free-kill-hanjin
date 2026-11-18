@@ -23,7 +23,7 @@ end
 ---@param player ServerPlayer
 ---@return ServerPlayer[]
 local function alivePlayers(player)
-  return table.filter(currentRoom(player).alive_players, function(p)
+  return table.filter(currentRoom(player):getPresentPlayers(), function(p)
     return p:isAlive() and not p:isRemoved()
   end)
 end
@@ -84,7 +84,7 @@ skill:addEffect("active", {
       if not player.dead and player:isAlive() then player:setChainState(true) end
     else
       room:setPlayerMark(player, USED_DISCARD, 1)
-      local targets = table.filter(room.alive_players, function(p)
+      local targets = table.filter(room:getPresentPlayers(), function(p)
         return p.chained and p:isAlive() and not p:isRemoved()
       end)
       for _, to in ipairs(targets) do

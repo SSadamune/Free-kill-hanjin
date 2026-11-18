@@ -15,7 +15,7 @@ local H = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
 local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 
 local function others(player)
-  return table.filter(W.currentRoom(player).alive_players, function(p)
+  return table.filter(W.currentRoom(player):getPresentPlayers(), function(p)
     return p ~= player and not p:isRemoved()
   end)
 end

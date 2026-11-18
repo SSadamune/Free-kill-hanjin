@@ -46,7 +46,7 @@ end
 local function differentFactionCount(player)
   local own = currentKingdom(player)
   local seen, count = {}, 0
-  local alive = currentRoom(player).alive_players
+  local alive = currentRoom(player):getPresentPlayers()
   for _, p in ipairs(alive) do
     if p ~= player then
       local kingdom = p.kingdom
@@ -114,7 +114,7 @@ skill:addEffect("active", {
     if player.dead or to.dead or to:isRemoved() then return end
 
     local candidates = {}
-    for _, p in ipairs(room.alive_players) do
+    for _, p in ipairs(room:getPresentPlayers()) do
       if p ~= player and p ~= to and p:isAlive() and not p:isRemoved() and to:canPindian(p) then
         table.insert(candidates, p)
       end

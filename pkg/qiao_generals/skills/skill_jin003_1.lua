@@ -96,7 +96,7 @@ skill:addEffect(fk.AfterCardsMove, {
     end
     for _, suit in ipairs(suits) do
       if player.dead then return end
-      local others = table.filter(room.alive_players, function(p)
+      local others = table.filter(room:getPresentPlayers(), function(p)
         return p ~= player and not p:isNude() and not p:isRemoved()
       end)
       local choices = { OPT_DRAW }

@@ -12,8 +12,13 @@ local WeiHistory = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
 local WuHistory = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
+local KingdomSize = require "packages.qiao.pkg.qiao_mode.rules.kingdom_size"
+local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local W = require "ui_emu.preferences"
 local M = {}
+
+-- 大小势力/玉玺公共查询：服务器与客户端都只在本模式安装。
+KingdomSize.install()
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
 
@@ -172,6 +177,7 @@ function M.create(base)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      RemovedTargets.installServer(self.room)
       self.room:addSkill(WeiHistory.HISTORY_SKILL)
       self.room:addSkill(WeiHistory.WEIKUI_DISTANCE_SKILL)
       self.room:addSkill(WuHistory.HISTORY_SKILL)
@@ -200,6 +206,7 @@ function M.create(base)
       self.room:addSkill("qiao__dual_mount_rule")
       self.room:addSkill("qiao__faction_trick_rule")
       self.room:addSkill("qiao__luoshui_rule")
+      self.room:addSkill("qiao__removed_player_rule")
       self.room:addSkill("qiao__zhoujun_turn_bonus")
       for _, player in ipairs(self.room.players) do
         player:addFakeSkill("qiao__alliance")

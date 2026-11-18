@@ -28,7 +28,7 @@ end
 
 local function candidates(room, player)
   -- 先用可容纳全场的上限查询候选；explicit 条件会替换【杀】的通常距离条件。
-  return C.candidates(room, player, Fk:cloneCard(SLASH), policy(#room.alive_players),
+  return C.candidates(room, player, Fk:cloneCard(SLASH), policy(#room:getPresentPlayers()),
     { bypass_times = true })
 end
 
@@ -47,7 +47,7 @@ local function hasCandidate(room, player)
   end
   local slash = Fk:cloneCard(SLASH)
   slash.skillName = skill.name
-  return table.find(room.alive_players or {}, function(p)
+  return table.find(room:getPresentPlayers(), function(p)
     return p ~= player and not p.dead and not p:isRemoved()
       and C.matchesCondition(room, player, slash, p, CONDITION)
       and player:canUseTo(slash, p, { bypass_times = true, bypass_distances = true })

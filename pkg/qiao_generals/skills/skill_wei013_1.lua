@@ -13,7 +13,7 @@ local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local function eligibleTargets(player)
   local room = Fk:currentRoom()
   if room == nil then return {} end
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
       and p.hp > player.hp and player:canPindian(p)
   end)
@@ -43,7 +43,7 @@ skill:addEffect("active", {
 
     if winner == player then
       -- 由拼点对手对其攻击范围内、由荀彧选择的另一名角色造成伤害。
-      local candidates = table.filter(room.alive_players, function(p)
+      local candidates = table.filter(room:getPresentPlayers(), function(p)
         return p ~= target and p:isAlive() and not p:isRemoved()
           and target:inMyAttackRange(p)
       end)

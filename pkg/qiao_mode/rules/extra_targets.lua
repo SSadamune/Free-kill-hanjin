@@ -186,7 +186,7 @@ function E.candidates(room, use, opts)
   end
 
   local result = {}
-  for _, target in ipairs(room.alive_players) do
+  for _, target in ipairs(room:getPresentPlayers()) do
     if commonLegal(use, target) then
       local legal
       if explicit ~= nil then

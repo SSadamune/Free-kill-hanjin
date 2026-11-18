@@ -48,7 +48,7 @@ skill:addEffect(fk.EventPhaseSkipped, {
     local chosen = room:askToChoosePlayers(player, {
       min_num = 1,
       max_num = 1,
-      targets = room.alive_players,
+      targets = room:getPresentPlayers(),
       skill_name = skill.name,
       prompt = "#qiao__skill_wei010_1-draw",
       cancelable = false,

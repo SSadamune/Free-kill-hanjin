@@ -14,7 +14,7 @@ skill.qiaoImplemented = true
 local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 
 local function candidates(player, data, excludeIds)
-  return table.filter(W.currentRoom(player).alive_players, function(p)
+  return table.filter(W.currentRoom(player):getPresentPlayers(), function(p)
     return p ~= player and p ~= data.from and not p:isRemoved()
       -- 转移目标不能是本次【杀】已指定的任何角色；这里不是追加目标。
       and not table.contains(data.use and data.use.tos or {}, p)

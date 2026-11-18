@@ -57,13 +57,15 @@
 
 既有实例／转换管理模块可以在明确的服务端分支内访问私有状态，在客户端分支只读公开摘要。区分两端的能力判定不等于使用该字段取得客户端房间；此类分流集中维护并验证两个分支，普通技能不得各自复制一套。
 
+普通技能的选人、角色数、手牌数或体力值比较统一使用 `room:getPresentPlayers()`，两端都能读取，随移出和移回实时更新。汉晋服务端的 `getAlivePlayers()`、默认的 `getOtherPlayers()` 和公共选人请求也应用同一过滤。胜负、天然野心家与鏖战等明确计入移出者的规则读取原始名单。延时效果或固定目标直接取得角色对象时，在实际结算前用 `removed_targets.isPresent(player)` 复核。
+
 公共查询示例（可供可用性、目标筛选和服务端复核共用）：
 
 ```lua
 local function candidates(player)
   local room = Fk:currentRoom()
-  return table.filter(room.alive_players, function(other)
-    return other ~= player and not other:isRemoved()
+  return table.filter(room:getPresentPlayers(), function(other)
+    return other ~= player
   end)
 end
 

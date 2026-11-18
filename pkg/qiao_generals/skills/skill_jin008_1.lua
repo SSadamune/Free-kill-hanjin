@@ -30,7 +30,7 @@ local function discardEntries(player, data)
     local proposer = move.proposer
     if move.moveReason == fk.ReasonDiscard
       and move.toArea == Card.DiscardPile
-      and proposer ~= nil and not proposer.dead
+      and proposer ~= nil and not proposer.dead and not proposer:isRemoved()
       and B.sameKingdom(proposer, player) then
       local entry = byProposer[proposer.id]
       if entry == nil then
@@ -106,7 +106,7 @@ skill:addEffect(fk.AfterCardsMove, {
 
     local proposer = entry.proposer
     local ids = entry.ids
-    if proposer.dead or #ids == 0 then return end
+    if proposer.dead or proposer:isRemoved() or #ids == 0 then return end
 
     local give = chooseFromDiscard(room, player, ids, 1,
       "#qiao__skill_jin008_1-give")

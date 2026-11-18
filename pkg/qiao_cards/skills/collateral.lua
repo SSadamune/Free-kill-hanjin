@@ -135,7 +135,7 @@ Fk:addPostLoadFunc(function()
     -- selection uses (collateral_skill:modTargetFilter with selected={main}).
     sub_candidates = function(room, use, main)
       local result = {}
-      for _, candidate in ipairs(room.alive_players) do
+      for _, candidate in ipairs(room:getPresentPlayers()) do
         if candidate ~= main
           and upstream():modTargetFilter(use.from, candidate, { main }, use.card, use.extra_data) then
           table.insert(result, candidate)
@@ -153,7 +153,7 @@ Fk:addPostLoadFunc(function()
       if #selected == 1 and selected[1] ~= nil and card ~= nil then
         local main = selected[1]
         local room = Fk:currentRoom()
-        for _, candidate in ipairs(room and room.alive_players or {}) do
+        for _, candidate in ipairs(room and room:getPresentPlayers() or {}) do
           if candidate ~= main
             and upstream():modTargetFilter(player, candidate, { main }, card) then
             return false

@@ -33,7 +33,7 @@ end
 ---@param equipped ServerPlayer
 ---@return ServerPlayer[]
 local function discardTargets(room, equipped)
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= equipped and not p.dead and not p:isRemoved()
       and equipped:distanceTo(p) == 1 and #discardableArea(p) > 0
   end)

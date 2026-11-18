@@ -46,7 +46,7 @@ end
 
 --- 距离被【杀】伤害的目标 1 的另一名其他角色。
 local function legalTargets(room, player, damaged)
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p ~= damaged and damaged:distanceTo(p) == 1
   end)
 end

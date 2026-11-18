@@ -54,7 +54,7 @@ local function discardEntries(player, data)
     end
   end
   for _, entry in pairs(byPlayer) do
-    if entry.total >= 2 and #entry.ids > 0 and not entry.owner.dead then
+    if entry.total >= 2 and #entry.ids > 0 and not entry.owner.dead and not entry.owner:isRemoved() then
       table.insert(entries, entry)
     end
   end
@@ -121,7 +121,7 @@ skill:addEffect(fk.AfterCardsMove, {
 
     local owner = entry.owner
     local ids = entry.ids
-    if owner.dead or #ids == 0 then return end
+    if owner.dead or owner:isRemoved() or #ids == 0 then return end
 
     local give = chooseFromDiscard(room, player, ids, 1, 1, "#qiao__skill_wu015a_2-give")
     local giveId = give[1]

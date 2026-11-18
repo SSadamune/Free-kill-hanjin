@@ -26,7 +26,7 @@ skill.qiaoImplemented = true
 local function hideTargets(room, player)
   local ret = {}
   if room == nil then return ret end
-  for _, target in ipairs(room.alive_players or {}) do
+  for _, target in ipairs(room:getPresentPlayers()) do
     if target ~= player and target:isAlive() and not target:isRemoved()
       and Q.allGeneralsRevealed(target) then
       table.insert(ret, target)

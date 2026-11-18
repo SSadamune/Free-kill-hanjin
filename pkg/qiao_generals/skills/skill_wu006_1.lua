@@ -41,7 +41,7 @@ local function discardableDelayed(owner, player)
 end
 
 local function discardTargets(room, player)
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return not p:isRemoved() and #discardableDelayed(p, player) > 0
   end)
 end
@@ -49,7 +49,7 @@ end
 local function useTargets(room, player)
   local card = Fk:cloneCard("qiao__indulgence")
   local cardSkill = card:getSkill(player)
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and not p:isRemoved()
       and not player:isProhibited(p, card)
       and cardSkill:targetFilter(player, p, {}, {}, card, {}) == true

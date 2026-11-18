@@ -90,7 +90,7 @@ skill:addEffect("cardskill", {
   fix_targets = function(self, player, selected, card)
     local room = Fk:currentRoom()
     if room == nil then return nil end
-    return table.filter(room.alive_players, function(p)
+    return table.filter(room:getPresentPlayers(), function(p)
       return p.kingdom == "unknown" and not p:isRemoved()
     end)
   end,
@@ -110,7 +110,7 @@ end
 
 local function presentUndetermined(room)
   local result = {}
-  for _, player in ipairs(room.alive_players) do
+  for _, player in ipairs(room:getPresentPlayers()) do
     if player.kingdom == "unknown" and isPresent(player) then
       table.insert(result, player)
     end

@@ -49,7 +49,7 @@ skill:addEffect("prohibit", {
 local HAOSHI_PENDING = "__qiao_haoshi_pending_player"
 
 local function leastHandOthers(player)
-  local others = table.filter(player.room.alive_players, function(p)
+  local others = table.filter(player.room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
   if #others == 0 then return {} end
@@ -72,7 +72,7 @@ skill:addEffect(fk.AfterDrawNCards, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     data[HAOSHI_PENDING] = nil
-    if player.dead then return end
+    if player.dead or player:isRemoved() then return end
     local hand = player:getCardIds(Player.Hand)
     if #hand <= 5 then return end
 

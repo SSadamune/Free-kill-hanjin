@@ -94,7 +94,7 @@ end
 function M.characterCount(room, skillName)
   if room == nil then return 0 end
   local count = 0
-  for _, p in ipairs(room.alive_players or {}) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= nil and not p.dead and not p:isRemoved()
       and R.countForSkill(p, skillName) > 0 then
       count = count + 1

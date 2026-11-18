@@ -22,7 +22,7 @@ skill:addEffect(fk.Damaged, {
     local tos = room:askToChoosePlayers(player, {
       min_num = 1,
       max_num = 1,
-      targets = room.alive_players,
+      targets = room:getPresentPlayers(),
       skill_name = skill.name,
       prompt = "#qiao__skill_wei013_2-choose",
       cancelable = true,

@@ -13,7 +13,7 @@ local function zhoujunEnter(room, player)
   if not big and not small then return end
   local same = big and Heg.isBigKingdomPlayer or Heg.isSmallKingdomPlayer
   local candidates = {}
-  for _, other in ipairs(room.alive_players) do
+  for _, other in ipairs(room:getPresentPlayers()) do
     if other ~= player and not other:isRemoved() and same(other)
       and #other:getCardIds("he") > 0 then
       table.insert(candidates, other)
@@ -80,7 +80,7 @@ M.types = {
   { id = "qiao__unexpectation", display = "出其不意", type = "trick", is_damage = true, skill = "qiao__unexpectation_skill", inert = false },
   { id = "qiao__known_both", display = "知己知彼", type = "trick", skill = "qiao__inert", inert = true },
   { id = "qiao__befriend_attacking", display = "远交近攻", type = "trick", skill = "qiao__inert", inert = true },
-  { id = "qiao__lure_tiger", display = "调虎离山", type = "trick", skill = "qiao__inert", inert = true },
+  { id = "qiao__lure_tiger", display = "调虎离山", type = "trick", skill = "qiao__lure_tiger_skill", inert = false },
   { id = "qiao__burning_camps", display = "火烧连营", type = "trick", is_damage = true, skill = "qiao__inert", inert = true },
   { id = "qiao__alliance_feast", display = "联军盛宴", type = "trick", skill = "qiao__inert", inert = true },
   { id = "qiao__threaten_emperor", display = "挟天子以令诸侯", type = "trick",

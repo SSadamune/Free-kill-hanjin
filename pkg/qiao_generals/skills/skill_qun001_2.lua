@@ -24,9 +24,7 @@ end
 local function alivePlayers()
   local room = Fk:currentRoom()
   if room == nil then return {} end
-  if room.alive_players ~= nil then return room.alive_players end
-  if type(room.getAlivePlayers) == "function" then return room:getAlivePlayers() end
-  return {}
+  return room:getPresentPlayers()
 end
 
 skill:addEffect("active", {

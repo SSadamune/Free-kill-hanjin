@@ -20,7 +20,7 @@ local HEARTS = "#qiao__gongxin-hearts"
 local function otherPlayers(player)
   local room = Fk:currentRoom()
   if room == nil then return {} end
-  return table.filter(room.alive_players, function(p)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
 end

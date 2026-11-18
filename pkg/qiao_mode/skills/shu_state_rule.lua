@@ -37,7 +37,7 @@ skill:addEffect(fk.EventPhaseStart, {
   on_refresh = function(self, event, target, player, data)
     local room = player.room
     room:setPlayerMark(player, GUANX, 0)
-    local n = #room.alive_players < 4 and 3 or 5
+    local n = #room:getPresentPlayers() < 4 and 3 or 5
     room:askToGuanxing(player, {
       cards = room:getNCards(n),
       skill_name = "qiao__skill_shu004_1",
@@ -77,7 +77,7 @@ skill:addEffect(fk.TurnEnd, {
         return not player:prohibitDiscard(id)
       end) then return end
       local candidates = {}
-      for _, p in ipairs(room.alive_players) do
+      for _, p in ipairs(room:getPresentPlayers()) do
         if p ~= player and not p:isRemoved() then table.insert(candidates, p) end
       end
       -- 先选目标（可取消）；支付弃牌后不得再取消选人吞费用。

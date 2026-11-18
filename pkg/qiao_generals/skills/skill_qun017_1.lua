@@ -23,8 +23,8 @@ local function slashPolicy()
 end
 
 local function equipmentOwners(room)
-  if room == nil or room.alive_players == nil then return {} end
-  return table.filter(room.alive_players, function(p)
+  if room == nil then return {} end
+  return table.filter(room:getPresentPlayers(), function(p)
     return not p:isRemoved() and #p:getCardIds("e") > 0
   end)
 end
@@ -46,7 +46,7 @@ local function hasSlashTarget(room, player)
   end
   local slash = Fk:cloneCard(SLASH)
   slash.skillName = skill.name
-  return table.find(room.alive_players or {}, function(p)
+  return table.find(room:getPresentPlayers(), function(p)
     return p ~= player and not p.dead and not p:isRemoved()
       and player:canUseTo(slash, p, { bypass_times = true, bypass_distances = true })
   end) ~= nil

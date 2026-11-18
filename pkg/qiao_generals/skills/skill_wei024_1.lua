@@ -22,12 +22,12 @@ skill:addEffect(fk.EventPhaseStart, {
   can_trigger = function(self, event, target, player, data)
     return target == player and not player.dead and player.phase == Player.Start
       and not player:isKongcheng()
-      and table.find(player.room.alive_players, function(p) return otherFaction(player, p) end) ~= nil
+      and table.find(player.room:getPresentPlayers(), function(p) return otherFaction(player, p) end) ~= nil
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
     local tos = room:askToChoosePlayers(player, {
-      targets = table.filter(room.alive_players, function(p) return otherFaction(player, p) end),
+      targets = table.filter(room:getPresentPlayers(), function(p) return otherFaction(player, p) end),
       min_num = 1, max_num = 1, skill_name = skill.name,
       prompt = "#qiao__wei024_ask_target", cancelable = true,
     })

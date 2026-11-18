@@ -22,7 +22,7 @@ local CHOICES = {
 
 local function lordFor(player)
   local room = Fk:currentRoom()
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and not p.dead and not p:isRemoved()
       and p:hasShownSkill(ZHANGWU) and H.compareKingdomWith(p, player) then
       return p
@@ -35,7 +35,7 @@ local function available(player)
   local result = {}
   for _, name in ipairs(CHOICES) do
     local shown = false
-    for _, p in ipairs((player.room or Fk:currentRoom()).alive_players) do
+    for _, p in ipairs((player.room or Fk:currentRoom()):getPresentPlayers()) do
       if p:hasShownSkill(name) then shown = true break end
     end
     if not shown then table.insert(result, name) end

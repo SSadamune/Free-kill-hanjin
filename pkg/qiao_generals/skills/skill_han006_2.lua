@@ -24,7 +24,7 @@ end
 local function gainedTargets(player)
   local room = player.room
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and alive(p) and History.count(room, p) > 0 then
       table.insert(ret, p)
     end
@@ -38,7 +38,7 @@ end
 ---@return ServerPlayer[]
 local function duelTargets(room, gained)
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= gained and alive(p) then table.insert(ret, p) end
   end
   return ret

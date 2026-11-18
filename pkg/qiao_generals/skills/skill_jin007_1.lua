@@ -32,7 +32,7 @@ end
 local function candidates(player)
   local room = player.room
   local ret = {}
-  for _, p in ipairs(room.alive_players) do
+  for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and not p.dead and not p:isRemoved() and not p:isKongcheng()
       and not H.compareKingdomWith(p, player) then
       table.insert(ret, p)

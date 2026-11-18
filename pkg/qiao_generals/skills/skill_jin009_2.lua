@@ -17,7 +17,7 @@ local function aliveCount(room)
   if type(room.getAlivePlayers) == "function" then
     return #room:getAlivePlayers()
   end
-  return #(room.alive_players or {})
+  return #(room:getPresentPlayers())
 end
 
 skill:addEffect("active", {

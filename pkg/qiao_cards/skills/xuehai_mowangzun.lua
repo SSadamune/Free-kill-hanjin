@@ -45,7 +45,7 @@ end
 local function candidates(player)
   local room = player.room
   local list = {}
-  for _, other in ipairs(room.alive_players) do
+  for _, other in ipairs(room:getPresentPlayers()) do
     if not other:isRemoved()
       and (other == player or Heg.compareKingdomWith(player, other, false, true)) then
       table.insert(list, other)

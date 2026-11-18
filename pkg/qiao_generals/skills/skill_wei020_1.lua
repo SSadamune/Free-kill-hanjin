@@ -64,7 +64,7 @@ skill:addEffect("active", {
       if #selected >= player:getHandcardNum() then return false end
       if to_use.skill:getMaxTargetNum(player, to_use) == 1 then
         local x = 0
-        for _, p in ipairs(Fk:currentRoom().alive_players) do
+        for _, p in ipairs(Fk:currentRoom():getPresentPlayers()) do
           if p == to_select or (not player:isProhibited(p, to_use) and to_use.skill:modTargetFilter(player, p, { to_select }, to_use, true)) then
             x = x + 1
           end
