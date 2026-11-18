@@ -298,4 +298,139 @@ function Testqiao_em_han001_liuxie:testZhaoshuSelectSkillCardLimit()
     handler:_finish()
   end)
 end
+
+
+-- ===== 敕令 / 诏书 / 挟天子：真实回合定向验收 =====
+
+local IMPERIAL_CARD = "qiao__imperial_order"
+local THREATEN = "qiao__threaten_emperor_skill"
+local THREATEN_CARD = "qiao__threaten_emperor"
+
+--- 走真实移动把一张敕令实体置入弃牌堆（AfterCardsMove 跟踪）。
+local function imperialToDiscard(room)
+  local card = room:printCard(IMPERIAL_CARD, Card.Club, 3)
+  room:moveCardTo(card, Card.DiscardPile, nil, fk.ReasonDiscard, "test")
+  return card
+end
+
+--- 撤掉初平取得的诏书，模拟本局尚无人持有。
+local function clearZhaoshu(room)
+  for _, player in ipairs(room.players) do
+    room:setPlayerMark(player, P.MARK, 0)
+  end
+  P.sync(room)
+end
+
+function Testqiao_em_han001_liuxie:testImperialOrderTurnEndGrantsZhaoshuWhenNobodyHoldsIt()
+  local room, lord, user = FkTest.room, p(1), p(2)
+  local card
+  inRoom(function()
+    clearZhaoshu(room)
+    lu.assertNil(P.holder(room))
+    card = imperialToDiscard(room)
+    room:setCurrent(user)
+    room.logic:trigger(fk.TurnEnd, user, {})
+  end)
+  lu.assertIs(P.holder(room), user, "无持有者时由当前回合角色获得诏书")
+  lu.assertEquals(room:getCardArea(card), Card.Void, "满足后段时该实体移出游戏")
+  lu.assertTrue(user:hasSkill(P.CONSUME), "持有者获得四花色消费入口")
+  lu.assertTrue(lord:hasSkill(P.BANNER), "同势力角色获得交牌入口")
+  lu.assertFalse(p(4):hasSkill(P.BANNER), "异势力不获得交牌入口")
+end
+
+function Testqiao_em_han001_liuxie:testImperialOrderTurnEndSkipsEntityThatLeftDiscardPile()
+  local room, user, third = FkTest.room, p(2), p(3)
+  local card
+  inRoom(function()
+    clearZhaoshu(room)
+    card = imperialToDiscard(room)
+    room:obtainCard(third, card, true, fk.ReasonPrey)
+    room:setCurrent(user)
+    room.logic:trigger(fk.TurnEnd, user, {})
+  end)
+  lu.assertNil(P.holder(room), "回合结束前离开弃牌堆的实体不发放诏书")
+  lu.assertEquals(room:getCardArea(card), Card.PlayerHand, "未被移出游戏")
+  lu.assertTrue(table.contains(third:getCardIds(Player.Hand), card.id))
+end
+
+function Testqiao_em_han001_liuxie:testImperialOrderTurnEndKeepsExistingZhaoshuAndStillRemovesCard()
+  local room, lord, user = FkTest.room, p(1), p(2)
+  local card
+  lu.assertIs(P.holder(room), lord)
+  inRoom(function()
+    card = imperialToDiscard(room)
+    room:setCurrent(user)
+    room.logic:trigger(fk.TurnEnd, user, {})
+  end)
+  lu.assertEquals(room:getCardArea(card), Card.Void, "已有诏书时敕令照常移出游戏")
+  lu.assertIs(P.holder(room), lord, "全场诏书唯一，不转移已有诏书")
+  lu.assertEquals(user:getMark(P.MARK), 0, "不再发放第二份诏书")
+end
+
+function Testqiao_em_han001_liuxie:testZhaoshuHolderRemovedStillOwnsTokenAndEntryIsSeparate()
+  local room, lord, ally = FkTest.room, p(1), p(2)
+  inRoom(function()
+    room:setPlayerMark(lord, "PlayerRemoved", 1)
+    P.sync(room)
+  end)
+  lu.assertIs(P.holder(room), lord, "被移出游戏期间仍拥有诏书")
+  lu.assertNil(P.availableHolder(room), "入口可用性另行过滤")
+  lu.assertFalse(ally:hasSkill(P.BANNER), "暂离期间不向同势力开放入口")
+  inRoom(function()
+    local card = imperialToDiscard(room)
+    room:setCurrent(ally)
+    room.logic:trigger(fk.TurnEnd, ally, {})
+    room:setPlayerMark(lord, "PlayerRemoved", 0)
+    P.sync(room)
+  end)
+  lu.assertIs(P.holder(room), lord, "不据不可见或不可用发第二份诏书")
+  lu.assertEquals(ally:getMark(P.MARK), 0)
+  lu.assertTrue(ally:hasSkill(P.BANNER), "移回后入口恢复")
+end
+
+function Testqiao_em_han001_liuxie:testThreatenEmperorNominalTurnEndsPlayPhaseThenRequiresRealDiscard()
+  local room, user = FkTest.room, p(1)
+  local card, pay
+  inRoom(function()
+    card = room:printCard(THREATEN_CARD, Card.Spade, 1)
+    room:obtainCard(user, card, false, fk.ReasonJustMove)
+    pay = room:printCard("qiao__jink", Card.Heart, 3)
+    room:obtainCard(user, pay, false, fk.ReasonJustMove)
+    room:setCurrent(user)
+  end)
+
+  local phaseData = PhaseData:new { who = user, phase = Player.Play }
+  FkTest.setNextReplies(user, { FkTest.ReplyCard(card, { user }) })
+  inRoom(function() GameEvent.Phase:create(phaseData):exec() end)
+  lu.assertTrue(phaseData.phase_end, "挟天子应结束本人出牌阶段")
+  lu.assertEquals(user:getMark("qiao__threaten_emperor-turn"), 1,
+    "实际结束出牌阶段后建立回合结束的支付")
+  lu.assertEquals(room:getCardArea(card), Card.DiscardPile, "牌按正常用牌流程进入弃牌堆")
+
+  FkTest.setNextReplies(user, { FkTest.ReplyDiscard({ pay.id }) })
+  inRoom(function() room.logic:trigger(fk.TurnEnd, user, {}) end)
+  lu.assertEquals(room:getCardArea(pay.id), Card.DiscardPile, "回合结束须弃置一张手牌")
+  lu.assertEquals(#room.extra_turn_list, 1, "实际弃置后获得一个额外回合")
+  lu.assertIs(room.extra_turn_list[1].who, user)
+end
+
+function Testqiao_em_han001_liuxie:testThreatenEmperorUsableOnlyInOwnNominalTurn()
+  local room, user, foreign = FkTest.room, p(1), p(4)
+  local card
+  inRoom(function()
+    card = room:printCard(THREATEN_CARD, Card.Spade, 1)
+    room:obtainCard(user, card, false, fk.ReasonJustMove)
+    room:setCurrent(user)
+    user.phase = Player.Play
+  end)
+  local sk = card:getSkill(user)
+  inRoom(function()
+    lu.assertTrue(sk:canUse(user, card), "额定回合的大势力角色可使用")
+    lu.assertFalse(sk:canUse(foreign, card), "非大势力角色不可使用")
+    room:addTableMark(user, "_extra_turn_count", "test")
+    lu.assertFalse(sk:canUse(user, card), "额外回合内不可使用")
+    room:setPlayerMark(user, "_extra_turn_count", 0)
+  end)
+end
+
 return { name = "qiao_em_han001_liuxie" }

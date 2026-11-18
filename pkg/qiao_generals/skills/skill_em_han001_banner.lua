@@ -30,21 +30,21 @@ skill:addEffect("active", {
   end,
   can_use = function(self, player)
     local room = Fk:currentRoom()
-    local lord = P.lord(room)
+    local holder = P.availableHolder(room)
     return player ~= nil and not player.dead and player.phase == Player.Play
-      and lord ~= nil and P.isSameKingdom(lord, player)
+      and holder ~= nil and P.isSameKingdom(holder, player)
       and #player:getCardIds(Player.Hand) > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from
-    local lord = P.lord(room)
+    local holder = P.availableHolder(room)
     local cards = effect.cards or {}
-    if lord == nil or not P.isSameKingdom(lord, player) or #cards == 0 then return end
+    if holder == nil or not P.isSameKingdom(holder, player) or #cards == 0 then return end
     if #cards > maxCards(room, player) then return end
     for _, id in ipairs(cards) do
       if not table.contains(player:getCardIds(Player.Hand), id) then return end
     end
-    lord:addToPile(P.PILE, cards, true, skill.name)
+    holder:addToPile(P.PILE, cards, true, skill.name)
   end,
 })
 

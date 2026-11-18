@@ -49,12 +49,77 @@ skill:addEffect("cardskill", {
     return upstream():onUse(room, use)
   end,
   on_effect = function(self, room, effect)
-    return upstream():onEffect(room, effect)
+    local from, to = effect.from, effect.to
+    if from == nil or to == nil then return end
+    if to ~= from then
+      if to.dead then return end
+      to:drawCards(1, skill.name)
+      if to.chained then to:setChainState(false) end
+      return
+    end
+
+    -- 使用者的效果改为按其他最终目标数逐次选择并执行。
+    local others = 0
+    for _, target in ipairs(effect.tos or {}) do
+      if target ~= from then others = others + 1 end
+    end
+    for index = 1, others do
+      if from.dead then return end
+      local choice = room:askToChoice(from, {
+        choices = { "alliance_feast_recover:::1", "alliance_feast_draw:::1" },
+        skill_name = "alliance_feast_skill",
+        prompt = "#qiao__alliance_feast-choice:::" .. (others - index + 1),
+      })
+      if choice == nil then return end
+      if choice:startsWith("alliance_feast_recover") then
+        room:recover {
+          who = from,
+          recoverBy = from,
+          card = effect.card,
+          num = 1,
+          skillName = skill.name,
+        }
+      else
+        from:drawCards(1, skill.name)
+      end
+    end
+  end,
+})
+
+-- 使用者必须先结算自己的 X 次选择，再按座次结算其他目标。引擎按
+-- use.tos 顺序生效，额外目标在 on_use 之后才加入，因此在 CardUsing
+-- （AfterCardTargetDeclared 之后、实际生效之前）重排。
+skill:addEffect(fk.CardUsing, {
+  global = true,
+  mute = true,
+  priority = -200,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and data.card ~= nil
+      and data.card.name == "qiao__alliance_feast"
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    local from = data.from
+    local selfTargeted = false
+    local others = {}
+    for _, to in ipairs(data.tos or {}) do
+      if to == from then
+        selfTargeted = true
+      else
+        table.insert(others, to)
+      end
+    end
+    if not selfTargeted then return end
+    Fk:currentRoom():sortByAction(others, from)
+    local ordered = { from }
+    for _, to in ipairs(others) do table.insert(ordered, to) end
+    data.tos = ordered
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__alliance_feast_skill"] = "联军盛宴",
+  ["#qiao__alliance_feast-choice"] = "联军盛宴：选择一项（剩余%arg次）：回复1点体力或摸一张牌",
 }
 
 Fk:addPostLoadFunc(function()
