@@ -15,6 +15,7 @@ local ORDINARY_TREASURE = "qiao__bronze_sparrow"
 local GONGXIN = P.GONGXIN
 local DISCARD = "#qiao__gongxin-discard"
 local ON_TOP = "#qiao__gongxin-top"
+local END_CHOICE = "#qiao__gongxin-end"
 
 local function inRoom(fn)
   local result
@@ -90,6 +91,94 @@ local function clientPlayHandler(client, skillName)
   handler.skill_name = skillName
   handler:setup()
   return handler
+end
+
+--- 限次夹具使用实际注册到正式客户端的 QiaoPlayCard，而不是基类请求。
+local qiaoPlayCardRequest
+local function qiaoPlayCardClass()
+  if qiaoPlayCardRequest == nil then
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local client = board.client_klass:new(ClientInstance.client)
+    qiaoPlayCardRequest = assert(client.request_handlers.PlayCard)
+  end
+  return qiaoPlayCardRequest
+end
+
+local function clientLimitHandler(client, skillName)
+  local handler = qiaoPlayCardClass():new(client)
+  handler.skill_name = skillName
+  handler:setup()
+  return handler
+end
+
+--- 客户端副本按座位顺序创建；用服务端角色对象定位对应副本。
+local function clientFor(room, player, clients)
+  for index, original in ipairs(room.players) do
+    if original == player then return clients[index] end
+  end
+  error("clientFor: player is not in room")
+end
+
+--- 在真实 ClientPlayer 上查询主动技按钮是否可用。
+local function clientButtonValid(room, user, skillName)
+  local valid
+  withClientRoom(room, function(clients)
+    local handler = clientLimitHandler(clientFor(room, user, clients), skillName)
+    valid = handler:skillButtonValidity(skillName)
+    handler:_finish()
+  end)
+  return valid
+end
+
+--- 真实按钮 → 点击技能 → 选牌／选目标 → 确认，返回客户端主动技回包，
+--- 供服务端 handleUseCardReply 按真实回包流程处理。
+local function clientActiveReply(room, user, skillName, opts)
+  opts = opts or {}
+  local reply
+  withClientRoom(room, function(clients)
+    local me = clientFor(room, user, clients)
+    local handler = clientLimitHandler(me, skillName)
+    lu.assertTrue(handler:skillButtonValidity(skillName),
+      "首次应由真实客户端按钮发起：" .. skillName)
+    handler:selectSkill(skillName, { selected = true })
+    if opts.card ~= nil then
+      lu.assertTrue(handler:cardValidity(opts.card), "所选牌应可由真实客户端点击：" .. skillName)
+      handler:selectCard(opts.card, { selected = true })
+    end
+    if opts.target ~= nil then
+      local clientTarget = clientFor(room, opts.target, clients)
+      lu.assertTrue(handler:targetValidity(clientTarget.id),
+        "目标应可由真实客户端选中：" .. skillName)
+      handler:selectTarget(clientTarget.id, { selected = true })
+    end
+    lu.assertTrue(handler:feasible(), "合法选择后应可确认：" .. skillName)
+    -- 与 ReqActiveSkill:doOKButton 的非二级选择回包同形；测试环境有 ClientInstance
+    -- 时该方法只负责发送 UI 通知，因此直接取当前选择构造同一回包。
+    local chosen = Fk.skills[skillName]
+    reply = {
+      card = { skill = skillName, subcards = table.simpleClone(handler.pendings or {}) },
+      targets = table.simpleClone(handler.selected_targets or {}),
+      interaction_data = chosen and chosen.interaction and chosen.interaction.data,
+    }
+    handler:_finish()
+  end)
+  lu.assertNotNil(reply, "真实客户端应生成主动技回包")
+  return reply
+end
+
+--- 测试用禁止弃置技能：只禁止指定角色弃置指定牌。
+local function installDiscardProhibit(room, owner, id)
+  local skel = fk.CreateSkill { name = "#qiao_test_gongxin_prohibit" }
+  skel:addEffect("prohibit", {
+    prohibit_discard = function(self, player, card)
+      return player == owner and card ~= nil and card.id == id
+    end,
+  })
+  local instance = skel:createSkill()
+  -- 房间状态技会广播 AddStatusSkill，客户端按 Fk.skills 查表；测试技能需先登记。
+  Fk.skills[instance.name] = instance
+  inRoom(function() room:addSkill(instance) end)
+  return instance
 end
 
 Testqiao_em_wu001_sunquan = {
@@ -288,9 +377,9 @@ function Testqiao_em_wu001_sunquan:testPrepareGrantsGongxinAtThreeFenghuo()
   lu.assertFalse(target:hasSkill(GONGXIN), "异势力角色不获得")
   lu.assertFalse(table.contains(wu:getSkillNameList(), GONGXIN), "所授技能不附在武将牌上")
 
-  -- 同一回合实际发动刚授予的攻心：私看 -> 红桃候选 -> 真实 AskForPoxi 选牌 ->
-  -- 展示所选一张红桃并弃置；另一张红桃与非红桃都不得移动。
-  local viewed, offered, shown, shownFrom = nil, nil, nil, nil
+  -- 同一回合实际发动刚授予的攻心：私密原生面板显示全部手牌、只允许选红桃，
+  -- 选一张红桃弃置；另一张红桃与非红桃都不得移动。
+  local asked, askedWho, shown, shownFrom
   inRoom(function()
     room.current = wu
     wu.phase = Player.Play
@@ -301,23 +390,15 @@ function Testqiao_em_wu001_sunquan:testPrepareGrantsGongxinAtThreeFenghuo()
     shownFrom = from
     return originalShow(self, cards, from, proposer)
   end
-  FkTest.setNextReplies(wu, { { heart } })
+  FkTest.setNextReplies(wu, { { cards = { heart }, choice = DISCARD } })
   local ok, err = pcall(function()
     skill_test.withSkillRequests(room, GONGXIN, {
-      viewCards = function(self, who, params, original)
+      askToChooseCardsAndChoice = function(self, who, params, original)
         if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        viewed = { who = who, cards = table.simpleClone(params.cards) }
-        return nil
-      end,
-      askToChooseCards = function(self, who, params, original)
-        if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        offered = params
-        -- 不伪造选牌结果：走真实请求，回复由 setNextReplies 提供。
+        asked = params
+        askedWho = who
+        -- 不伪造结果：走真实 AskForCardsAndChoice 请求，回复由 setNextReplies 提供。
         return original(self, who, params)
-      end,
-      askToChoice = function(self, who, params, original)
-        if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        return DISCARD
       end,
     }, function()
       inRoom(function()
@@ -330,9 +411,22 @@ function Testqiao_em_wu001_sunquan:testPrepareGrantsGongxinAtThreeFenghuo()
   end)
   room.showCards = originalShow
   if not ok then error(err, 0) end
-  lu.assertIs(viewed.who, wu, "私看只发给发动者")
-  lu.assertEquals(#viewed.cards, 3, "应私看目标全部手牌")
-  lu.assertEquals(#offered.flag.card_data[1][2], 2, "真实选牌请求的候选只列红桃")
+  lu.assertIs(askedWho, wu, "面板只询问发动者")
+  lu.assertEquals(#asked.all_cards, 3, "面板应显示目标全部手牌")
+  for _, id in ipairs({ heart, otherHeart, spade }) do
+    lu.assertTrue(table.contains(asked.all_cards, id), "面板应显示全部手牌：" .. id)
+  end
+  lu.assertEquals(#asked.cards, 2, "面板可选的只有当前有效红桃")
+  lu.assertTrue(table.contains(asked.cards, heart))
+  lu.assertTrue(table.contains(asked.cards, otherHeart))
+  lu.assertFalse(table.contains(asked.cards, spade), "非红桃不可选")
+  lu.assertEquals(asked.choices[1], END_CHOICE, "结束观看置于首位")
+  lu.assertEquals(asked.default_choice, END_CHOICE, "超时默认结束观看")
+  lu.assertEquals(asked.min_num, 0, "可以不选牌直接结束")
+  lu.assertEquals(asked.max_num, 1, "最多选择一张红桃")
+  lu.assertEquals(asked.filter_skel_name, GONGXIN, "按钮筛选使用本技能骨架")
+  lu.assertEquals(#asked.extra_data.hearts, 2, "红桃快照随私密请求下发")
+  lu.assertEquals(#asked.extra_data.prohibited, 0, "无禁止弃置的红桃")
   lu.assertEquals(#shown, 1, "只展示所选的这一张红桃")
   lu.assertEquals(shown[1], heart)
   lu.assertIs(shownFrom, target)
@@ -388,7 +482,7 @@ function Testqiao_em_wu001_sunquan:testFiveFenghuoTwoSkillsKeepIndependentSource
   inRoom(function() lu.assertFalse(P.hasTemp(room, wu), "本回合授予记录应清空") end)
 end
 
---- 攻心：私看目标手牌，只列红桃；展示所选红桃后弃置。
+--- 攻心：私密原生面板显示全部手牌、只允许选红桃；展示所选红桃后弃置。
 function Testqiao_em_wu001_sunquan:testGongxinViewsShowsAndDiscardsHeart()
   local room, user, target = FkTest.room, p(2), p(3)
   clearCards(user)
@@ -396,7 +490,7 @@ function Testqiao_em_wu001_sunquan:testGongxinViewsShowsAndDiscardsHeart()
   local heart = give(target, "qiao__jink", Card.Heart, 3)
   local spade = give(target, "qiao__jink", Card.Spade, 4)
   local club = give(target, "qiao__jink", Card.Club, 5)
-  local viewed, offered, shown, shownFrom
+  local asked, askedWho, shown, shownFrom
   inRoom(function()
     room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
     room.current = user
@@ -408,21 +502,14 @@ function Testqiao_em_wu001_sunquan:testGongxinViewsShowsAndDiscardsHeart()
     shownFrom = from
     return originalShow(self, cards, from, proposer)
   end
+  FkTest.setNextReplies(user, { { cards = { heart }, choice = DISCARD } })
   local ok, err = pcall(function()
     skill_test.withSkillRequests(room, GONGXIN, {
-      viewCards = function(self, who, params, original)
+      askToChooseCardsAndChoice = function(self, who, params, original)
         if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        viewed = { who = who, cards = table.simpleClone(params.cards) }
-        return nil
-      end,
-      askToChooseCards = function(self, who, params, original)
-        if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        offered = params
-        return { heart }
-      end,
-      askToChoice = function(self, who, params, original)
-        if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        return DISCARD
+        asked = params
+        askedWho = who
+        return original(self, who, params)
       end,
     }, function()
       inRoom(function()
@@ -436,11 +523,12 @@ function Testqiao_em_wu001_sunquan:testGongxinViewsShowsAndDiscardsHeart()
   room.showCards = originalShow
   if not ok then error(err, 0) end
 
-  lu.assertIs(viewed.who, user, "观看只发给发动者")
-  lu.assertEquals(#viewed.cards, 3, "应私看目标的全部手牌")
-  lu.assertEquals(#offered.flag.card_data[1][2], 1, "候选只列红桃")
-  lu.assertEquals(offered.flag.card_data[1][2][1], heart)
-  lu.assertEquals(offered.min, 0, "可以不选红桃")
+  lu.assertIs(askedWho, user, "观看只发给发动者")
+  lu.assertEquals(#asked.all_cards, 3, "应显示目标的全部手牌")
+  lu.assertEquals(#asked.cards, 1, "可选候选只列红桃")
+  lu.assertEquals(asked.cards[1], heart)
+  lu.assertEquals(asked.min_num, 0, "可以不选红桃直接结束")
+  lu.assertEquals(asked.max_num, 1)
   lu.assertEquals(#shown, 1, "应公开展示所选红桃")
   lu.assertEquals(shown[1], heart)
   lu.assertIs(shownFrom, target, "展示的来源是手牌所有者")
@@ -449,7 +537,7 @@ function Testqiao_em_wu001_sunquan:testGongxinViewsShowsAndDiscardsHeart()
   lu.assertEquals(room:getCardArea(club), Card.PlayerHand, "未展示的牌不动")
 end
 
---- 攻心：置于牌堆顶、无红桃只看、取消不移动。
+--- 攻心：置顶、无红桃、无答复与结束观看都只走原生面板，不展示未选牌。
 function Testqiao_em_wu001_sunquan:testGongxinPutOnTopNoHeartAndCancel()
   local room, user = FkTest.room, p(2)
   local target, blackTarget = p(3), p(4)
@@ -465,70 +553,133 @@ function Testqiao_em_wu001_sunquan:testGongxinPutOnTopNoHeartAndCancel()
     user.phase = Player.Play
   end)
 
-  -- 弃置分支之外的另一合法去向：置于牌堆顶。
-  skill_test.withSkillRequests(room, GONGXIN, {
-    viewCards = function(self, who, params, original)
-      if params.skill_name ~= GONGXIN then return original(self, who, params) end
-      return nil
-    end,
-    askToChooseCards = function(self, who, params, original)
-      if params.skill_name ~= GONGXIN then return original(self, who, params) end
-      return { heart }
-    end,
-    askToChoice = function(self, who, params, original)
-      if params.skill_name ~= GONGXIN then return original(self, who, params) end
-      return ON_TOP
-    end,
-  }, function()
-    inRoom(function()
-      local skill = Fk.skills[GONGXIN]
-      room:useSkill(user, skill, function()
-        skill:onUse(room, { from = user, cards = {}, tos = { target } })
-      end, { from = user, cards = {}, tos = { target } })
-    end)
-  end)
-  lu.assertEquals(room:getCardArea(heart), Card.DrawPile, "应置于牌堆")
-  lu.assertEquals(room.draw_pile[1], heart, "应置于牌堆顶")
-  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "未展示的牌不动")
-
-  -- 无红桃：只完成观看，不再要求选牌，也不移动任何牌。
-  local askCount = 0
-  skill_test.withSkillRequests(room, GONGXIN, {
-    viewCards = function(self, who, params, original)
-      if params.skill_name ~= GONGXIN then return original(self, who, params) end
-      return nil
-    end,
-    askToChooseCards = function(self, who, params, original)
-      if params.skill_name ~= GONGXIN then return original(self, who, params) end
-      askCount = askCount + 1
-      return {}
-    end,
-  }, function()
-    inRoom(function()
-      local skill = Fk.skills[GONGXIN]
-      skill:onUse(room, { from = user, cards = {}, tos = { blackTarget } })
-    end)
-  end)
-  lu.assertEquals(askCount, 0, "没有红桃时不应要求选牌")
-  lu.assertEquals(room:getCardArea(club), Card.PlayerHand, "无红桃时不动手牌")
-
-  -- 有红桃但取消：不展示也不移动。
-  local heart2 = give(target, "qiao__jink", Card.Heart, 9)
+  -- 置顶分支：真实回包选红桃 + 置顶。
   local shown = 0
   local originalShow = room.showCards
   room.showCards = function(...)
     shown = shown + 1
     return originalShow(...)
   end
+  FkTest.setNextReplies(user, { { cards = { heart }, choice = ON_TOP } })
   local ok, err = pcall(function()
     skill_test.withSkillRequests(room, GONGXIN, {
-      viewCards = function(self, who, params, original)
+      askToChooseCardsAndChoice = function(self, who, params, original)
         if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        return nil
+        return original(self, who, params)
       end,
-      askToChooseCards = function(self, who, params, original)
+    }, function()
+      inRoom(function()
+        local skill = Fk.skills[GONGXIN]
+        room:useSkill(user, skill, function()
+          skill:onUse(room, { from = user, cards = {}, tos = { target } })
+        end, { from = user, cards = {}, tos = { target } })
+      end)
+    end)
+  end)
+  room.showCards = originalShow
+  if not ok then error(err, 0) end
+  lu.assertEquals(shown, 1, "置顶前只展示所选红桃")
+  lu.assertEquals(room:getCardArea(heart), Card.DrawPile, "应置于牌堆")
+  lu.assertEquals(room.draw_pile[1], heart, "应置于牌堆顶")
+  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "未展示的牌不动")
+
+  -- 无红桃且无答复：面板仍显示全部手牌，但无牌可选；不展示、不移动。
+  local askedNoHeart, shownNoHeart = nil, 0
+  room.showCards = function(...)
+    shownNoHeart = shownNoHeart + 1
+    return originalShow(...)
+  end
+  FkTest.setNextReplies(user, { "" })
+  local ok2, err2 = pcall(function()
+    skill_test.withSkillRequests(room, GONGXIN, {
+      askToChooseCardsAndChoice = function(self, who, params, original)
         if params.skill_name ~= GONGXIN then return original(self, who, params) end
-        return {}
+        askedNoHeart = params
+        return original(self, who, params)
+      end,
+    }, function()
+      inRoom(function()
+        local skill = Fk.skills[GONGXIN]
+        skill:onUse(room, { from = user, cards = {}, tos = { blackTarget } })
+      end)
+    end)
+  end)
+  room.showCards = originalShow
+  if not ok2 then error(err2, 0) end
+  lu.assertNotNil(askedNoHeart, "没有红桃也应显示面板")
+  lu.assertEquals(#askedNoHeart.all_cards, 1, "面板显示目标的唯一手牌")
+  lu.assertEquals(#askedNoHeart.cards, 0, "没有红桃时无牌可选")
+  lu.assertEquals(askedNoHeart.choices[1], END_CHOICE, "结束观看仍置于首位")
+  lu.assertEquals(shownNoHeart, 0, "无答复结束不展示任何牌")
+  lu.assertEquals(room:getCardArea(club), Card.PlayerHand, "无红桃时不动手牌")
+
+  -- 客户端回包带牌但选择结束：仍不展示、不移动。
+  local heart2 = give(target, "qiao__jink", Card.Heart, 9)
+  local shownEnd = 0
+  room.showCards = function(...)
+    shownEnd = shownEnd + 1
+    return originalShow(...)
+  end
+  FkTest.setNextReplies(user, { { cards = { heart2 }, choice = END_CHOICE } })
+  local ok3, err3 = pcall(function()
+    inRoom(function()
+      local skill = Fk.skills[GONGXIN]
+      skill:onUse(room, { from = user, cards = {}, tos = { target } })
+    end)
+  end)
+  room.showCards = originalShow
+  if not ok3 then error(err3, 0) end
+  lu.assertEquals(shownEnd, 0, "结束观看不展示任何牌")
+  lu.assertEquals(room:getCardArea(heart2), Card.PlayerHand, "结束观看不移动手牌")
+end
+
+--- 原生面板按钮：结束项始终可用；弃置/置顶只在恰好一张快照红桃时可用，
+--- 禁止弃置只关闭弃置，不影响置顶。
+function Testqiao_em_wu001_sunquan:testGongxinNativeChoiceFilter()
+  local skel = assert(Fk.skill_skels[GONGXIN])
+  local filter = assert(skel.extra and skel.extra.choiceFilter,
+    "技能骨架应暴露面板按钮筛选")
+  local data = { hearts = { 11, 12 }, prohibited = { 12 } }
+  lu.assertTrue(filter({}, END_CHOICE, data), "未选牌时可结束观看")
+  lu.assertTrue(filter({ 11 }, END_CHOICE, data), "选中红桃时仍可结束观看")
+  lu.assertFalse(filter({}, DISCARD, data), "未选牌不可弃置")
+  lu.assertFalse(filter({}, ON_TOP, data), "未选牌不可置顶")
+  lu.assertFalse(filter({ 11, 12 }, DISCARD, data), "超过一张不可弃置")
+  lu.assertTrue(filter({ 11 }, DISCARD, data), "一张未禁红桃可弃置")
+  lu.assertFalse(filter({ 12 }, DISCARD, data), "禁止弃置的红桃不可弃置")
+  lu.assertTrue(filter({ 12 }, ON_TOP, data), "禁止弃置的红桃仍可置顶")
+  lu.assertFalse(filter({ 99 }, DISCARD, data), "非快照红桃不可弃置")
+  lu.assertFalse(filter({ 99 }, ON_TOP, data), "非快照红桃不可置顶")
+end
+
+--- 私密面板的牌与禁令快照：显示全部手牌、只开放红桃；禁止弃置的红桃仍可置顶。
+function Testqiao_em_wu001_sunquan:testGongxinProhibitedHeartSnapshotAllowsTop()
+  local room, user, target = FkTest.room, p(2), p(3)
+  clearCards(user)
+  clearCards(target)
+  local freeHeart = give(target, "qiao__jink", Card.Heart, 3)
+  local prohibited = give(target, "qiao__jink", Card.Heart, 4)
+  local spade = give(target, "qiao__jink", Card.Spade, 5)
+  installDiscardProhibit(room, target, prohibited)
+  inRoom(function()
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    room.current = user
+    user.phase = Player.Play
+  end)
+
+  local asked, shown = nil, nil
+  local originalShow = room.showCards
+  room.showCards = function(self, cards, from, proposer)
+    shown = Card:getIdList(cards)
+    return originalShow(self, cards, from, proposer)
+  end
+  FkTest.setNextReplies(user, { { cards = { prohibited }, choice = ON_TOP } })
+  local ok, err = pcall(function()
+    skill_test.withSkillRequests(room, GONGXIN, {
+      askToChooseCardsAndChoice = function(self, who, params, original)
+        if params.skill_name ~= GONGXIN then return original(self, who, params) end
+        asked = params
+        return original(self, who, params)
       end,
     }, function()
       inRoom(function()
@@ -539,8 +690,89 @@ function Testqiao_em_wu001_sunquan:testGongxinPutOnTopNoHeartAndCancel()
   end)
   room.showCards = originalShow
   if not ok then error(err, 0) end
-  lu.assertEquals(shown, 0, "取消后不展示任何牌")
-  lu.assertEquals(room:getCardArea(heart2), Card.PlayerHand, "取消后不移动手牌")
+
+  lu.assertEquals(#asked.all_cards, 3, "面板应显示目标全部手牌")
+  lu.assertTrue(table.contains(asked.all_cards, spade), "非红桃也在面板中显示")
+  lu.assertEquals(#asked.cards, 2, "只把两张红桃作为可选候选")
+  lu.assertTrue(table.contains(asked.cards, freeHeart))
+  lu.assertTrue(table.contains(asked.cards, prohibited),
+    "禁止弃置的红桃仍是可选候选")
+  lu.assertEquals(#asked.extra_data.prohibited, 1, "禁令快照随请求下发")
+  lu.assertEquals(asked.extra_data.prohibited[1], prohibited)
+  lu.assertEquals(#shown, 1, "只公开所选的一张红桃")
+  lu.assertEquals(shown[1], prohibited)
+  lu.assertEquals(room:getCardArea(prohibited), Card.DrawPile, "禁止弃置的红桃仍可置顶")
+  lu.assertEquals(room.draw_pile[1], prohibited, "应置于牌堆顶")
+  lu.assertEquals(room:getCardArea(freeHeart), Card.PlayerHand, "未选红桃不移动")
+  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "非红桃不移动")
+end
+
+--- 服务端复核：回包后失位、非候选牌、非法动作与展示后失位都不得移动。
+function Testqiao_em_wu001_sunquan:testGongxinServerRechecksStaleSelectionAndAction()
+  local room, user, target = FkTest.room, p(2), p(3)
+  clearCards(user)
+  clearCards(target)
+  local heart = give(target, "qiao__jink", Card.Heart, 3)
+  local spade = give(target, "qiao__jink", Card.Spade, 4)
+  inRoom(function()
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    room.current = user
+    user.phase = Player.Play
+  end)
+
+  local shown = 0
+  local originalShow = room.showCards
+  room.showCards = function(...)
+    shown = shown + 1
+    return originalShow(...)
+  end
+  local function useNow()
+    inRoom(function()
+      local skill = Fk.skills[GONGXIN]
+      skill:onUse(room, { from = user, cards = {}, tos = { target } })
+    end)
+  end
+
+  -- 请求返回后、展示前牌被移走：展示前复核拒绝。
+  FkTest.setNextReplies(user, { { cards = { heart }, choice = DISCARD } })
+  skill_test.withSkillRequests(room, GONGXIN, {
+    askToChooseCardsAndChoice = function(self, who, params, original)
+      if params.skill_name ~= GONGXIN then return original(self, who, params) end
+      local cards, choice = original(self, who, params)
+      -- 只改牌所在区域模拟结算窗口内的移动，避免在请求回包中再触发完整移牌流程。
+      self.card_place[heart] = Card.DiscardPile
+      return cards, choice
+    end,
+  }, useNow)
+  lu.assertEquals(shown, 0, "回包后牌已离开原手牌区时不展示")
+  lu.assertEquals(room:getCardArea(heart), Card.DiscardPile)
+
+  -- 非候选牌与非法动作：即使携带牌也不展示、不移动。
+  local shownBefore = shown
+  FkTest.setNextReplies(user, { { cards = { spade }, choice = ON_TOP } })
+  useNow()
+  lu.assertEquals(shown, shownBefore, "非候选牌不得展示")
+  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "非候选牌不得移动")
+
+  FkTest.setNextReplies(user, { { cards = { spade }, choice = "#qiao__gongxin-unknown" } })
+  useNow()
+  lu.assertEquals(shown, shownBefore, "非法动作不得展示")
+  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "非法动作不得移动")
+
+  -- 展示后、移动前牌被移走：移动前复核拒绝。
+  local late = give(target, "qiao__jink", Card.Heart, 5)
+  FkTest.setNextReplies(user, { { cards = { late }, choice = ON_TOP } })
+  local countingShow = room.showCards
+  room.showCards = function(self, cards, from, proposer)
+    local ret = countingShow(self, cards, from, proposer)
+    -- 展示后、移动前失位；同样只改区域，不触发第二次完整移牌。
+    self.card_place[late] = Card.DiscardPile
+    return ret
+  end
+  useNow()
+  room.showCards = countingShow
+  lu.assertNotEquals(room:getCardArea(late), Card.DrawPile, "展示后失位不得置于牌堆")
+  room.showCards = originalShow
 end
 
 --- 旗第三段：真实牌造成伤害后由持旗者选择移去一张烽火、正常扣血；本回合下一次
@@ -724,6 +956,266 @@ function Testqiao_em_wu001_sunquan:testGongxinClientAvailabilityWithoutPlayerRoo
     lu.assertFalse(finished:skillButtonValidity(GONGXIN), "非出牌阶段应禁用")
     finished:_finish()
   end)
+end
+
+--- 攻心限次：真实客户端首次可用；引擎在 on_use 前写入既有阶段历史后按钮禁用；
+--- 回放同一主动技回包不得再次观看或结算；真实阶段结束清空阶段历史后，
+--- 下个出牌阶段恢复。
+function Testqiao_em_wu001_sunquan:testGongxinOncePerPlayPhaseAndServerRejectsDuplicate()
+  local room, user, target = FkTest.room, p(2), p(3)
+  clearCards(user)
+  clearCards(target)
+  local heart = give(target, "qiao__jink", Card.Heart, 3)
+  local spade = give(target, "qiao__jink", Card.Spade, 4)
+  inRoom(function()
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    room.current = user
+    user.phase = Player.Play
+  end)
+
+  local reply = clientActiveReply(room, user, GONGXIN, { target = target })
+  lu.assertEquals(reply.card.skill, GONGXIN, "回包应携带真实技能 ID")
+  lu.assertEquals(#reply.targets, 1, "回包应携带真实目标")
+
+  local asks, shows = 0, 0
+  local originalShow = room.showCards
+  room.showCards = function(...)
+    shows = shows + 1
+    return originalShow(...)
+  end
+  FkTest.setNextReplies(user, { { cards = { heart }, choice = DISCARD } })
+  local ok, err = pcall(function()
+    skill_test.withSkillRequests(room, GONGXIN, {
+      askToChooseCardsAndChoice = function(self, who, params, original)
+        if params.skill_name ~= GONGXIN then return original(self, who, params) end
+        asks = asks + 1
+        return original(self, who, params)
+      end,
+    }, function()
+      inRoom(function() room:handleUseCardReply(user, reply, nil) end)
+    end)
+  end)
+  room.showCards = originalShow
+  if not ok then error(err, 0) end
+  lu.assertEquals(asks, 1, "真实回包应完成一次原生面板询问")
+  lu.assertEquals(shows, 1, "第一次发动应展示所选红桃")
+  lu.assertEquals(room:getCardArea(heart), Card.DiscardPile, "首次提交应正常结算")
+  lu.assertEquals(user:usedSkillTimes(GONGXIN, Player.HistoryPhase), 1,
+    "首次发动应写入既有阶段历史")
+  lu.assertFalse(clientButtonValid(room, user, GONGXIN),
+    "同一出牌阶段首次发动后不可再用")
+
+  -- 服务端二次提交：回放同一技能回包，不得再次询问、展示或结算。
+  inRoom(function() end)
+  local asksBefore, showsBefore = asks, shows
+  local originalShow2 = room.showCards
+  room.showCards = function(...)
+    shows = shows + 1
+    return originalShow2(...)
+  end
+  skill_test.withSkillRequests(room, GONGXIN, {
+    askToChooseCardsAndChoice = function(self, who, params, original)
+      if params.skill_name ~= GONGXIN then return original(self, who, params) end
+      asks = asks + 1
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function()
+      room:handleUseCardReply(user, {
+        card = { skill = GONGXIN, subcards = {} },
+        targets = { target.id },
+      }, nil)
+    end)
+  end)
+  room.showCards = originalShow2
+  lu.assertEquals(asks, asksBefore, "服务端二次提交不得再次询问面板")
+  lu.assertEquals(shows, showsBefore, "服务端二次提交不得再展示牌")
+  lu.assertEquals(room:getCardArea(spade), Card.PlayerHand, "二次提交不得移动手牌")
+  lu.assertEquals(user:usedSkillTimes(GONGXIN, Player.HistoryPhase), 1,
+    "二次提交不得增加既有阶段历史")
+
+  -- 下个出牌阶段：真实阶段结束清空阶段历史后恢复。
+  FkTest.setNextReplies(user, { "" })
+  inRoom(function()
+    GameEvent.Phase:create(
+      PhaseData:new { who = user, phase = Player.Play, reason = "game_rule" }):exec()
+  end)
+  lu.assertEquals(user:usedSkillTimes(GONGXIN, Player.HistoryPhase), 0,
+    "阶段结束应清空本阶段历史")
+  inRoom(function()
+    room.current = user
+    user.phase = Player.Play
+  end)
+  lu.assertTrue(clientButtonValid(room, user, GONGXIN), "下个出牌阶段恢复可用")
+end
+
+--- 攻心：观看后即使没有可展示的红桃而立即结束，也已消耗本阶段次数。
+function Testqiao_em_wu001_sunquan:testGongxinViewOnlyStillConsumesPhaseUse()
+  local room, user, target = FkTest.room, p(2), p(3)
+  clearCards(user)
+  clearCards(target)
+  give(target, "qiao__jink", Card.Spade, 5)
+  inRoom(function()
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    room.current = user
+    user.phase = Player.Play
+  end)
+
+  local reply = clientActiveReply(room, user, GONGXIN, { target = target })
+  local asked, shows = nil, 0
+  local originalShow = room.showCards
+  room.showCards = function(...)
+    shows = shows + 1
+    return originalShow(...)
+  end
+  FkTest.setNextReplies(user, { "" })
+  local ok, err = pcall(function()
+    skill_test.withSkillRequests(room, GONGXIN, {
+      askToChooseCardsAndChoice = function(self, who, params, original)
+        if params.skill_name ~= GONGXIN then return original(self, who, params) end
+        asked = params
+        return original(self, who, params)
+      end,
+    }, function()
+      inRoom(function() room:handleUseCardReply(user, reply, nil) end)
+    end)
+  end)
+  room.showCards = originalShow
+  if not ok then error(err, 0) end
+  lu.assertNotNil(asked, "没有红桃也走原生面板")
+  lu.assertEquals(#asked.cards, 0, "没有红桃时面板无牌可选")
+  lu.assertEquals(shows, 0, "结束观看不展示任何牌")
+  lu.assertEquals(user:usedSkillTimes(GONGXIN, Player.HistoryPhase), 1,
+    "观看后结束也消耗攻心次数")
+  lu.assertFalse(clientButtonValid(room, user, GONGXIN),
+    "观看后结束的同一阶段不可再用")
+end
+
+--- 攻心：同阶段失去后重获不刷新既有次数。
+function Testqiao_em_wu001_sunquan:testGongxinRegrantDoesNotRefreshSamePhaseUse()
+  local room, user, target = FkTest.room, p(2), p(3)
+  clearCards(user)
+  clearCards(target)
+  give(target, "qiao__jink", Card.Spade, 6)
+  inRoom(function()
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    room.current = user
+    user.phase = Player.Play
+  end)
+
+  local reply = clientActiveReply(room, user, GONGXIN, { target = target })
+  FkTest.setNextReplies(user, { "" })
+  skill_test.withSkillRequests(room, GONGXIN, {
+    askToChooseCardsAndChoice = function(self, who, params, original)
+      if params.skill_name ~= GONGXIN then return original(self, who, params) end
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function() room:handleUseCardReply(user, reply, nil) end)
+  end)
+  lu.assertFalse(clientButtonValid(room, user, GONGXIN), "首次发动后不可再用")
+
+  inRoom(function()
+    room:handleAddLoseSkills(user, "-" .. GONGXIN, P.SOURCE, false, true)
+    lu.assertFalse(user:hasSkill(GONGXIN), "应实际失去本次授予")
+    room:handleAddLoseSkills(user, GONGXIN, P.SOURCE, false, true)
+    lu.assertTrue(user:hasSkill(GONGXIN), "同阶段应重获攻心")
+  end)
+  lu.assertFalse(clientButtonValid(room, user, GONGXIN),
+    "重获技能不刷新同阶段既有次数")
+end
+
+--- 旗入口限次：真实客户端首次可用；二次提交不得再置入烽火；计次按角色隔离；
+--- 下个出牌阶段恢复。
+function Testqiao_em_wu001_sunquan:testFlagEntryOncePerPlayPhaseRejectsDuplicate()
+  local room, lord, wu = FkTest.room, p(1), p(2)
+  clearCards(lord)
+  clearCards(wu)
+  local first = give(wu, P.PEARL, Card.Heart, 2)
+  local second = give(wu, P.PEARL, Card.Spade, 3)
+  give(lord, P.PEARL, Card.Club, 4)
+  inRoom(function()
+    room.current = wu
+    wu.phase = Player.Play
+    lord.phase = Player.Play
+  end)
+
+  local reply = clientActiveReply(room, wu, P.ENTRY, { card = first })
+  inRoom(function() room:handleUseCardReply(wu, reply, nil) end)
+  lu.assertEquals(P.count(lord), 1, "首次提交应真实置入烽火")
+  inRoom(function()
+    lu.assertTrue(table.contains(lord:getPile(P.PILE), first), "所置的装备牌应进入旗牌堆")
+  end)
+  lu.assertEquals(wu:usedSkillTimes(P.ENTRY, Player.HistoryPhase), 1,
+    "首次发动应写入既有阶段历史")
+  lu.assertFalse(clientButtonValid(room, wu, P.ENTRY),
+    "同一出牌阶段首次发动后不可再用")
+
+  -- 服务端二次提交：同一入口回包不得再次置入。
+  inRoom(function()
+    room:handleUseCardReply(wu, {
+      card = { skill = P.ENTRY, subcards = { second } },
+      targets = {},
+    }, nil)
+  end)
+  lu.assertEquals(P.count(lord), 1, "服务端二次提交不得再次置入烽火")
+  lu.assertEquals(room:getCardArea(second), Card.PlayerHand, "二次提交的牌不应移动")
+  lu.assertEquals(wu:usedSkillTimes(P.ENTRY, Player.HistoryPhase), 1,
+    "二次提交不得增加既有阶段历史")
+
+  -- 计次按角色隔离：同阶段其他吴势力角色的入口仍可用。
+  lu.assertTrue(clientButtonValid(room, lord, P.ENTRY),
+    "同阶段不同角色不共享旗入口的计次")
+
+  -- 下个出牌阶段恢复。
+  FkTest.setNextReplies(wu, { "" })
+  inRoom(function()
+    GameEvent.Phase:create(
+      PhaseData:new { who = wu, phase = Player.Play, reason = "game_rule" }):exec()
+  end)
+  inRoom(function()
+    room.current = wu
+    wu.phase = Player.Play
+  end)
+  lu.assertTrue(clientButtonValid(room, wu, P.ENTRY), "下个出牌阶段恢复可用")
+end
+
+--- 攻心与旗入口分别计次：发动其一不影响另一技能的同阶段可用性。
+function Testqiao_em_wu001_sunquan:testGongxinAndFlagEntryUseSeparatePhaseCounts()
+  local room, lord, wu, target = FkTest.room, p(1), p(2), p(3)
+  clearCards(lord)
+  clearCards(wu)
+  clearCards(target)
+  give(target, "qiao__jink", Card.Spade, 5)
+  local equip = give(wu, P.PEARL, Card.Heart, 6)
+  inRoom(function()
+    room:handleAddLoseSkills(wu, GONGXIN, P.SOURCE, false, true)
+    room.current = wu
+    wu.phase = Player.Play
+  end)
+  lu.assertTrue(clientButtonValid(room, wu, GONGXIN), "攻心首次可用")
+  lu.assertTrue(clientButtonValid(room, wu, P.ENTRY), "旗入口首次可用")
+
+  local reply = clientActiveReply(room, wu, GONGXIN, { target = target })
+  FkTest.setNextReplies(wu, { "" })
+  skill_test.withSkillRequests(room, GONGXIN, {
+    askToChooseCardsAndChoice = function(self, who, params, original)
+      if params.skill_name ~= GONGXIN then return original(self, who, params) end
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function() room:handleUseCardReply(wu, reply, nil) end)
+  end)
+  lu.assertFalse(clientButtonValid(room, wu, GONGXIN), "攻心已计次")
+  lu.assertTrue(clientButtonValid(room, wu, P.ENTRY), "攻心计次不影响旗入口")
+
+  local entryReply = clientActiveReply(room, wu, P.ENTRY, { card = equip })
+  inRoom(function() room:handleUseCardReply(wu, entryReply, nil) end)
+  lu.assertEquals(P.count(lord), 1, "旗入口应正常置入烽火")
+  lu.assertEquals(wu:usedSkillTimes(P.ENTRY, Player.HistoryPhase), 1,
+    "旗入口独立计入自身历史")
+  lu.assertFalse(clientButtonValid(room, wu, P.ENTRY), "旗入口已计次")
+  lu.assertFalse(clientButtonValid(room, wu, GONGXIN), "两技能均已达本阶段上限")
 end
 
 return { name = "qiao_em_wu001_sunquan" }
