@@ -90,10 +90,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "克复中原",
-  [":" .. skill.name] = "出牌阶段，对一名或多名角色使用。每名目标依次选择：视为使用"
-    .. "一张【杀】（按【杀】的正常目标条件选择目标）或摸一张牌；没有合法用杀对象时"
-    .. "只能摸牌。若你使用此牌时已确定为蜀势力，蜀势力目标的该次【杀】伤害 +1，"
-    .. "选择摸牌则改为摸两张。",
   ["#qiao__restore_heartland_skill"] = "克复中原：每名目标选择视为使用【杀】或摸牌",
   ["#qiao__restore_heartland-choice"] = "克复中原：选择视为使用一张【杀】或摸一张牌",
   ["#qiao__restore_heartland-slash"] = "克复中原：视为使用一张【杀】",

@@ -149,6 +149,10 @@ function Testqiao_faction_tricks:testSevenTricksKeepIdentityAndStayOutsideTheDec
     lu.assertTrue(FactionTricks.isFactionTrick(card), "应识别为势力锦囊: " .. name)
     lu.assertNil(inPile[id], "势力锦囊不得进入默认牌堆: " .. name)
     lu.assertEquals(room:getCardArea(id), Card.Void, "势力锦囊默认在游戏外: " .. name)
+    local description = Fk:translate(":" .. name, "zh_CN")
+    lu.assertNotEquals(description, ":" .. name, "缺少势力锦囊牌面原文: " .. name)
+    lu.assertEquals(card:getDynamicDescription(room.players[1], "zh_CN"), description)
+    lu.assertEquals(Fk:translate(":" .. card.skill.name, "zh_CN"), description)
   end
 end
 
@@ -158,7 +162,7 @@ function Testqiao_faction_tricks:testImplementedTricksLoadAsFormalUsableCards()
   local expected = {
     { STRENGTHEN, "qiao__strengthen_state_skill", "摸八张" },
     { DANGGU, "qiao__danggu_zhihuo_skill", "不能明置" },
-    { LUANWU, "qiao__luanwu_chaos_skill", "类别不同" },
+    { LUANWU, "qiao__luanwu_chaos_skill", "类别各不同" },
   }
   for _, spec in ipairs(expected) do
     local name, skillName, keyword = spec[1], spec[2], spec[3]
@@ -172,6 +176,9 @@ function Testqiao_faction_tricks:testImplementedTricksLoadAsFormalUsableCards()
     lu.assertTrue(text:find(keyword, 1, true) ~= nil, "牌面描述缺少关键效果: " .. name)
     lu.assertNil(text:find("尚未实装", 1, true), "已实装牌不应显示空壳描述: " .. name)
   end
+  lu.assertEquals(Fk:translate(":" .. STRENGTHEN, "zh_CN"),
+    "出牌阶段，对你使用。目标角色摸八张牌，然后弃置至少六张手牌。"
+      .. "你可以将以此法弃置的牌交给其他吴势力角色（每名角色至多两张）。")
   -- 多目标牌需要正式 multi_targets 元数据，客户端才能一次选齐所有合法目标。
   lu.assertTrue(Fk.all_card_types[DANGGU].multiple_targets == true)
   lu.assertTrue(Fk.all_card_types[LUANWU].multiple_targets == true)

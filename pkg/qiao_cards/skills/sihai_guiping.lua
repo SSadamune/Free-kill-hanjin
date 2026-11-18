@@ -175,10 +175,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "四海归平",
-  [":" .. skill.name] = "出牌阶段，对你使用。结束本次出牌阶段的自由出牌入口，"
-    .. "继续完成当前锦囊及后续阶段。从本阶段置入弃牌堆且仍在弃牌堆的牌中，"
-    .. "每种花色各获得一张。若你使用此牌时已确定为晋势力，你可以将本次获得的牌"
-    .. "交给其他晋势力角色（每名一张），然后按座次询问所有晋势力角色是否使用一张牌。",
   ["#qiao__sihai_guiping_skill"] = "四海归平：结束自由出牌入口并按花色回收本阶段弃牌",
   ["#qiao__sihai_guiping-suit"] = "四海归平：选择一张%arg花色的牌",
   ["#qiao__sihai_guiping-give"] = "四海归平：可将本次获得的牌交给其他晋势力角色",

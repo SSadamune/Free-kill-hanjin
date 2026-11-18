@@ -181,10 +181,6 @@ skill:addEffect("cardskill", {
 
 Fk:loadTranslationTable {
   [skill.name] = "号令天下",
-  [":" .. skill.name] = "出牌阶段，对一名体力值高于场上最小值的角色使用。除目标外的"
-    .. "角色按座次决定是否参与：参与者可以弃置一张手牌，视为对目标使用一张【杀】；"
-    .. "或弃置目标的一张手牌或装备。若你使用此牌时已确定为魏势力，魏势力参与者跳过"
-    .. "弃牌步骤，并取得第二项中实际弃置且仍可取得的牌。",
   ["#qiao__command_world_skill"] = "号令天下：对一名体力值高于场上最小值的角色使用",
   ["#qiao__command_world-participate"] = "号令天下：是否参与（目标为 %dest）",
   ["#qiao__command_world-choice"] = "号令天下：选择对 %dest 执行的一项",
