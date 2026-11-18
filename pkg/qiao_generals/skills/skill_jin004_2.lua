@@ -115,12 +115,15 @@ skill:addEffect(fk.TargetConfirmed, {
     ensureDamageProbe(room)
     local damageRecord = { actor = player.id, source = source.id, damaged = false }
     -- 选择阶段就建立无距离策略；返回的是待执行数据，由本技能执行一次。
+    -- 自由用牌：声明 not_passive，客户端不提供无响应时机的【闪】
+    -- 【无懈可击】等；服务端 validateUse 的被动分支按同一标记早拒。
     local nextUse = C.askToUseCard(room, player, {
       names = Fk.all_card_names,
       pattern = ".",
       skill_name = skill.name,
       prompt = "#qiao__skill_jin004_2-use",
       cancelable = true,
+      extra_data = { not_passive = true },
       policy = C.bypassDistance({ names = Fk.all_card_names }),
     })
     if nextUse ~= nil then

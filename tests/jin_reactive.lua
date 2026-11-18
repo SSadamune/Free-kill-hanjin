@@ -123,6 +123,40 @@ function Testqiao_jin_reactive:testBeishiDistantOtherVictimDoesNotAvoidHpLoss()
   lu.assertEquals(p.hp, 3)
 end
 
+function Testqiao_jin_reactive:testBeishiFreeUseRejectsInjectedPassiveCard()
+  local room = prepare("qiao_heg__jin004")
+  local p, source = room.players[1], room.players[2]
+  local discarded = give(room, p, { { "jink", Card.Heart, 4 } })[1]
+  local injected = give(room, p, { { "jink", Card.Diamond, 6 } })[1]
+  local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
+  inRoom(function() p.hp = 4 end)
+
+  local captured
+  skill_test.withSkillRequests(room, BEISHI, {
+    askToUseCard = function(self, player, params, original)
+      captured = params
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(p, {
+      "1",
+      FkTest.ReplyDiscard({ discarded }),
+      FkTest.ReplyCard(Fk:getCardById(injected), {}),
+    })
+    inRoom(function()
+      room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) }
+    end)
+  end)
+
+  lu.assertNotNil(captured, "悖弑必须发出真实的自由用牌请求")
+  lu.assertEquals(captured.pattern, ".")
+  lu.assertTrue(captured.extra_data ~= nil and captured.extra_data.not_passive == true,
+    "悖弑自由用牌请求必须声明 not_passive")
+  lu.assertTrue(table.contains(p:getCardIds("h"), injected),
+    "服务端应在 validateUse 被动分支早拒注入的【闪】")
+  lu.assertEquals(p.hp, 3, "拒绝用牌后仍按未造成伤害失去1点体力")
+end
+
 function Testqiao_jin_reactive:testBeishiDamagesOriginalUserAvoidsHpLoss()
   local room = prepare("qiao_heg__jin004")
   local p, source = room.players[1], room.players[2]

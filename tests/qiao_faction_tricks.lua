@@ -14,6 +14,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local FactionTricks = require "packages.qiao.pkg.qiao_mode.rules.faction_tricks"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
+local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
 local ReqActive = require "ltk.core.request_type.active_skill"
 
 local STRENGTHEN = "qiao__strengthen_state"
@@ -993,7 +994,7 @@ function Testqiao_faction_tricks:testSihaiGuipingUseEntryAcceptsConversionCard()
     FkTest.ReplyUseSkill("qiao_test_sihai_viewas", { victim }, { material.id }),
   })
   inRoom(function()
-    use = room:askToUseCard(jin, {
+    use = FreeUse.askToUseCard(jin, {
       pattern = ".",
       skill_name = "qiao__sihai_guiping_skill",
       prompt = "#qiao__sihai_guiping-use",

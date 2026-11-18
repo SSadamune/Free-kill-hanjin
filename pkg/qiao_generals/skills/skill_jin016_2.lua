@@ -4,6 +4,7 @@
 -- 后，按本回合全体角色真实使用过的牌检查四种花色，满足则摸两张且回复1点体力。
 -- 不是只检查本次询问，也不把纯打出计入；技能效果内的用牌不占用空闲出杀次数。
 local H = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin016_2",
@@ -50,7 +51,10 @@ skill:addEffect("active", {
     for _, target in ipairs(targets) do
       if player.dead then break end
       if not target.dead and not target:isRemoved() then
-        local use = room:askToUseCard(target, {
+        -- 自由用牌：请求声明 not_passive，客户端不提供【闪】【无懈可击】
+        -- 等无响应时机的被动牌；返回后由公共入口按本次请求复核禁止、转换
+        -- 与目标，伪造的被动牌按放弃处理。
+        local use = FreeUse.askToUseCard(target, {
           pattern = ".",
           skill_name = skill.name,
           prompt = "#qiao__skill_jin016_2-use:" .. target.id,
