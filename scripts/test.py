@@ -9,6 +9,7 @@ from setup_dependencies import verify
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNTIME = ROOT / '.dev/runtime/FreeKill-release'
+FULL_SUITE = ROOT / 'tests/all.lua'
 
 
 def run_locked(args, exe, suite):
@@ -56,7 +57,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skills', help='Comma-separated skill names (native addTest cases)')
     parser.add_argument('--file', type=Path, help='External LuaUnit suite; defaults to tests/all.lua')
-    parser.add_argument('--timeout', type=int, default=60)
+    parser.add_argument(
+        '--timeout', type=int,
+        help='Native test process timeout in seconds (default: 900 for tests/all.lua, 60 otherwise)',
+    )
     args = parser.parse_args()
     if args.skills is not None and args.file is not None:
         parser.error('--skills and --file are mutually exclusive')
@@ -65,9 +69,11 @@ def main():
         parser.error(f'Missing runtime: {exe}')
     suite = None
     if args.skills is None:
-        suite = (args.file or ROOT / 'tests/all.lua').resolve()
+        suite = (args.file or FULL_SUITE).resolve()
         if not suite.is_file():
             parser.error(f'Missing suite: {suite}')
+    if args.timeout is None:
+        args.timeout = 900 if suite == FULL_SUITE.resolve() else 60
     try:
         with runtime_lock(RUNTIME):
             return run_locked(args, exe, suite)

@@ -22,7 +22,7 @@
 | JIN015 | 石苞 | [前驱](active.md#jin015-1) |
 | JIN016 | 张华 | [复礼](support.md#jin016-1)、[风物](support.md#jin016-2) |
 
-运行时武将 ID 为 `qiao__jin编号`；除应期外，各技能源码为 `pkg/qiao_generals/skills/skill_jin编号_顺序.lua`。应期仍为 `qiao__skill_wei002_3`，不新增晋副本。
+运行时武将 ID 采用 `qiao_heg__` 前缀，例如 `qiao_heg__jin001`。除应期外，各技能源码为 `pkg/qiao_generals/skills/skill_jin编号_顺序.lua`。应期共用 `qiao__skill_wei002_3`。
 
 ## 2. 关联翼从
 

@@ -117,4 +117,4 @@
 
 挑衅 AI 请求修复：`C.askToUseCard` 的 `names/card_name/name` 是策略白名单，不再作为引擎 pattern 直接删除；公共转发从卡名派生 `trueName` pattern（`qiao__slash` → `slash`）。挑衅真实走 `Room:askToUseCard` 请求，AI 不再收到 nil pattern；选择端用锁定引擎的 `extra_data.exclusive_targets` 限定姜维，服务端保留 `fixed_targets` 复核。`tests/card_use_targets.lua` 36/36（含 `card_name` 别名、固定目标拒绝和 exclusive_targets 观察）、`tests/shu012_jiangwei.lua` 6/6（含取消后实际弃牌）。全库扫描中已有显式 pattern 或由上层生成请求参数的分支保留；未发现其他无证据需改的直接调用。首次全量982项981成功，唯一失败为 `shu021_mifuren`；该套记录初始珠联标记（样本 before=0/after=1）并按 before+1 修正断言，单跑4/4。两项修复后最终全量982/982通过。
 
-四君主增量验收：君孙权 7/7、君曹操 15/15、君司马炎 6/6、君刘协 7/7、双坐骑 3/3；最终默认套件 1020/1020 通过。当前发布包与人工验收边界见[开发状态](../../status.md#最近验证记录)。七张势力锦囊的牌面效果仍为既有空壳。
+2026-11-17 四君主增量验收：君孙权 7/7、君曹操 15/15、君司马炎 6/6、君刘协 7/7、双坐骑 3/3；该批默认套件 1020/1020 通过。该批的诏书验证覆盖势力锦囊的取得和使用记录，牌面效果由[后续批次](../card-deck.md#势力锦囊)接入。最新全量与人工验收范围见[开发状态](../../status.md#当前验收基线)。

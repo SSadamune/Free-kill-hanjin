@@ -8,7 +8,7 @@
 - [《汉晋规则集》工作底稿](../rulebook/README.md)：已复制的外部基础条文及后续正式改编。
 - [外部参考资料与素材原稿登记](../assets/README.md)：外部规则副本、武将／技能原始数据、FAQ 及 UI 原稿的位置、来源与不回写边界。
 
-外部资料原样保存在 [`assets/docs/`](../assets/docs/) 与 [`assets/ui/`](../assets/ui/)；采用条目、项目裁定及差异记录在 `docs/rules/` 与 `rulebook/`，不直接回写原始资料。
+外部原件、素材及公开图鉴整理稿的来源见[资料登记](../assets/README.md)。采用条目、项目裁定及差异记录在 `docs/rules/` 与 `rulebook/`。
 
 ## 开发文档
 

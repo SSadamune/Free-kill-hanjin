@@ -16,4 +16,4 @@
 
 ## 登记差异
 
-JSON `zhulian_ke` 与标准表均列本将指向 JIN002 司马师的珠联璧合；当前 `data/standard.lua` 的本将 `companions` 为空。实装时须补登记并核对实际组合，不能依靠反向关系自动补全。
+JSON `zhulian_ke` 与运行时标准表的 `companions` 均登记本将指向 JIN002 司马师的珠联璧合。此项关系在司马昭的记录中明确登记。
