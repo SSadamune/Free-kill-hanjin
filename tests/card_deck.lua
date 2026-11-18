@@ -548,6 +548,28 @@ function Testqiao_card_deck:testSevenFactionTricksExistOnlyOutsideTheDefaultDraw
   lu.assertEquals(seen, 7)
 end
 
+function Testqiao_card_deck:testFactionTrickShellMetadataFollowsItsReuseDecision()
+  local room = create()
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
+  local seen = 0
+  for _, trick in pairs(H.factionTricks) do
+    local card = packageCard(trick.card, trick.suit, trick.number)
+    lu.assertNotNil(card, "Missing faction trick " .. trick.display)
+    local position = assert(H.getSlot(card), "Missing faction trick position " .. trick.display)
+    local reused = assert(H.reuse[trick.card], "Missing reuse decision " .. trick.display).status == "reused"
+    lu.assertEquals(card.extra_data.qiao_inert, not reused,
+      "势力锦囊的牌元数据空壳标记应与复用决定一致: " .. trick.display)
+    lu.assertEquals(position.inert, not reused,
+      "势力锦囊的牌位空壳标记应与复用决定一致: " .. trick.display)
+    lu.assertEquals(H.isInert(card), not reused,
+      "势力锦囊的运行时空壳判定应与复用决定一致: " .. trick.display)
+    lu.assertEquals(room:getCardArea(card.id), Card.Void,
+      "势力锦囊默认位于游戏外: " .. trick.display)
+    seen = seen + 1
+  end
+  lu.assertEquals(seen, 7)
+end
+
 function Testqiao_card_deck:testNationalAndOrdinaryNullificationStayDistinct()
   local national, ordinary = 0, 0
   for _, slot in ipairs(Cards.basePositions) do

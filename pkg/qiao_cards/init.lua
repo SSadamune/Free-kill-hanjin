@@ -190,6 +190,57 @@ local DESCRIPTION_OVERRIDES = {
   ["qiao__shenshou_sizhao"] = "装备牌·武器 攻击范围2<br/>"
     .. "<b>装备技能</b>：此牌进入装备区的回合中，若你仍装备此牌，你使用牌无距离限制，"
     .. "并跳过弃牌阶段。后续回合，你可将此牌作为合纵牌与手牌一同交出。",
+  ["qiao__strengthen_state"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你<br/>"
+    .. "<b>效果</b>：你摸八张牌，然后从现有手牌中选择至少六张合法牌弃置"
+    .. "（可弃手牌不足六张时弃尽，为零时无牌可弃）。若你使用此牌时已确定为吴势力，"
+    .. "你可以将本次实际弃置且仍可从弃牌堆取得的牌交给其他吴势力角色，"
+    .. "每名角色至多两张。<br/>"
+    .. "<b>势力</b>：吴<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__danggu_zhihuo"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有其他角色<br/>"
+    .. "<b>效果</b>：你逐目标选择其一张可暗置的明置武将牌并暗置。此牌对该目标生效后，"
+    .. "其不能明置，持续到你的下回合开始或你死亡。若你使用此牌时已确定为汉势力，"
+    .. "汉势力目标可以交给你一张自己的手牌或装备，如此做则此牌仅对其无效。<br/>"
+    .. "<b>势力</b>：汉<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__luanwu_chaos"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：所有角色<br/>"
+    .. "<b>效果</b>：你逐目标展示其手牌，然后选择一项：1.该目标弃置两张类别不同的手牌；"
+    .. "2.你弃置其一张手牌。若你使用此牌时已确定为群势力，群势力目标结算后手牌为零时"
+    .. "补至其当前体力值。<br/>"
+    .. "<b>势力</b>：群<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__command_world"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名体力值高于场上最小值的角色<br/>"
+    .. "<b>效果</b>：除目标外的角色按座次决定是否参与：参与者可以弃置一张手牌，"
+    .. "视为对目标使用一张【杀】；或弃置目标的一张手牌或装备。若你使用此牌时已确定为"
+    .. "魏势力，魏势力参与者跳过弃牌步骤，并取得第二项中实际弃置且仍可取得的牌。<br/>"
+    .. "<b>势力</b>：魏<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__restore_heartland"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名或多名角色<br/>"
+    .. "<b>效果</b>：每名目标依次选择：视为使用一张【杀】（按【杀】的正常目标条件"
+    .. "选择目标）或摸一张牌；没有合法用杀对象时只能摸牌。若你使用此牌时已确定为蜀"
+    .. "势力，蜀势力目标的该次【杀】伤害 +1，选择摸牌则改为摸两张。<br/>"
+    .. "<b>势力</b>：蜀<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__sihai_guiping"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：你<br/>"
+    .. "<b>效果</b>：结束本次出牌阶段的自由出牌入口，继续完成当前锦囊及后续阶段。"
+    .. "从本阶段置入弃牌堆且仍在弃牌堆的牌中，每种花色各获得一张。若你使用此牌时"
+    .. "已确定为晋势力，你可以将本次获得的牌交给其他晋势力角色（每名一张），然后"
+    .. "按座次询问所有晋势力角色是否使用一张牌。<br/>"
+    .. "<b>势力</b>：晋<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
+  ["qiao__luoshui_zhishi"] = "延时锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
+    .. "<b>目标</b>：一名角色<br/>"
+    .. "<b>效果</b>：判定为黑桃 2～9 且该目标在此时为野心家时，其选择一名角色，"
+    .. "对该角色造成 3 点雷电伤害；否则若本回合仍有后续阶段，把该阶段改为判定阶段，"
+    .. "此牌重新判定。若你使用此牌时已确定为野心家且目标为你，则立即判定生效。<br/>"
+    .. "<b>势力</b>：野心家<br/>"
+    .. "<b>牌堆</b>：仅通过特殊手段加入，不在默认牌堆",
 }
 
 local function cardDescription(cardType)
@@ -240,6 +291,7 @@ for _, cardType in ipairs(CardData.types) do
     spec.type = Card.TypeTrick
     if cardType.delayed then spec.sub_type = Card.SubtypeDelayedTrick end
     spec.is_damage_card = cardType.is_damage == true
+    spec.multiple_targets = cardType.multiple_targets == true
   else
     spec.type = Card.TypeEquip
     spec.sub_type = cardType.subtype
@@ -428,6 +480,7 @@ end
 
 for _, row in ipairs(SlotData.factionTricks) do
   local s, n = suit(row.suit), rank(row.number)
+  local implemented = H.reuse[row.card] and H.reuse[row.card].status == "reused"
   local extra = {
     qiao_package = "qiao_cards",
     qiao_slot = "faction_trick/" .. row.suit .. "/" .. row.number,
@@ -439,7 +492,7 @@ for _, row in ipairs(SlotData.factionTricks) do
     qiao_national = true,
     qiao_guozhan = true,
     qiao_variant = "faction_trick",
-    qiao_inert = true,
+    qiao_inert = not implemented,
     qiao_deck_policy = "special_only",
     qiao_faction_trick = row.kingdom,
     qiao_kingdom = row.kingdom,
@@ -454,7 +507,7 @@ for _, row in ipairs(SlotData.factionTricks) do
     rank = row.number,
     display = row.display,
     card = row.card,
-    inert = true,
+    inert = not implemented,
     kingdom = row.kingdom,
     extra = extra,
   }

@@ -66,13 +66,20 @@ M.cards = {
 
   -- Lord equipment and unique special tricks without a local implementation.
   ["qiao__sihai_liuqian"] = { status = "reused", kind = "qiao_equip", upstream = "sihai_liuqian", skill = "qiao__sihai_liuqian_skill", desc = false },
-  ["qiao__danggu_zhihuo"] = { status = "missing" },
-  ["qiao__command_world"] = { status = "missing" },
-  ["qiao__restore_heartland"] = { status = "missing" },
-  ["qiao__strengthen_state"] = { status = "missing" },
-  ["qiao__luanwu_chaos"] = { status = "missing" },
-  ["qiao__sihai_guiping"] = { status = "missing" },
-  ["qiao__luoshui_zhishi"] = { status = "missing" },
+  ["qiao__danggu_zhihuo"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__danggu_zhihuo_skill", desc = false },
+  ["qiao__command_world"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__command_world_skill", desc = false },
+  ["qiao__restore_heartland"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__restore_heartland_skill", desc = false },
+  ["qiao__strengthen_state"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__strengthen_state_skill", desc = false },
+  ["qiao__luanwu_chaos"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__luanwu_chaos_skill", desc = false },
+  ["qiao__sihai_guiping"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__sihai_guiping_skill", desc = false },
+  ["qiao__luoshui_zhishi"] = { status = "reused", kind = "qiao_skill",
+    skill = "qiao__luoshui_zhishi_skill", desc = false },
 
   -- Weapons ---------------------------------------------------------------
   ["qiao__spear"] = { status = "reused", kind = "qiao_equip", upstream = "spear", skill = "qiao__spear_skill" },

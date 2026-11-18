@@ -34,18 +34,24 @@ function M.isSameKingdom(lord, player)
   return type(kingdom) == "string" and player.kingdom == kingdom
 end
 
---- 现有正式牌堆中被移出游戏的势力锦囊实体；按本模式允许势力过滤。
-function M.availableTricks(room)
+--- 本局不可用的常规势力集合（候选外与禁选合并）。
+function M.unavailableKingdoms(room)
   local allowed = room:getBanner("all_kingdoms") or {}
   local unavailable = {}
   for _, kingdom in ipairs(Ban.kingdoms or {}) do
     if not table.contains(allowed, kingdom) then unavailable[kingdom] = true end
   end
+  return unavailable
+end
+
+--- 现有正式牌堆中被移出游戏的势力锦囊实体；按本模式允许势力与池门槛过滤。
+function M.availableTricks(room)
+  local unavailable = M.unavailableKingdoms(room)
   local result = {}
   for _, id in ipairs(room.void or {}) do
     local card = Fk:getCardById(id, true)
     if card ~= nil and Cards.tricks[card.name] ~= nil
-      and Cards.trickAllowed(card.name, unavailable) then
+      and Cards.trickAllowed(card.name, unavailable, room) then
       result[#result + 1] = { id = id, name = card.name, kingdom = Cards.tricks[card.name] }
     end
   end
@@ -69,9 +75,15 @@ function M.trickNames(room)
   return room and room:getBanner(M.TRICK_BANNER) or {}
 end
 
---- 取得实际移出游戏的实体牌；不新建同名牌。
+--- 取得实际移出游戏的实体牌；不新建同名牌。服务器按与候选相同的过滤复核，
+--- 避免过期/伪造候选绕过势力禁选或洛水之誓的池门槛。
 function M.obtainTrick(room, player, entry)
-  if entry == nil then return nil end
+  if entry == nil or type(entry.name) ~= "string" then return nil end
+  local unavailable = M.unavailableKingdoms(room)
+  if Cards.tricks[entry.name] == nil
+    or not Cards.trickAllowed(entry.name, unavailable, room) then
+    return nil
+  end
   local id = table.find(room.void or {}, function(candidate)
     local card = Fk:getCardById(candidate, true)
     return card ~= nil and card.name == entry.name

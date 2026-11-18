@@ -198,6 +198,8 @@ function M.create(base)
       self.room:addSkill("qiao__em_jin001_double_rule")
       self.room:addSkill("qiao__linxiao_yuyu_rule")
       self.room:addSkill("qiao__dual_mount_rule")
+      self.room:addSkill("qiao__faction_trick_rule")
+      self.room:addSkill("qiao__luoshui_rule")
       self.room:addSkill("qiao__zhoujun_turn_bonus")
       for _, player in ipairs(self.room.players) do
         player:addFakeSkill("qiao__alliance")

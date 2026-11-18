@@ -73,6 +73,15 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   local pileBefore
   inRoom(function()
     content.setupHidden(room, target, "qiao_heg__jin002", "qiao_heg__jin003", "jin")
+    -- 固定剩余将池：放入两张真实晋势力候选（非君主/士兵/翼从），使“赐”的
+    -- 选将请求必然发生且结果由本夹具确定，而不是依赖随机将池里恰好有晋将。
+    for _, name in ipairs({ "qiao_heg__jin004", "qiao_heg__jin005" }) do
+      table.removeOne(room.general_pile, name)
+      table.insert(room.general_pile, 1, name)
+      if type(room.disabled_generals) == "table" then
+        table.removeOne(room.disabled_generals, name)
+      end
+    end
     pileBefore = #room.general_pile
   end)
   local invokes, picks = 0, 0
