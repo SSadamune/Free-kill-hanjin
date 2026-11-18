@@ -32,16 +32,16 @@ skill:addEffect("cardskill", {
   min_target_num = 1,
   max_target_num = function(self, player, card)
     local room = Fk:currentRoom()
-    return #room:getAlivePlayers()
+    return #room:getPresentPlayers()
   end,
+  -- cardskill 的默认 targetFilter 恒为 false；接回共用入口后，客户端按同一
+  -- mod_target_filter 条件点亮目标。
+  target_filter = Util.CardTargetFilter,
   mod_target_filter = function(self, player, to_select, selected, card, extra_data)
     return to_select ~= nil and to_select:isAlive() and not to_select:isRemoved()
   end,
   can_use = function(self, player)
-    for _, other in ipairs(Fk:currentRoom():getAlivePlayers()) do
-      if other:isAlive() and not other:isRemoved() then return true end
-    end
-    return false
+    return #Fk:currentRoom():getPresentPlayers() > 0
   end,
   on_effect = function(self, room, effect)
     local target = effect.to

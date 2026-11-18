@@ -128,14 +128,14 @@ end
 skill:addEffect("cardskill", {
   prompt = "#qiao__luoshui_zhishi_skill",
   target_num = 1,
+  -- cardskill 的默认 targetFilter 恒为 false；接回共用入口后，客户端按同一
+  -- mod_target_filter 条件点亮目标。
+  target_filter = Util.CardTargetFilter,
   mod_target_filter = function(self, player, to_select, selected, card, extra_data)
     return to_select ~= nil and to_select:isAlive() and not to_select:isRemoved()
   end,
   can_use = function(self, player)
-    for _, other in ipairs(Fk:currentRoom():getAlivePlayers()) do
-      if other:isAlive() and not other:isRemoved() then return true end
-    end
-    return false
+    return #Fk:currentRoom():getPresentPlayers() > 0
   end,
   on_use = function(self, room, use)
     -- 用牌时记录本次用牌的势力快照；立即结算推迟到目标事件之后。

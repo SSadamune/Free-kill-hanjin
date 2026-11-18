@@ -12,6 +12,7 @@
 --      当前势力检查，手牌为零补至当前体力。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local FactionTricks = require "packages.qiao.pkg.qiao_mode.rules.faction_tricks"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
@@ -83,29 +84,21 @@ local function presetDrawTop(room, count)
   return ids
 end
 
---- 建立与当前房间对应的真实客户端角色/房间，用于请求处理夹具。
-local function withClientRoom(current, fn)
-  local ClientPlayer = require "ltk.client.clientplayer"
-  local clients = {}
-  for _, original in ipairs(current.players) do
-    local copy = ClientPlayer:new(original._splayer)
-    for key, value in pairs(original) do
-      if key ~= "room" and key ~= "class" and key ~= "serverplayer" then copy[key] = value end
+--- 客户端房间禁止回落服务端名单查询，其余公开状态复用公共 client_room 夹具。
+local function withoutServerRoster(current)
+  return setmetatable({}, { __index = function(_, key)
+    if key == "getAlivePlayers" or key == "getOtherPlayers" then
+      error("client test must not fall back to server " .. tostring(key), 2)
     end
-    local cards = {}
-    for area, ids in pairs(copy.player_cards or {}) do cards[area] = table.simpleClone(ids) end
-    copy.player_cards = cards
-    table.insert(clients, copy)
-  end
-  for index, player in ipairs(clients) do player.next = clients[index % #clients + 1] end
-  local clientRoom = setmetatable({ players = clients, alive_players = clients, current = clients[1] },
-    { __index = current })
-  local originalRoom = Fk.currentRoom
-  Fk.currentRoom = function() return clientRoom end
-  local ok, err = pcall(function() fn(clients, clientRoom) end)
-  Fk.currentRoom = originalRoom
-  if not ok then error(err, 0) end
-  return clients, clientRoom
+    return current[key]
+  end })
+end
+
+--- 正式客户端的出牌请求类：由 qiao_heg_mode 的 board 注册。
+local function qiaoPlayCardClass()
+  local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+  local client = board.client_klass:new(ClientInstance.client)
+  return assert(client.request_handlers.PlayCard)
 end
 
 Testqiao_faction_tricks = {
@@ -326,7 +319,7 @@ function Testqiao_faction_tricks:testDistributionEntrySelectsDiscardedCardsInRea
   local choose = assert(Fk.skills["ex__choose_skill"])
   choose._extra_data = extra
   local ok, err = pcall(function()
-    withClientRoom(room, function(clients)
+    client_room.run(room, function(clients)
       local me = clients[1]
       lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
       local handler = ReqActive:new(me, { "ex__choose_skill", "#qiao__test-distribute", true, extra })
@@ -588,6 +581,86 @@ function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains(
   lu.assertFalse(table.contains(target:getCardIds("he"), targetCard.id))
   lu.assertEquals(#wei:getCardIds("he"), beforeWei + 1)
   lu.assertEquals(room:getCardArea(card), Card.Void, "势力锦囊用后仍移出游戏")
+end
+
+function Testqiao_faction_tricks:testClientPlayCardScansFactionTricksWithoutServerRoster()
+  local room, user, restore, luoshui = FkTest.room, p(1),
+    "qiao__restore_heartland", "qiao__luoshui_zhishi"
+  -- 七张势力锦囊一并交给使用者：真实 setup 会全部扫描一次，防同类客户端缺失；
+  -- 只对其中的号令天下／克复中原／洛水之誓断言可用性。
+  local tricks = { DANGGU, COMMAND_WORLD, restore, STRENGTHEN, LUANWU,
+    "qiao__sihai_guiping", luoshui }
+  local hand = {}
+  inRoom(function()
+    local ids = user:getCardIds("he")
+    if #ids > 0 then room:throwCard(ids, "qiao_test_clear", user, user) end
+    for _, name in ipairs(tricks) do
+      local id = voidTrick(room, name)
+      giveFromVoid(room, id, user)
+      hand[name] = id
+    end
+    -- 在场最低体力为 2（3/5/6 号并列）；2 号 3 点、使用者 4 点。
+    -- 死亡的 7 号（0 点）与暂离的 8 号（1 点）不得计入最低值。
+    user.hp = 4
+    p(2).hp = 3
+    p(3).hp = 2
+    p(4).hp = 4
+    p(5).hp = 2
+    p(6).hp = 2
+    p(7).dead = true
+    p(7).hp = 0
+    p(8).hp = 1
+    room:setPlayerMark(p(8), MarkEnum.PlayerRemoved .. "-turn", 1)
+    room.current = user
+    user.phase = Player.Play
+  end)
+  client_room.run(withoutServerRoster(room), function(clients, clientRoom)
+    lu.assertFalse(pcall(function() return clientRoom:getAlivePlayers() end),
+      "真实客户端房间不得回落服务端 getAlivePlayers")
+    lu.assertEquals(#clientRoom:getPresentPlayers(), 6, "在场名单应排除死亡与暂离角色")
+    local me = clients[1]
+    local handler = qiaoPlayCardClass():new(me)
+    handler:setup()
+    local items = handler.scene:getAllItems("CardItem")
+    for name, id in pairs(hand) do
+      lu.assertNotNil(items[id], "真实 setup 应扫描手牌中的势力锦囊: " .. name)
+    end
+    for _, name in ipairs({ COMMAND_WORLD, restore, luoshui }) do
+      lu.assertTrue(handler:cardValidity(hand[name]),
+        "真实 setup 应点亮手牌中的势力锦囊: " .. name)
+    end
+    -- 号令天下：高于最低者（含自己）可选，并列最低者不可选，死亡与暂离角色不可选。
+    handler:selectCard(hand[COMMAND_WORLD], { selected = true })
+    lu.assertTrue(handler:targetValidity(clients[2].id), "体力高于最低的角色应可选")
+    lu.assertTrue(handler:targetValidity(me.id), "体力高于最低时自己可选")
+    lu.assertFalse(handler:targetValidity(clients[3].id), "并列最低的角色不可选")
+    lu.assertFalse(handler:targetValidity(clients[5].id), "并列最低的角色不可选")
+    lu.assertFalse(handler:targetValidity(clients[6].id), "并列最低的角色不可选")
+    lu.assertFalse(handler:targetValidity(clients[7].id), "死亡角色不可选")
+    lu.assertFalse(handler:targetValidity(clients[8].id), "暂离角色不可选")
+    handler:selectTarget(clients[2].id, { selected = true })
+    lu.assertTrue(handler:feasible(), "号令天下选一名高于最低的目标后应可确认")
+    handler:selectTarget(clients[2].id, { selected = false })
+    -- 另外两张：各自至少能点选一个合法目标并确认。
+    local other = qiaoPlayCardClass():new(me)
+    other:setup()
+    for _, name in ipairs({ restore, luoshui }) do
+      other:selectCard(hand[name], { selected = true })
+      lu.assertTrue(other:targetValidity(clients[2].id), name .. " 应可选合法目标")
+      other:selectTarget(clients[2].id, { selected = true })
+      lu.assertTrue(other:feasible(), name .. " 选一个目标后应可确认")
+      other:selectTarget(clients[2].id, { selected = false })
+      other:selectCard(hand[name], { selected = false })
+    end
+    -- 克复中原：客户端上限只数在场角色。
+    local restoreCard = Fk:getCardById(hand[restore], true)
+    local restoreSkill = restoreCard:getSkill(me)
+    lu.assertTrue(restoreSkill:canUse(me, restoreCard), "克复中原在客户端应可用")
+    lu.assertEquals(restoreSkill:getMaxTargetNum(me, restoreCard), 6,
+      "克复中原的客户端上限应为在场人数")
+    other:_finish()
+    handler:_finish()
+  end)
 end
 
 function Testqiao_faction_tricks:testRestoreHeartlandChoicesAndShuBonus()
