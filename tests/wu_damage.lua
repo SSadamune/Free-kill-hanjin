@@ -84,6 +84,24 @@ local function seedDrawPile(room, specs)
   return ids
 end
 
+--- 取当前房间中指定汉晋牌位的实体牌，保留该牌位自己的 extra_data。
+-- 洗牌或初始手牌可能已把它发到其他角色手里，所以不限定仍在牌堆。
+local function roomCardAtSlot(room, player, slot)
+  local id
+  inRoom(function()
+    local card = table.find(Fk.cards, function(candidate)
+      local area = room:getCardArea(candidate.id)
+      return candidate.extra_data ~= nil
+        and candidate.extra_data.qiao_slot == slot
+        and area ~= Card.Unknown and area ~= Card.Void
+    end)
+    assert(card ~= nil, "房间中缺少汉晋牌位 " .. slot)
+    id = card.id
+    room:obtainCard(player, card, false, fk.ReasonJustMove)
+  end)
+  return id
+end
+
 local function grant(player, skillName)
   inRoom(function()
     player.room:handleAddLoseSkills(player, skillName, nil, false, true)
@@ -301,6 +319,109 @@ function Testqiao_wu_damage:testHongyanSpadeHandEquipAndJudge()
   inRoom(function() room:judge(judge) end)
   lu.assertEquals(judge.card.suit, Card.Heart)
   lu.assertEquals(judge.card.id, judgeIds[1])
+end
+
+-- 红颜：真实黑桃9雷【杀】经正常回包使用，锁视牌保留原包与逐实体元数据，
+-- 原实体不变，并完成音效、移动、雷伤害和弃牌。
+function Testqiao_wu_damage:testHongyanRealThunderSlashKeepsEntityAndResolves()
+  local room = FkTest.room
+  grant(p(1), HONGYAN)
+  clearCards(room, p(1), "he")
+  setHand(room, p(2), {})
+  inRoom(function()
+    room.current = p(1)
+    p(1).phase = Player.Play
+  end)
+
+  local id = roomCardAtSlot(room, p(1), "shibei/S/9")
+  local raw = Fk:getCardById(id, true)
+  local rawExtra = raw.extra_data
+  lu.assertNotNil(rawExtra)
+  lu.assertEquals(raw.suit, Card.Spade)
+  lu.assertEquals(raw.color, Card.Black)
+  lu.assertEquals(rawExtra.qiao_slot, "shibei/S/9")
+  lu.assertEquals(#rawExtra.qiao_adaptation, 1)
+  local hp = p(2).hp
+
+  local damages, handled = {}, {}
+  inRoom(function()
+    local probe = fk.CreateSkill { name = "#qiao_test_wu_hongyan_damage" }
+    probe:addEffect(fk.Damage, {
+      global = true,
+      can_refresh = function(self, event, target, player, data)
+        return handled[event.id] ~= true and data.to == p(2)
+      end,
+      on_refresh = function(self, event, target, player, data)
+        handled[event.id] = true
+        table.insert(damages, {
+          from = data.from and data.from.id,
+          to = data.to and data.to.id,
+          damage = data.damage,
+          nature = data.damageType,
+          card = data.card and data.card.id,
+          suit = data.card and data.card.suit,
+          package = data.card and data.card.package and data.card.package.name,
+        })
+      end,
+    })
+    room:addSkill(probe:createSkill())
+  end)
+
+  FkTest.setNextReplies(p(1), { FkTest.ReplyCard(Fk:getCardById(id), { p(2) }) })
+  FkTest.setNextReplies(p(2), { "__cancel" })
+
+  local sounds, used = {}, nil
+  local originalSound = room.broadcastPlaySound
+  room.broadcastPlaySound = function(self, path)
+    table.insert(sounds, path)
+    return originalSound(self, path)
+  end
+  local ok, err = pcall(function()
+    inRoom(function()
+      used = room:askToUseCard(p(1), { pattern = ".", cancelable = true })
+      lu.assertNotNil(used)
+      lu.assertEquals(used.card.id, id)
+      room:useCard(used)
+    end)
+  end)
+  room.broadcastPlaySound = originalSound
+  if not ok then error(err) end
+
+  local filtered = used.card
+  lu.assertEquals(filtered.suit, Card.Heart)
+  lu.assertEquals(filtered.color, Card.Red)
+  lu.assertIs(filtered.package, Fk.packages.qiao_cards)
+  lu.assertEquals(filtered.skill.name, "qiao__thunder_slash_skill")
+  lu.assertNotIs(filtered.extra_data, rawExtra)
+  lu.assertEquals(filtered.extra_data.qiao_slot, "shibei/S/9")
+  lu.assertEquals(filtered.extra_data.qiao_package, "qiao_cards")
+  lu.assertEquals(filtered.extra_data.qiao_adaptation[1].condition, "gujun")
+  lu.assertEquals(filtered.extra_data.qiao_adaptation[1].effect, "ignore_times")
+
+  lu.assertNotNil(table.find(sounds, function(path)
+    return path ~= nil
+      and path:find("/packages/qiao/", 1, true) ~= nil
+      and path:find("qiao__thunder__slash", 1, true) ~= nil
+  end), "实际用牌音效应按原实体所属包播放")
+
+  lu.assertEquals(#damages, 1)
+  lu.assertEquals(damages[1].from, p(1).id)
+  lu.assertEquals(damages[1].to, p(2).id)
+  lu.assertEquals(damages[1].damage, 1)
+  lu.assertEquals(damages[1].nature, fk.ThunderDamage)
+  lu.assertEquals(damages[1].card, id)
+  lu.assertEquals(damages[1].suit, Card.Heart)
+  lu.assertEquals(damages[1].package, "qiao_cards")
+  lu.assertEquals(p(2).hp, hp - 1)
+
+  lu.assertEquals(room:getCardArea(id), Card.DiscardPile)
+  lu.assertTrue(table.contains(room.discard_pile, id))
+  lu.assertIs(Fk:getCardById(id, true), raw)
+  lu.assertIs(raw.extra_data, rawExtra)
+  lu.assertEquals(raw.suit, Card.Spade)
+  lu.assertEquals(raw.color, Card.Black)
+  lu.assertEquals(rawExtra.qiao_slot, "shibei/S/9")
+  lu.assertEquals(#rawExtra.qiao_adaptation, 1)
 end
 
 -- 天义赢：乐成拼点、酣战取回最大杀，并建立本回合胜利标记 ---------------
