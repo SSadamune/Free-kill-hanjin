@@ -1587,7 +1587,9 @@ function Testqiao_commander_retinue:testFormalSourceDescriptionNamesCardAndRetin
   lu.assertTrue(description:find("若你没有士兵，你可以移除一张不为赵云的武将牌，视为使用【无懈可击】。", 1, true) ~= nil)
   lu.assertTrue(description:find("「白马义从」", 1, true) ~= nil)
   lu.assertFalse(description:find("其标注的牌", 1, true) ~= nil)
-  lu.assertEquals(C.description(user, "qiao_heg__shu005"), description)
+  -- 头像详情经 skill_source_labels 包裹〔统领〕标签；规则/UI 原始描述不带标签。
+  local original = C.description(user, "qiao_heg__shu005")
+  lu.assertEquals(description, "<b>〔统领〕</b> " .. original)
   local skill = Fk.skills[C.ABILITY_SKILL]
   local previous = skill.interaction.data
   skill.interaction.data = "qiao_heg__shu005"
