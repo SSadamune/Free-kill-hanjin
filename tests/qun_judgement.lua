@@ -130,7 +130,7 @@ function Testqiao_qun_judgement:testBeigeHeartRecoversDamagedPlayer()
   local paid = give(p3, SLASH, Card.Club, 2)
   seedJudgeCard("qiao__jink", Card.Heart, 9)
   inRoom(function() p2.hp = 3 end)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   FkTest.setNextReplies(p2, { "" })
 
   useSlash(p1, p2)
@@ -149,7 +149,7 @@ function Testqiao_qun_judgement:testBeigeSpadeStacksSourceWithoutFlippingBack()
   give(p3, SLASH, Card.Club, 3)
   seedJudgeCard("qiao__jink", Card.Spade, 9)
   inRoom(function() p2.hp = 3 end)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ firstHandId(p3) }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ firstHandId(p3) }) })
   FkTest.setNextReplies(p2, { "" })
   useSlash(p1, p2)
   lu.assertFalse(inRoom(function() return p1.faceup end))
@@ -157,7 +157,7 @@ function Testqiao_qun_judgement:testBeigeSpadeStacksSourceWithoutFlippingBack()
   -- 第二次黑桃判定：已经叠置，不再翻回。
   inRoom(function() p2.hp = 3 end)
   seedJudgeCard("qiao__jink", Card.Spade, 8)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ firstHandId(p3) }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ firstHandId(p3) }) })
   FkTest.setNextReplies(p2, { "" })
   useSlash(p1, p2)
   lu.assertFalse(inRoom(function() return p1.faceup end))
@@ -195,7 +195,7 @@ function Testqiao_qun_judgement:testHuangjinBlackIncreasesFirstNonHandcardDamage
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
   seedJudgeCard("qiao__jink", Card.Spade, 9)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   inRoom(function()
     local before = p2.hp
     room():damage { from = p1, to = p2, damage = 1 }
@@ -210,7 +210,7 @@ function Testqiao_qun_judgement:testHuangjinRedGivesJudgeCardToSource()
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
   local judgeId = seedJudgeCard("qiao__jink", Card.Heart, 9)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   inRoom(function()
     local before = p2.hp
     room():damage { from = p1, to = p2, damage = 1 }
@@ -230,13 +230,15 @@ function Testqiao_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstCha
   clearHand(p3)
   give(p3, SLASH, Card.Club, 2)
   local asked = 0
-  local original = room().askToSkillInvoke
+  local originalInvoke = room().askToSkillInvoke
+  local originalDiscard = room().askToDiscard
   room().askToSkillInvoke = function(self, player, params)
-    if params and params.skill_name == HUANGJIN then
-      asked = asked + 1
-      return true
-    end
-    return original(self, player, params)
+    if params and params.skill_name == HUANGJIN then asked = asked + 1 end
+    return originalInvoke(self, player, params)
+  end
+  room().askToDiscard = function(self, player, params)
+    if params and params.skill_name == HUANGJIN then asked = asked + 1 end
+    return originalDiscard(self, player, params)
   end
   local ok, err = pcall(function()
     inRoom(function()
@@ -246,7 +248,8 @@ function Testqiao_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstCha
     end)
     lu.assertEquals(asked, 0)
   end)
-  room().askToSkillInvoke = original
+  room().askToSkillInvoke = originalInvoke
+  room().askToDiscard = originalDiscard
   assert(ok, err)
 end
 
@@ -262,11 +265,10 @@ function Testqiao_qun_judgement:testHuangjinIgnoresHandcardSlashDamage()
   seedJudgeCard("qiao__jink", Card.Spade, 9)
 
   local asked = 0
-  local original = room().askToSkillInvoke
-  room().askToSkillInvoke = function(self, player, params)
+  local original = room().askToDiscard
+  room().askToDiscard = function(self, player, params)
     if params and params.skill_name == HUANGJIN then
       asked = asked + 1
-      return true
     end
     return original(self, player, params)
   end
@@ -283,7 +285,7 @@ function Testqiao_qun_judgement:testHuangjinIgnoresHandcardSlashDamage()
     end)
     lu.assertEquals(asked, 1)
   end)
-  room().askToSkillInvoke = original
+  room().askToDiscard = original
   assert(ok, err)
 end
 

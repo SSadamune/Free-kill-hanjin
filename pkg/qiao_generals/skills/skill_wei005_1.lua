@@ -4,6 +4,9 @@
 -- 伤害+1。发动后效果是本回合的独立延时效果：即使许褚随后失去此技能，
 -- 本回合的加伤仍然有效。因此效果只读取回合标记，不再检查技能是否仍在；
 -- 标记刻意不使用技能名前缀，避免武将交换把它当成来源技能标记迁走。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回恰好一张合法牌也不发动。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wei005_1",
 }
@@ -25,19 +28,14 @@ skill:addEffect(fk.EventPhaseEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei005_1-invoke",
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认：取消即不发动，弃牌在 on_use 统一支付。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei005_1-discard",
-      cancelable = false,
+      cancelable = true,
       skip = true,
     })
     if #cards ~= 1 then return false end
@@ -65,8 +63,8 @@ skill:addEffect(fk.DamageCaused, {
 })
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_wei005_1-invoke"] = "裸衣：你可以弃置一张牌，本回合你使用【杀】或【决斗】造成的伤害+1",
-  ["#qiao__skill_wei005_1-discard"] = "裸衣：弃置一张牌",
+  ["#qiao__skill_wei005_1-discard"] =
+    "裸衣：弃置一张牌发动，本回合你使用【杀】或【决斗】造成的伤害+1",
 }
 
 return skill

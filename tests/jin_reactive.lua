@@ -117,7 +117,7 @@ function Testqiao_jin_reactive:testBeishiDistantOtherVictimDoesNotAvoidHpLoss()
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4; other.hp = 4 end)
   lu.assertFalse(p:inMyAttackRange(other))
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { other }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { other }) })
   inRoom(function() room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) } end)
   lu.assertEquals(other.hp, 3)
   lu.assertEquals(p.hp, 3)
@@ -139,7 +139,6 @@ function Testqiao_jin_reactive:testBeishiFreeUseRejectsInjectedPassiveCard()
     end,
   }, function()
     FkTest.setNextReplies(p, {
-      "1",
       FkTest.ReplyDiscard({ discarded }),
       FkTest.ReplyCard(Fk:getCardById(injected), {}),
     })
@@ -163,7 +162,7 @@ function Testqiao_jin_reactive:testBeishiDamagesOriginalUserAvoidsHpLoss()
   local mine = give(room, p, { { "jink", Card.Heart, 4 } })[1]
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4; source.hp = 4 end)
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { source }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { source }) })
   inRoom(function() room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) } end)
   lu.assertEquals(source.hp, 3)
   lu.assertEquals(p.hp, 4)
@@ -176,7 +175,7 @@ function Testqiao_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDamage
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4 end)
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), "" })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), "" })
   inRoom(function()
     room:useCard {
       from = source,

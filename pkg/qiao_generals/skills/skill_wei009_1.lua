@@ -18,24 +18,12 @@ local SKIPPABLE = {
   [Player.Discard] = true,
 }
 
--- 每个可跳过阶段使用自己的提示，确认前说明当前跳过的阶段及该阶段的可选后效。
+-- 弃牌请求本身就是发动选择：每个可跳过阶段使用自己的提示，说明当前阶段及可选后效。
 local PROMPTS = {
-  [Player.Judge] = {
-    invoke = "#qiao__skill_wei009_1-invoke-judge",
-    discard = "#qiao__skill_wei009_1-discard-judge",
-  },
-  [Player.Draw] = {
-    invoke = "#qiao__skill_wei009_1-invoke-draw",
-    discard = "#qiao__skill_wei009_1-discard-draw",
-  },
-  [Player.Play] = {
-    invoke = "#qiao__skill_wei009_1-invoke-play",
-    discard = "#qiao__skill_wei009_1-discard-play",
-  },
-  [Player.Discard] = {
-    invoke = "#qiao__skill_wei009_1-invoke-discard",
-    discard = "#qiao__skill_wei009_1-discard-discard",
-  },
+  [Player.Judge] = "#qiao__skill_wei009_1-discard-judge",
+  [Player.Draw] = "#qiao__skill_wei009_1-discard-draw",
+  [Player.Play] = "#qiao__skill_wei009_1-discard-play",
+  [Player.Discard] = "#qiao__skill_wei009_1-discard-discard",
 }
 
 ---@param player ServerPlayer
@@ -64,20 +52,15 @@ skill:addEffect(fk.EventPhaseChanging, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    local prompts = PROMPTS[data.phase]
-    if prompts == nil then return false end
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = prompts.invoke,
-    }) then
-      return false
-    end
+    local prompt = PROMPTS[data.phase]
+    if prompt == nil then return false end
+    -- 可取消的弃牌请求同时承担“是否发动”的选择：取消即不弃牌、不跳过。
     local discarded = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
-      prompt = prompts.discard,
+      prompt = prompt,
       cancelable = true,
       skip = true,
     })
@@ -128,14 +111,10 @@ skill:addEffect(fk.EventPhaseChanging, {
 Fk:loadTranslationTable {
   ["qiao__skill_wei009_1"] = "巧变",
   [":qiao__skill_wei009_1"] = "你可以弃置一张牌并跳过一个阶段（准备和结束阶段除外），若为：摸牌阶段，你可以获得至多两名其他角色各一张手牌；出牌阶段，你可以移动场上的一张牌。",
-  ["#qiao__skill_wei009_1-invoke-judge"] = "巧变：你可以弃置一张牌并跳过判定阶段",
-  ["#qiao__skill_wei009_1-invoke-draw"] = "巧变：你可以弃置一张牌并跳过摸牌阶段，然后你可以获得至多两名其他角色各一张手牌",
-  ["#qiao__skill_wei009_1-invoke-play"] = "巧变：你可以弃置一张牌并跳过出牌阶段，然后你可以移动场上一张牌",
-  ["#qiao__skill_wei009_1-invoke-discard"] = "巧变：你可以弃置一张牌并跳过弃牌阶段",
-  ["#qiao__skill_wei009_1-discard-judge"] = "巧变：弃置一张牌以跳过判定阶段",
-  ["#qiao__skill_wei009_1-discard-draw"] = "巧变：弃置一张牌以跳过摸牌阶段",
-  ["#qiao__skill_wei009_1-discard-play"] = "巧变：弃置一张牌以跳过出牌阶段",
-  ["#qiao__skill_wei009_1-discard-discard"] = "巧变：弃置一张牌以跳过弃牌阶段",
+  ["#qiao__skill_wei009_1-discard-judge"] = "巧变：你可以弃置一张牌并跳过判定阶段",
+  ["#qiao__skill_wei009_1-discard-draw"] = "巧变：你可以弃置一张牌并跳过摸牌阶段，然后你可以获得至多两名其他角色各一张手牌",
+  ["#qiao__skill_wei009_1-discard-play"] = "巧变：你可以弃置一张牌并跳过出牌阶段，然后你可以移动场上一张牌",
+  ["#qiao__skill_wei009_1-discard-discard"] = "巧变：你可以弃置一张牌并跳过弃牌阶段",
   ["#qiao__skill_wei009_1-gain"] = "巧变：跳过摸牌阶段，选择至多两名其他角色，各获得其一张手牌",
 }
 

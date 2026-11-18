@@ -5,6 +5,9 @@
 -- UseCard 事件计数，包含响应中的实际使用与装备，纯“打出”的 RespondCard
 -- 不计入。弃置一张牌后：基本牌或普通锦囊只令所选目标无效（不是取消目标，
 -- 也不是取消整张牌）；装备牌或延时锦囊则横置该使用者。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回恰好一张牌也不发动。弃牌仍在 on_use 支付（skip=true）。
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin012_1",
 }
@@ -56,18 +59,13 @@ skill:addEffect(fk.AfterCardUseDeclared, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin012_1-invoke:" .. target.id,
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认；取消请求即不发动。提示保留第二张牌的使用者。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin012_1-discard",
+      prompt = "#qiao__skill_jin012_1-discard::" .. target.id,
       cancelable = true,
       skip = true,
     })
@@ -115,8 +113,7 @@ skill:addEffect(fk.AfterCardUseDeclared, {
 skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_jin012_1-invoke"] = "慈威：你可以弃置一张牌，令 %dest 使用的第二张牌无效或横置其",
-  ["#qiao__skill_jin012_1-discard"] = "慈威：弃置一张牌",
+  ["#qiao__skill_jin012_1-discard"] = "慈威：弃置一张牌发动，令 %dest 使用的第二张牌无效或横置其",
   ["#qiao__skill_jin012_1-targets"] = "慈威：选择此牌任意个目标，令此牌对其无效",
 }
 

@@ -313,8 +313,8 @@ function Testqiao_qun_cards:testShuangxiongConvertDuelAndRetrieveDamageCard()
     FkTest.ReplyDiscard({ red }), -- 弃置红牌
     "",                           -- 决斗中不打出【杀】
   })
-  -- 双雄两处发动都走同一技能名：直接确认发动，避免“无【杀】可响应”时
-  -- 响应请求被跳过导致结束阶段收牌回复错位。
+  -- 摸牌阶段结束的弃牌请求已并入发动确认；结束阶段的收牌仍单独确认发动，
+  -- 直接确认以免“无【杀】可响应”时响应请求被跳过导致收牌回复错位。
   skill_test.withSkillRequests(room(), SHUANGXIONG, {
     askToSkillInvoke = function() return true end,
   }, function()

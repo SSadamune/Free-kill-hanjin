@@ -5,6 +5,9 @@
 -- 自己的牌，取消目标，获得原牌可得材料，然后可使用一张无距离限制的牌。
 -- 只有本次后续用牌对原使用者造成的真实伤害才算；未用、取消、未造成伤害均失去
 -- 1点体力。后续用牌在“选择时”即接入无距离策略，避免远距离目标选不上。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回恰好一张同类别牌也不发动。
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local skill = fk.CreateSkill {
@@ -73,12 +76,7 @@ skill:addEffect(fk.TargetConfirmed, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin004_2-invoke:" .. data.use.from.id,
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认；取消请求即不发动。提示保留牌的原使用者。
     local pattern = categoryPattern(data.use.card)
     local discarded = room:askToDiscard(player, {
       min_num = 1,
@@ -86,7 +84,7 @@ skill:addEffect(fk.TargetConfirmed, {
       include_equip = true,
       pattern = pattern,
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin004_2-discard",
+      prompt = "#qiao__skill_jin004_2-discard:" .. data.use.from.id,
       cancelable = true,
     })
     if discarded == nil or #discarded ~= 1 then return false end
@@ -146,8 +144,7 @@ end)
 skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_jin004_2-invoke"] = "悖弑：你可以弃置一张同类别牌，取消 %src 使用的此牌",
-  ["#qiao__skill_jin004_2-discard"] = "悖弑：弃置一张同类别牌",
+  ["#qiao__skill_jin004_2-discard"] = "悖弑：弃置一张同类别牌发动，取消 %src 使用的此牌",
   ["#qiao__skill_jin004_2-use"] = "悖弑：你可以使用一张牌（无距离限制）",
 }
 

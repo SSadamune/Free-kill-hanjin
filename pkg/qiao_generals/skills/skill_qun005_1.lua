@@ -7,6 +7,9 @@
 -- 双雄本体后本回合已建立的权限仍可执行；范围不额外缩小为手牌。
 -- 结束阶段的后半段独立检查本回合实际造成过伤害的牌，不以是否发动前半段为
 -- 条件；只取得仍在弃牌堆的实体牌，已被其他效果移走的牌不收回。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回一张牌也不发动。
 local STATE = "qiao__qun_cards_state"
 local COLOR_MARK = "qiao_shuangxiong_color"
 
@@ -34,19 +37,14 @@ skill:addEffect(fk.EventPhaseEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun005_1-invoke",
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认；取消请求即不发动。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun005_1-discard",
-      cancelable = false,
+      cancelable = true,
     })
     if cards == nil or #cards == 0 then return false end
     event:setCostData(self, { color = discardColor(room, cards) })
@@ -113,8 +111,7 @@ skill:addEffect(fk.EventPhaseStart, {
 })
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_qun005_1-invoke"] = "双雄：你可以弃置一张牌，本回合将一张与其颜色不同的牌当【决斗】使用",
-  ["#qiao__skill_qun005_1-discard"] = "双雄：弃置一张自己的手牌或装备牌",
+  ["#qiao__skill_qun005_1-discard"] = "双雄：弃置一张自己的手牌或装备牌发动，本回合可将一张与其颜色不同的牌当【决斗】使用",
   ["#qiao__skill_qun005_1-retrieve"] = "双雄：获得本回合对你造成过伤害且仍在弃牌堆的牌",
 }
 

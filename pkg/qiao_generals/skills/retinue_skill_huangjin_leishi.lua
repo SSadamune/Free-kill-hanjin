@@ -9,6 +9,9 @@
 -- 不会因之后取得翼从而重开。事件是否为“不因使用手牌”由记录器按真实
 -- DamageData（chain/parent）与 UseCardData:isUsingHandcard 判定，本技能不重复
 -- 判断，也不读取客户端无法取得的私有事件。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回一张手牌也不发动。
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_huangjin_leishi",
 }
@@ -40,18 +43,13 @@ skill:addEffect(fk.DamageCaused, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_huangjin_leishi-invoke:" .. data.from.id,
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认；取消请求即不发动。提示保留伤害来源。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = false,
       skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_huangjin_leishi-discard",
+      prompt = "#qiao__retinue_skill_huangjin_leishi-discard:" .. data.from.id,
       cancelable = true,
     })
     if cards == nil or #cards < 1 then return false end
@@ -76,8 +74,7 @@ skill:addEffect(fk.DamageCaused, {
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_huangjin_leishi"] = "黄巾雷使",
   [":qiao__retinue_skill_huangjin_leishi"] = "每回合首次有角色不因使用手牌而造成伤害时，你可以弃置一张手牌并判定，若为：黑色，此伤害+1；红色，其获得此判定牌。",
-  ["#qiao__retinue_skill_huangjin_leishi-invoke"] = "黄巾雷使：你可以弃置一张手牌并判定（伤害来源 %src）",
-  ["#qiao__retinue_skill_huangjin_leishi-discard"] = "黄巾雷使：弃置一张手牌",
+  ["#qiao__retinue_skill_huangjin_leishi-discard"] = "黄巾雷使：弃置一张手牌发动并判定（伤害来源 %src）",
 }
 
 return skill

@@ -6,6 +6,9 @@
 -- 弃牌者为蔡文姬，判定者为受伤角色；判定走正式 judge 流程（鬼道可改判）。
 -- “【杀】造成的伤害”按伤害牌当前实际牌名判断，转化【杀】同样成立。
 -- 叠置是定向操作：仅平置→叠置，已叠置不翻回（见 skill_wei014_2 放逐）。
+--
+-- 发动确认并入这一次弃牌请求，不再另发 askToSkillInvoke：取消请求即不发动，
+-- 请求未返回一张牌也不发动。提示保留判定者。
 local skill = fk.CreateSkill {
   name = "qiao__skill_qun012_1",
 }
@@ -57,18 +60,13 @@ skill:addEffect(fk.Damaged, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun012_1-invoke:" .. target.id,
-    }) then
-      return false
-    end
+    -- 弃牌请求本身即发动确认；取消请求即不发动。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
-      prompt = "#qiao__skill_qun012_1-discard-self",
+      prompt = "#qiao__skill_qun012_1-discard-self:" .. target.id,
       cancelable = true,
     })
     if cards == nil or #cards < 1 then return false end
@@ -85,8 +83,7 @@ skill:addEffect(fk.Damaged, {
 Fk:loadTranslationTable {
   ["qiao__skill_qun012_1"] = "悲歌",
   [":qiao__skill_qun012_1"] = "当一名角色受到【杀】造成的伤害后，你可以弃置一张牌，然后令其判定，若为：红桃，其回复1点体力；方片，其摸两张牌；梅花，来源弃置两张牌；黑桃，来源叠置。",
-  ["#qiao__skill_qun012_1-invoke"] = "悲歌：你可以弃置一张牌，令 %src 判定",
-  ["#qiao__skill_qun012_1-discard-self"] = "悲歌：弃置一张牌",
+  ["#qiao__skill_qun012_1-discard-self"] = "悲歌：弃置一张牌发动，令 %src 判定",
   ["#qiao__skill_qun012_1-discard"] = "悲歌：弃置两张牌",
 }
 

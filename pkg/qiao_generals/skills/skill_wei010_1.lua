@@ -1,7 +1,7 @@
 -- WEI010 徐晃 · 断粮
 --
 -- 规则基线：docs/rules/standard-generals.md 魏区 WEI010。
--- 一张黑色非锦囊牌当【兵粮寸断】使用；只授权手牌。
+-- 一张黑色非锦囊牌当【兵粮寸断】使用；描述未限定手牌区域，不额外增加区域限制。
 -- 其他角色跳过摸牌阶段后，可以令一名角色摸一张牌。这里监听真实的
 -- fk.EventPhaseSkipped（阶段已被跳过之后），不依赖兵粮寸断这一具体来源：
 -- 任何原因造成的摸牌阶段跳过都可以触发。
@@ -19,7 +19,9 @@ skill:addEffect("viewas", {
     min_num = 1,
     max_num = 1,
     -- 牌名|点数|花色|区域|完整牌名|类别：黑色且为基本牌或装备牌（排除锦囊）。
-    pattern = ".|.|black|||basic,equip",
+    -- 区域与完整牌名两字段必须显式写通配符 "."；留空会被解析成空匹配表，
+    -- 导致任何位置、任何牌名都无法匹配（见 exppattern.parseMatcher）。
+    pattern = ".|.|black|.|.|basic,equip",
   },
   view_as = function(self, player, cards)
     if #cards ~= 1 then return nil end
