@@ -73,7 +73,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 - 补齐 Windows 客户端 Lua 模块加载路径。
 - 创建房间页对空/未注册游戏模式做初始化保护，避免在模式尚未赋值时查询设置；上游正式修复应位于 `Fk/Pages/Lobby/RoomGeneralSettings.qml` 的 `refreshGameMode` 入口，本项只在开发运行时生效。
 
-计时适配由 `scripts/prepare_runtime.py` 安装，会影响该开发版中的其他游戏模式。改动在关闭游戏后仍保留，重新解压官方本体可恢复。
+计时适配由 `scripts/prepare_runtime.py` 安装，覆盖运行时根目录和 `packages/freekill-core` 中已安装的核心。适配会影响该开发版中的其他游戏模式，关闭游戏后仍保留。重新安装相应核心可恢复官方文件。
 
 **上述适配仅供本地开发使用，用户安装平行时空扩展后仍使用其新月杀本体原有的操作时间和超时惩罚机制。**
 

@@ -58,31 +58,40 @@ def replacements():
 def apply(runtime=RUNTIME):
     """Validate every replacement before writing, and support repeated syncs."""
     pending = {}
-    for relative, edits in replacements().items():
-        path = runtime / relative
-        original = path.read_text(encoding='utf-8')
-        updated = original
-        # Migrate markers installed by earlier local-console patches so repeated
-        # syncs remain idempotent after the project namespace rename.
-        for old_name in ('hanjinConsoleStart', 'hanjinConsoleTimeout', 'hanjinOperationTimeout'):
-            updated = updated.replace(old_name, 'qiao' + old_name[len('hanjin'):])
-        for old, new in edits:
-            # Exact lines avoid matching an indented occurrence inside another block.
-            if new in updated:
-                continue
-            if old not in updated:
-                raise RuntimeError(f'Unsupported runtime content: {relative}')
-            if old.startswith(' '):
-                updated, count = re.subn('(?m)^' + re.escape(old), lambda _: new, updated)
-                if not count:
-                    raise RuntimeError(f'Unsupported runtime indentation: {relative}')
-            else:
-                updated = updated.replace(old, new)
-        if updated != original:
-            pending[path] = updated
+    layouts = [path for path in (runtime, runtime / 'packages/freekill-core')
+               if (path / 'lua/freekill.lua').is_file()]
+    if not layouts:
+        raise RuntimeError(f'FreeKill core not found: {runtime}')
+    for layout in layouts:
+        pending.update(prepare_layout(layout))
     for path, content in pending.items():
         path.write_text(content, encoding='utf-8')
     print(f'Console timeout compatibility ready ({len(pending)} files updated)')
+
+
+def prepare_layout(layout):
+    pending = {}
+    for relative, edits in replacements().items():
+        path = layout / relative
+        original = path.read_text(encoding='utf-8')
+        updated = original
+        # Migrate markers from earlier local-console patches.
+        for old_name in ('hanjinConsoleStart', 'hanjinConsoleTimeout', 'hanjinOperationTimeout'):
+            updated = updated.replace(old_name, 'qiao' + old_name[len('hanjin'):])
+        for old, new in edits:
+            if new in updated:
+                continue
+            if old.startswith(' '):
+                # Avoid matching an indented occurrence inside another block.
+                updated, count = re.subn('(?m)^' + re.escape(old), lambda _: new, updated)
+            else:
+                count = updated.count(old)
+                updated = updated.replace(old, new)
+            if not count:
+                raise RuntimeError(f'Unsupported runtime content: {path}')
+        if updated != original:
+            pending[path] = updated
+    return pending
 
 
 if __name__ == '__main__':
