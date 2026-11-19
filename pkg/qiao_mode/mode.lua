@@ -21,6 +21,7 @@ local M = {}
 
 -- 大小势力/玉玺公共查询：服务器与客户端都只在本模式安装。
 KingdomSize.install()
+Ascension.installFoundingCountries()
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
 
@@ -207,6 +208,7 @@ function M.create(base, name)
       self.room:addSkill("qiao__jin_sources_rule")
       self.room:addSkill("qiao__zhen_shi_history_rule")
       self.room:addSkill("qiao__general_card_skills_rule")
+      self.room:addSkill("qiao__lord_flag_display")
       self.room:addSkill("qiao__em_jin001_double_rule")
       self.room:addSkill("qiao__linxiao_yuyu_rule")
       self.room:addSkill("qiao__dual_mount_rule")

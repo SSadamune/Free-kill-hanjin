@@ -42,7 +42,7 @@
 - **标识与依据**：运行时 ID `qiao__skill_han008_1`；源码 [skill_han008_1.lua](../../../../pkg/qiao_generals/skills/skill_han008_1.lua)。规则见[伏皇后规范](../../../rules/generals/han008-fuhuanghou.md)。同将求援见[用牌目标与距离](active.md#han008-2)。
 - **实现与接口**：
   - `EventPhaseStart` 全局监听其他角色的准备阶段；伏皇后已受伤且可与该角色拼点时，通过正规 `can_trigger/on_cost/on_use` 发动。`createTriggerSkill` 会用 `can_trigger` 覆盖基类 target 门槛，因此不需要 refresh／`room:useSkill` 代理；正常明置来源并记录技能发动。
-  - 伏皇后赢：给该角色加本回合 `no_damage` 延迟标记；房间级 `DamageCaused` 监听器按标记把该角色造成的伤害防止，监听器不依赖伏皇后之后是否仍有技能。
+  - 伏皇后赢：给该角色加本回合公开的「惴恐」标记。房间级 `DamageCaused` 监听器按标记防止该角色造成的伤害，监听器不依赖伏皇后之后是否仍有技能。
   - 没赢（含平局）：该角色可选择视为对伏皇后使用【杀】；使用显式目标策略，目标为伏皇后，不叠加普通距离条件，仍复核禁止使用／禁止指定。
 - **验证依据**：[han008_fuhuanghou.lua](../../../../tests/han008_fuhuanghou.lua) 覆盖惴恐赢后防止目标本回合伤害、平局按没赢允许目标视为使用无距离【杀】。历史记录见[共享验证证据](verification-evidence.md#han008_fuhuanghou)。
 - **未完成与边界**：未执行真实客户端选目标与拼点交互；未覆盖多个伏皇后同时惴恐、目标中途死亡／失技等排列；依赖公共目标／用牌复核。旧记录保留的计划定向入口为 `python scripts/test.py --file tests/han008_fuhuanghou.lua --timeout 120`（当时标为待基础组执行，未产生该文件单独输出，后由默认套件覆盖）。

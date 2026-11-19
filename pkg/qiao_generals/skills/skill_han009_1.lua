@@ -87,15 +87,18 @@ skill:addEffect(fk.TargetSpecified, {
       return p ~= nil and p:isAlive() and not p:isRemoved()
     end)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
-      min_num = 1,
-      max_num = 1,
-      targets = targets,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han009_1-target",
-      cancelable = false,
-    })
-    local to = chosen and chosen[1]
+    local to = targets[1]
+    if #targets > 1 then
+      local chosen = room:askToChoosePlayers(player, {
+        min_num = 1,
+        max_num = 1,
+        targets = targets,
+        skill_name = skill.name,
+        prompt = "#qiao__skill_han009_1-target",
+        cancelable = false,
+      })
+      to = chosen and chosen[1]
+    end
     if to == nil or to.dead or to:isRemoved() then return false end
 
     local options = { OPTION_DRAW }
@@ -162,7 +165,7 @@ end)
 Fk:loadTranslationTable {
   ["qiao__skill_han009_1"] = "谋溃",
   [":qiao__skill_han009_1"] = "当你使用【杀】指定目标后，你可以选择一个目标并选择一至两项：1.摸一张牌；2.弃置其一张牌。若你选择了两项，当其抵消此【杀】时，其弃置你一张牌。",
-  ["#qiao__skill_han009_1-invoke"] = "谋溃：选择此【杀】的一个目标并选择一至两项",
+  ["#qiao__skill_han009_1-invoke"] = "谋溃：你可以对本次【杀】的一个目标选择一至两项效果",
   ["#qiao__skill_han009_1-target"] = "谋溃：选择此【杀】的一个目标",
   ["#qiao__skill_han009_1-options"] = "谋溃：选择一至两项",
   ["#qiao__skill_han009_1-discard"] = "谋溃：弃置其一张牌",

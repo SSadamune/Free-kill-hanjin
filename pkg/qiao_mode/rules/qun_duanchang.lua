@@ -120,6 +120,21 @@ local function pairHasLost(room, player)
   return false
 end
 
+local DISPLAY_MARK = "@@qiao_duanchang"
+local DISPLAY_TAG = "qiao_duanchang_cards"
+Fk:loadTranslationTable { [DISPLAY_MARK] = "断肠" }
+
+CardSkills.addChangeListener(function(room)
+  local affected = room:getTag(DISPLAY_TAG)
+  if not affected then return end
+  for _, player in ipairs(room.players) do
+    local main = Exchange.actualGeneral(player, false)
+    local deputy = Exchange.actualGeneral(player, true)
+    local value = not player.dead and (affected[main] or affected[deputy]) and 1 or 0
+    if player:getMark(DISPLAY_MARK) ~= value then room:setPlayerMark(player, DISPLAY_MARK, value) end
+  end
+end)
+
 --- 只在“本角色双将有断肠记录”时，为与另一张将牌共享的同名基础技能计算明置
 --- 恢复候选（引擎 revealGeneral 的 tolose 可能误删存活来源）。不处理 related，
 --- 不为单牌独有技能或正常明置补授。
@@ -368,6 +383,9 @@ function M.resolve(room, player, source)
   local printed = printedSkills(source, cardName)
   if #printed == 0 then return false end
 
+  local affected = room:getTag(DISPLAY_TAG) or {}
+  affected[cardName] = true
+  room:setTag(DISPLAY_TAG, affected)
   M.markLost(room, cardName, printed)
   applyLoss(room, source, isDeputy, cardName, printed)
   return true

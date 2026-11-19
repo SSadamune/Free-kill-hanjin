@@ -60,7 +60,7 @@ skill:addEffect("active", {
                 target = to,
                 flag = { card_data = { { "弃置", ids } } },
                 skill_name = skill.name,
-                prompt = "#qiao__skill_shu012_1-discard:" .. to.id,
+                prompt = "#qiao__skill_shu012_1-discard::" .. to.id,
               })
               if id ~= nil and id ~= -1 and table.contains(ids, id) then
                 room:throwCard(id, skill.name, to, player)
@@ -77,7 +77,7 @@ skill:addEffect("active", {
               target = to,
               flag = { card_data = { { "弃置", ids } } },
               skill_name = skill.name,
-              prompt = "#qiao__skill_shu012_1-discard:" .. to.id,
+              prompt = "#qiao__skill_shu012_1-discard::" .. to.id,
             })
             if id ~= nil and id ~= -1 and table.contains(ids, id) then
               room:throwCard(id, skill.name, to, player)

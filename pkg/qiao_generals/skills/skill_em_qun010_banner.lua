@@ -4,6 +4,7 @@
 -- 旗存在期间，当前群势力角色（含持旗者）获得“天兵当雷【杀】”的视技入口。
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local H = require "packages.hegemony.util"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local skill = fk.CreateSkill {
   name = P.BANNER_SKILL,
@@ -105,8 +106,12 @@ end
 
 -- 旗失去时 Player:loseSkill 先清掉持旗者的派生入口，SkillSkeleton:onLose 再把
 -- 旗牌堆移入弃牌堆，随后触发本回调；这里只负责清理其余角色的入口。
-skill:addAcquireEffect(function(self, player) syncEntries(player.room) end)
-skill:addLoseEffect(function(self, player) syncEntries(player.room) end)
+local function syncFlag(self, player)
+  syncEntries(player.room)
+  Flags.refresh(player, self.name)
+end
+skill:addAcquireEffect(syncFlag)
+skill:addLoseEffect(syncFlag)
 
 -- 与嘉禾的旗入口同一时机集合；旗技能实例在首次授予时才注册这些全局监听。
 local syncSpec = {

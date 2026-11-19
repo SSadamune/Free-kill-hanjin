@@ -17,7 +17,7 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local NORMAL_SLASH = "qiao__slash"
-local MARK = "qiao_skill_han005_2_source-noclear"
+local MARK = "@@qiao_skill_han005_2_source-noclear"
 local DELAY_SKILL_NAME = "#qiao_skill_han005_2_delay"
 
 local delay_skill
@@ -74,6 +74,7 @@ end)
 
 Fk:loadTranslationTable {
   ["qiao__skill_han005_2"] = "构难",
+  [MARK] = "构难",
   [":qiao__skill_han005_2"] = "锁定技，你死亡后，来源本局因普通【杀】造成或受到伤害时，此伤害+1。",
 }
 

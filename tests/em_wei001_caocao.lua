@@ -39,6 +39,7 @@ local function inRoom(fn, label)
   return result
 end
 local function p(n) return FkTest.room.players[n] end
+local withClientRoom
 
 --- 公开势力未确定，但保留真实武将牌（用于验证不读取暗将牌面势力）。
 local function setUnknown(room, player)
@@ -88,6 +89,11 @@ function Testqiao_em_wei001_caocao:testDataAndAscension()
   lu.assertEquals(p(1).general, LORD)
   lu.assertTrue(p(1):hasSkill(W.JIANAN))
   lu.assertTrue(p(1):hasSkill(W.BANNER), "建安应授予霸者求贤状")
+  local mark = "@!!" .. W.BANNER
+  lu.assertEquals(p(1):getMark(mark), "旗")
+  lu.assertEquals(Fk:translate(":" .. mark), Fk:translate(":" .. W.BANNER))
+  inRoom(function() FkTest.room:handleAddLoseSkills(p(1), "-" .. W.BANNER, W.JIANAN, false, true) end)
+  lu.assertEquals(p(1):getMark(mark), 0)
   local banner = Fk.skill_skels["qiao__skill_em_wei001_banner"]
   lu.assertTrue(table.contains(banner.qiaoPools.high, "qiao__skill_wei024_1"), "常令应进入高鱼组")
   lu.assertTrue(table.contains(banner.qiaoPools.low, "qiao__skill_wei020_1"), "奇策应进入低鱼组")
@@ -186,18 +192,75 @@ function Testqiao_em_wei001_caocao:testBannerCostHideSkillAndCardBoundRestrictio
   lu.assertFalse(user:prohibitReveal(false), "本人下回合开始应解除限制")
 end
 
-function Testqiao_em_wei001_caocao:testHuibianDamageDrawAndRecover()
+function Testqiao_em_wei001_caocao:testHuibianDamageDrawThenRecoverSelection()
   local room, lord, first, second = FkTest.room, p(1), p(2), p(3)
-  local before
+  local before, askedTargets, askedAfterResolve
   inRoom(function()
     second.hp = second.maxHp - 1
+    first.hp = first.maxHp
     before = #first:getCardIds("h")
     lord.phase = Player.Play
-    Fk.skills[W.HUIBIAN]:onUse(room, { from = lord, tos = { first, second } })
+    local skill = Fk.skills[W.HUIBIAN]
+    lu.assertEquals(skill.target_num, 1, "首段只预选一名目标")
+    lu.assertTrue(skill:targetFilter(lord, first, {}),
+      "首段只要求魏势力，不要求受伤或存在另一名可回复者")
   end)
+  skill_test.withSkillRequests(room, W.HUIBIAN, {
+    askToChoosePlayers = function(self, who, params, original)
+      if params.skill_name ~= W.HUIBIAN then return original(self, who, params) end
+      askedTargets = table.simpleClone(params.targets)
+      -- 进入回复选择时，首段的伤害与摸牌必须已经结算。
+      askedAfterResolve = first.hp == first.maxHp - 1
+        and #first:getCardIds("h") == before + 2
+      return { second }
+    end,
+  }, function()
+    inRoom(function()
+      Fk.skills[W.HUIBIAN]:onUse(room, { from = lord, tos = { first } })
+    end)
+  end)
+  lu.assertTrue(askedAfterResolve, "回复目标应在首段伤害与摸牌结算后选择")
+  lu.assertNotNil(askedTargets)
+  lu.assertFalse(table.contains(askedTargets, first), "回复者不能与受伤者相同")
+  lu.assertTrue(table.contains(askedTargets, second), "已受伤的魏角色应进入回复候选")
   lu.assertEquals(first.hp, first.maxHp - 1, "第一名魏角色受到1点伤害")
   lu.assertEquals(#first:getCardIds("h"), before + 2, "受伤者摸两张牌")
   lu.assertEquals(second.hp, second.maxHp, "另一名魏角色回复1点体力")
+end
+
+function Testqiao_em_wei001_caocao:testHuibianSoloWeiResolvesOnlyFirstSegment()
+  local room, lord = FkTest.room, p(1)
+  local askCalls, before = 0, 0
+  inRoom(function()
+    -- 其他角色均非魏：只有曹操本人可作首段目标，且没有第二段合法对象。
+    for index = 2, #room.players do
+      local other = room.players[index]
+      other.kingdom = "wu"
+      room:setPlayerProperty(other, "kingdom", "wu")
+      room:setPlayerMark(other, "__heg_kingdom", "wu")
+    end
+    lord.hp = lord.maxHp
+    lord.phase = Player.Play
+    before = #lord:getCardIds("h")
+    lu.assertTrue(Fk.skills[W.HUIBIAN]:canUse(lord),
+      "只有自己为魏时仍可发动首段")
+  end)
+  skill_test.withSkillRequests(room, W.HUIBIAN, {
+    askToChoosePlayers = function(self, who, params, original)
+      if params.skill_name == W.HUIBIAN then
+        askCalls = askCalls + 1
+        return {}
+      end
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function()
+      Fk.skills[W.HUIBIAN]:onUse(room, { from = lord, tos = { lord } })
+    end)
+  end)
+  lu.assertEquals(lord.hp, lord.maxHp - 1, "自己作为首段目标承受1点伤害")
+  lu.assertEquals(#lord:getCardIds("h"), before + 2, "自己摸两张牌")
+  lu.assertEquals(askCalls, 0, "没有另一名可回复的魏角色时不得发起第二段选择")
 end
 
 function Testqiao_em_wei001_caocao:testZongyuMovesZhulong()
@@ -285,6 +348,237 @@ function Testqiao_em_wei001_caocao:testBannerPreservesIndependentRevealAndSkillS
     "解绑只删本次新增的 m，不删既有来源 d")
   lu.assertTrue(user:prohibitReveal(true), "既有副将禁明置来源保留")
   lu.assertTrue(user:hasSkill("qiao__skill_wei004_1"), "独立同名技能来源不应被到期删除")
+end
+
+-- 霸者求贤状的授技属于角色，不附在将牌上。暗将恰好印刷同名技能时：
+-- 独立来源仍可实际发动；发动不得明置该暗将；到期只撤本次来源。
+local function expireWithoutRevealing(user)
+  -- 临时来源先到期，上游随后仍会提供一次普通明置。明确取消以隔离这两个流程。
+  FkTest.cleanNextReplies(user)
+  FkTest.setNextReplies(user, { { "Cancel" } })
+  inRoom(function() FkTest.room.logic:trigger(fk.TurnStart, user, {}) end)
+  FkTest.cleanNextReplies(user)
+end
+
+function Testqiao_em_wei001_caocao:testBannerSameNameAsHiddenGeneralStaysIndependent()
+  local room, user, target = FkTest.room, p(2), p(5)
+  local SCOUT = "qiao__skill_wei016_1" -- 骁果：副将乐进印刷
+  local basic, junk
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei005", deputy = "qiao_heg__wei016", kingdom = "wei",
+    })
+    user:hideGeneral(true) -- 副将乐进暗置，骁果只以 fake 存在
+    basic = room:printCard("qiao__slash", Card.Spade, 3)
+    junk = room:printCard("qiao__jink", Card.Heart, 4)
+    room:obtainCard(user, basic, false, fk.ReasonJustMove)
+    room:obtainCard(user, junk, false, fk.ReasonJustMove)
+    user.phase = Player.Start
+    lu.assertFalse(user:hasSkill(SCOUT), "暗置乐进的同名技能尚未激活")
+  end)
+
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToDiscard = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      self:throwCard({ junk.id }, W.BANNER, who, who)
+      return { junk.id }
+    end,
+    askToChoice = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      if table.contains(params.choices, "m") then return "m" end
+      lu.assertTrue(table.contains(params.choices, SCOUT),
+        "副将乐进暗置后，骁果不在公开场上，应可被选择")
+      return SCOUT
+    end,
+  }, function()
+    inRoom(function()
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+  end)
+
+  lu.assertTrue(user:hasSkill(SCOUT), "应取得独立来源的骁果")
+  lu.assertTrue(W.isTempProvided(user, SCOUT), "应记录本次授技来源")
+  lu.assertEquals(user.general, "anjiang", "主将仍暗置")
+  lu.assertEquals(user.deputyGeneral, "anjiang", "暗置乐进保持暗置")
+
+  -- 真实发动骁果：触发入口不应因暗将印刷同名技能而明置乐进。
+  local targetHp
+  inRoom(function() targetHp = target.hp end)
+  FkTest.setNextReplies(user, { FkTest.ReplyDiscard({ basic.id }) })
+  inRoom(function()
+    room.logic:trigger(fk.EventPhaseStart, target,
+      PhaseData:new { who = target, phase = Player.Start, reason = "game_rule" })
+  end)
+  lu.assertEquals(target.hp, targetHp - 1, "独立来源的骁果应实际造成伤害")
+  lu.assertEquals(user.general, "anjiang", "临时来源发动不得明置主将")
+  lu.assertEquals(user.deputyGeneral, "anjiang", "同名暗将不得被明置")
+
+  expireWithoutRevealing(user)
+  lu.assertFalse(W.isTempProvided(user, SCOUT), "到期应撤销本次来源")
+  lu.assertFalse(user:hasSkill(SCOUT), "到期后暗将 fake 不提供可用技能")
+  lu.assertEquals(user.deputyGeneral, "anjiang", "到期不改动暗将状态")
+end
+
+-- 暗将同名技能已预亮时，预亮不是可代替本次授技的独立来源；到期只撤本次来源。
+function Testqiao_em_wei001_caocao:testBannerTempSourceSurvivesPrelightOnlySource()
+  local room, user = FkTest.room, p(2)
+  local SCOUT = "qiao__skill_wei016_1"
+  local junk
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei005", deputy = "qiao_heg__wei016", kingdom = "wei",
+    })
+    user:hideGeneral(true)
+    user:prelightSkill(Fk.skills[SCOUT], true)
+    junk = room:printCard("qiao__jink", Card.Club, 5)
+    room:obtainCard(user, junk, false, fk.ReasonJustMove)
+    user.phase = Player.Start
+  end)
+  lu.assertTrue(user:hasSkill(SCOUT), "预亮使暗将同名技能暂时可用")
+
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToDiscard = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      self:throwCard({ junk.id }, W.BANNER, who, who)
+      return { junk.id }
+    end,
+    askToChoice = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      if table.contains(params.choices, "m") then return "m" end
+      return SCOUT
+    end,
+  }, function()
+    inRoom(function()
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+  end)
+  lu.assertTrue(W.isTempProvided(user, SCOUT),
+    "预亮来源不应阻止本次独立授技记账")
+  lu.assertTrue(table.contains(user.derivative_skills[Fk.skills[W.SOURCE]] or {},
+    Fk.skills[SCOUT]), "预亮之外应实际建立本次导数来源")
+
+  expireWithoutRevealing(user)
+  lu.assertFalse(W.isTempProvided(user, SCOUT), "到期撤销本次来源")
+  lu.assertTrue(user:hasSkill(SCOUT), "预亮来源作为暗将状态保留")
+  lu.assertTrue(table.contains(user.prelighted_skills, Fk.skills[SCOUT]),
+    "到期只撤本次来源，不撤销原有预亮")
+end
+
+-- 同位置：霸者暗置乐进并取得同名骁果。上游 reveal_prohibited 只因被绑位置
+-- 仍印刷同名技能而按名失效；角色持有本次独立来源时应可实际发动，暗将仍禁亮。
+function Testqiao_em_wei001_caocao:testBannerSameNameOnBoundPositionBypassesRevealInvalidity()
+  local room, user, target = FkTest.room, p(2), p(5)
+  local SCOUT = "qiao__skill_wei016_1" -- 骁果：被暗置的主将乐进印刷
+  local basic, junk
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei016", deputy = "qiao_heg__wei005", kingdom = "wei",
+    })
+    basic = room:printCard("qiao__slash", Card.Spade, 6)
+    junk = room:printCard("qiao__jink", Card.Heart, 7)
+    room:obtainCard(user, basic, false, fk.ReasonJustMove)
+    room:obtainCard(user, junk, false, fk.ReasonJustMove)
+    user.phase = Player.Start
+  end)
+
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToDiscard = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      self:throwCard({ junk.id }, W.BANNER, who, who)
+      return { junk.id }
+    end,
+    askToChoice = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      if table.contains(params.choices, "m") then return "m" end
+      lu.assertTrue(table.contains(params.choices, SCOUT),
+        "暗置乐进后，同名骁果仍应作为场上没有的技能进入候选")
+      return SCOUT
+    end,
+  }, function()
+    inRoom(function()
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+  end)
+
+  lu.assertTrue(user:hasSkill(SCOUT), "本次独立来源不应被禁亮按名失效误伤")
+  lu.assertTrue(user:prohibitReveal(false), "被暗置的乐进仍不能明置")
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertTrue(table.contains(user.derivative_skills[Fk.skills[W.SOURCE]] or {},
+    Fk.skills[SCOUT]), "应实际建立本次导数来源")
+
+  -- ClientPlayer 没有 room 字段；来源按可见玩家标记同步，客户端同样放行。
+  withClientRoom(room, function(clients)
+    local me = clients[2]
+    lu.assertNil(me.room)
+    lu.assertTrue(me:hasSkill(SCOUT), "客户端应按同步来源跳过误判")
+  end)
+
+  local targetHp
+  inRoom(function() targetHp = target.hp end)
+  FkTest.setNextReplies(user, { FkTest.ReplyDiscard({ basic.id }) })
+  inRoom(function()
+    room.logic:trigger(fk.EventPhaseStart, target,
+      PhaseData:new { who = target, phase = Player.Start, reason = "game_rule" })
+  end)
+  lu.assertEquals(target.hp, targetHp - 1, "独立来源的骁果应实际造成伤害")
+  lu.assertEquals(user.general, "anjiang", "临时来源发动不得明置乐进")
+  lu.assertTrue(user:prohibitReveal(false), "发动后仍不能明置")
+
+  -- 只绕开 reveal_prohibited 的误判；其他 invalidity 仍须生效。
+  inRoom(function()
+    room:setPlayerMark(user, MarkEnum.InvalidSkills, { [SCOUT] = true })
+  end)
+  lu.assertFalse(user:hasSkill(SCOUT), "其他 invalidity 不得被本豁免绕过")
+  inRoom(function() room:setPlayerMark(user, MarkEnum.InvalidSkills, 0) end)
+
+  expireWithoutRevealing(user)
+  lu.assertFalse(W.isTempProvided(user, SCOUT), "到期撤销本次来源")
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertFalse(user:hasSkill(SCOUT), "到期后禁亮暗将的同名技能不再可用")
+  lu.assertFalse(user:prohibitReveal(false), "到期解除禁亮")
+  lu.assertNil(W.record(room, user), "到期清除位置记录")
+end
+
+-- 到期时已有预亮：M.expire 仍按本次来源撤掉 derivative_skills 记账，
+-- 但不撤销暗将自身的预亮状态。
+function Testqiao_em_wei001_caocao:testBannerSameNameExpiryRemovesDerivativeWithPrelight()
+  local room, user = FkTest.room, p(2)
+  local SCOUT = "qiao__skill_wei016_1"
+  local junk
+  inRoom(function()
+    skill_test.installDualGenerals(room, user, {
+      main = "qiao_heg__wei016", deputy = "qiao_heg__wei005", kingdom = "wei",
+    })
+    junk = room:printCard("qiao__jink", Card.Club, 8)
+    room:obtainCard(user, junk, false, fk.ReasonJustMove)
+    user.phase = Player.Start
+  end)
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToDiscard = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      self:throwCard({ junk.id }, W.BANNER, who, who)
+      return { junk.id }
+    end,
+    askToChoice = function(self, who, params, original)
+      if params.skill_name ~= W.BANNER then return original(self, who, params) end
+      if table.contains(params.choices, "m") then return "m" end
+      return SCOUT
+    end,
+  }, function()
+    inRoom(function()
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+  end)
+  inRoom(function() user:prelightSkill(Fk.skills[SCOUT], true) end)
+  lu.assertTrue(table.contains(user.derivative_skills[Fk.skills[W.SOURCE]] or {},
+    Fk.skills[SCOUT]), "预亮之外仍应有本次导数来源")
+
+  expireWithoutRevealing(user)
+  lu.assertFalse(table.contains(user.derivative_skills[Fk.skills[W.SOURCE]] or {},
+    Fk.skills[SCOUT]), "到期应按来源撤掉导数记账")
+  lu.assertTrue(table.contains(user.prelighted_skills, Fk.skills[SCOUT]),
+    "到期不撤销暗将自身的预亮")
+  lu.assertTrue(user:hasSkill(SCOUT), "禁亮解除后预亮仍可用")
 end
 
 -- 真实连续回合：自己的准备阶段发动 → 挟天子额外回合（默认阶段表含准备）再次
@@ -971,7 +1265,7 @@ function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
   lu.assertFalse(table.contains(room.general_pile, chosen), "新副将不应留在池中")
 end
 
-local function withClientRoom(current, fn)
+withClientRoom = function(current, fn)
   local ClientPlayer = require "ltk.client.clientplayer"
   local clients = {}
   for _, original in ipairs(current.players) do

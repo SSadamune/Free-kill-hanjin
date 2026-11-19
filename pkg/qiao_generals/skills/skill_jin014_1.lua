@@ -76,7 +76,7 @@ skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
   [OPTION_DRAW] = "摸牌至体力值",
-  [OPTION_RECOVER] = "弃置所有手牌，然后回复体力至X点（X为以此法弃置的牌数）",
+  [OPTION_RECOVER] = "弃置所有手牌，然后将体力回复至实际弃置的张数",
   ["#qiao__skill_jin014_1-invoke"] = "膂力：你可以选择一项",
   ["#qiao__skill_jin014_1-choice"] = "膂力：请选择一项",
 }

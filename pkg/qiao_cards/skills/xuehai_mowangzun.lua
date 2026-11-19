@@ -73,7 +73,7 @@ skill:addEffect(fk.AskForCardUse, {
         local respond = room:askToResponse(helper, {
           skill_name = skill.name,
           pattern = ".|.|spade",
-          prompt = "#qiao__xuehai-ask:" .. player.id,
+          prompt = "#qiao__xuehai-ask::" .. player.id,
           cancelable = true,
         })
         if respond then

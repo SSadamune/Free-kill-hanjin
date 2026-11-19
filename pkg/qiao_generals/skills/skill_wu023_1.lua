@@ -54,8 +54,11 @@ skill:addEffect("active", {
     local player = effect.from
     if player == nil or player.dead then return end
 
+    local targets = alivePlayers(player)
+    local max = math.min(math.max(1, player:getLostHp()), #targets)
+    local chain = OPT_CHAIN .. ":::" .. max
     local choices = {}
-    if canChain(player) then table.insert(choices, OPT_CHAIN) end
+    if canChain(player) and max > 0 then table.insert(choices, chain) end
     if canDiscardAll(player) then table.insert(choices, OPT_DISCARD) end
     if #choices == 0 then return end
     local choice = room:askToChoice(player, {
@@ -64,18 +67,16 @@ skill:addEffect("active", {
       prompt = "#qiao__skill_wu023_1-choice",
       cancelable = true,
     })
-    if choice ~= OPT_CHAIN and choice ~= OPT_DISCARD then return end
+    if choice ~= chain and choice ~= OPT_DISCARD then return end
 
-    if choice == OPT_CHAIN then
+    if choice == chain then
       room:setPlayerMark(player, USED_CHAIN, 1)
-      local targets = alivePlayers(player)
-      local max = math.min(math.max(1, player:getLostHp()), #targets)
       local chosen = room:askToChoosePlayers(player, {
         min_num = 1,
         max_num = max,
         targets = targets,
         skill_name = skill.name,
-        prompt = "#qiao__skill_wu023_1-target",
+        prompt = "#qiao__skill_wu023_1-target:::" .. max,
         cancelable = false,
       })
       for _, to in ipairs(chosen or {}) do
@@ -97,7 +98,7 @@ skill:addEffect("active", {
               target = to,
               flag = "he",
               skill_name = skill.name,
-              prompt = "#qiao__skill_wu023_1-discard:" .. to.id,
+              prompt = "#qiao__skill_wu023_1-discard::" .. to.id .. ":" .. skill.name,
             })
             if id ~= nil and id ~= -1 and table.contains(ids, id) then
               room:throwCard({ id }, skill.name, to, player)
@@ -114,9 +115,9 @@ Fk:loadTranslationTable {
   [":qiao__skill_wu023_1"] = "出牌阶段各限一次，你可以：1.令至多X名角色横置（X为你已损失的体力值，至少为1），然后你横置；2.若你横置，弃置所有横置的角色各一张牌。",
   ["#qiao__skill_wu023_1-prompt"] = "奋命：横置角色，或弃置所有横置角色各一张牌",
   ["#qiao__skill_wu023_1-choice"] = "奋命：请选择一项",
-  ["#qiao__skill_wu023_1-target"] = "奋命：选择至多X名角色横置（含自己）",
+  ["#qiao__skill_wu023_1-target"] = "奋命：选择至多 %arg 名角色横置（可选自己）",
   ["#qiao__skill_wu023_1-discard"] = "奋命：选择 %dest 的一张牌弃置",
-  [OPT_CHAIN] = "令至多X名角色横置，然后自己横置",
+  [OPT_CHAIN] = "令至多 %arg 名角色横置，然后自己横置",
   [OPT_DISCARD] = "弃置所有横置角色各一张牌",
 }
 

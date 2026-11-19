@@ -9,7 +9,9 @@ local skill = fk.CreateSkill {
 
 skill:addEffect("viewas", {
   anim_type = "defensive",
-  pattern = "qiao__jink",
+  -- 响应请求按牌的 trueName 发 pattern（杀询问【闪】时为 "jink"），不能用
+  -- 程序牌名 qiao__jink；view_as 仍构造正式牌 ID，牌面与材料不变。
+  pattern = "jink",
   prompt = "#qiao__skill_wei007_1-prompt",
   handly_pile = true,
   filter_pattern = {

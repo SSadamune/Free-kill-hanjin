@@ -42,7 +42,7 @@ skill:addEffect(fk.TargetSpecified, {
     local chosen = room:askToChooseCards(player, {
       target = to, flag = "he", min = 0, max = x,
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu020_2-cards:" .. to.id,
+      prompt = "#qiao__skill_wu020_2-cards::" .. to.id .. ":" .. x,
       cancelable = true,
     }) or {}
     chosen = table.filter(chosen, function(id) return table.contains(ids, id) end)
@@ -64,8 +64,8 @@ skill:addEffect(fk.TargetSpecified, {
 Fk:loadTranslationTable {
   ["qiao__skill_wu020_2"] = "破军",
   [":qiao__skill_wu020_2"] = "当你使用【杀】指定一个目标后，你可以扣置其至多X张牌（X为其势力角色数），这些牌本回合移出游戏。",
-  ["#qiao__skill_wu020_2-invoke"] = "破军：是否扣置 %dest 的牌？",
-  ["#qiao__skill_wu020_2-cards"] = "破军：选择至多X张牌扣置",
+  ["#qiao__skill_wu020_2-invoke"] = "破军：是否扣置 %src 的牌？",
+  ["#qiao__skill_wu020_2-cards"] = "破军：选择 %dest 至多 %arg 张牌扣置",
 }
 
 return skill

@@ -9,6 +9,7 @@ local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local M = {}
 
@@ -72,6 +73,31 @@ end
 --- 在 qiao_generals 的 postLoad 调用；此时所有包已安装，骨架已可查。
 --- @param retinues? table Data.retinues（实际声明的翼从技能来源）
 function M.register(retinues)
+  local translations = {}
+  for name in pairs(Flags.flags) do
+    local mark = "@!!" .. name
+    translations[mark] = Fk:translate(name, "zh_CN")
+    translations[":" .. mark] = Fk:translate(":" .. name, "zh_CN")
+  end
+  for name, skel in pairs(Fk.skill_skels) do
+    if name:startsWith("qiao__") and table.contains(skel.tags, Skill.Limited) then
+      local first, second = "$" .. name .. "1", "$" .. name .. "2"
+      if Fk:translate(first, "zh_CN") == first and Fk:translate(second, "zh_CN") == second then
+        translations[first] = Fk:translate(name, "zh_CN")
+      end
+    end
+  end
+  Fk:loadTranslationTable(translations)
+
+  local getDescription = Fk.getDescription
+  function Fk:getDescription(name, lang, player)
+    local text = getDescription(self, name, lang, player)
+    if name == "qiao__skill_jin013_1" then
+      return (text:gsub("<富甲→改为雷电伤害>", "&lt;富甲→改为雷电伤害&gt;"))
+    end
+    return text
+  end
+
   M.decorate(Han.BANNER, LABELS.EDICT)
   M.decorate(Han.CONSUME, LABELS.EDICT)
 
@@ -82,7 +108,7 @@ function M.register(retinues)
   -- 黄巾天兵符的第二段入口由旗授予，不是武将牌技能；按钮名保持精简“天兵”。
   M.decorate(Qun.ENTRY, LABELS.FLAG)
   -- 六师率义旗、诸王敕封册没有独立 util 常量；保持与技能文件同名。
-  M.decorate("qiao__skill_em_shu001_flag", LABELS.FLAG)
+  M.decorate(Flags.shuFlag, LABELS.FLAG)
   -- 诸王敕封册本体是旗，另管理“赐”的独立消费；太康等武将技不在此标。
   M.decorate("qiao__skill_em_jin001_banner", LABELS.FLAG,
     "<br/><b>〔赐〕</b> 本技能另有“赐”的消耗入口。", "〔赐〕")

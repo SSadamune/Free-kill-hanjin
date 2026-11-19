@@ -3,9 +3,11 @@
 -- This package owns the formal, independent HanJin card identities. It defines
 -- all 162 physical base positions from docs/rules/card-deck.md, the twelve lord-
 -- equipment replacement materials, and the seven faction tricks that stay
--- outside the default deck. Only the existing Thunder Slash positions (spade 9
--- and spade 10) keep a usable effect; every other card is an explicitly inert
--- shell whose card skill cannot be used.
+-- outside the default deck. All seven printed Thunder Slash positions share one
+-- identity and the real thunder-damage effect. Card usability follows
+-- data/reuse.lua: a type whose registry status is "reused" installs that
+-- implementation, while a non-reused status keeps the inert shell declared in
+-- data/cards.lua.
 --
 -- The runtime policy side reads the same identities through the HanJin card
 -- name and through extra_data. The public interface is exposed as
@@ -23,6 +25,7 @@ extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_cards/skills")
 local CardData = require "packages.qiao.pkg.qiao_cards.data.cards"
 local SlotData = require "packages.qiao.pkg.qiao_cards.data.slots"
 local ReuseData = require "packages.qiao.pkg.qiao_cards.data.reuse"
+local EquipmentText = require "packages.qiao.pkg.qiao_cards.data.equipment_text"
 
 local SUITS = { S = Card.Spade, H = Card.Heart, C = Card.Club, D = Card.Diamond }
 local RANKS = { A = 1, J = 11, Q = 12, K = 13, ["1"] = 1, ["11"] = 11, ["12"] = 12, ["13"] = 13 }
@@ -72,7 +75,7 @@ end
 
 -- Card prototypes -----------------------------------------------------------
 
-local function shellDescription(cardType)
+local function cardDescriptionWithHeader(cardType, printedText)
   local lines
   if cardType.type == "basic" then
     lines = { "基本牌" }
@@ -100,17 +103,17 @@ local function shellDescription(cardType)
   elseif cardType.national then
     table.insert(lines, "<b>版本</b>：国战")
   end
-  table.insert(lines, "<b>状态</b>：正式牌位已登记，牌面效果尚未实装；本牌不能使用。")
+  table.insert(lines, printedText or "<b>状态</b>：正式牌位已登记，牌面效果尚未实装；本牌不能使用。")
   return table.concat(lines, "<br/>")
 end
 
 local THUNDER_SLASH_DESCRIPTION = "基本牌<br/><b>时机</b>：出牌阶段<br/>"
   .. "<b>目标</b>：攻击范围内的一名角色<br/>"
-  .. "<b>效果</b>：对目标角色造成1点雷电伤害。<br/><b>应变·孤军</b>：此牌无视次数。"
-
-local THUNDER_SHELL_DESCRIPTION = "基本牌<br/><b>时机</b>：出牌阶段<br/>"
-  .. "<b>目标</b>：攻击范围内的一名角色<br/>"
   .. "<b>效果</b>：对目标角色造成1点雷电伤害。"
+
+-- 势备 ♠9/♠10 的雷杀孤军卡面原文。只由该实体牌位自身的应变条目动态追加，
+-- 其余雷杀牌位及虚拟牌不继承。
+local THUNDER_GUJUN_DESCRIPTION = "<b>应变·孤军</b>：此牌无视次数。"
 
 -- Reference implementations adapted into HanJin skills. These descriptions are
 -- the confirmed local 应变 card texts, not invented effects.
@@ -146,9 +149,6 @@ local DESCRIPTION_OVERRIDES = {
     .. "<b>效果</b>：目标角色各选择一项：1.明置一张武将牌并摸一张牌；2.弃置一张装备牌；3.失去1点体力。"
     .. "此牌置入弃牌堆的回合结束时：若此牌未触发效果，未确定势力的角色执行此牌的效果；"
     .. "若所有角色均确定势力，此牌移出游戏，当前回合角色获得“诏书”。",
-  ["qiao__jade_seal"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：锁定技，若你已确定势力：装备着【玉玺】的角色的势力视为大势力，"
-    .. "其余势力视为小势力；摸牌阶段，你多摸一张牌；出牌阶段开始时，你视为使用一张【知己知彼】。",
   ["qiao__iron_chain"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
     .. "<b>目标</b>：一至两名角色<br/>"
     .. "<b>效果</b>：目标角色横置或重置。<br/>"
@@ -174,109 +174,41 @@ local DESCRIPTION_OVERRIDES = {
     .. "<b>目标</b>：你<br/>"
     .. "<b>效果</b>：目标角色判定，若为黑桃2～9，其受到3点无来源雷电伤害；"
     .. "若不为黑桃2～9或此牌被抵消，此牌移动给其下家。",
-  ["qiao__five_elements_fan"] = "装备牌·武器<br/><b>攻击范围</b>：4<br/>"
-    .. "<b>武器技能</b>：你可以将一张属性【杀】当任意一种其他属性【杀】使用。",
-  ["qiao__blade"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：锁定技，你使用【杀】指定一个目标时，你令其不能明置武将牌且"
-    .. "不能使用此【杀】花色的手牌，直到此【杀】结算结束。",
-  ["qiao__black_chain"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：锁定技，当你使用【杀】指定一个目标后，你令其横置。",
-  ["qiao__qinggang_sword"] = "装备牌·武器<br/><b>攻击范围</b>：2<br/>"
-    .. "<b>武器技能</b>：锁定技，你使用【杀】指定一个目标后，你令其防具无效，"
-    .. "直到此【杀】结算结束。",
-  ["qiao__halberd"] = "装备牌·武器<br/><b>攻击范围</b>：4<br/>"
-    .. "<b>武器技能</b>：你使用【杀】可以额外指定任意名不与其余目标势力相同的角色。"
-    .. "若如此做，此【杀】被【闪】抵消后对剩余目标无效。",
-  ["qiao__bronze_sparrow"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：每回合限一次，你使用应变牌时，你可以无视条件应变。",
-  ["qiao__dark_armor"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：锁定技，当你成为伤害牌或黑色非伤害锦囊牌的目标后，"
-    .. "若你不是此牌的唯一目标，此牌对你无效。",
-  ["qiao__vine"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：锁定技，【南蛮入侵】、【万箭齐发】和普通【杀】对你无效。"
-    .. "当你受到火焰伤害时，此伤害+1。",
-  ["qiao__breastplate"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：出牌阶段，你可以将手牌中的此牌置于其他角色的装备区。"
-    .. "当你受到致命伤害或大于1点的伤害时，你可以将装备区里的此牌置入弃牌堆，然后防止此伤害。",
   ["qiao__collateral"] = "锦囊牌<br/><b>时机</b>：出牌阶段<br/>"
     .. "<b>目标</b>：一名装备着武器牌的其他角色<br/>"
     .. "<b>效果</b>：除非目标角色对其攻击范围内由你选择的另一名角色使用一张【杀】，"
     .. "否则其将装备区里的一张武器牌交给你。",
-  ["qiao__axe"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：当你使用【杀】被目标角色使用【闪】抵消后，"
-    .. "你可以弃置两张牌并令此【杀】依然生效。",
-  ["qiao__triblade"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：当你使用【杀】对目标角色造成伤害后，你可以弃置一张手牌，"
-    .. "并对其距离1的另一名其他角色造成1点伤害。",
-  ["qiao__taigong_tactics"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：出牌阶段开始时，你可以横置或重置一名角色；出牌阶段结束时，你可以重铸一张手牌。",
-  ["qiao__wonder_map"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：锁定技，此牌进入你的装备区时，弃置一张其他牌；此牌离开你的装备区时，你将手牌摸至五张。",
-  ["qiao__liulongcanjia"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
-    .. "<b>坐骑技能</b>：锁定技，其他角色到你的距离+X，你到其他角色的距离-X；"
-    .. "X为当前场上与你势力相同的角色装备区里的坐骑牌总张数，每张牌计一次"
-    .. "（双副类别坐骑也只计一张）。你全暗且势力尚未确定时只计自己的六龙骖驾，X=1。",
-  ["qiao__linxiao_yuyu"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
-    .. "<b>坐骑技能</b>：你到其他角色的距离-1，其他角色到你的距离+1。"
-    .. "此牌进入装备区，或由装备区进入非装备区后，当前回合角色摸一张牌；"
-    .. "若同次进出有坐骑因装备栏占用被实际替换，改为回复1点体力。",
-  ["qiao__feiyun_gaihai"] = "装备牌·坐骑（进攻坐骑、防御坐骑）<br/>"
-    .. "<b>坐骑技能</b>：锁定技，你未横置时，你到其他角色的距离-2；"
-    .. "你横置时，其他角色到你的距离+2。",
-  ["qiao__dragon_phoenix"] = "装备牌·武器<br/><b>攻击范围</b>：2<br/>"
-    .. "<b>武器技能</b>：当你使用【杀】指定一个目标后，你可以令该目标弃置一张自己的牌。"
-    .. "当你使用的【杀】造成的伤害令其实际目标进入濒死状态时，"
-    .. "你可以在求桃前获得该目标的一张手牌。",
-  ["qiao__luminous_pearl"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：出牌阶段限一次，你可以弃置1至X张自己的合法手牌或装备"
-    .. "（X为你的体力上限，此牌本身不能用于该次弃置），然后摸等量的牌。",
-  ["qiao__peace_spell"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：锁定技，防止你受到属性伤害。你的手牌上限+X"
-    .. "（X为当前与你势力相同的角色数，含你自己；群势力按天兵人数修正）。"
-    .. "当你失去装备区里的此牌后，你摸两张牌，然后若你的体力值大于1，你失去1点体力。",
-  ["qiao__chixiao_sword"] = "装备牌·武器<br/><b>攻击范围</b>：3<br/>"
-    .. "<b>武器技能</b>：当你使用【杀】指定目标后，若你与该目标一个大势力、"
-    .. "另一个小势力，该目标须交给你一张红色手牌；未能交出时，"
-    .. "该目标不能抵消此【杀】对自己的结算。",
-  ["qiao__jinxiu_zhengpao"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：当你成为其他角色使用伤害牌的目标后，若此牌本次具有"
-    .. "标准花色且你的手牌中没有该花色，你可以展示所有手牌并获得本次来牌"
-    .. "对应、仍可获得的实体牌；然后若你的手牌具有四种花色，此牌对你无效。",
-  ["qiao__xuwang_zhimian"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：锁定技，你在自己的摸牌阶段多摸两张牌；你的手牌上限-1。",
-  ["qiao__sihai_liuqian"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：出牌阶段内的空闲时间点，你可以选择距离大于1的一名角色，"
-    .. "预先选择其恰好两张手牌或装备；将此牌交到其手牌区，并获得所选的两张牌。",
-  ["qiao__zhoujun_lingbingyin"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：此牌进入装备区后，与装备者同为一个大势力或同为一个小势力"
-    .. "的其他角色可各交给你一张手牌或装备。准备阶段，你可以令本回合的额定摸牌数、"
-    .. "使用【杀】次数上限、手牌上限中的一项增加1或2，并将等量扣减分配到另外两项。",
-  ["qiao__zouyu_fan"] = "装备牌·防具<br/>"
-    .. "<b>防具技能</b>：回合外每回合限一次，在需要使用或打出【杀】或【闪】时，"
-    .. "你可以视为使用或打出之；随后本回合下一次受到伤害后，失去1点体力，"
-    .. "若此牌仍在你的装备区且可弃置，弃置之。",
-  ["qiao__xuehai_mowangzun"] = "装备牌·宝物<br/>"
-    .. "<b>宝物技能</b>：当你需要合法使用【酒】时，同势力角色可打出黑桃牌协助；"
-    .. "首次协助成功后你视为使用【酒】。你脱离濒死时，将此牌交给伤害来源。",
-  ["qiao__shenshou_sizhao"] = "装备牌·武器 攻击范围2<br/>"
-    .. "<b>装备技能</b>：此牌进入装备区的回合中，若你仍装备此牌，你使用牌无距离限制，"
-    .. "并跳过弃牌阶段。后续回合，你可将此牌作为合纵牌与手牌一同交出。",
-  -- 势力锦囊牌面原文见 assets/bilibili articles/cards/锦囊装备.json。
-  ["qiao__danggu_zhihuo"] = "出牌阶段，对所有其他角色使用。你暗置目标角色各一张武将牌，且其不能明置武将牌直到你下回合开始或你死亡。汉势力角色成为此牌的目标后，其可以交给你一张牌，然后令此牌对其无效。",
-  ["qiao__command_world"] = "出牌阶段，对一名体力值不是最小的角色使用。除目标角色外的角色均可以选择一项：1.弃置一张手牌并视为对其使用一张【杀】；2.弃置其一张牌。魏势力角色选择1时跳过弃置牌的步骤，选择2时获得弃置的牌。",
-  ["qiao__restore_heartland"] = "出牌阶段，对任意名角色使用。目标角色各选择一项：1.视为使用一张【杀】；2.摸一张牌。蜀势力角色选择1时使用【杀】伤害+1，选择2时改为摸两张牌。",
-  ["qiao__strengthen_state"] = "出牌阶段，对你使用。目标角色摸八张牌，然后弃置至少六张手牌。你可以将以此法弃置的牌交给其他吴势力角色（每名角色至多两张）。",
-  ["qiao__luanwu_chaos"] = "出牌阶段，对所有角色使用。目标角色各展示手牌并令你选择一项：1.其弃置两张类别各不同的手牌；2.你弃置其中一张牌。群势力角色结算后，若其没有手牌，其摸牌至体力值。",
-  ["qiao__sihai_guiping"] = "出牌阶段，对你使用。目标角色结束其出牌阶段，然后获得弃牌堆中此阶段置入的每种花色各一张牌。你可以将这些牌交给其他晋势力角色各一张，且晋势力角色依次可以使用一张牌。",
-  ["qiao__luoshui_zhishi"] = "出牌阶段，对一名角色使用。目标角色判定：若不为黑桃2～9，本回合下个阶段开始前，其将【洛水之誓】置回判定区，该阶段改为判定阶段；若为黑桃2～9且其为野心家，其对一名角色造成3点雷电伤害。野心家对自己使用此牌则立即结算。",
+  ["qiao__danggu_zhihuo"] = "出牌阶段，对所有其他角色使用。你暗置目标角色各一张武将牌，且其不能明置武将牌直到你下回合开始或你死亡。"
+    .. "<br/>若使用者为汉势力角色，则汉势力角色成为此牌的目标后，其可以交给你一张牌，然后令此牌对其无效。",
+  ["qiao__command_world"] = "出牌阶段，对一名体力值不是最小的角色使用。除目标角色外的角色均可以选择一项：1.弃置一张手牌并视为对其使用一张【杀】；2.弃置其一张牌。"
+    .. "<br/>若使用者为魏势力角色，则魏势力角色选择1时跳过弃置牌的步骤，选择2时获得弃置的牌。",
+  ["qiao__restore_heartland"] = "出牌阶段，对任意名角色使用。目标角色各选择一项：1.视为使用一张【杀】；2.摸一张牌。"
+    .. "<br/>若使用者为蜀势力角色，则蜀势力角色选择1时使用【杀】伤害+1，选择2时改为摸两张牌。",
+  ["qiao__strengthen_state"] = "出牌阶段，对你使用。目标角色摸八张牌，然后弃置至少六张手牌。"
+    .. "<br/>若使用者为吴势力角色，则你可以将以此法弃置的牌交给其他吴势力角色（每名角色至多两张）。",
+  ["qiao__luanwu_chaos"] = "出牌阶段，对所有角色使用。目标角色各展示手牌并令你选择一项：1.其弃置两张类别各不同的手牌；2.你弃置其中一张牌。"
+    .. "<br/>若使用者为群势力角色，则群势力角色结算后，若其没有手牌，其摸牌至体力值。",
+  ["qiao__sihai_guiping"] = "出牌阶段，对你使用。目标角色结束其出牌阶段，然后获得弃牌堆中此阶段置入的每种花色各一张牌。"
+    .. "<br/>若使用者为晋势力角色，则你可以将这些牌交给其他晋势力角色各一张，且晋势力角色依次可以使用一张牌。",
+  ["qiao__luoshui_zhishi"] = "出牌阶段，对一名角色使用。目标角色判定：若不为黑桃2～9，本回合下个阶段开始前，其将【洛水之誓】置回判定区，该阶段改为判定阶段；若为黑桃2～9且其为野心家，其对一名角色造成3点雷电伤害。"
+    .. "<br/>若使用者为野心家且对自己使用此牌，则立即结算。",
 }
 
 local function cardDescription(cardType)
   if cardType.id == "qiao__thunder__slash" then return THUNDER_SLASH_DESCRIPTION end
-  if cardType.id == "qiao__thunder_shell__slash" then return THUNDER_SHELL_DESCRIPTION end
   local override = DESCRIPTION_OVERRIDES[cardType.id]
   if override then return override end
-  return shellDescription(cardType)
+  return cardDescriptionWithHeader(cardType, EquipmentText[cardType.id])
+end
+
+local function adaptationDescription(self, entry)
+  if self.name == "qiao__thunder__slash" and entry.condition == "gujun"
+    and entry.effect == "ignore_times" then
+    return THUNDER_GUJUN_DESCRIPTION
+  end
+  local condition = CONDITION_TEXT[entry.condition] or entry.condition
+  local effect = EFFECT_TEXT[entry.effect] or entry.effect
+  return "<b>应变·" .. condition .. "</b>：" .. effect
 end
 
 local function dynamicDescription(self, player, lang)
@@ -287,9 +219,7 @@ local function dynamicDescription(self, player, lang)
     table.insert(lines, "<b>合纵</b>")
   end
   for _, entry in ipairs(data.qiao_adaptation or {}) do
-    local condition = CONDITION_TEXT[entry.condition] or entry.condition
-    local effect = EFFECT_TEXT[entry.effect] or entry.effect
-    table.insert(lines, "<b>应变·" .. condition .. "</b>：" .. effect)
+    table.insert(lines, adaptationDescription(self, entry))
   end
   if #lines > 0 then return base .. "<br/>" .. table.concat(lines, "<br/>") end
   return base
@@ -310,6 +240,7 @@ for _, cardType in ipairs(CardData.types) do
   }
   if cardType.subtypes then
     spec.extra_data.qiao_subtypes = table.clone(cardType.subtypes)
+    spec.ui_name = cardType.id
   end
   if cardType.type == "basic" then
     spec.type = Card.TypeBasic
@@ -374,7 +305,7 @@ end
 
 local function adaptationId(partition, suitCode, rankCode)
   local key = positionId(partition, suitCode, rankCode)
-  -- Keep the existing public entry id of the two implemented Thunder Slashes.
+  -- Keep the existing public entry id of the 势备 ♠9/♠10 孤军 positions.
   if key == "shibei/S/9" or key == "shibei/S/10" then
     return "qiao_thunder_slash_gujun"
   end
@@ -887,7 +818,7 @@ Fk:addPostLoadFunc(function()
     local reuse = H.reuse[card.name]
     if not reuse or reuse.status ~= "reused" then return end
     patchReuseCard(card, reuse)
-    if reuse.desc ~= false and (reuse.kind == "skill" or reuse.kind == "equip"
+    if not EquipmentText[card.name] and reuse.desc ~= false and (reuse.kind == "skill" or reuse.kind == "equip"
       or reuse.kind == "qiao_skill" or reuse.kind == "qiao_equip") then
       copyUpstreamDescription(card.name, reuse.upstream)
     end
@@ -968,6 +899,10 @@ for _, cardType in ipairs(CardData.types) do
   translations[":" .. cardType.id] = description
   if cardType.faction_trick then
     translations[":" .. cardType.skill] = description
+  end
+  local reuse = ReuseData.cards[cardType.id]
+  if EquipmentText[cardType.id] and reuse and reuse.kind == "qiao_equip" then
+    translations[":" .. reuse.skill] = EquipmentText[cardType.id]
   end
 end
 Fk:loadTranslationTable(translations)

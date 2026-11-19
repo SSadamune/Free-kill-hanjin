@@ -1,7 +1,7 @@
 -- 观星、空城与放权已经建立的持续结算，不依赖原技能是否仍在。
 local skill = fk.CreateSkill { name = "qiao__shu_state_rule" }
 
-local KONG = "qiao__skill_shu004_2_kong"
+local KONG = "@@qiao__skill_shu004_2_kong"
 local GUANX = "qiao__skill_shu004_1_finish-turn"
 local FQ = "qiao__skill_shu013_2_turn-turn"
 

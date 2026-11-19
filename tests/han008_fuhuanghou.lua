@@ -1,7 +1,7 @@
 -- HAN008 伏皇后：惴恐、求援。定向验收文件。
 -- 规则依据：docs/rules/generals/han008-fuhuanghou.md、rulebook/events/use-card.md、
 -- rulebook/events/damage.md、docs/rules/extra-targets.md。
--- 本文件尚未执行；由基础组统一运行：
+-- 本文件为定向验收；由基础组统一运行：
 --   python scripts/test.py --file tests/han008_fuhuanghou.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 
@@ -155,6 +155,9 @@ function Testqiao_han008:testChuikongWinPreventsTargetDamage()
   inRoom(function() GameEvent.Phase:create(data):exec() end)
 
   lu.assertEquals(p1():usedSkillTimes(CK, Player.HistoryGame), 1)
+  local mark = "@@qiao__skill_han008_1_no_damage-turn"
+  lu.assertEquals(p2():getMark(mark), 1)
+  lu.assertEquals(Fk:translate(mark), "惴恐")
   inRoom(function()
     room:damage { from = p2(), to = p3(), damage = 1, skillName = "test" }
   end)
@@ -185,6 +188,35 @@ function Testqiao_han008:testChuikongTieAllowsTargetVirtualSlash()
 end
 
 -- 求援 ---------------------------------------------------------------------
+
+-- 惴恐视为使用的【杀】也走求援：新增目标死亡后，伏皇后仍应受此【杀】伤害。
+function Testqiao_han008:testChuikongSlashQiuyuanDeathKeepsRemainingTarget()
+  local room = FkTest.room
+  inRoom(function() p1().hp = p1().maxHp - 1 end)
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 7 } })[1]
+  setHand(room, p3(), {})
+  inRoom(function() p3().hp = 1 end)
+
+  FkTest.setNextReplies(p1(), {
+    "1",
+    FkTest.ReplyChooseCards({ p1card }),
+    "1",
+    FkTest.ReplyChoosePlayer({ p3() }),
+  })
+  FkTest.setNextReplies(p2(), {
+    FkTest.ReplyChooseCards({ p2card }),
+    { OPTION_YES },
+  })
+  FkTest.setNextReplies(p3(), { "" })
+  local hp = p1().hp
+  local data = PhaseData:new { who = p2(), phase = Player.Start, reason = "game_rule" }
+  inRoom(function() GameEvent.Phase:create(data):exec() end)
+
+  lu.assertTrue(p3().dead, "优先目标应死亡")
+  lu.assertEquals(p1().hp, hp - 1, "优先目标死亡后伏皇后仍应受此【杀】伤害")
+  lu.assertEquals(p1():usedSkillTimes(QY, Player.HistoryGame), 1)
+end
 
 function Testqiao_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRest()
   local room = FkTest.room
@@ -241,6 +273,57 @@ function Testqiao_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRest(
   lu.assertTrue(seenConfirmed)
   lu.assertIs(firstAtEffect, p3())
   lu.assertEquals(p2().hp, 20)
+  lu.assertEquals(p2():usedSkillTimes(QY, Player.HistoryGame), 1)
+end
+
+-- 优先目标被此【杀】实际击杀不是“抵消”：其余目标仍须结算。用真实
+-- room:useCard 建立两名目标，只给新增目标 1 点体力且不提供【闪】。
+function Testqiao_han008:testQiuyuanPriorityTargetDeathKeepsSlashOnRemainingTarget()
+  local room = FkTest.room
+  setQiuYuanSeats(room)
+  local slashCard = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })[1]
+  setHand(room, p2(), {})
+  setHand(room, p3(), {})
+  inRoom(function()
+    p2().maxHp = 20
+    p2().hp = 20
+    p3().hp = 1
+  end)
+
+  local effectOrder, effectDetail = {}, {}
+  probeSerial = probeSerial + 1
+  installTestSkill(room, "#qiao_han008_death_probe_" .. probeSerial, {
+    { fk.PreCardEffect, {
+      global = true,
+      can_refresh = function(self, event, target, player, data)
+        return data.card ~= nil and data.card.trueName == "slash"
+          and data.use ~= nil and data.use.qiao_skill_han008_2_priority ~= nil
+      end,
+      on_refresh = function(self, event, target, player, data)
+        if effectOrder[#effectOrder] ~= data.to then
+          table.insert(effectOrder, data.to)
+          table.insert(effectDetail, string.format("%s from=%s card=%s tos=%s", tostring(data.to),
+            tostring(data.from), tostring(data.card),
+            table.concat(table.map(data.use.tos, function(p) return p.id end), ",")))
+        end
+      end,
+    } },
+  })
+
+  FkTest.setNextReplies(p2(), {
+    "1",
+    FkTest.ReplyChoosePlayer({ p3() }),
+  })
+  FkTest.setNextReplies(p3(), { "" })
+  inRoom(function()
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:getCardById(slashCard) }
+  end)
+
+  lu.assertIs(effectOrder[1], p3(), "新增目标应先结算，死亡分支才与报告一致: " .. table.concat(effectDetail, " | "))
+  lu.assertIs(effectOrder[2], p2(), "死亡不等于抵消，其余目标仍应进入效果结算: " .. table.concat(effectDetail, " | "))
+  lu.assertTrue(p3().dead, "优先目标应实际死亡，才进入死亡而非抵消分支")
+  lu.assertFalse(p2().dead)
+  lu.assertEquals(p2().hp, 19, "优先目标死亡后，其余目标仍应受此【杀】伤害")
   lu.assertEquals(p2():usedSkillTimes(QY, Player.HistoryGame), 1)
 end
 

@@ -6,12 +6,17 @@
 -- 的手牌均被本次弃置，发动前没有手牌时不视为“弃置了所有手牌”。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu001_1",
+  dynamic_desc = function(self, player)
+    if player then return self.name .. "-current:" .. player.maxHp end
+  end,
 }
 skill.qiaoImplemented = true
 
 skill:addEffect("active", {
   anim_type = "drawcard",
-  prompt = "#qiao__skill_wu001_1-prompt",
+  prompt = function(self, player)
+    return "#qiao__skill_wu001_1-prompt:::" .. player.maxHp
+  end,
   max_phase_use_time = 1,
   target_num = 0,
   min_card_num = 1,
@@ -47,7 +52,8 @@ skill:addEffect("active", {
 })
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_wu001_1-prompt"] = "制衡：弃置至多 X 张牌，然后摸等量的牌",
+  [":qiao__skill_wu001_1-current"] = "出牌阶段限一次，你可以弃置至多{1}张牌，然后摸等量的牌，若你因此弃置了所有手牌，则多摸一张牌。",
+  ["#qiao__skill_wu001_1-prompt"] = "制衡：弃置至多 %arg 张牌，然后摸等量的牌",
 }
 
 return skill

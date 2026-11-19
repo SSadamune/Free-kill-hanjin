@@ -6,6 +6,7 @@ local skill = fk.CreateSkill {
 
 Fk:loadTranslationTable {
   ["qiao__wonder_map_skill"] = "天机图",
+  ["#qiao__wonder_map-discard"] = "天机图：弃置一张其他牌",
 }
 
 skill:addEffect(fk.AfterCardsMove, {
@@ -44,6 +45,7 @@ skill:addEffect(fk.AfterCardsMove, {
       include_equip = true,
       pattern = tostring(Exppattern { id = candidates }),
       skill_name = skill.name,
+      prompt = "#qiao__wonder_map-discard",
       cancelable = false,
     })
   end,

@@ -32,7 +32,7 @@ local function chooseEquip(room, chooser, target)
     target = target,
     flag = "e",
     skill_name = skill.name,
-    prompt = "#qiao__skill_jin023_1-equip:" .. target.id,
+    prompt = "#qiao__skill_jin023_1-equip::" .. target.id,
   })
 end
 

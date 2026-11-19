@@ -442,8 +442,9 @@ function Testqiao_wei_damage:testXiaoguoCostRequestNamesTargetAndFollowUp()
   lu.assertEquals(request.max_num, 2)
   -- Ltk.processPrompt 的参数位依次是 #键:来源:目标:参数；%dest 取第 3 段目标。
   lu.assertEquals(request.prompt,
-    "#qiao__skill_wei016_1-discard:" .. p(1).id .. ":" .. p(2).id .. ":2")
+    "#qiao__skill_wei016_1-discard::" .. p(2).id)
   local text = Fk:translate("#qiao__skill_wei016_1-discard")
+  lu.assertNil(text:find("%arg", 1, true))
   lu.assertTrue(text:find("%dest", 1, true) ~= nil,
     "提示应使用 %dest 指向目标：" .. text)
   lu.assertTrue(text:find("造成1点伤害", 1, true) ~= nil,

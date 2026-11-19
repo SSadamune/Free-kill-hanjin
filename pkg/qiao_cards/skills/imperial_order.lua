@@ -47,6 +47,7 @@ local function doImperialOrder(room, target)
     choices = choices,
     skill_name = skill.name,
     all_choices = all_choices,
+    prompt = "#qiao__imperial_order-choice",
   })
   if choice == "imperial_order_reveal" then
     H.askToRevealGenerals(target, {
@@ -215,7 +216,8 @@ Fk:loadTranslationTable {
   ["qiao__imperial_order_skill"] = "敕令",
   ["#qiao__imperial_order_skill"] = "所有没有势力的角色选择：1.明置一张武将牌，摸一张牌；"
     .. "2.弃置一张装备牌；3.失去1点体力",
-  ["#qiao__imperial_order-discard"] = "请选择一张装备牌弃置",
+  ["#qiao__imperial_order-choice"] = "敕令：选择明置武将牌并摸一张牌、弃置一张装备牌或失去1点体力",
+  ["#qiao__imperial_order-discard"] = "敕令：请选择一张装备牌弃置",
   ["#ImperialOrderRemoved"] = "【敕令】移出游戏",
 }
 

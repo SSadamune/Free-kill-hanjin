@@ -113,6 +113,11 @@ function Testqiao_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   lu.assertTrue(table.contains(lord:getCardIds("h"), first))
   lu.assertTrue(table.contains(lord:getCardIds("h"), second))
   lu.assertTrue(other:hasSkill("qiao__skill_shu002_1"))
+  local mark = "@!!" .. FLAG
+  lu.assertEquals(lord:getMark(mark), "旗")
+  lu.assertEquals(other:getMark(mark), 0)
+  inRoom(function() room:handleAddLoseSkills(lord, "-" .. ZHANGWU, nil, false, true) end)
+  lu.assertEquals(lord:getMark(mark), 0)
 end
 
 return { name = "qiao_em_shu001_liubei" }

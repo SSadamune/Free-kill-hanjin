@@ -74,7 +74,7 @@ local function ensureFollowListener(room)
           local choice = room:askToChoice(player, {
             choices = { OPT_CHAIN, OPT_RESET },
             skill_name = skill.name,
-            prompt = "#qiao__skill_jin005_1-chain:" .. p.id,
+            prompt = "#qiao__skill_jin005_1-chain::" .. p.id,
             cancelable = false,
           })
           if choice == OPT_CHAIN then
@@ -107,7 +107,7 @@ skill:addEffect(fk.PreCardUse, {
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin005_1-invoke:" .. target.id,
+      prompt = "#qiao__skill_jin005_1-invoke::" .. target.id,
     })
   end,
   on_use = function(self, event, target, player, data)

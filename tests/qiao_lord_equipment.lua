@@ -4,6 +4,7 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local Heg = require "packages.hegemony.util"
+local AllianceCards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 
 local CHIXIAO = "qiao__chixiao_sword"
 local JINXIU = "qiao__jinxiu_zhengpao"
@@ -52,6 +53,29 @@ local function use(room, from, tos, c)
   local data = UseCardData:new { from = from, tos = tos or {}, card = c, extra_data = {} }
   room:useCard(data)
   return data
+end
+
+--- 模拟客户端实际持有的实体牌：由 PrintCard 打印，只有公开合纵标记，没有
+--- 服务端在打印后写入的 extra_data.qiao_heji。
+local function printedAllianceCard(room, name, suit, number)
+  local c = room:printCard(name, suit, number)
+  room:setCardMark(c, "@@alliance-public", 1)
+  return c
+end
+
+local function shenshouBypassesDistance(player)
+  local snatch = Fk:cloneCard("qiao__snatch")
+  local distant = assert(table.find(player.room:getOtherPlayers(player), function(other)
+    return player:distanceTo(other) > 1
+  end), "神授思召用例须有原本超出顺手牵羊距离的目标")
+  return snatch.skill:withinDistanceLimit(player, false, snatch, distant)
+end
+
+local function totalInvokeLogs(logs)
+  return #table.filter(logs, function(log)
+    return type(log.type) == "string" and log.type:startsWith("#InvokeSkill")
+      and type(log.arg) == "string" and log.arg:find("shenshou_sizhao", 1, true) ~= nil
+  end)
 end
 
 function Testqiao_lord_equipment:testChixiaoBigSmallTargetGivesRedOrCannotOffset()
@@ -204,12 +228,18 @@ function Testqiao_lord_equipment:testZhoujunEnteringSameCategoryAndNoBigKingdom(
   local owner, ally, noBig = p(1), p(3), p(4)
   local seal = card("qiao__zhoujun_lingbingyin")
   local gift = card("qiao__peach", Card.Heart, 7)
+  local giftPrompt
   FkTest.runInRoom(function()
     give(room, owner, seal)
     give(room, ally, gift)
+    FkTest.setRoomBreakpoint(ally, "AskForSkillInvoke", function(data)
+      if data[1] == "qiao__zhoujun_lingbingyin_skill" then giftPrompt = data[2] end
+      return false
+    end)
     FkTest.setNextReplies(ally, { "1", gift.id })
     use(room, owner, { owner }, seal)
   end)
+  lu.assertEquals(giftPrompt, "#qiao__zhoujun-give::" .. owner.id)
   lu.assertTrue(table.contains(owner:getCardIds("h"), gift.id),
     "同为一个大势力的角色可交牌给装备者")
 
@@ -235,11 +265,11 @@ function Testqiao_lord_equipment:testZhoujunPrepareChoiceAndTurnPersistence()
   local room = FkTest.room
   local owner = p(1)
   local seal = card("qiao__zhoujun_lingbingyin")
-  local handBefore
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    FkTest.setNextReplies(owner, { "1", "#qiao__zhoujun-draw2" })
+    -- 摸牌+2，出杀-1，手牌上限-1：合法组合由服务端数值校验后生效。
+    FkTest.setNextReplies(owner, { "1", { draw = 2, slash = -1, hand = -1 } })
     room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
     local drawData = { n = 2 }
     room.logic:trigger(fk.DrawNCards, owner, drawData)
@@ -270,24 +300,68 @@ function Testqiao_lord_equipment:testZhoujunTwoPointReduction()
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    FkTest.setNextReplies(owner, { "1" })
-    local originalChoice = room.askToChoice
-    room.askToChoice = function(self, who, params)
-      if params.skill_name == "qiao__zhoujun_lingbingyin_skill" then
-        for _, c in ipairs(params.choices or {}) do
-          if tostring(c):find("qiao__zhoujun-slash2-draw2", 1, true) then return c end
-        end
-      end
-      return originalChoice(self, who, params)
-    end
+    FkTest.setNextReplies(owner, { "1", { draw = -2, slash = 2, hand = 0 } })
     room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
-    room.askToChoice = originalChoice
     local drawData = { n = 2 }
     room.logic:trigger(fk.DrawNCards, owner, drawData)
     lu.assertEquals(drawData.n, 0, "摸牌-2按当前基数足额扣除")
     lu.assertEquals(Fk.skills["slash_skill"]:getMaxUseTime(
       owner, Player.HistoryPhase, Fk:cloneCard("slash")), 3, "出杀+2")
     room.logic:trigger(fk.TurnEnd, owner, {})
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInvalidReply()
+  local room = FkTest.room
+  local owner = p(6)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  local request
+  FkTest.runInRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    -- 三项都在取值范围内，但不是服务端提供的合法组合，不能生效。
+    FkTest.setNextReplies(owner, { "1", { draw = 0, slash = 0, hand = 0 } })
+    FkTest.setRoomBreakpoint(owner, "CustomDialog", function(data)
+      request = data
+      return false
+    end)
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+
+    lu.assertNotNil(request, "准备阶段应打开数值调整弹窗")
+    lu.assertEquals(request.component.url,
+      "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml")
+    local options = request.component.prop.options
+    lu.assertTrue(#options > 0, "服务端应提供合法组合")
+    for _, option in ipairs(options) do
+      lu.assertEquals(option.draw + option.slash + option.hand, 0,
+        "合法组合三项增减值合计为 0")
+      local increased = 0
+      for _, value in ipairs({ option.draw, option.slash, option.hand }) do
+        if value > 0 then increased = increased + 1 end
+      end
+      lu.assertEquals(increased, 1, "合法组合恰有一项增加")
+      lu.assertTrue(option.draw >= -2 and option.draw <= 2)
+      lu.assertTrue(option.slash >= -2 and option.slash <= 2)
+      lu.assertTrue(option.hand >= -2 and option.hand <= 2)
+    end
+    lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "非合法组合不产生摸牌修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0, "非合法组合不产生出杀修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0, "非合法组合不产生手牌上限修正")
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunCancelLeavesNoBonus()
+  local room = FkTest.room
+  local owner = p(7)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  FkTest.runInRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    FkTest.setNextReplies(owner, { "1", "" })
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "取消不随机选择修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
+    lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
   end)
 end
 
@@ -525,33 +599,121 @@ function Testqiao_lord_equipment:testXuehaiProhibitedWineDoesNotAskHelper()
     lu.assertTrue(table.contains(helper:getCardIds("h"), spade.id), "协助者未被询问/消耗")
   end)
 end
-function Testqiao_lord_equipment:testAllianceRealClientButtonMix()
+function Testqiao_lord_equipment:testShenshouEntryTurnHiddenThenClearedSilently()
+  local room = FkTest.room
+  local owner = p(1)
+  local fan
+  FkTest.runInRoom(function()
+    fan = printedAllianceCard(room, SHENSHOU, Card.Spade, 5)
+    -- 客户端打印牌没有服务端的合纵 extra_data，只有公开牌面标记。
+    lu.assertFalse(AllianceCards.isHeji(fan), "PrintCard 实体牌不应带服务端 extra_data")
+    give(room, owner, fan)
+    room.current = owner
+    use(room, owner, { owner }, fan)
+    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 1, "置入装备区的回合建立状态")
+    lu.assertTrue(shenshouBypassesDistance(owner), "当回合使用牌无距离限制")
+    local phase = PhaseData:new { who = owner, reason = "game_rule", phase = Player.Discard }
+    room.logic:trigger(fk.EventPhaseChanging, owner, phase)
+    lu.assertTrue(phase.skipped, "当回合跳过弃牌阶段")
+
+    -- 当回合只有神授思召：没有合法合纵牌，不能从装备区合纵。
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(c) return c.id == owner.id end)
+      local handler = ReqPlayCard:new(me)
+      handler.skill_name = "qiao__alliance"
+      handler:setup()
+      lu.assertFalse(handler:skillButtonValidity("qiao__alliance"),
+        "当回合只有神授思召时合纵按钮不应可用")
+      lu.assertFalse(handler:cardValidity(fan.id), "当回合不能从装备区合纵")
+    end)
+
+    local logs = {}
+    local original = room.sendLog
+    room.sendLog = function(self, log) table.insert(logs, log) end
+    room.logic:trigger(fk.TurnEnd, owner, {})
+    room.sendLog = original
+    lu.assertEquals(totalInvokeLogs(logs), 0, "回合结束清理不应表现为一次可见技能发动")
+    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 0, "回合结束清除置入回合状态")
+    lu.assertFalse(shenshouBypassesDistance(owner), "后续回合不再获得无距离限制")
+    local nextPhase = PhaseData:new { who = owner, reason = "game_rule", phase = Player.Discard }
+    room.logic:trigger(fk.EventPhaseChanging, owner, nextPhase)
+    lu.assertNotIsTrue(nextPhase.skipped, "额外回合及后续回合不再跳过弃牌阶段")
+  end)
+end
+
+function Testqiao_lord_equipment:testShenshouAllianceFromEquipmentAfterOtherTurnEnds()
   local room = FkTest.room
   local owner, target = p(1), p(2)
-  local fan = card(SHENSHOU)
-  local hand = card("qiao__peach", Card.Diamond, 3)
+  local fan, hand
   FkTest.runInRoom(function()
+    fan = printedAllianceCard(room, SHENSHOU, Card.Spade, 5)
+    hand = printedAllianceCard(room, "qiao__peach", Card.Diamond, 3)
+    lu.assertFalse(AllianceCards.isHeji(fan))
+    lu.assertFalse(AllianceCards.isHeji(hand))
     give(room, owner, fan)
-    use(room, owner, { owner }, fan)
+    -- 神授思召在他人回合进入装备区。
+    room.current = target
+    room:moveCardTo(fan.id, Card.PlayerEquip, owner, fk.ReasonJustMove,
+      "test", nil, true, owner)
     give(room, owner, hand)
+
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(c) return c.id == owner.id end)
+      local to = table.find(clients, function(c) return c.id == target.id end)
+      local handler = ReqPlayCard:new(me)
+      handler.skill_name = "qiao__alliance"
+      handler:setup()
+      lu.assertTrue(handler:skillButtonValidity("qiao__alliance"), "有合纵手牌时按钮可用")
+      lu.assertNotNil(handler.scene:getAllItems("CardItem")[fan.id],
+        "装备区的神授思召应展开到选牌区")
+      lu.assertFalse(handler:cardValidity(fan.id), "进入装备区的当回合不能选神授思召")
+      lu.assertTrue(handler:cardValidity(hand.id), "当回合仍可正常合纵手牌")
+      handler:selectSkill("qiao__alliance", { selected = true })
+      handler:selectCard(hand.id, { selected = true })
+      lu.assertTrue(handler:targetValidity(to.id), "手牌合纵目标仍然合法")
+      handler:selectTarget(to.id, { selected = true })
+      lu.assertTrue(handler:feasible(), "当回合手牌合纵可确认")
+      handler:_finish()
+    end)
+
+    local logs = {}
+    local original = room.sendLog
+    room.sendLog = function(self, log) table.insert(logs, log) end
     room.logic:trigger(fk.TurnEnd, target, {})
+    room.sendLog = original
+    lu.assertEquals(totalInvokeLogs(logs), 0, "他人回合结束清理也应静默")
+    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 0, "他人回合结束清除状态")
   end)
+
   client_room.run(room, function(clients)
     local me = table.find(clients, function(c) return c.id == owner.id end)
     local to = table.find(clients, function(c) return c.id == target.id end)
+    lu.assertEquals(me:getMark("qiao_shenshou_active"), 0, "客户端同步到状态已清除")
     local handler = ReqPlayCard:new(me)
     handler.skill_name = "qiao__alliance"
     handler:setup()
-    lu.assertTrue(handler:skillButtonValidity("qiao__alliance"), "真实客户端按钮应可用")
+    lu.assertTrue(handler:skillButtonValidity("qiao__alliance"), "后续回合按钮可用")
+    lu.assertNotNil(handler.scene:getAllItems("CardItem")[fan.id],
+      "后续回合装备区牌仍在选牌区")
+    lu.assertTrue(handler:cardValidity(fan.id), "后续回合可从装备区选择神授思召")
     handler:selectSkill("qiao__alliance", { selected = true })
-    lu.assertTrue(handler:cardValidity(fan.id), "神授装备应可在混选中点亮")
     handler:selectCard(fan.id, { selected = true })
-    lu.assertTrue(handler:cardValidity(hand.id), "合纵手牌应可继续混选")
+    lu.assertTrue(handler:cardValidity(hand.id), "装备与合纵手牌可继续混选")
     handler:selectCard(hand.id, { selected = true })
-    lu.assertTrue(handler:targetValidity(to.id), "异势力目标应合法")
+    lu.assertTrue(handler:targetValidity(to.id), "混选目标合法")
     handler:selectTarget(to.id, { selected = true })
-    lu.assertTrue(handler:feasible(), "混合选择后应可确认")
+    lu.assertTrue(handler:feasible(), "装备与手牌混选可确认")
     handler:_finish()
+  end)
+
+  FkTest.runInRoom(function()
+    local targetHand = #target:getCardIds("h")
+    Fk.skills["qiao__alliance"]:onUse(room, {
+      from = owner, tos = { target }, cards = { fan.id, hand.id },
+    })
+    lu.assertEquals(#target:getCardIds("h"), targetHand + 2, "装备与手牌一同交给目标")
+    lu.assertEquals(room:getCardOwner(fan.id).id, target.id, "神授思召进入目标手牌区")
+    lu.assertEquals(room:getCardOwner(hand.id).id, target.id, "合纵手牌进入目标手牌区")
   end)
 end
 function Testqiao_lord_equipment:testXuehaiWineCanUseRespectsLimitAndSelfTarget()

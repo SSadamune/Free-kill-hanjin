@@ -108,17 +108,15 @@ function Testqiao_han009:testMoukuiSingleOptionsWithoutCounter()
   -- 只摸一张：目标没有任何牌，弃牌选项不可选。
   FkTest.setNextReplies(p1(), {
     "1",
-    FkTest.ReplyChoosePlayer({ p2() }),
   })
   inRoom(function()
     room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(#p1():getCardIds("h"), 2)
 
-  -- 只弃一张：先选择目标，再选择“弃置其一张牌”。
+  -- 只有一个目标：确认发动后直接选择“弃置其一张牌”。
   FkTest.setNextReplies(p1(), {
     "1",
-    FkTest.ReplyChoosePlayer({ p3() }),
     { OPTION_DISCARD },
     p3card,
   })
@@ -143,7 +141,6 @@ function Testqiao_han009:testMoukuiDoubleSelectionCounterDiscardsOwnerCard()
 
   FkTest.setNextReplies(p1(), {
     "1",
-    FkTest.ReplyChoosePlayer({ p2() }),
     { OPTION_DRAW, OPTION_DISCARD },
     discardCard,
   })

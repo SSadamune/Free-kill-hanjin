@@ -3,6 +3,7 @@ local skill = fk.CreateSkill { name = "qiao__unexpectation_skill" }
 Fk:loadTranslationTable {
   ["qiao__unexpectation_skill"] = "出其不意",
   ["#qiao__unexpectation_skill"] = "选择一名有手牌的其他角色，展示其一张手牌，若花色与此牌不同则对其造成伤害",
+  ["#qiao__unexpectation-show"] = "出其不意：选择 %dest 的一张手牌展示",
 }
 
 skill:addEffect("cardskill", {
@@ -19,6 +20,7 @@ skill:addEffect("cardskill", {
       target = target,
       flag = "h",
       skill_name = skill.name,
+      prompt = "#qiao__unexpectation-show::" .. target.id .. ":" .. skill.name,
     })
     target:showCards(card)
     card = Fk:getCardById(card)

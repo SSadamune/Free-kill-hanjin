@@ -85,6 +85,7 @@ skill:addEffect(fk.EventPhaseStart, {
         target = t,
         flag = flag,
         skill_name = skill.name,
+        prompt = "#qiao__em_wu001_jubao-obtain::" .. t.id .. ":" .. skill.name,
       })
       if card ~= nil then
         room:obtainCard(player, card, false, fk.ReasonPrey, player, skill.name)
@@ -95,6 +96,7 @@ skill:addEffect(fk.EventPhaseStart, {
 
 Fk:loadTranslationTable {
   [P.JUBAO] = "聚宝",
+  ["#qiao__em_wu001_jubao-obtain"] = "聚宝：选择 %dest 的一张牌获得",
   [":" .. P.JUBAO] = "锁定技，防止其他角色不因弃置而移动你装备着的宝物牌。结束阶段，若【定澜夜明珠】在场上或弃牌堆，你摸一张牌，获得装备着该牌的角色一张牌。",
 }
 

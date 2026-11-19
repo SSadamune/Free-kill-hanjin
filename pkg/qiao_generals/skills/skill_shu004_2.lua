@@ -4,10 +4,11 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local KONG = "qiao__skill_shu004_2_kong"
+local KONG = "@@qiao__skill_shu004_2_kong"
 
 Fk:loadTranslationTable {
   ["qiao__skill_shu004_2"] = "空城",
+  [KONG] = "空城",
   [":qiao__skill_shu004_2"] = "主将技，当你失去手牌后，若你没有手牌，你可以令【杀】和【决斗】对你无效，直到你下次摸牌。",
   ["#qiao__skill_shu004_2-invoke"] = "空城：是否令【杀】和【决斗】对你无效，直到下次摸牌？",
 }
