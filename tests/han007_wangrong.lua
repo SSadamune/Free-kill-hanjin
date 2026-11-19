@@ -230,6 +230,11 @@ function Testqiao_han007:testMinsiDrawnHeartsDoNotCountForHandLimit()
   room.askToDiscard = function(self, player, params)
     if params.skill_name == "phase_discard" then
       captured = { min_num = params.min_num, max_num = params.max_num }
+      local mark = "@@qiao_minsi_hand_limit-turn"
+      for _, id in ipairs(drawnHearts) do
+        lu.assertNotEquals(Fk:getCardById(id, true):getMark(mark), 0)
+      end
+      lu.assertEquals(Fk:getCardById(ids[3], true):getMark(mark), 0)
     end
     return original(self, player, params)
   end
@@ -254,6 +259,11 @@ function Testqiao_han007:testMinsiDrawnHeartsDoNotCountForHandLimit()
   lu.assertEquals(#hand, 5 - expectedDiscard)
   lu.assertTrue(table.contains(hand, ids[3]))
   for _, id in ipairs(drawnHearts) do lu.assertTrue(table.contains(hand, id)) end
+  inRoom(function()
+    for _, id in ipairs(drawnHearts) do
+      lu.assertEquals(Fk:getCardById(id, true):getMark("@@qiao_minsi_hand_limit-turn"), 0)
+    end
+  end)
 end
 
 function Testqiao_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination()

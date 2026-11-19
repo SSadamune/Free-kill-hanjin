@@ -65,7 +65,7 @@ skill:addEffect("active", {
       max_card_num = giveCount,
       pattern = ".|.|.|hand",
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin008_2-give::" .. giveCount,
+      prompt = "#qiao__skill_jin008_2-give:::" .. giveCount,
       cancelable = false,
     })
     chosen = chosen or {}

@@ -141,10 +141,13 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
--- 公开：所有角色均可看到带标记的牌。
+-- 公开：所有角色均可看到带标记的牌。只有明确带标记时才返回 true；
+-- 未命中必须返回 nil 交还引擎（false 会把该牌对所有人强制隐藏）。
 skill:addEffect("visibility", {
   card_visible = function(self, player, card)
-    return card:getMark(VISIBLE_MARK) > 0
+    if card == nil then return nil end
+    if card:getMark(VISIBLE_MARK) > 0 then return true end
+    return nil
   end,
 })
 

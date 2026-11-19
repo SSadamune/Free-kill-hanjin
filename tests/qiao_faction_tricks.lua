@@ -119,13 +119,13 @@ Testqiao_faction_tricks = {
 function Testqiao_faction_tricks:testSevenTricksKeepIdentityAndStayOutsideTheDeck()
   local room = FkTest.room
   local expected = {
-    { DANGGU, "han" },
-    { COMMAND_WORLD, "wei" },
-    { "qiao__restore_heartland", "shu" },
-    { STRENGTHEN, "wu" },
-    { LUANWU, "qun" },
-    { "qiao__sihai_guiping", "jin" },
-    { "qiao__luoshui_zhishi", "wild" },
+    { DANGGU, "han", "若使用者为汉势力角色，则汉势力角色成为此牌的目标后" },
+    { COMMAND_WORLD, "wei", "若使用者为魏势力角色，则魏势力角色选择1时" },
+    { "qiao__restore_heartland", "shu", "若使用者为蜀势力角色，则蜀势力角色选择1时" },
+    { STRENGTHEN, "wu", "若使用者为吴势力角色，则你可以将以此法弃置的牌" },
+    { LUANWU, "qun", "若使用者为群势力角色，则群势力角色结算后" },
+    { "qiao__sihai_guiping", "jin", "若使用者为晋势力角色，则你可以将这些牌" },
+    { "qiao__luoshui_zhishi", "wild", "若使用者为野心家且对自己使用此牌，则立即结算。" },
   }
   local inPile = {}
   for _, id in ipairs(room.draw_pile) do inPile[id] = true end
@@ -133,7 +133,7 @@ function Testqiao_faction_tricks:testSevenTricksKeepIdentityAndStayOutsideTheDec
     for _, id in ipairs(player:getCardIds("he")) do inPile[id] = true end
   end
   for _, spec in ipairs(expected) do
-    local name, kingdom = spec[1], spec[2]
+    local name, kingdom, factionText = table.unpack(spec)
     lu.assertEquals(Cards.tricks[name], kingdom, "独立牌表登记的所属势力不符: " .. name)
     local id = voidTrick(room, name)
     lu.assertNotNil(id, "缺少游戏外实体: " .. name)
@@ -143,7 +143,7 @@ function Testqiao_faction_tricks:testSevenTricksKeepIdentityAndStayOutsideTheDec
     lu.assertNil(inPile[id], "势力锦囊不得进入默认牌堆: " .. name)
     lu.assertEquals(room:getCardArea(id), Card.Void, "势力锦囊默认在游戏外: " .. name)
     local description = Fk:translate(":" .. name, "zh_CN")
-    lu.assertNotEquals(description, ":" .. name, "缺少势力锦囊牌面原文: " .. name)
+    lu.assertStrContains(description, "。<br/>" .. factionText, "势力效果应另起一行: " .. name)
     lu.assertEquals(card:getDynamicDescription(room.players[1], "zh_CN"), description)
     lu.assertEquals(Fk:translate(":" .. card.skill.name, "zh_CN"), description)
   end
@@ -171,7 +171,7 @@ function Testqiao_faction_tricks:testImplementedTricksLoadAsFormalUsableCards()
   end
   lu.assertEquals(Fk:translate(":" .. STRENGTHEN, "zh_CN"),
     "出牌阶段，对你使用。目标角色摸八张牌，然后弃置至少六张手牌。"
-      .. "你可以将以此法弃置的牌交给其他吴势力角色（每名角色至多两张）。")
+      .. "<br/>若使用者为吴势力角色，则你可以将以此法弃置的牌交给其他吴势力角色（每名角色至多两张）。")
   -- 多目标牌需要正式 multi_targets 元数据，客户端才能一次选齐所有合法目标。
   lu.assertTrue(Fk.all_card_types[DANGGU].multiple_targets == true)
   lu.assertTrue(Fk.all_card_types[LUANWU].multiple_targets == true)
@@ -484,7 +484,7 @@ end
 
 function Testqiao_faction_tricks:testLuanwuShowsCardsAndGroupDrawsEmptyHandToHp()
   local room, user, groupTarget, other = FkTest.room, p(1), p(2), p(3)
-  local card, shown, firstDiscard
+  local card, shown, kept, arriving, firstDiscard, wire, discarded
   inRoom(function()
     room:setPlayerProperty(user, "kingdom", "qun")
     room:setPlayerMark(user, "__heg_kingdom", "qun")
@@ -504,9 +504,41 @@ function Testqiao_faction_tricks:testLuanwuShowsCardsAndGroupDrawsEmptyHandToHp(
     room:obtainCard(groupTarget, basic, false, fk.ReasonJustMove)
     room:obtainCard(groupTarget, trick, false, fk.ReasonJustMove)
     firstDiscard = { basic.id, trick.id }
-    -- 另一目标只有一张手牌，由使用者选第二项弃置。
+    -- 另一目标的手牌均为基本牌，由使用者选第二项弃置。
     shown = room:printCard("qiao__peach", Card.Diamond, 3)
+    kept = room:printCard("qiao__jink", Card.Heart, 4)
+    arriving = room:printCard("qiao__slash", Card.Club, 5)
     room:obtainCard(other, shown, false, fk.ReasonJustMove)
+    room:obtainCard(other, kept, false, fk.ReasonJustMove)
+
+    local probe = fk.CreateSkill { name = "#qiao_test_luanwu_display" }
+    probe:addEffect(fk.CardShown, {
+      global = true,
+      can_refresh = function(self, event, target, player, data)
+        return player == other and data.from == other and table.contains(data.cardIds, shown.id)
+      end,
+      on_refresh = function()
+        room:obtainCard(other, arriving, false, fk.ReasonJustMove)
+      end,
+    })
+    probe:addEffect(fk.AfterCardsMove, {
+      global = true,
+      can_refresh = function(self, event, target, player)
+        return player == other
+      end,
+      on_refresh = function(self, event, target, player, data)
+        for _, move in ipairs(data) do
+          if move.toArea == Card.DiscardPile and move.from == other then discarded = move end
+        end
+      end,
+    })
+    room:addSkill(probe:createSkill())
+  end)
+  FkTest.setRoomBreakpoint(user, "AskForCardChosen", function(data)
+    if data[3] == "#qiao__luanwu_chaos-user-discard::" .. other.id .. ":" .. LUANWU .. "_skill" then
+      wire = cbor.encode(data)
+    end
+    return false
   end)
   FkTest.setNextReplies(user, { { "luanwu_target_discard" }, { "luanwu_user_discard" }, shown.id })
   -- askToChooseCards 走 AskForPoxi，测试用技能限定覆盖返回本次要弃的两张手牌。
@@ -529,14 +561,33 @@ function Testqiao_faction_tricks:testLuanwuShowsCardsAndGroupDrawsEmptyHandToHp(
     "群目标结算后手牌为零应补至当前体力值")
   lu.assertFalse(table.contains(other:getCardIds(Player.Hand), shown.id),
     "第二项应由使用者弃置其展示的一张手牌")
+  lu.assertItemsEquals(other:getCardIds(Player.Hand), { kept.id, arriving.id })
+  lu.assertNotNil(wire)
+  FkTest.runInClient(function()
+    local client = ClientInstance
+    local payload
+    local notify = client.notifyUI
+    client.notifyUI = function(_, command, data)
+      if command == "AskForCardChosen" then payload = data end
+    end
+    local ok, err = pcall(client.askForCardChosen, client, cbor.decode(wire))
+    client.notifyUI = notify
+    assert(ok, err)
+    lu.assertEquals(payload.card_data, { { "$Hand", { shown.id, kept.id } } })
+    lu.assertNil(payload.visible_data, "选牌框应将本次展示的候选全部视为明牌")
+  end)
+  lu.assertNotNil(discarded)
+  lu.assertEquals(discarded.moveReason, fk.ReasonDiscard)
+  lu.assertTrue(discarded.moveVisible, "被选中的牌应正面向上弃置")
+  lu.assertIs(discarded.proposer, user)
   lu.assertEquals(room:getCardArea(shown.id), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(card), Card.Void, "势力锦囊用后仍移出游戏")
 end
 
 function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains()
   local room, user, target = FkTest.room, p(1), p(2)
-  local nonWei, wei = p(3), p(4)
-  local card, ownCard, targetCard, beforeWei, beforeHp
+  local nonWei, wei, discardOnly = p(3), p(4), p(5)
+  local card, ownCard, targetCard, secondTargetCard, beforeWei, beforeHp, onlyChoice
   inRoom(function()
     room:setPlayerProperty(user, "kingdom", "wei")
     room:setPlayerMark(user, "__heg_kingdom", "wei")
@@ -547,7 +598,7 @@ function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains(
     card = voidTrick(room, COMMAND_WORLD)
     giveFromVoid(room, card, user)
     -- 场上最低体力：两名并列最低的角色均不合法。
-    p(5).hp = 1
+    discardOnly.hp = 1
     p(6).hp = 1
     target.hp = 3
     beforeHp = target.hp
@@ -555,6 +606,10 @@ function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains(
     room:obtainCard(nonWei, ownCard, false, fk.ReasonJustMove)
     targetCard = room:printCard("qiao__peach", Card.Diamond, 9)
     room:obtainCard(target, targetCard, false, fk.ReasonJustMove)
+    secondTargetCard = room:printCard("qiao__jink", Card.Heart, 6)
+    room:obtainCard(target, secondTargetCard, false, fk.ReasonJustMove)
+    local hand = discardOnly:getCardIds("h")
+    if #hand > 0 then room:throwCard(hand, "test", discardOnly, discardOnly) end
     beforeWei = #wei:getCardIds("he")
   end)
   -- 合法目标判定：并列最低不合法，高于最低者合法。
@@ -570,7 +625,12 @@ function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains(
   FkTest.setNextReplies(nonWei, {
     "1", { "command_world_own" }, FkTest.ReplyDiscard({ ownCard.id }),
   })
-  FkTest.setNextReplies(wei, { "1", { "command_world_target" }, targetCard.id })
+  FkTest.setNextReplies(wei, { "1", { "command_world_target_wei" }, targetCard.id })
+  FkTest.setNextReplies(discardOnly, { "1", { "command_world_target" }, secondTargetCard.id })
+  FkTest.setRoomBreakpoint(discardOnly, "AskForChoices", function(data)
+    if data[5] == COMMAND_WORLD .. "_skill" then onlyChoice = data end
+    return false
+  end)
   inRoom(function()
     room:useCard { from = user, card = Fk:getCardById(card, true), tos = { target } }
   end)
@@ -580,6 +640,11 @@ function Testqiao_faction_tricks:testCommandWorldTargetRuleAndParticipantChains(
     "魏势力参与者应取得第二项实际弃置的牌")
   lu.assertFalse(table.contains(target:getCardIds("he"), targetCard.id))
   lu.assertEquals(#wei:getCardIds("he"), beforeWei + 1)
+  lu.assertNotNil(onlyChoice, "只有一项合法时也应显示明确的选择框")
+  lu.assertEquals(onlyChoice[1], { "command_world_target" })
+  lu.assertEquals(onlyChoice[2], { "command_world_own", "command_world_target" })
+  lu.assertEquals(onlyChoice[6], "#qiao__command_world-choice::" .. target.id)
+  lu.assertEquals(room:getCardArea(secondTargetCard.id), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(card), Card.Void, "势力锦囊用后仍移出游戏")
 end
 
@@ -761,14 +826,13 @@ end
 
 --- 把一张指定花色点数的牌放到牌堆顶，作为下一次判定牌。
 local function putJudgeOnTop(room, suit, number)
-  local id = table.find(room.draw_pile, function(candidate)
-    local card = Fk:getCardById(candidate, true)
-    return card ~= nil and card.suit == suit and card.number == number
-  end)
-  lu.assertNotNil(id, "牌堆中缺少所需判定牌")
-  table.removeOne(room.draw_pile, id)
-  table.insert(room.draw_pile, 1, id)
-  return id
+  -- 指定花色点数的正式牌可能已被发到起始手牌。
+  local card = room:printCard("qiao__slash", suit, number)
+  room:moveCards {
+    ids = { card.id }, toArea = Card.DrawPile, drawPilePosition = 1,
+    moveReason = fk.ReasonJustMove, skillName = "test",
+  }
+  return card.id
 end
 
 --- 记录真实伤害事件（来源、目标、点数与属性）。

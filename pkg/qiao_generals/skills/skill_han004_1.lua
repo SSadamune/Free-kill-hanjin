@@ -185,6 +185,7 @@ end
 -- ViewAs 统一入口：选牌名（客户端公开项），无实体子牌，正常目标规则。
 skill:addEffect("viewas", {
   pattern = ".",
+  prompt = "#qiao__skill_han004_1-use",
   interaction = function(self, player)
     local names = availableNames()
     local choices = player:getViewAsCardNames(self.name, names)
@@ -245,6 +246,7 @@ skill:addEffect(fk.AfterCardUseDeclared, {
 
 Fk:loadTranslationTable {
   ["qiao__skill_han004_1"] = "滔乱",
+  ["#qiao__skill_han004_1-use"] = "滔乱：选择要视为使用的基本牌或普通锦囊牌",
   [":qiao__skill_han004_1"] = "当你需要使用任意一种基本或普通锦囊牌时，你可以明置此武将牌并视为使用之。当前回合结束时，你选择本回合以此法使用牌指定过的至多三名其他角色，其依次展示并交给你一张手牌，若红色牌多于黑色，你暗置一张武将牌。",
   ["#qiao__skill_han004_1-choose"] = "滔乱：选择至多三名本回合以此法指定过的角色",
   ["#qiao__skill_han004_1-give"] = "滔乱：展示并交给张让一张手牌",

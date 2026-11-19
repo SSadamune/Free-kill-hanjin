@@ -32,7 +32,7 @@
 - **实现与接口**：
   - 监听真实 `fk.AfterCardsMove`：只认 `moveReason == fk.ReasonDiscard` 且目标为弃牌堆的移动；重铸、给牌等不计。
   - 分别按真实移动数据判断：`move.proposer == 穆顺` 为自己弃置任意角色的牌（含自己主动弃自己的牌）；`move.from == 穆顺` 且 `proposer` 为其他角色为被其他角色弃置。不按技能名或猜测的弃牌者判断。
-  - 结算时重新检查候选牌仍在弃牌堆，才允许选择；用 `askToCards` 的 `expand_pile` 展示弃牌堆候选，取得后才写本回合限制标记。
+  - 结算时通过 `askToChooseCards` 的独立牌组展示本次仍在弃牌堆的候选，允许取消。确认后再核对牌仍在弃牌堆，取得后写本回合限制标记。
   - 取得成功后才建立 `-turn` 的“下一次同条件弃牌失 1 点体力”标记；罚效果由房间级延迟监听器读取角色标记，不要求穆顺当前仍有技能。罚监听只判断“是否发生了符合条件的弃置”，不要求牌仍在弃牌堆：即使该次弃置的牌已被同优先级技能取走，仍失血。取得事件本身用事件标识抑制同一事件刚建立的罚效果，避免重复扣血。
   - 取得次数标记以技能名开头，随翼从武将迁移；罚标记附在角色身上、不带技能前缀，避免误迁。每回合取得一次由 `-turn` 标记限制。
 - **验证依据**：[han_retinues.lua](../../../../tests/han_retinues.lua) 夹具直接授予正式翼从技能、只验证技能本身，覆盖穆顺取得与下一次失血（弃置他人牌后取回一张；同回合下一次弃牌不再取得，失去 1 点体力）。历史记录见[共享验证证据](verification-evidence.md#han_retinues)。
@@ -47,6 +47,7 @@
   - 被选牌角色是“一名角色”，候选为全场有手牌的合法角色，不限制与西园军同势力（可选敌方，也可选当前空手的阶段角色以外的角色）。先选角色，再用 `askToChooseCard(flag="h")` 由引擎隐藏选牌；返回值用 `Card:getIdList` 规范化为单个 id，兼容 Card/ID/数组。
   - 每个西园军 owner 各自独立处理同一事件，不使用单一 `__done` 互相阻止。
   - 选中牌打两个标记：`qiao_retinue_xiyuanjun_visible-turn`（`visibility.card_visible` 对全部角色公开，回合末清理）与 `qiao_retinue_xiyuanjun_lock-turn-inhand`（`prohibit_use`／`prohibit_response` 禁止持有者使用或打出；名字同时含 `-turn` 与 `-inhand`，牌离开手牌立即清理，回合末也清理，避免后续持有者继承错误禁用）。禁止判断会展开虚拟／转化牌的实体子牌，不只看虚拟牌自身 mark。
+  - `visibility.card_visible` 命中公开标记时返回 `true`，未命中时交回引擎判断。回归检查持有者自己的未标记手牌依然可见、其他人的未标记手牌依然隐藏。
   - `fk.Damaged` 监听带标记牌的角色：有伤害来源时由来源经 `obtainCard` 获得该牌并清标记；无来源不获得。弃置、给予等其他操作不受用牌／打出限制影响。
 - **验证依据**：[han_retinues.lua](../../../../tests/han_retinues.lua) 覆盖当前阶段角色空手、所选敌方角色有手牌也可选；选中手牌对其他角色可见、持有者不能使用（含该子牌的虚拟牌也不能使用）；受伤后伤害来源获得该牌、标记清理。历史记录见[共享验证证据](verification-evidence.md#han_retinues)。
 - **未完成与边界**：“公开”使用现有 `VisibilitySkill` 公共接口，无客户端补丁；若客户端未按该接口刷新手牌可见性，需基础组回报最小公共接线，而不是伪造可见数据。伤害来源为空的场合已跳过；多张同时带标记的异常输入只取一张，正常流程一次只建立一张。翼从取得／失去技能由统领公共流程覆盖。
@@ -70,7 +71,8 @@
 - **实现与接口**：
   - `fk.TurnEnd` 为全局触发，不限于自己回合；每回合结束时，若持有者本回合共计造成和受到过的伤害数大于 1，可以移动场上一张牌。
   - 用 `logic:getActualDamageEvents` 读取实际伤害（排除被防止），`data.from == player` 与 `data.to == player` 分别累加，自己对自己的伤害计两份。满足后复用阶段组 `wei_phases.moveCardInBoard`。
-- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实回合内伤害后移动场上一张牌；历史 3/3。
+  - 魏、吴调用者共用选人和移牌逻辑。选人请求只开放可移出或接收的候选，选牌请求按角色列出可移动的装备与判定牌并允许取消。确认后重新校验牌区和目标。
+- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实回合内伤害、客户端选人、合法牌组、实际移动、取消及无合法组合时关闭询问。
 - **未完成与边界**：真实客户端移牌面板未人工验收；测试在真实 `GameEvent.Turn` 内制造伤害，避免伪造回合历史。
 
 <a id="niujin"></a>
@@ -79,7 +81,7 @@
 - **标识与依据**：翼从 ID `qiao_heg__retinue_niujin`，技能 ID `qiao__retinue_skill_niujin`；源码 [retinue_skill_niujin.lua](../../../../pkg/qiao_generals/skills/retinue_skill_niujin.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从牛金与 [docs/rules/general-principles.md](../../../rules/general-principles.md)。
 - **实现与接口**：
   - `fk.TurnEnd` 全局触发，目标为同势力角色（含自己）；同势力角色回合结束时，可使用基本／锦囊／装备每类别至多各一张牌；以此法杀死角色后摸三张牌。
-  - 不设固定类别顺序，每次由玩家选择未用类别或结束，逐次调用 `room:askToUseCard`，每项可取消。效果内用牌 `bypass_times = true`、`extraUse = true`，正常禁止与目标条件照常。
+  - 类别选单只提供未用类别及一个取消按钮，取消即结束。每类的用牌请求可单独取消。公共自由用牌入口排除【闪】等被动牌，并复核禁止和目标。合法用牌设置 `bypass_times` 和 `extraUse`。
   - 来源写入本次 `use.extra_data`；房间级奖励监听在 `fk.Death` 中向上追溯 `GameEvent.UseCard` 的 `extra_data`，仅在本次窗口用牌击杀时摸三张，不依赖持有者之后是否仍有技能。
 - **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实用【杀】击杀不同势力角色，牛金奖励恰好一次 3 张，另加标准国战击杀奖励 1 张，总手牌 4；断言技能／同势力／实际用牌后再断言击杀奖励。历史 3/3。此前 `expected 3 actual 25` 的根因与修复见[共享验证证据](verification-evidence.md#牛金奖励根因)。
 - **未完成与边界**：每类别用牌的真实客户端面板未人工验收；若后续改用牌流程，需复核 `extra_data` 来源追溯仍只奖励一次。

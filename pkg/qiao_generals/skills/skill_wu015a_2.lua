@@ -62,27 +62,6 @@ local function discardEntries(player, data)
   return entries
 end
 
---- 在候选堆中选牌；候选只包含实际仍在弃牌堆的牌。
----@param room Room
----@param player ServerPlayer
----@param ids integer[]
----@param min integer
----@param max integer
----@param prompt string
----@return integer[]
-local function chooseFromDiscard(room, player, ids, min, max, prompt)
-  if #ids == 0 or max < 1 then return {} end
-  return room:askToChooseCards(player, {
-    target = player,
-    flag = { card_data = { { "弃牌堆", ids } } },
-    min = min,
-    max = math.min(max, #ids),
-    skill_name = skill.name,
-    prompt = prompt,
-    cancelable = false,
-  }) or {}
-end
-
 skill:addEffect(fk.AfterCardsMove, {
   anim_type = "support",
   can_trigger = function(self, event, target, player, data)
@@ -123,8 +102,12 @@ skill:addEffect(fk.AfterCardsMove, {
     local ids = entry.ids
     if owner.dead or owner:isRemoved() or #ids == 0 then return end
 
-    local give = chooseFromDiscard(room, player, ids, 1, 1, "#qiao__skill_wu015a_2-give")
-    local giveId = give[1]
+    local giveId = room:askToChooseCard(player, {
+      target = player,
+      flag = { card_data = { { "弃牌堆", ids } } },
+      skill_name = skill.name,
+      prompt = "#qiao__skill_wu015a_2-give",
+    })
     if giveId == nil or not table.contains(ids, giveId)
       or room:getCardArea(giveId) ~= Card.DiscardPile then
       return
@@ -138,11 +121,18 @@ skill:addEffect(fk.AfterCardsMove, {
     end)
     local maxGain = math.min(3, #remaining)
     if maxGain <= 0 then return end
-    local gain = chooseFromDiscard(room, player, remaining, 0, maxGain,
-      "#qiao__skill_wu015a_2-gain")
+    local gain = room:askToCustomDialog(player, {
+      skill_name = skill.name,
+      component = {
+        url = "packages/qiao/pkg/qiao_mode/qml/GuzhengGainBox.qml",
+        prop = { cards = remaining, maxGain = maxGain },
+      },
+    })
+    if type(gain) ~= "table" or #gain > maxGain then return end
     local gainIds = {}
     for _, id in ipairs(gain) do
-      if table.contains(remaining, id) and room:getCardArea(id) == Card.DiscardPile then
+      if not table.contains(remaining, id) or table.contains(gainIds, id) then return end
+      if room:getCardArea(id) == Card.DiscardPile then
         table.insert(gainIds, id)
       end
     end
@@ -158,7 +148,7 @@ Fk:loadTranslationTable {
   ["#qiao__skill_wu015a_2-invoke"] = "固政：你可以将其中一张牌交给该角色，然后获得其余至多三张牌",
   ["#qiao__skill_wu015a_2-owner"] = "固政：选择本事件中要结算的一名其他角色",
   ["#qiao__skill_wu015a_2-give"] = "固政：选择交给该角色的一张牌",
-  ["#qiao__skill_wu015a_2-gain"] = "固政：选择获得其余至多三张牌",
+  ["#qiao__skill_wu015a_2-gain"] = "固政：保留至多三张要获得的牌，点击可取消选中",
 }
 
 return skill

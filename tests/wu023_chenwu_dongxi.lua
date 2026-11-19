@@ -146,7 +146,12 @@ function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
         return original(self, who, params)
       end
       choiceCount = choiceCount + 1
-      return choiceCount == 1 and OPT_CHAIN or OPT_DISCARD
+      if choiceCount == 1 then
+        local option = OPT_CHAIN .. ":::" .. player:getLostHp()
+        lu.assertTrue(table.contains(params.choices, option))
+        return option
+      end
+      return OPT_DISCARD
     end,
     askToChoosePlayers = function(self, who, params, original)
       if params.skill_name ~= FENGMING then
@@ -154,6 +159,7 @@ function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
       end
       -- 第一项可选自己。
       lu.assertTrue(table.contains(params.targets, player))
+      lu.assertEquals(params.prompt, "#qiao__skill_wu023_1-target:::" .. params.max_num)
       return { player, second }
     end,
     askToChooseCard = function(self, who, params, original)

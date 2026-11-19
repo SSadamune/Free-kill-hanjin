@@ -39,15 +39,13 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     local basic = basicHandIds(player)
     if #basic == 0 then return false end
-    -- 提示参数位为“#键:来源:目标:参数”，%dest 取第 3 段目标；%arg 为可选张数。
     local cards = room:askToDiscard(player, {
       min_num = 1,
       max_num = #basic,
       include_equip = false,
       pattern = BASIC_PATTERN,
       skill_name = skill.name,
-      prompt = "#qiao__skill_wei016_1-discard:"
-        .. player.id .. ":" .. target.id .. ":" .. #basic,
+      prompt = "#qiao__skill_wei016_1-discard::" .. target.id,
       cancelable = true,
       skip = true,
     })
@@ -103,7 +101,7 @@ skill:addEffect(fk.EventPhaseStart, {
 
 Fk:loadTranslationTable {
   ["#qiao__skill_wei016_1-discard"] =
-    "骁果：弃置至少一张基本牌发动（至多 %arg 张），令 %dest 弃置等量装备牌；若你弃置的基本牌多于其装备牌，你对其造成1点伤害，否则你摸一张牌",
+    "骁果：弃置至少一张基本牌发动，令 %dest 弃置等量装备牌；若你弃置的基本牌多于其装备牌，你对其造成1点伤害，否则你摸一张牌",
   ["#qiao__skill_wei016_1-equip"] = "骁果：弃置装备区 %arg 张牌",
 }
 

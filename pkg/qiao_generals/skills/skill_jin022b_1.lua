@@ -41,7 +41,7 @@ skill:addEffect("active", {
       picked = room:askToChoice(player, {
         choices = choices,
         skill_name = skill.name,
-        prompt = "#qiao__skill_jin022b_1-range",
+        prompt = "#qiao__skill_jin022b_1-range:::" .. lost,
         cancelable = false,
       })
     end
@@ -67,8 +67,8 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   ["qiao__skill_jin022b_1"] = "烈戎",
-  ["#qiao__skill_jin022b_1-prompt"] = "烈戎：失去1点体力，令本回合攻击范围至多+X，视为使用火【杀】",
-  ["#qiao__skill_jin022b_1-range"] = "烈戎：选择本回合攻击范围的增加量",
+  ["#qiao__skill_jin022b_1-prompt"] = "烈戎：失去1点体力，按结算时已损失的体力增加攻击范围，视为使用火【杀】",
+  ["#qiao__skill_jin022b_1-range"] = "烈戎：选择本回合攻击范围的增加量，至多 %arg",
   ["#qiao__skill_jin022b_1-use"] = "烈戎：视为使用火【杀】",
 }
 

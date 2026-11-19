@@ -185,6 +185,17 @@ function Testqiao_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne()
   give(turn_player, "qiao__jink", Card.Club, 5)
   give(other_kingdom, "qiao__peach", Card.Heart, 6)
 
+  -- 让首名受益者摸到敕令，覆盖弃置后在回合末正常移出游戏的路径。
+  local imperial = assert(table.find(Fk.packages.qiao_cards.cards, function(card)
+    return card.name == "qiao__imperial_order"
+  end))
+  inRoom(function()
+    room:moveCards {
+      ids = { imperial.id }, toArea = Card.DrawPile, drawPilePosition = 1,
+      moveReason = fk.ReasonJustMove, skillName = "test",
+    }
+  end)
+
   local invoked, discards, invokedBy = 0, {}, {}
   local probe = fk.CreateSkill { name = "#qiao_shu018b_shoucheng_probe" }
   probe:addEffect(fk.EventPhaseStart, {
@@ -255,8 +266,13 @@ function Testqiao_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne()
       local hand = who:getCardIds(Player.Hand)
       lu.assertEquals(#hand, 2) -- 先摸两张，再弃一张；不是摸一张。
       local id = hand[1]
-      table.insert(discards, { player = who, id = id })
+      if #discards == 0 then
+        lu.assertTrue(table.contains(hand, imperial.id))
+        id = imperial.id
+      end
       self:throwCard({ id }, SHOUCHENG, who, who)
+      lu.assertEquals(self:getCardArea(id), Card.DiscardPile)
+      table.insert(discards, who)
       return { id }
     end,
   }, function()
@@ -267,12 +283,10 @@ function Testqiao_shu018b_feiyi:testShouchengPerTargetOnceAndDrawTwoDiscardOne()
 
   lu.assertEquals(invoked, 3)
   lu.assertEquals(#discards, 3)
-  lu.assertIs(discards[1].player, first)
-  lu.assertIs(discards[2].player, second)
-  lu.assertIs(discards[3].player, first)
-  for _, record in ipairs(discards) do
-    lu.assertEquals(FkTest.room:getCardArea(record.id), Card.DiscardPile)
-  end
+  lu.assertIs(discards[1], first)
+  lu.assertIs(discards[2], second)
+  lu.assertIs(discards[3], first)
+  lu.assertEquals(room:getCardArea(imperial.id), Card.Void)
   lu.assertEquals(invokedBy[holder.id], 2)
   lu.assertEquals(invokedBy[second_holder.id], 1)
   lu.assertEquals(#first:getCardIds(Player.Hand), 1)

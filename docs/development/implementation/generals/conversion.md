@@ -97,8 +97,8 @@
 #### 倾国（WEI007 甄姬）
 
 - **标识与依据**：运行时 ID `qiao__skill_wei007_1`；源码 [skill_wei007_1.lua](../../../../pkg/qiao_generals/skills/skill_wei007_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)魏区 WEI007。同将洛神见[判定与花色](retrial.md#wei007-2)。
-- **实现与接口**：黑色手牌当【闪】使用或打出；`viewas` 仅手牌、花色黑色，未开放装备区；使用与打出共用入口。
-- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖黑色手牌可转化、红色手牌与装备区牌不可用、使用／响应均可用；历史 14/14。
+- **实现与接口**：黑色手牌当【闪】使用或打出，响应表达式用引擎牌名 `jink`，生成的正式牌为 `qiao__jink`。使用与打出共用转换入口。
+- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 走实际客户端【闪】请求，核对按钮、黑色手牌、红色手牌和装备区牌的可选性，再验证确认回包生成正式【闪】。
 - **未完成与边界**：客户端转化提示未人工验收。
 
 <a id="wei010-1"></a>
@@ -115,7 +115,7 @@
 #### 仁德（SHU001 刘备）
 
 - **标识与依据**：`qiao__skill_shu001_1`；[源码](../../../../pkg/qiao_generals/skills/skill_shu001_1.lua)；[标准武将表](../../../rules/standard-generals.md) SHU001。
-- **实现与接口**：主动给牌按接收者记录阶段次数，累计跨过第二张时提供一次基本牌选择；选择后经公共目标策略真实使用一次，传递 bypass_times 与 extraUse，取消不再询问。
+- **实现与接口**：主动给牌按接收者记录阶段次数，累计跨过第二张时提供一次基本牌选择。汉晋客户端刷新虚拟用牌候选时也读取当前请求的 `extra_data`；选择后经公共目标策略使用一次，传递 `bypass_times` 和 `extraUse`，取消结束此次选择。
 - **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收。
 

@@ -5,6 +5,7 @@
 -- HegUtil.lordGenerals。上游按名字识别的君主特例（有君无野、君主拉回
 -- 超员野心家、君主死亡转野）因此不会抢先执行；汉晋在显式登记表上统一实现。
 local H = require "packages.hegemony.util"
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local CardState = require "packages.qiao.pkg.qiao_mode.rules.general_card_state"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -299,6 +300,62 @@ function M.death_succession(room, victim)
     end
   end
   return false, deadKingdom
+end
+
+--- 明置时归一溢出转野的私有身份。
+---
+--- 引擎在 `GeneralShown` 之前已把人数溢出的角色 `kingdom` 设为 `wild`，但其
+--- `role` 仍是初始常规势力。上游 `heg_rule` 会按 `role` 属于 `all_kingdoms`
+--- 弹出“野心家建国”。外部 FAQ 的“暴露野心/拉拢人心”只针对未明置的野心家
+--- 专属武将，人数溢出转野的普通武将没有建国依据；这里只把仍为常规势力的
+--- 私有身份归一为 `wild`，已建立的 `wild`/国号/特殊身份不覆盖。
+---@param player ServerPlayer
+function M.ensure_wild_role(player)
+  if player == nil or player.kingdom ~= "wild" or player:getMark("__heg_wild") == 1 then return end
+  local role = player.role
+  if type(role) ~= "string" or not Ban.isKnown(role) then return end
+  player.role = "wild"
+end
+
+--- Adapt the locked hegemony country picker without mutating shared country lists.
+function M.installFoundingCountries()
+  local original = H.wildChooseKingdom
+  H.wildChooseKingdom = function(player, generalName)
+    local room = player.room
+    if not Modes.inRoom(room) then return original(player, generalName) end
+
+    local appointed = player.general == generalName and H.kingdomMapper[generalName]
+    if appointed == player.role then appointed = nil end
+    local kingdoms = room:getBanner("all_kingdoms") or {}
+    if not appointed and player.role ~= "unknown" and player.role ~= "hidden"
+      and not table.contains(kingdoms, player.role) then
+      return
+    end
+
+    local allChoices = table.filter(H.wildKingdoms, function(name)
+      return name ~= "heg_han" and name ~= "heg_jin"
+    end)
+    local choices = table.simpleClone(allChoices)
+    for _, other in ipairs(room.players) do table.removeOne(choices, other.role) end
+    if #choices == 0 then return end
+
+    local choice = appointed
+    if not table.contains(choices, choice) then
+      choice = room:askToChoice(player, {
+        choices = choices,
+        all_choices = allChoices,
+        skill_name = "game_rule",
+        prompt = "#wild-choose",
+        cancelable = false,
+      })
+    end
+    if not table.contains(choices, choice) then return end
+    player.role = choice
+    room:setPlayerProperty(player, "role_shown", true)
+    room:broadcastProperty(player, "role")
+    room:sendLog { type = "#WildChooseKingdom", from = player.id, arg = choice, arg2 = "wild" }
+    return choice
+  end
 end
 
 --- 君主死亡无人继位时的转野结算。已有野心家保持原势力，不因继位回归。

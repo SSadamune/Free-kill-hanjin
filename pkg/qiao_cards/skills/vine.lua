@@ -15,11 +15,11 @@ local skill = fk.CreateSkill {
 }
 
 -- 普通【杀】按牌的真实类别判断；火杀、雷杀、冰杀的 trueName 同为 slash，
--- 但正式牌名不同，不能因 trueName 相同被误当作普通【杀】。
+-- 但正式牌名不同，不能因 trueName 相同被误当作普通【杀】。七张实体雷杀共用
+-- 同一程序牌名，均按属性杀处理。
 local ELEMENTAL_SLASHES = {
   ["qiao__fire__slash"] = true,
   ["qiao__thunder__slash"] = true,
-  ["qiao__thunder_shell__slash"] = true,
   ["qiao__ice__slash"] = true,
   ["fire__slash"] = true,
   ["thunder__slash"] = true,

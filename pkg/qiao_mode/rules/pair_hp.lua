@@ -24,9 +24,6 @@ M.YINGQI_SKILLS = {
 --- 应期的半格修正值：☯️+2。
 M.YINGQI_HALF = 2
 
---- 开局登记的房间 tag；只用于核对/调试，不参与体力上限计算。
-M.START_TAG = "qiao_yingqi_start"
-
 local function skillList(general)
   if type(general.getSkillNameList) == "function" then
     return general:getSkillNameList()
@@ -161,8 +158,7 @@ function M.actual_deputy(player)
 end
 
 --- 开局接线：引擎先按“主将贡献 + 副将贡献 // 2”写入 maxHp / hp / 余数标记，
---- 这里再把应期的 2 个半格补上。只增加、不减少；重复调用幂等，因此模式流程与
---- 技能效果在同一时点先后触发也不会叠加。
+--- 这里再把应期的 2 个半格补上。只增加、不减少；重复调用幂等。
 ---@param room Room
 ---@param player ServerPlayer
 ---@return boolean @ 是否实际调整了体力上限
@@ -181,25 +177,8 @@ function M.apply_start(room, player)
   return true
 end
 
---- 技能骨架的 GameStart 效果只登记“本局哪个配将组合含应期”。体力上限只在
---- 模式的开局 broadcastGeneral 单点计算一次，不在这里重算，因此不会因其他
---- GameStart 效果改动上限而被错误补回。
----@param room Room
----@param player ServerPlayer
----@return boolean
-function M.register_start(room, player)
-  local main, deputy = M.actual_main(player), M.actual_deputy(player)
-  local extra = M.yinyang(main, deputy)
-  if extra == 0 then return false end
-  local tag = room:getTag(M.START_TAG) or {}
-  tag[player.id] = {
-    main = main,
-    deputy = deputy,
-    base_half = M.base_half_hp(main, deputy),
-    yingqi_half = extra,
-  }
-  room:setTag(M.START_TAG, tag)
-  return true
-end
+--- 技能骨架不注册 GameStart 效果：体力上限只在模式的开局 broadcastGeneral 单点
+--- 计算一次，不在这里重算，因此不会因其他 GameStart 效果改动上限而被错误补回，
+--- 也不会让暗置武将的技能在开局被假触发而预亮。
 
 return M

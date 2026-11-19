@@ -5,6 +5,7 @@ Fk:loadTranslationTable {
   ["qiao__drowning_skill"] = "水淹七军",
   ["qiao__drowning_throw"] = "弃置装备区里的所有牌",
   ["qiao__drowning_damage"] = "受到%src造成的1点雷电伤害",
+  ["#qiao__drowning-choice"] = "水淹七军：弃置装备区里的所有牌，或受到 %src 造成的1点雷电伤害",
   ["#qiao__drowning_skill"] = "选择一名装备区里有牌的其他角色，其选择：1.弃置装备区里的所有牌；2.受到你造成的1点雷电伤害",
 }
 
@@ -50,6 +51,7 @@ skill:addEffect("cardskill", {
     local choice = room:askToChoice(to, {
       choices = choices, all_choices = allChoices,
       skill_name = "qiao__drowning", cancelable = false,
+      prompt = "#qiao__drowning-choice:" .. from.id,
     })
     if choice == "qiao__drowning_throw" then
       to:throwAllCards("e")

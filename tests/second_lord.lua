@@ -86,6 +86,24 @@ local function captureAscensionPrompts()
   return prompts
 end
 
+--- Capture the upstream wild-founding request. Return a predicate; the wrapper
+--- answers it instead of blocking so the test can assert the request never ran.
+local function captureWildFounding()
+  local prompted = false
+  FkTest.runInRoom(function()
+    local r = room()
+    local original = r.askToChoice
+    function r:askToChoice(target, params)
+      if params and params.prompt == "#wild-choose" then
+        prompted = true
+        return nil
+      end
+      return original(self, target, params)
+    end
+  end)
+  return function() return prompted end
+end
+
 local function markDead(p, kingdom)
   -- Reveal directly instead of broadcasting: the victory helper only needs the
   -- final face-up state, and broadcasting property changes for already-dead
@@ -122,6 +140,19 @@ function Testsecond_lord:testFirstOrdinaryAscensionOccupiesFactionSlot()
   lu.assertEquals(second.general, "anjiang")
   lu.assertEquals(second.kingdom, "unknown")
   lu.assertEquals(first.general, G.wei_monarch.name)
+end
+
+function Testsecond_lord:testFormalHanLiuxieAscendsOnFirstTurn()
+  local candidate = player(1)
+  FkTest.runInRoom(function()
+    room():setBanner("all_kingdoms", { "han", "wei", "shu", "qun" })
+    hidden(candidate, "qiao_heg__han001", "qiao_test__han_2", "han")
+  end)
+  local prompts = captureAscensionPrompts()
+  triggerTurnStart(candidate, A.ASCEND_ACCEPT)
+  lu.assertEquals(prompts.convert, { candidate.seat })
+  lu.assertEquals(candidate.general, "qiao_heg__em_han001")
+  lu.assertEquals(candidate.kingdom, "han")
 end
 
 function Testsecond_lord:testOrdinaryAscensionNeedsHiddenMainAndFirstTurn()
@@ -464,6 +495,102 @@ function Testsecond_lord:testLordPresenceDoesNotPreventOverpopulationWild()
   FkTest.runInRoom(function() candidate:revealGeneral(false) end)
   lu.assertEquals(candidate.kingdom, "wild")
   lu.assertEquals(candidate.general, G.wei_normal.name)
+end
+
+function Testsecond_lord:testOverflowWildRevealDoesNotEnterUpstreamFounding()
+  local lord, candidate = player(1), player(2)
+  local allies = { player(3), player(4), player(5) }
+  local allowedBefore
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    for _, ally in ipairs(allies) do
+      revealed(ally, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    -- broadcastGeneral leaves the private role at the initial kingdom; the
+    -- overflow itself only changes kingdom to wild.
+    candidate.role = "wei"
+    allowedBefore = room():getBanner("all_kingdoms")
+  end)
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() candidate:revealGeneral(false) end)
+  lu.assertFalse(prompted(), "溢出转野不得进入上游建国询问")
+  lu.assertEquals(candidate.kingdom, "wild")
+  lu.assertEquals(candidate.role, "wild")
+  lu.assertEquals(candidate:getMark("hasShownMainGeneral"), 1,
+    "上游其余明置流程仍须执行")
+  -- getBanner 对普通表返回副本，上游临时插入的 unknown/hidden 不得回写到
+  -- 房间或广播给客户端。
+  lu.assertEquals(room():getBanner("all_kingdoms"), allowedBefore)
+end
+
+function Testsecond_lord:testExclusiveWildFoundingExcludesHanAndJin()
+  local room, candidate = room(), player(1)
+  local request
+  FkTest.runInRoom(function()
+    hidden(candidate, G.wild_simple.name, "qiao_test__shu_1", "shu")
+    candidate.role = "shu"
+    player(2).role = "heg_qin"
+    room:setBanner("all_kingdoms", { "wei", "shu", "wu", "qun", "han", "jin" })
+    local ask = room.askToChoice
+    function room:askToChoice(target, params)
+      if params.prompt == "#wild-choose" then
+        lu.assertIs(target, candidate)
+        request = params
+        return "heg_hanr"
+      end
+      return ask(self, target, params)
+    end
+    candidate:revealGeneral(false)
+  end)
+  lu.assertNotNil(request, "野心家专属武将仍应进入建国询问")
+  for _, options in ipairs({ request.choices, request.all_choices }) do
+    lu.assertFalse(table.contains(options, "heg_han"))
+    lu.assertFalse(table.contains(options, "heg_jin"))
+    lu.assertTrue(table.contains(options, "heg_hanr"), "韩和汉是不同国号")
+  end
+  lu.assertFalse(table.contains(request.choices, "heg_qin"), "已占用的国号仍不可选")
+  lu.assertEquals(candidate.role, "heg_hanr")
+  lu.assertTrue(table.contains(H.wildKingdoms, "heg_han"))
+  lu.assertTrue(table.contains(H.wildKingdoms, "heg_jin"))
+end
+
+function Testsecond_lord:testOverflowWildDeathDoesNotEnterUpstreamFounding()
+  local lord, candidate = player(1), player(2)
+  local allies = { player(3), player(4), player(5) }
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    for _, ally in ipairs(allies) do
+      revealed(ally, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    candidate.role = "wei"
+  end)
+  FkTest.runInRoom(function() candidate:revealGeneral(false) end)
+  lu.assertEquals(candidate.role, "wild")
+  -- No winner yet: the HanJin GameOverJudge guard falls through to the
+  -- upstream handler, which must not offer founding for an overflow wild.
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() room():killPlayer { who = candidate } end)
+  lu.assertFalse(prompted(), "溢出转野死亡时不得进入上游建国询问")
+  lu.assertEquals(candidate.role, "wild")
+end
+
+function Testsecond_lord:testRegularRevealKeepsItsIdentity()
+  local normal = player(6)
+  FkTest.runInRoom(function()
+    hidden(normal, "qiao_test__shu_1", "qiao_test__shu_2", "shu")
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    normal.role = "shu"
+  end)
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() normal:revealGeneral(false) end)
+  lu.assertFalse(prompted())
+  lu.assertEquals(normal.kingdom, "shu")
+  lu.assertEquals(normal.role, "shu")
+  lu.assertEquals(normal:getMark("hasShownMainGeneral"), 1)
 end
 
 function Testsecond_lord:testSuccessorDoesNotRestoreExistingWild()

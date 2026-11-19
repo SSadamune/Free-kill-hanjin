@@ -6,6 +6,8 @@ Fk:loadTranslationTable {
   ["#qiao__chasing_near_skill"] = "选择一名其他角色",
   ["#qiao__chasing_near-prey"] = "获得牌",
   ["#qiao__chasing_near-discard"] = "弃置牌",
+  ["#qiao__chasing_near-choose-prey"] = "逐近弃远：选择 %dest 的一张牌获得",
+  ["#qiao__chasing_near-choose-discard"] = "逐近弃远：选择 %dest 的一张牌弃置",
 }
 
 local function currentUse(room)
@@ -33,10 +35,13 @@ skill:addEffect("cardskill", {
     if from.dead or to.dead or to:isAllNude() then return end
     local use = currentUse(room)
     local both = use and A.hasEffect(use, "execute_both")
+    local firstPrompt = (both or from:distanceTo(to) > 1)
+      and "#qiao__chasing_near-choose-discard" or "#qiao__chasing_near-choose-prey"
     local first = room:askToChooseCard(from, {
       target = to,
       flag = "hej",
       skill_name = skill.name,
+      prompt = firstPrompt .. "::" .. to.id .. ":" .. skill.name,
     })
     if both then
       -- HanJin adaptation: discard first, then obtain from the remaining area.
@@ -46,6 +51,7 @@ skill:addEffect("cardskill", {
         target = to,
         flag = "hej",
         skill_name = skill.name,
+        prompt = "#qiao__chasing_near-choose-prey::" .. to.id .. ":" .. skill.name,
       })
       room:obtainCard(from, second, false, fk.ReasonPrey, from, skill.name)
     elseif from:distanceTo(to) > 1 then

@@ -73,7 +73,7 @@ skill:addEffect(fk.Damaged, {
     local room = player.room
     if not room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin007_2-invoke:" .. target.id,
+      prompt = "#qiao__skill_jin007_2-invoke::" .. target.id,
     }) then
       return false
     end

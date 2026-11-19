@@ -58,6 +58,16 @@ skill:addEffect("maxcards", {
   end,
 })
 
+skill:addEffect(fk.AfterCardsMove, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return player == player.room.players[1]
+  end,
+  on_refresh = function(self, event, target, player, data)
+    M.refreshDisplay(player.room, data)
+  end,
+})
+
 skill:addTest(function(room, me)
   if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()

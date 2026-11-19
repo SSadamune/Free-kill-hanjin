@@ -139,6 +139,8 @@ function Testqiao_qun_duanchang:testExchangeDoesNotRestoreLostSkills()
   -- 司马懿的牌换到另一名角色主将位置，记录随牌保留；许褚的裸衣留在原角色。
   lu.assertEquals(other.general, SIMAYI)
   lu.assertEquals(source.general, "qiao_test__wei_1")
+  lu.assertEquals(source:getMark("@@qiao_duanchang"), 0)
+  lu.assertEquals(other:getMark("@@qiao_duanchang"), 1)
   lu.assertFalse(other:hasSkill(S_LANGGU))
   lu.assertFalse(other:hasSkill(S_YINGSHI))
   lu.assertFalse(other:hasSkill(S_YINGQI))

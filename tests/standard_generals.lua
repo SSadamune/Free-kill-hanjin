@@ -173,7 +173,10 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
       lu.assertEquals(Fk:translate(skill.id), skill.name)
       lu.assertEquals(Fk:translate(":" .. skill.id), skill.text)
       local skel = assert(Fk.skill_skels[skill.id], "Missing skeleton " .. skill.id)
-      if isImplemented(skill.id) then
+      if PairHp.YINGQI_SKILLS[skill.id] then
+        lu.assertTrue(isImplemented(skill.id), "Pair HP skill must be implemented: " .. skill.id)
+        lu.assertEquals(#skel.effects, 0, "Pair HP skill must not register a trigger: " .. skill.id)
+      elseif isImplemented(skill.id) then
         lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. skill.id)
       else
         lu.assertEquals(#skel.effects, 0, "Skill must have no effect: " .. skill.id)
@@ -238,7 +241,11 @@ function Teststandard_generals:testImplementedExceptionListMatchesRegisteredEffe
   end
   for _, name in ipairs(names) do
     local skel = assert(Fk.skill_skels[name], "Missing implemented skeleton " .. name)
-    lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. name)
+    if PairHp.YINGQI_SKILLS[name] then
+      lu.assertEquals(#skel.effects, 0, "Pair HP skill must not register a trigger: " .. name)
+    else
+      lu.assertTrue(#skel.effects > 0, "Implemented skill needs an effect: " .. name)
+    end
   end
   local jin = assert(Fk.generals["qiao_heg__jin001"])
   lu.assertTrue(table.contains(jin:getSkillNameList(), "qiao__skill_jin001_1"))
@@ -482,6 +489,11 @@ end
 function Teststandard_generals:testSourceLabelsDescribeNonGeneralSkills()
   local room = create { formalOnly = true }
   local player = room.players[1]
+  local chengliu = "qiao__skill_jin013_1"
+  lu.assertStrContains(Fk:translate(":" .. chengliu), "<富甲→改为雷电伤害>")
+  lu.assertStrContains(Fk:getDescription(chengliu, nil, player), "&lt;富甲→改为雷电伤害&gt;")
+  local limited = "qiao__skill_shu010_2"
+  lu.assertEquals(Fk:translate("$" .. limited .. "1"), Fk:translate(limited))
   local function labeled(name, label)
     local text = Fk:getDescription(name, nil, player)
     return type(text) == "string" and text:find("〔" .. label .. "〕", 1, true) ~= nil

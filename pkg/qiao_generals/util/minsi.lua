@@ -17,6 +17,7 @@ M.TARGET = 13
 --- 值记录受益者 id，避免已经转给其他角色的牌继续替原角色豁免。
 --- 「-turn」后缀由房间在回合结束时统一清理。
 local MARK_PREFIX = "qiao__skill_han007_1_"
+local DISPLAY_MARK = "@@qiao_minsi_hand_limit-turn"
 
 ---@param player ServerPlayer | ClientPlayer
 ---@return string
@@ -25,6 +26,37 @@ local function markName(player)
 end
 
 M.markName = markName
+
+local function setDisplay(room, card, owner)
+  local previous = card:getMark(DISPLAY_MARK)
+  local nextOwner = owner and owner.id or 0
+  if previous == nextOwner then return end
+  card:setMark(DISPLAY_MARK, nextOwner)
+  local oldOwner = previous ~= 0 and room:getPlayerById(previous)
+  if oldOwner then
+    room:doBroadcastNotify("SetCardMark", { card.id, DISPLAY_MARK, 0 }, { oldOwner })
+  end
+  if owner then
+    room:doBroadcastNotify("SetCardMark", { card.id, DISPLAY_MARK, 1 }, { owner })
+  end
+end
+
+function M.refreshDisplay(room, moves)
+  for _, move in ipairs(moves) do
+    for _, info in ipairs(move.moveInfo) do
+      local card = Fk:getCardById(info.cardId, true)
+      local owner = room:getCardOwner(info.cardId)
+      if card and owner and room:getCardArea(info.cardId) == Card.PlayerHand
+        and card:getMark(markName(owner)) > 0 then
+        setDisplay(room, card, owner)
+      elseif card then
+        setDisplay(room, card)
+      end
+    end
+  end
+end
+
+Fk:loadTranslationTable { [DISPLAY_MARK] = "不计入手牌上限" }
 
 ---@param card Card
 ---@return integer
@@ -148,7 +180,11 @@ function M.perform(room, player, cards, skillName)
   room:showCards(drawn, player)
   for _, id in ipairs(drawn) do
     if M.isHeart(room, player, id) then
-      room:setCardMark(Fk:getCardById(id, true), markName(player), 1)
+      local card = Fk:getCardById(id, true)
+      room:setCardMark(card, markName(player), 1)
+      if room:getCardOwner(id) == player and room:getCardArea(id) == Card.PlayerHand then
+        setDisplay(room, card, player)
+      end
     end
   end
 

@@ -59,7 +59,7 @@ skill:addEffect(fk.EventPhaseStart, {
         max_num = maxDiscard,
         include_equip = true,
         skill_name = skill.name,
-        prompt = "#qiao__skill_jin002_1-discard::" .. maxDiscard,
+        prompt = "#qiao__skill_jin002_1-discard:::" .. maxDiscard,
         cancelable = true,
       }) or {}
     end

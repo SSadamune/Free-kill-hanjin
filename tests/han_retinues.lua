@@ -1,6 +1,7 @@
 -- HAN 翼从：穆顺、西园军。默认国战套件用例（加入 tests/all.lua 后生效）。
 -- 夹具直接授予正式翼从技能，以验证技能本身；翼从取得流程由统领公共套件覆盖。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 local MS = "qiao__retinue_skill_mushun"
 local XY = "qiao__retinue_skill_xiyuanjun"
@@ -82,16 +83,32 @@ function Testqiao_han_retinues:testMushunObtainsThenPunishesNextDiscard()
     { "qiao__slash", Card.Spade, 1 },
     { "qiao__jink", Card.Heart, 2 },
   })
+  -- 自己的手牌不是候选：旧实现用 askToCards 的默认手牌候选会把它一并显示。
+  local own = setHand(room, p1(), { { "qiao__jink", Card.Club, 3 } })[1]
   inRoom(function() p1().hp = 4 end)
 
-  FkTest.setNextReplies(p1(), {
-    "1",
-    FkTest.ReplyChooseCards({ theirs[1] }),
-  })
-  inRoom(function()
-    room:throwCard({ theirs[1] }, MS, p2(), p1())
+  FkTest.setNextReplies(p1(), { "1" })
+  local offered
+  local asked = false
+  skill_test.withSkillRequests(room, MS, {
+    askToChooseCards = function(self, player, params)
+      asked = true
+      lu.assertIs(player, p1())
+      offered = {}
+      for _, pile in ipairs(params.flag.card_data) do
+        table.insertTable(offered, pile[2])
+      end
+      return { theirs[1] }
+    end,
+  }, function()
+    inRoom(function()
+      room:throwCard({ theirs[1] }, MS, p2(), p1())
+    end)
   end)
+  lu.assertTrue(asked, "穆顺应从实际弃置牌中选择，而不是提供默认手牌候选")
+  lu.assertEquals(offered, { theirs[1] }, "穆顺的候选只能是实际仍在弃牌堆的本次弃置牌")
   lu.assertTrue(table.contains(p1():getCardIds("h"), theirs[1]))
+  lu.assertTrue(table.contains(p1():getCardIds("h"), own), "自己原有的手牌不应被移走")
   lu.assertIs(p1().hp, 4)
 
   -- 本回合下一次同条件弃牌：不再取得，直接失去 1 点体力。
@@ -105,12 +122,21 @@ end
 function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDamage()
   local room = FkTest.room
   grant(p1(), XY)
+  -- 未标记的手牌仍由引擎决定可见性；西园军不得把全场手牌统一翻背。
+  local own = setHand(room, p1(), { { "qiao__jink", Card.Club, 3 } })[1]
   -- 当前出牌阶段角色 p2 空手；被选牌角色 p4 为敌方（魏）也可选。
   setHand(room, p2(), {})
-  local card = setHand(room, FkTest.room.players[4], { { "qiao__jink", Card.Heart, 5 } })[1]
+  local p4 = FkTest.room.players[4]
+  local p4cards = setHand(room, p4, {
+    { "qiao__jink", Card.Heart, 5 },
+    { "qiao__slash", Card.Diamond, 6 },
+  })
+  local card, other = p4cards[1], p4cards[2]
   setHand(room, p3(), {})
 
-  local p4 = FkTest.room.players[4]
+  lu.assertTrue(inRoom(function() return p1():cardVisible(own) end),
+    "获得西园军后，自己未标记的手牌仍应可见")
+
   local original = room.askToChooseCard
   room.askToChooseCard = function(self, player, params) return card end
 
@@ -126,6 +152,8 @@ function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDam
     on_refresh = function(self, event, target, player, data)
       done = true
       lu.assertTrue(p3():cardVisible(card))
+      lu.assertFalse(p3():cardVisible(other), "未标记的敌方手牌应交给引擎判定为不可见")
+      lu.assertTrue(p4:cardVisible(other), "未标记的手牌对其持有者仍应可见")
       lu.assertTrue(p4:prohibitUse(Fk:getCardById(card)))
       local virtual = Fk:cloneCard("qiao__slash")
       virtual:addSubcard(card)
@@ -154,7 +182,8 @@ function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDam
 
   lu.assertTrue(done)
   -- TurnEnd 后 -turn 公开与锁定标记均应清理；生产清理逻辑未放宽。
-  lu.assertFalse(p3():cardVisible(card))
+  -- 牌已被伤害来源取得，因此改由其他角色确认它不再因公开标记而对全场可见。
+  lu.assertFalse(p2():cardVisible(card))
   lu.assertFalse(p4:prohibitUse(Fk:getCardById(card)))
   lu.assertEquals(Fk:getCardById(card):getMark(LOCK), 0)
 end

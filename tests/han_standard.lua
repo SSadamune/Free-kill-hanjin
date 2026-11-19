@@ -5,6 +5,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local SY = "qiao__skill_han002_1"
 local DS = "qiao__skill_han002_2"
 local JB = "qiao__skill_han018_1"
+local JB_END = JB .. "_turnend&"
 
 Testqiao_han_standard = {}
 
@@ -189,6 +190,8 @@ function Testqiao_han_standard:testJibingCountsSameKingdomIncludingSelfAndPenali
   -- 同势力为 p1、p2、p3 共 3 人：摸牌阶段 2+3=5；本回合伤害 0<3，失去 1 点体力。
   lu.assertEquals(#p2():getCardIds("h"), 5)
   lu.assertEquals(p2().hp, 3)
+  lu.assertEquals(p2():usedSkillTimes(JB_END, Player.HistoryGame), 1)
+  lu.assertEquals(Fk:translate(JB_END), Fk:translate(JB))
 end
 
 function Testqiao_han_standard:testJibingDeclineDoesNotDrawExtraOrLoseHp()
@@ -242,6 +245,8 @@ function Testqiao_han_standard:testJibingDamageAtLeastXNoHpLoss()
   -- X=2（p1、p2），造成 2 点伤害，未低于 X，不失去体力。
   lu.assertEquals(#p2():getCardIds("h"), 4)
   lu.assertEquals(p2().hp, 4)
+  lu.assertEquals(p2():usedSkillTimes(JB_END, Player.HistoryGame), 0)
+  lu.assertEquals(p2():getMark(JB .. "_x-turn"), 0)
 end
 
 return { name = "qiao_han_standard" }

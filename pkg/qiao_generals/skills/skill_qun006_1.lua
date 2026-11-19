@@ -41,7 +41,7 @@ skill:addEffect(fk.EventPhaseStart, {
           target = other,
           flag = "hej",
           skill_name = skill.name,
-          prompt = "#qiao__skill_qun006_1-card:" .. other.id,
+          prompt = "#qiao__skill_qun006_1-card::" .. other.id,
         })
         if id ~= nil and id ~= -1 and table.contains(other:getCardIds("hej"), id) then
           room:obtainCard(player, id, true, fk.ReasonPrey, other, skill.name)

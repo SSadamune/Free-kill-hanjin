@@ -85,7 +85,10 @@ function M.manages(player,name)
 end
 function M.sync(room)
   if not room or room:getTag(SYNCING) then return end
-  if type(room:getTag(M.TAG))~="table" and type(room:getTag(HIDDEN))~="table" then return end
+  if type(room:getTag(M.TAG))~="table" and type(room:getTag(HIDDEN))~="table" then
+    for _,fn in ipairs(listeners) do fn(room) end
+    return
+  end
   M.installRevealAdapter()
   local source=assert(Fk.skills[M.SOURCE],"Missing pre-registered card-skill source")
   local E=require "packages.qiao.pkg.qiao_mode.rules.general_exchange"

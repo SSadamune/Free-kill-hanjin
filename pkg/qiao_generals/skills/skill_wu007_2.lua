@@ -98,7 +98,7 @@ skill:addEffect("viewas", {
       max = x,
       pattern = ".|.|red",
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu007_2-burn:" .. x,
+      prompt = "#qiao__skill_wu007_2-burn:::" .. x,
       cancelable = true,
     })
     if picked == nil or #picked ~= x then return end

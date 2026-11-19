@@ -20,7 +20,7 @@ skill:addEffect(fk.DamageCaused, {
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin002_2-invoke:" .. data.to.id,
+      prompt = "#qiao__skill_jin002_2-invoke::" .. data.to.id,
     })
   end,
   on_use = function(self, event, target, player, data)

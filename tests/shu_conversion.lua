@@ -4,6 +4,7 @@
 -- 夹具复用白板双将与公共请求辅助；只用真实房间流程，不替换 useCard/damage。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local RENDE = "qiao__skill_shu001_1"
@@ -168,8 +169,71 @@ local function replyVirtualSlash(target)
   }
 end
 
+local function chooseRendeSlash(current, player, victim, params)
+  local reply
+  client_room.run(current, function(clients)
+    local players = {}
+    for _, client in ipairs(clients) do players[client.id] = client end
+    for _, server in ipairs(current.players) do
+      players[server.id].next = players[server.next.id]
+    end
+    local handler = ClientInstance.request_handlers.AskForUseActiveSkill:new(players[player.id], {
+      params.skill_name, params.prompt or "", params.cancelable, params.extra_data,
+    })
+    handler:setup()
+    lu.assertEquals(handler.class.name, "QiaoActiveSkill")
+    lu.assertIsTrue(handler.extra_data.bypass_times)
+    lu.assertEquals(handler.player:usedCardTimes("slash", Player.HistoryPhase), 1)
+
+    local interaction = handler.scene:getAllItems("Interaction")["1"]
+    local items = interaction.refresh_data.expandItems
+    local byName = {}
+    for _, item in ipairs(items or {}) do byName[item.name] = item end
+    lu.assertNotNil(byName["qiao__slash"])
+    -- 服务端 choices 仍是候选上限；次数已满的【杀】靠请求 extra_data 可用。
+    lu.assertTrue(table.contains(handler.extra_data.choices, "qiao__slash"))
+    lu.assertFalse(table.contains(handler.extra_data.choices, "qiao__jink"))
+    lu.assertIsTrue(byName["qiao__slash"].prop.additional_prop.selectable)
+    lu.assertFalse(byName["qiao__jink"].prop.additional_prop.selectable)
+
+    -- 真实牌名点击：QML 以 Interaction update 传入 ExpandItem。
+    local slashItem = byName["qiao__slash"]
+    handler:update("Interaction", "1", "update", {
+      elemType = "ExpandItem", cid = slashItem.cid, name = slashItem.name,
+    })
+    local card = handler:getUsingCard()
+    lu.assertNotNil(card)
+    lu.assertEquals(card.trueName, "slash")
+    lu.assertEquals(card.skillName, RENDE)
+
+    -- 真实目标点击与确认按钮；目标可用性同样来自请求 extra_data。
+    lu.assertIsTrue(handler:targetValidity(victim.id))
+    handler:update("Photo", victim.id, "click", { selected = true })
+    lu.assertIsTrue(handler:feasible())
+    lu.assertIsTrue(handler.scene:getAllItems("Button")["OK"].enabled)
+
+    local ui = ClientInstance.client._ui
+    local savedCB = ui.cb
+    ui.cb = function(command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ui.cb = savedCB
+    assert(ok, err)
+    lu.assertNotNil(reply)
+    lu.assertEquals(reply.interaction_data, "qiao__slash")
+    lu.assertEquals(reply.targets, { victim.id })
+    lu.assertEquals(reply.card.skill, "virtual_viewas")
+  end)
+  return reply
+end
+
 function Testqiao_shu_conversion:testRendeRealSlashWhenNormalQuotaIsUsed()
-  local p1, p2, p3, p4 = p(1), p(2), p(3), p(4)
+  local p1 = p(1)
+  local p2 = p1.next
+  local recipients = table.filter(room().players, function(player)
+    return player ~= p1 and player ~= p2
+  end)
   grant(p1, RENDE)
   clearCards(p1)
   clearCards(p2)
@@ -180,16 +244,26 @@ function Testqiao_shu_conversion:testRendeRealSlashWhenNormalQuotaIsUsed()
   local give1 = give(p1, "qiao__jink", Card.Heart, 1)
   local give2 = give(p1, "qiao__jink", Card.Heart, 2)
 
-  FkTest.setNextReplies(p2, { "__cancel" })
+  FkTest.setNextReplies(p2, { "__cancel", "__cancel" })
   use(p1, Fk:getCardById(first), { p2 })
   lu.assertEquals(p1:usedCardTimes("slash", Player.HistoryPhase), 1)
   lu.assertNotIsTrue(p1:canUse(Fk:getCardById(second)))
 
-  -- 给第二张牌时提供基本牌，真实回复选择【杀】并对已用完次数的同一目标使用。
-  FkTest.setNextReplies(p1, { replyVirtualSlash(p2) })
-  FkTest.setNextReplies(p2, { "__cancel" })
-  activate(p1, RENDE, { p3 }, { give1 })
-  activate(p1, RENDE, { p4 }, { give2 })
+  -- 使用真实请求参数构造客户端处理器，再把确认回包交给原请求和结算。
+  local prompted = false
+  skill_test.withSkillRequests(room(), "virtual_viewas", {
+    askToUseActiveSkill = function(current, player, params, original)
+      if params.extra_data.skillName == RENDE then
+        prompted = true
+        FkTest.setNextReplies(player, { chooseRendeSlash(current, player, p2, params) })
+      end
+      return original(current, player, params)
+    end,
+  }, function()
+    activate(p1, RENDE, { recipients[1] }, { give1 })
+    activate(p1, RENDE, { recipients[2] }, { give2 })
+  end)
+  lu.assertTrue(prompted)
 
   lu.assertEquals(p2.hp, 18) -- 普通【杀】+ 仁德视为【杀】
   -- 视为使用按 extraUse 处理，不进入通常用牌次数历史。

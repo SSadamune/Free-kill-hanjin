@@ -2,13 +2,14 @@
 -- 君主技：刘备拥有“六师率义旗”；旗入口授予其他蜀势力角色，随明置/失技/
 -- 死亡/势力/座次变化同步。授予来源独立，不删除其他来源。
 local H = require "packages.hegemony.util"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_em_shu001_1",
 }
 skill.qiaoImplemented = true
 
-local FLAG = "qiao__skill_em_shu001_flag"
+local FLAG = Flags.shuFlag
 local SYNCING = "qiao_em_shu001_flag_syncing"
 
 local function lordOf(room)
@@ -57,8 +58,12 @@ skill:addEffect(fk.Death, spec)
 skill:addEffect(fk.AfterPropertyChange, spec)
 skill:addEffect(fk.TurnStart, spec)
 
-skill:addAcquireEffect(function(self,player) syncFlags(player.room) end)
-skill:addLoseEffect(function(self,player) syncFlags(player.room) end)
+local function syncFlag(self, player)
+  syncFlags(player.room)
+  Flags.refresh(player, FLAG)
+end
+skill:addAcquireEffect(syncFlag)
+skill:addLoseEffect(syncFlag)
 
 Fk:loadTranslationTable {
   ["qiao__skill_em_shu001_1"] = "章武",
