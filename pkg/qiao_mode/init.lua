@@ -6,14 +6,21 @@ extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 -- Register after all extensions are installed; qiao may load before hegemony.
 -- Do not create a second boardgame: Fk:loadPackages() iterates Fk.boardgames and
 -- postLoads every entry.  A new board entry would make the same engine postLoad
--- twice, duplicating game modes and card types.  The existing board keeps its
--- engine/room/page/settings; only the extension client is installed, and the
--- client delegates every non-HanJin room or skill back to the base handlers.
+-- twice, duplicating game modes and card types. The room page selection below
+-- shares the registered board's engine, classes, and settings.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Qiao requires the hegemony extension")
   local factory = require "packages.qiao.pkg.qiao_mode.mode"
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
   board.client_klass = require "packages.qiao.pkg.qiao_mode.client"
+  local qiaoBoard = setmetatable({
+    page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
+  }, { __index = board })
+  local getBoardGame = Fk.getBoardGame
+  function Fk:getBoardGame(name)
+    if Modes.isHanjin(name) then return qiaoBoard end
+    return getBoardGame(self, name)
+  end
   for _, name in ipairs(Modes.names) do
     local mode = factory.create(base, name)
     mode.game_name = base.game_name

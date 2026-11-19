@@ -233,6 +233,7 @@ for _, cardType in ipairs(CardData.types) do
   }
   if cardType.subtypes then
     spec.extra_data.qiao_subtypes = table.clone(cardType.subtypes)
+    spec.ui_name = cardType.id
   end
   if cardType.type == "basic" then
     spec.type = Card.TypeBasic

@@ -82,7 +82,10 @@ function Testmode_rules:testBoardGameRegistrationUsesOneSharedEngine()
   -- The extension must not add a second boardgame that reuses the same Engine:
   -- Fk:loadPackages() postLoads every board entry, which would run the Engine's
   -- postLoad twice and duplicate game modes/card types.
-  lu.assertIs(qiao, base)
+  lu.assertEquals(base.page.name, "Room")
+  lu.assertEquals(qiao.page.url, "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml")
+  lu.assertEquals(Fk:getBoardGame("qiao_free_mode").page, qiao.page)
+  lu.assertIs(qiao.room_klass, base.room_klass)
   lu.assertIs(qiao.engine, Fk)
   lu.assertNil(Fk.boardgames.qiao)
   lu.assertIs(qiao.client_klass, require "packages.qiao.pkg.qiao_mode.client")

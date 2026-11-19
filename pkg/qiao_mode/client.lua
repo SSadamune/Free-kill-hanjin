@@ -163,4 +163,11 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
   return text
 end
 
+function QiaoClient:notifyUI(command, data)
+  if command == "Ltk.SkillInvoked" and isQiaoMode() then
+    data = stripRichText(data)
+  end
+  return BaseClient.notifyUI(self, command, data)
+end
+
 return QiaoClient

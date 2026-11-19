@@ -1682,7 +1682,7 @@ function Testqiao_han001:testMZ33ClientRecipientClickReplacesPreviousSelection()
     -- 只登记一个共享 Engine 的 boardgame；汉晋与上游国战指向同一注册。
     local base = Fk:getBoardGame("new_heg_mode")
     local board = Fk:getBoardGame("qiao_heg_mode")
-    lu.assertIs(board, base)
+    lu.assertIs(board.engine, base.engine)
     lu.assertIs(board.engine, Fk)
     lu.assertIs(board.client_klass, require "packages.qiao.pkg.qiao_mode.client")
     lu.assertNil(Fk.boardgames.qiao)
@@ -1754,9 +1754,9 @@ function Testqiao_han001:testCardFootnoteStripsRichTextOnlyInQiaoMode()
       local client = board.client_klass:new(ClientInstance.client)
       client.players = clients
       local notified = {}
-      client.notifyUI = function(_, name, data)
+      client.client = { notifyUI = function(_, name, data)
         table.insert(notified, { name = name, data = data })
-      end
+      end }
 
       -- 路径 1：SetCardFootnote（setCardNote → parseMsg(msg, true)）
       room.settings.gameMode = "qiao_heg_mode"
@@ -1783,6 +1783,15 @@ function Testqiao_han001:testCardFootnoteStripsRichTextOnlyInQiaoMode()
       local rich = client:parseMsg(msg, nil)
       lu.assertNotNil(rich:find("<font", 1, true))
       lu.assertNotNil(rich:find("<b>", 1, true))
+
+      notified = {}
+      client:appendLog({ type = "#InvokeSkillTo", from = me.id, to = { to.id },
+        arg = "qiao__black_chain_skill" })
+      lu.assertEquals(notified[1].name, "GameLog")
+      lu.assertStrContains(notified[1].data, "<font")
+      lu.assertEquals(notified[2].name, "Ltk.SkillInvoked")
+      lu.assertStrContains(notified[2].data, "乌铁锁链")
+      lu.assertNil(notified[2].data:find("[<>]"))
 
       -- 其他模式：委托原逻辑，脚注保持富文本
       room.settings.gameMode = "new_heg_mode"
