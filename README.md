@@ -83,7 +83,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 python scripts/build_release.py
 ```
 
-生成 `.dev/dist/qiao.zip`，解压到用户游戏的 `packages/` 后得到 `packages/qiao/`。
+也可在 VS Code 的“终端 → 运行任务”中选择“平行时空：构建用户安装包”。
+
+生成 `.dev/dist/qiao.zip`。Windows 上构建成功后会自动在资源管理器中打开 `.dev/dist/`。将压缩包解压到用户游戏的 `packages/` 后得到 `packages/qiao/`。
 
 从旧版升级时，先移除旧扩展目录 `packages/hanjin/`，再安装 `packages/qiao/`，避免同时加载两份扩展。
 

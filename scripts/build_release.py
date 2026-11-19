@@ -1,5 +1,7 @@
 """Build the user-installable extension from workspace assets only."""
+import os
 from pathlib import Path
+import sys
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,4 +31,9 @@ def build(output=OUTPUT):
 
 
 if __name__ == '__main__':
-    build()
+    output = build()
+    if os.name == 'nt':
+        try:
+            os.startfile(output.parent)
+        except OSError as error:
+            print(f'Could not open {output.parent} in File Explorer: {error}', file=sys.stderr)
