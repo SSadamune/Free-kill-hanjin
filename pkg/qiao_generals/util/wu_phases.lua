@@ -7,6 +7,7 @@
 -- 不在此推断规则；调用方负责时机、消耗与效果。
 local H = require "packages.hegemony.util"
 local History = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+local WeiPhases = require "packages.qiao.pkg.qiao_generals.util.wei_phases"
 
 local M = {}
 
@@ -35,37 +36,24 @@ function M.playPhaseUsed(player)
   end)
 end
 
---- 当前是否存在可移动的场上牌。
+--- 当前是否存在可移动的场上牌（与魏区阶段组共用同一实现）。
 ---@param room Room | Client
 ---@param flag? "e" | "j"
 ---@return boolean
 function M.hasMovableBoardCard(room, flag)
-  local movable = room:canMoveCardInBoard(flag, nil, {})
-  return type(movable) == "table" and #movable > 0
+  return WeiPhases.hasMovableBoardCard(room, flag)
 end
 
 --- 公共两步式“移动场上一张牌”：先由引擎筛出确有可移动关系的两名角色，
---- 再由 askToMoveCardInBoard 在其中一人的装备/判定区选牌移动。
+--- 再由公开候选选牌（askToChooseCards）选牌并移动。与魏区阶段组共用同一实现，
+--- 仅选人提示文案不同。
 ---@param room Room
 ---@param player ServerPlayer
 ---@param skillName string
 ---@param flag? "e" | "j"
 ---@return { card: Card, from: ServerPlayer, to: ServerPlayer }?
 function M.moveCardInBoard(room, player, skillName, flag)
-  if not M.hasMovableBoardCard(room, flag) then return nil end
-  local targets = room:askToChooseToMoveCardInBoard(player, {
-    flag = flag,
-    skill_name = skillName,
-    prompt = "#qiao_wu_move_board",
-    cancelable = true,
-  })
-  if targets == nil or #targets < 2 then return nil end
-  return room:askToMoveCardInBoard(player, {
-    target_one = targets[1],
-    target_two = targets[2],
-    skill_name = skillName,
-    flag = flag,
-  })
+  return WeiPhases.moveCardInBoard(room, player, skillName, flag, "#qiao_wu_move_board")
 end
 
 --- 是否为小势力角色（复用 hegemony 公共定义）。

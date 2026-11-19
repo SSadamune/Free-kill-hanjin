@@ -126,13 +126,14 @@ skill:addEffect(fk.AfterCardsMove, {
     if player:getMark(USED_MARK) > 0 then return end
     local ids = eligibleCards(player, data)
     if #ids == 0 then return end
-    local chosen = room:askToCards(player, {
-      min_num = 1,
-      max_num = 1,
+    local chosen = room:askToChooseCards(player, {
+      target = player,
+      flag = { card_data = { { "弃牌堆", ids } } },
+      min = 1,
+      max = 1,
       skill_name = skill.name,
       prompt = "#qiao__retinue_skill_mushun-choose",
       cancelable = true,
-      expand_pile = ids,
     })
     local id = chosen and chosen[1]
     if id == nil or not table.contains(ids, id)
