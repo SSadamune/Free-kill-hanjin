@@ -20,6 +20,8 @@ local skill = fk.CreateSkill {
 local SLASH = "qiao__slash"
 local CHOICE_OWN = "command_world_own"
 local CHOICE_TARGET = "command_world_target"
+local CHOICE_OWN_WEI = "command_world_own_wei"
+local CHOICE_TARGET_WEI = "command_world_target_wei"
 
 --- 给定在场名单（存活且未移出游戏）中的最低体力值。
 --- 名单由调用方取得：客户端房间没有服务端 getAlivePlayers。
@@ -92,7 +94,7 @@ local function doOrderTake(room, participant, target, exempt)
     target = target,
     flag = "he",
     skill_name = skill.name,
-    prompt = "#qiao__command_world-take:" .. target.id,
+    prompt = "#qiao__command_world-take::" .. target.id .. ":" .. skill.name,
   })
   if id == nil or room:getCardOwner(id) ~= target then return end
   room:throwCard({ id }, skill.name, target, participant)
@@ -107,31 +109,31 @@ local function resolveParticipant(room, participant, target, confirmed)
   if participant == target then return end
   if not room:askToSkillInvoke(participant, {
     skill_name = skill.name,
-    prompt = "#qiao__command_world-participate:" .. target.id,
+    prompt = "#qiao__command_world-participate::" .. target.id,
   }) then
     return
   end
   local exempt = weiExempt(confirmed, participant)
+  local attack = exempt and CHOICE_OWN_WEI or CHOICE_OWN
+  local take = exempt and CHOICE_TARGET_WEI or CHOICE_TARGET
   local options = {}
   if canSlashAt(room, participant, target) and (exempt or #discardableHand(participant) > 0) then
-    table.insert(options, CHOICE_OWN)
+    table.insert(options, attack)
   end
   if #target:getCardIds("he") > 0 then
-    table.insert(options, CHOICE_TARGET)
+    table.insert(options, take)
   end
   if #options == 0 then return end
-  local choice = options[1]
-  if #options > 1 then
-    choice = room:askToChoice(participant, {
-      choices = options,
-      all_choices = { CHOICE_OWN, CHOICE_TARGET },
-      skill_name = skill.name,
-      prompt = "#qiao__command_world-choice:" .. target.id,
-    })
-  end
-  if choice == CHOICE_OWN then
+  local choice = room:askToChoice(participant, {
+    choices = options,
+    all_choices = { attack, take },
+    skill_name = skill.name,
+    prompt = "#qiao__command_world-choice::" .. target.id,
+  })
+  if not table.contains(options, choice) then return end
+  if choice == attack then
     doOrderAttack(room, participant, target, exempt)
-  elseif choice == CHOICE_TARGET then
+  elseif choice == take then
     doOrderTake(room, participant, target, exempt)
   end
 end
@@ -189,6 +191,8 @@ Fk:loadTranslationTable {
   ["#qiao__command_world-take"] = "号令天下：选择 %dest 的一张手牌或装备",
   [CHOICE_OWN] = "弃置一张手牌，视为对目标使用【杀】",
   [CHOICE_TARGET] = "弃置目标一张手牌或装备",
+  [CHOICE_OWN_WEI] = "视为对目标使用【杀】",
+  [CHOICE_TARGET_WEI] = "弃置目标一张手牌或装备，然后获得该牌",
 }
 
 return skill

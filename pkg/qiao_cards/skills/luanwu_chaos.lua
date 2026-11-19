@@ -20,6 +20,10 @@ local function handIds(player)
   return player:getCardIds(Player.Hand)
 end
 
+local function isInHand(room, target, id)
+  return room:getCardArea(id) == Card.PlayerHand and room:getCardOwner(id) == target
+end
+
 local function cardType(id)
   local card = Fk:getCardById(id)
   return card and card.type or nil
@@ -82,23 +86,24 @@ skill:addEffect("cardskill", {
     local user, target = effect.from, effect.to
     if target == nil or target.dead or target:isRemoved() then return end
 
-    local hand = handIds(target)
-    if #hand > 0 then
-      room:showCards(hand, target)
+    local shown = handIds(target)
+    if #shown > 0 then
+      room:showCards(shown, target)
     end
+    local shownHand = table.filter(shown, function(id) return isInHand(room, target, id) end)
 
     local options = {}
     if canDiscardTwoCategories(target) then
       table.insert(options, CHOICE_TARGET_DISCARD)
     end
-    if #hand > 0 then table.insert(options, CHOICE_USER_DISCARD) end
+    if #shownHand > 0 then table.insert(options, CHOICE_USER_DISCARD) end
 
     if #options > 0 and user ~= nil and not user.dead then
       local choice = room:askToChoice(user, {
         choices = options,
         all_choices = { CHOICE_TARGET_DISCARD, CHOICE_USER_DISCARD },
         skill_name = skill.name,
-        prompt = "#qiao__luanwu_chaos-choose:" .. target.id,
+        prompt = "#qiao__luanwu_chaos-choose::" .. target.id,
       })
       if choice == CHOICE_TARGET_DISCARD then
         local picked = room:askToChooseCards(target, {
@@ -124,12 +129,13 @@ skill:addEffect("cardskill", {
       elseif choice == CHOICE_USER_DISCARD then
         local id = room:askToChooseCard(user, {
           target = target,
-          flag = "h",
+          -- 显式牌组让客户端继续正面显示本次展示的牌。
+          flag = { card_data = { { "$Hand", shownHand } } },
           skill_name = skill.name,
-          prompt = "#qiao__luanwu_chaos-user-discard",
+          prompt = "#qiao__luanwu_chaos-user-discard::" .. target.id .. ":" .. skill.name,
         })
-        if id ~= nil and table.contains(handIds(target), id) then
-          room:throwCard({ id }, skill.name, target, user)
+        if table.contains(shownHand, id) and isInHand(room, target, id) then
+          room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonDiscard, skill.name, nil, true, user)
         end
       end
     end
@@ -149,9 +155,9 @@ Fk:loadTranslationTable {
   ["#qiao__luanwu_chaos_skill"] = "文和乱武：逐目标展示手牌并弃置",
   ["#qiao__luanwu_chaos-choose"] = "文和乱武：选择对 %dest 执行的一项",
   ["#qiao__luanwu_chaos-target-discard"] = "文和乱武：弃置两张类别不同的手牌",
-  ["#qiao__luanwu_chaos-user-discard"] = "文和乱武：选择弃置其一张手牌",
+  ["#qiao__luanwu_chaos-user-discard"] = "文和乱武：选择弃置 %dest 展示的一张手牌",
   [CHOICE_TARGET_DISCARD] = "该目标弃置两张类别不同的手牌",
-  [CHOICE_USER_DISCARD] = "你弃置其一张手牌",
+  [CHOICE_USER_DISCARD] = "你弃置其展示的一张手牌",
 }
 
 return skill
