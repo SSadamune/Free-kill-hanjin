@@ -24,7 +24,8 @@ end
 
 function Testqiao_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUpstream()
   -- The formal pack now owns 90 independent general cards. None of them may be
-  -- an upstream identity; the two independent Thunder Slash cards remain ♠9/♠10.
+  -- an upstream identity; all seven printed Thunder Slash positions share one
+  -- independent identity. The individual positions are covered by card_deck.
   lu.assertEquals(#Fk.packages.qiao_generals.generals, 104) -- 90 generals + 14 retinues
   for _, general in ipairs(Fk.packages.qiao_generals.generals) do
     lu.assertTrue(general.name:startsWith("qiao_heg__"))
@@ -35,13 +36,10 @@ function Testqiao_faction_ban:testFormalContentIsIndependentAndDoesNotBorrowUpst
   local thunder = table.filter(Fk.packages.qiao_cards.cards, function(card)
     return card.name == "qiao__thunder__slash"
   end)
-  lu.assertEquals(#thunder, 2)
+  lu.assertEquals(#thunder, 7)
   for _, card in ipairs(Fk.packages.qiao_cards.cards) do
     lu.assertIsTrue(card.package == Fk.packages.qiao_cards)
     lu.assertEquals(card.package.extensionName, "qiao")
-  end
-  for _, card in ipairs(thunder) do
-    lu.assertTrue(card.suit == Card.Spade and (card.number == 9 or card.number == 10))
   end
   lu.assertFalse(table.contains(Fk.game_modes.qiao_heg_mode.whitelist, "hegemony_standard"))
   lu.assertFalse(table.contains(Fk.game_modes.qiao_heg_mode.whitelist, "hegemony_cards"))

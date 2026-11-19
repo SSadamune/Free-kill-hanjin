@@ -16,7 +16,6 @@ local SLASH_NAMES = {
   ["qiao__fire__slash"] = true,
   ["qiao__ice__slash"] = true,
   ["qiao__thunder__slash"] = true,
-  ["qiao__thunder_shell__slash"] = true,
 }
 
 ---@param card Card?
