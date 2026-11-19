@@ -54,7 +54,9 @@ M.types = {
   { id = "hanjin__collateral", display = "借刀杀人", type = "trick", is_damage = true, skill = "hanjin__inert", inert = true },
   { id = "hanjin__fire_attack", display = "火攻", type = "trick", is_damage = true, skill = "hanjin__inert", inert = true },
   { id = "hanjin__lightning", display = "闪电", type = "trick", delayed = true, is_damage = true, skill = "hanjin__inert", inert = true },
-  { id = "hanjin__sihai_liuqian", display = "四海流钱", type = "trick", skill = "hanjin__inert", inert = true },
+  { id = "hanjin__sihai_liuqian", display = "四海流钱", type = "equip",
+    subtype = Card.SubtypeTreasure, skill = "hanjin__inert_equip",
+    equip_skill = "hanjin__inert_equip", inert = true },
 
   -- Faction tricks: outside the base deck, only special means may add them.
   { id = "hanjin__danggu_zhihuo", display = "党锢之祸", type = "trick", kingdom = "han",
@@ -101,10 +103,10 @@ M.types = {
     subtype = Card.SubtypeWeapon, range = 3, skill = "default_equip_skill",
     equip_skill = "hanjin__axe_skill", inert = false },
   { id = "hanjin__chixiao_sword", display = "赤霄剑", type = "equip",
-    subtype = Card.SubtypeWeapon, range = 0, skill = "hanjin__inert_equip",
+    subtype = Card.SubtypeWeapon, range = 3, skill = "hanjin__inert_equip",
     equip_skill = "hanjin__inert_equip", inert = true },
   { id = "hanjin__shenshou_sizhao", display = "神授思召", type = "equip",
-    subtype = Card.SubtypeWeapon, range = 0, skill = "hanjin__inert_equip",
+    subtype = Card.SubtypeWeapon, range = 2, skill = "hanjin__inert_equip",
     equip_skill = "hanjin__inert_equip", inert = true },
   { id = "hanjin__dragon_phoenix", display = "飞龙夺凤", type = "equip",
     subtype = Card.SubtypeWeapon, range = 2, skill = "default_equip_skill",
