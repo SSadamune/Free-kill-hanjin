@@ -782,6 +782,12 @@ function Testqiao_card_reuse:testFiveElementsFanIsClickableViewAsAfterEquip()
   end)
 end
 
+function Testqiao_card_reuse:testWoodenOxUsesPrintedDescriptionInCardAndSkill()
+  local text = require "packages.qiao.pkg.qiao_cards.data.equipment_text"
+  lu.assertEquals(Fk:translate(":qiao__wooden_ox_skill"), text.qiao__wooden_ox)
+  lu.assertStrContains(Fk:translate(":qiao__wooden_ox"), text.qiao__wooden_ox)
+end
+
 -- 五行鹤翎扇：单张实体属性【杀】的 ViewAs；结果属性不能与材料相同，实体牌登记为
 -- 转化材料的 subcard；普通【杀】、多牌材料与已转化牌都不能作为材料。
 function Testqiao_card_reuse:testFiveElementsFanViewAsUsesSingleAttributeSlash()
