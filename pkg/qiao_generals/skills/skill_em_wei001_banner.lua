@@ -3,11 +3,15 @@
 -- 体力 4/3 获得一项场上没有的已实装技能，直到其下回合开始。
 local W = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local skill = fk.CreateSkill {
   name = W.BANNER,
 }
 skill.qiaoImplemented = true
+
+skill:addAcquireEffect(function(self, player) Flags.refresh(player, self.name) end)
+skill:addLoseEffect(function(self, player) Flags.refresh(player, self.name) end)
 
 local HIGH = {
   "qiao__skill_wei004_1", -- 突袭

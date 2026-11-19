@@ -89,6 +89,11 @@ function Testqiao_em_wei001_caocao:testDataAndAscension()
   lu.assertEquals(p(1).general, LORD)
   lu.assertTrue(p(1):hasSkill(W.JIANAN))
   lu.assertTrue(p(1):hasSkill(W.BANNER), "建安应授予霸者求贤状")
+  local mark = "@!!" .. W.BANNER
+  lu.assertEquals(p(1):getMark(mark), "旗")
+  lu.assertEquals(Fk:translate(":" .. mark), Fk:translate(":" .. W.BANNER))
+  inRoom(function() FkTest.room:handleAddLoseSkills(p(1), "-" .. W.BANNER, W.JIANAN, false, true) end)
+  lu.assertEquals(p(1):getMark(mark), 0)
   local banner = Fk.skill_skels["qiao__skill_em_wei001_banner"]
   lu.assertTrue(table.contains(banner.qiaoPools.high, "qiao__skill_wei024_1"), "常令应进入高鱼组")
   lu.assertTrue(table.contains(banner.qiaoPools.low, "qiao__skill_wei020_1"), "奇策应进入低鱼组")

@@ -3,12 +3,16 @@
 -- 第二段：每名吴势力角色自己的准备阶段，可按当前烽火数选择本回合获得的技能。
 -- 第三段：持旗者受到牌的伤害后移去一张烽火，然后建立本回合下次受到的伤害-1。
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local skill = fk.CreateSkill {
   name = P.FLAG,
   derived_piles = P.PILE,
 }
 skill.qiaoImplemented = true
+
+skill:addAcquireEffect(function(self, player) Flags.refresh(player, self.name) end)
+skill:addLoseEffect(function(self, player) Flags.refresh(player, self.name) end)
 
 skill:addEffect("atkrange", {
   correct_func = function(self, from)

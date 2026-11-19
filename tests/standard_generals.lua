@@ -489,6 +489,11 @@ end
 function Teststandard_generals:testSourceLabelsDescribeNonGeneralSkills()
   local room = create { formalOnly = true }
   local player = room.players[1]
+  local chengliu = "qiao__skill_jin013_1"
+  lu.assertStrContains(Fk:translate(":" .. chengliu), "<富甲→改为雷电伤害>")
+  lu.assertStrContains(Fk:getDescription(chengliu, nil, player), "&lt;富甲→改为雷电伤害&gt;")
+  local limited = "qiao__skill_shu010_2"
+  lu.assertEquals(Fk:translate("$" .. limited .. "1"), Fk:translate(limited))
   local function labeled(name, label)
     local text = Fk:getDescription(name, nil, player)
     return type(text) == "string" and text:find("〔" .. label .. "〕", 1, true) ~= nil

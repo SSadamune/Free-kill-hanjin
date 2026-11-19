@@ -7,9 +7,13 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local First = require "packages.qiao.pkg.qiao_generals.util.jin_first_reveal"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 local skill = fk.CreateSkill { name = "qiao__skill_em_jin001_banner" }
 skill.qiaoImplemented = true
+
+skill:addAcquireEffect(function(self, player) Flags.refresh(player, self.name) end)
+skill:addLoseEffect(function(self, player) Flags.refresh(player, self.name) end)
 
 local SHOWN_MARK = "qiao_jin001_first_double"
 local USED_MARK = "qiao_jin001_change_used"
