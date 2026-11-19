@@ -171,11 +171,25 @@ function Testqiao_wu_support:testYinghunDrawThenDiscard()
     p1.hp = 2
     p1.phase = Player.Start
   end)
+  asClient(room(), function(clients)
+    local text = Fk:getDescription(YINGHUN, "zh_CN", clients[1])
+    lu.assertStrContains(text, "摸2张牌")
+    lu.assertStrContains(text, "弃置2张牌")
+    lu.assertNil(text:find("X", 1, true))
+  end)
   local oldChoose, oldChoice, oldDiscard = room().askToChoosePlayers, room().askToChoice, room().askToDiscard
   skill_test.withSkillRequests(room(), YINGHUN, {
-    askToChoosePlayers = function(self, player, params) return { p2 } end,
-    askToChoice = function(self, player, params) return "#qiao__skill_wu009_1-draw" end,
+    askToChoosePlayers = function(self, player, params)
+      lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-choose:::2")
+      return { p2 }
+    end,
+    askToChoice = function(self, player, params)
+      lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-choice::" .. p2.id)
+      lu.assertEquals(params.choices, { "#qiao__skill_wu009_1-draw:::2", "#qiao__skill_wu009_1-discard:::2" })
+      return params.choices[1]
+    end,
     askToDiscard = function(self, player, params)
+      lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-throw:::1")
       local id = player:getCardIds("h")[1]
       self:throwCard({ id }, params.skill_name, player, player)
       return { id }

@@ -14,7 +14,13 @@ skill:addEffect(fk.Damaged,{
     end
   end,
   on_cost=function(self,event,target,player,data)
-    return player.room:askToSkillInvoke(player,{skill_name=skill.name,prompt="#qiao__wei023-invoke"})
+    local room = player.room
+    local current = room.current
+    local amount = math.max(1, #current:getCardIds("e"))
+    return room:askToSkillInvoke(player, {
+      skill_name = skill.name,
+      prompt = "#qiao__wei023-invoke::" .. current.id .. ":" .. amount,
+    })
   end,
   on_use=function(self,event,target,player,data)
     local room=player.room
@@ -29,6 +35,6 @@ skill:addEffect(fk.Damaged,{
 Fk:loadTranslationTable{
  ["qiao__skill_wei023_1"]="横江",
  [":qiao__skill_wei023_1"]="当你受到1点伤害后，你可以令当前回合角色本回合手牌上限-X（X为其装备区牌数，至少为1）。若如此做，其本回合弃牌阶段结束时，若其此阶段弃置过牌，则你摸一张牌，否则你摸牌至体力上限。",
- ["#qiao__wei023-invoke"]="横江：降低当前角色手牌上限，并建立弃牌阶段结束后的摸牌效果",
+ ["#qiao__wei023-invoke"]="横江：令 %dest 本回合手牌上限减少 %arg，弃牌阶段结束后你摸牌",
 }
 return skill

@@ -84,7 +84,7 @@ skill:addEffect("active", {
       max_card_num = count,
       pattern = ".",
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin003_2-give::" .. count,
+      prompt = "#qiao__skill_jin003_2-give:::" .. count,
       cancelable = false,
     })
     local give = {}

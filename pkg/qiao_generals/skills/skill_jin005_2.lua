@@ -28,7 +28,7 @@ local function discardOne(room, player, target)
     target = target,
     flag = "he",
     skill_name = skill.name,
-    prompt = "#qiao__skill_jin005_2-discard:" .. target.id,
+    prompt = "#qiao__skill_jin005_2-discard::" .. target.id,
   })
   if id == nil or id == -1 or not table.contains(ids, id) then return end
   room:throwCard({ id }, skill.name, target, player)

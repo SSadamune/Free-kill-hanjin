@@ -6,6 +6,9 @@
 -- 2. 令其摸一张牌，然后弃置 X 张牌（X 为孙坚已损失的体力值）。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu009_1",
+  dynamic_desc = function(self, player)
+    if player then return self.name .. "-current:" .. player:getLostHp() end
+  end,
 }
 skill.qiaoImplemented = true
 
@@ -40,7 +43,7 @@ skill:addEffect(fk.EventPhaseStart, {
       max_num = 1,
       targets = otherTargets(player),
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu009_1-choose",
+      prompt = "#qiao__skill_wu009_1-choose:::" .. player:getLostHp(),
       cancelable = true,
     })
     if #to > 0 then
@@ -52,12 +55,14 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     local to = event:getCostData(self).tos[1]
     local n = player:getLostHp()
+    local draw = DRAW .. ":::" .. n
+    local discard = DISCARD .. ":::" .. n
     local choice = room:askToChoice(player, {
-      choices = { DRAW, DISCARD },
+      choices = { draw, discard },
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu009_1-choice:::" .. n,
+      prompt = "#qiao__skill_wu009_1-choice::" .. to.id,
     })
-    if choice == DRAW then
+    if choice == draw then
       if to.dead then return end
       to:drawCards(n, skill.name)
       if to:isAlive() then
@@ -66,10 +71,11 @@ skill:addEffect(fk.EventPhaseStart, {
           max_num = 1,
           include_equip = true,
           skill_name = skill.name,
+          prompt = "#qiao__skill_wu009_1-throw:::1",
           cancelable = false,
         })
       end
-    else
+    elseif choice == discard then
       if to.dead then return end
       to:drawCards(1, skill.name)
       if n > 0 and to:isAlive() then
@@ -78,6 +84,7 @@ skill:addEffect(fk.EventPhaseStart, {
           max_num = n,
           include_equip = true,
           skill_name = skill.name,
+          prompt = "#qiao__skill_wu009_1-throw:::" .. n,
           cancelable = false,
         })
       end
@@ -86,10 +93,12 @@ skill:addEffect(fk.EventPhaseStart, {
 })
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_wu009_1-choose"] = "英魂：选择一名其他角色",
-  ["#qiao__skill_wu009_1-choice"] = "英魂：令其摸X张牌后弃置一张，或摸一张后弃置X张（X为%arg）",
-  [DRAW] = "令其摸X张牌，然后弃置一张牌",
-  [DISCARD] = "令其摸一张牌，然后弃置X张牌",
+  [":qiao__skill_wu009_1-current"] = "准备阶段，你可以选择一名其他角色并选择一项：1.令其摸{1}张牌，然后弃置一张牌；2.令其摸一张牌，然后弃置{1}张牌。",
+  ["#qiao__skill_wu009_1-choose"] = "英魂：选择一名其他角色，令其摸%arg张牌后弃置一张，或摸一张牌后弃置%arg张",
+  ["#qiao__skill_wu009_1-choice"] = "英魂：选择对 %dest 执行的一项",
+  ["#qiao__skill_wu009_1-throw"] = "英魂：弃置%arg张牌",
+  [DRAW] = "令其摸%arg张牌，然后弃置一张牌",
+  [DISCARD] = "令其摸一张牌，然后弃置%arg张牌",
 }
 
 return skill

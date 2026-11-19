@@ -46,7 +46,7 @@ skill:addEffect("active", {
       room:viewCards(player, {
         cards = hand,
         skill_name = skill.name,
-        prompt = "#qiao__skill_wei011_1-view",
+        prompt = "#qiao__skill_wei011_1-view:" .. target.id,
       })
     end
     local hasJink = false

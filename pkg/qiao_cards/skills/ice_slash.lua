@@ -5,6 +5,7 @@ local skill = fk.CreateSkill {
 Fk:loadTranslationTable {
   ["qiao_ice_damage_skill"] = "冰冻伤害",
   ["#qiao_ice_damage_skill-invoke"] = "你可以防止对 %dest 造成的冰冻伤害，改为依次弃置其两张牌",
+  ["#qiao_ice_damage_skill-discard"] = "冰冻伤害：选择 %dest 的一张手牌或装备牌弃置",
 }
 
 local slashSkill = Fk.skills["slash_skill"]
@@ -67,6 +68,7 @@ skill:addEffect(fk.DamageCaused, {
         target = data.to,
         flag = "he",
         skill_name = "qiao_ice_damage_skill",
+        prompt = "#qiao_ice_damage_skill-discard::" .. data.to.id .. ":qiao_ice_damage_skill",
       })
       room:throwCard(card, "qiao_ice_damage_skill", data.to, player)
     end

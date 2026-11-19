@@ -84,7 +84,7 @@ skill:addEffect(fk.DrawNCards, {
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_han018_1-invoke",
+      prompt = "#qiao__skill_han018_1-invoke:::" .. sameKingdomCount(player),
     })
   end,
   on_use = function(self, event, target, player, data)
@@ -98,7 +98,7 @@ skill:addEffect(fk.DrawNCards, {
 
 Fk:loadTranslationTable {
   [helper.name] = "集兵",
-  ["#qiao__skill_han018_1-invoke"] = "集兵：你可以多摸X张牌",
+  ["#qiao__skill_han018_1-invoke"] = "集兵：你可以多摸 %arg 张牌",
 }
 
 return skill

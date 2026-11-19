@@ -129,7 +129,7 @@ skill:addEffect("active", {
     C.askToUseVirtualCard(room, player, {
       name = DUEL,
       skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_wenhu-duel::" .. x,
+      prompt = "#qiao__retinue_skill_wenhu-duel:::" .. x,
       cancelable = false,
       policy = C.default {
         names = { DUEL },

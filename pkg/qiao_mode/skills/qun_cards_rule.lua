@@ -146,7 +146,7 @@ skill:addEffect(fk.CardUseFinished, {
       min = count,
       max = count,
       skill_name = XIAONI,
-      prompt = "#qiao__skill_qun027_2-discard:" .. count,
+      prompt = "#qiao__skill_qun027_2-discard:::" .. count,
       cancelable = false,
     })
     if ids == nil or #ids ~= count then return end

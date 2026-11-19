@@ -43,7 +43,7 @@ skill:addEffect(fk.EventPhaseStart, {
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin010_1-invoke:" .. target.id,
+      prompt = "#qiao__skill_jin010_1-invoke::" .. target.id,
     })
   end,
   on_use = function(self, event, target, player, data)

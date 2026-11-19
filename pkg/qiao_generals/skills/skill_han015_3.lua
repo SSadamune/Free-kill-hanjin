@@ -33,12 +33,13 @@ skill:addEffect(fk.EventPhaseStart, {
       return p:isAlive() and not p:isRemoved()
     end)
     if #targets == 0 or x <= 0 then return end
+    local max = math.min(x, #targets)
     local chosen = room:askToChoosePlayers(player, {
       min_num = 1,
-      max_num = math.min(x, #targets),
+      max_num = max,
       targets = targets,
       skill_name = skill.name,
-      prompt = "#qiao__skill_han015_3-target:::" .. x,
+      prompt = "#qiao__skill_han015_3-target:::" .. max,
       cancelable = false,
     })
     for _, to in ipairs(chosen or {}) do
@@ -53,7 +54,7 @@ skill:addEffect(fk.EventPhaseStart, {
 Fk:loadTranslationTable {
   ["qiao__skill_han015_3"] = "修体",
   [":qiao__skill_han015_3"] = "副将技，结束阶段，你可以令至多X名角色摸牌至体力上限（X为本回合明置的武将牌数）。",
-  ["#qiao__skill_han015_3-invoke"] = "修体：本回合明置了 %arg 张武将牌，可以令至多X名角色摸牌至体力上限",
+  ["#qiao__skill_han015_3-invoke"] = "修体：本回合明置了 %arg 张武将牌，可以令至多 %arg 名角色摸牌至体力上限",
   ["#qiao__skill_han015_3-target"] = "修体：选择至多 %arg 名角色",
 }
 

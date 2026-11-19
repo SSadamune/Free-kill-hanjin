@@ -5,6 +5,9 @@
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu005_1",
   tags = { Skill.Compulsory },
+  dynamic_desc = function(self, player)
+    if player then return self.name .. "-current:" .. player.maxHp end
+  end,
 }
 skill.qiaoImplemented = true
 
@@ -25,5 +28,9 @@ skill:addEffect("maxcards", {
     end
   end,
 })
+
+Fk:loadTranslationTable {
+  [":qiao__skill_wu005_1-current"] = "锁定技，摸牌阶段，你多摸一张牌；你的手牌上限为{1}。",
+}
 
 return skill

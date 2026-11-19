@@ -57,7 +57,7 @@ skill:addEffect("active", {
         max_num = need,
         include_equip = false,
         skill_name = skill.name,
-        prompt = "#qiao__retinue_skill_lujiang_shangjia-discard:" .. need,
+        prompt = "#qiao__retinue_skill_lujiang_shangjia-discard:::" .. need,
         cancelable = false,
       })
       -- 实际弃牌后本阶段【杀】次数+1，与弃牌张数无关，每次调整至多加一次。

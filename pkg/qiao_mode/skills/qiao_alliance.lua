@@ -34,6 +34,7 @@ end
 
 skill:addEffect("active", {
   anim_type = "support",
+  prompt = "#qiao__alliance-give",
   max_phase_use_time = 1,
   can_use = function(self, player)
     if player:usedSkillTimes(skill.name, Player.HistoryPhase) > 0 then return false end
@@ -78,6 +79,7 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   [skill.name] = "合纵",
+  ["#qiao__alliance-give"] = "合纵：选择至多三张合纵牌，交给一名势力不同或未确定势力的角色",
   [":" .. skill.name] = "出牌阶段限一次，你可以将至多三张有“合”标记的手牌展示并"
     .. "交给与你势力不同或未确定势力的一名角色；若其已确定势力，你摸等量的牌。",
 }

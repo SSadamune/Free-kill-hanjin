@@ -33,6 +33,9 @@ end
 
 skill:addEffect("active", {
   anim_type = "drawcard",
+  prompt = function(self, player)
+    return "#qiao__luminous_pearl-discard:::" .. player.maxHp
+  end,
   max_phase_use_time = 1,
   can_use = function(self, player)
     return player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
@@ -59,6 +62,7 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   [skill.name] = "定澜夜明珠",
+  ["#qiao__luminous_pearl-discard"] = "定澜夜明珠：弃置至多 %arg 张其他牌，然后摸等量的牌",
   [":qiao__luminous_pearl_skill"] = "出牌阶段限一次，你可以弃置1至X张自己的手牌或装备"
     .. "（X为你的体力上限，此牌本身不能用于该次弃置），然后摸等量的牌。",
 }

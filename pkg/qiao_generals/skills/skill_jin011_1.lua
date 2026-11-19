@@ -81,7 +81,7 @@ local function resolveTarget(room, player, to)
         target = to,
         flag = "e",
         skill_name = skill.name,
-        prompt = "#qiao__skill_jin011_1-equip:" .. to.id,
+        prompt = "#qiao__skill_jin011_1-equip::" .. to.id,
       })
     end
     if id ~= nil and id ~= -1 and table.contains(to:getCardIds(Player.Equip), id) then
@@ -94,7 +94,7 @@ local function resolveTarget(room, player, to)
         target = to,
         flag = "h",
         skill_name = skill.name,
-        prompt = "#qiao__skill_jin011_1-hand:" .. to.id,
+        prompt = "#qiao__skill_jin011_1-hand::" .. to.id,
       })
     end
     if id ~= nil and id ~= -1 and table.contains(to:getCardIds(Player.Hand), id) then

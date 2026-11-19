@@ -88,7 +88,7 @@ skill:addEffect(fk.TargetSpecified, {
       target = owner,
       flag = { card_data = { { "$Equip", ids } } },
       skill_name = skill.name,
-      prompt = "#qiao__skill_qun081_1-card:" .. owner.id,
+      prompt = "#qiao__skill_qun081_1-card::" .. owner.id,
     })
     if id == nil or id == -1 or not table.contains(ids, id) then return false end
     event:setCostData(self, { to = to, owner = owner, card = id })
