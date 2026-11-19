@@ -1,6 +1,7 @@
 -- 平行时空·君临天下·兵情篇
 -- 独立包：登记 EM(JIN001) 君司马炎；其余内容仍为空。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local package = Package:new("qiao_bingqing", Package.GeneralPack)
 package.extensionName = "qiao"
 package.game_modes_whitelist = Modes.names
@@ -47,7 +48,6 @@ for _, data in ipairs(Sources) do
 end
 
 Fk:addPostLoadFunc(function()
-  local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
   for _, data in ipairs(Sources) do
     for _, version in ipairs(data.versions or {}) do Versions.register(version) end
   end

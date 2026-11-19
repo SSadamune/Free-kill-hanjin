@@ -105,3 +105,10 @@
 马隆锋械、君刘备天钺和将包登记用例曾在游戏流程跑完后卡在对象断言。遇到类似超时时，先查看 `scripts/test.py` 在超时分支补打的子进程输出，再按[夹具与失败诊断](testing.md#夹具与失败诊断)核对断言是否遍历了房间对象图。
 
 房间内清牌、安装武将等 helper 不得再次调用 `FkTest.runInRoom`；由外层测试统一进入房间协程。嵌套恢复同一协程会产生 critical，并让后续准备步骤没有执行，不能据此推断正式技能未注册。测试准备保留至少两个势力，避免明置准备将牌时提前结束游戏。
+
+## 新核心布局下扩展 postLoad 相对 require 失效（已修复）
+
+- 现象：使用 `packages/freekill-core` 布局时，qiao 的 `postLoad` 报 `module 'packages.qiao...' not found`，对应文件实际存在。
+- 根因：`ModManager:loadPackages` 在 `postLoad` 前把工作目录切回核心包；引擎沙箱将 `package` 置空，扩展不能调整 `package.path`。
+- 修复：扩展加载时解析回调需要的模块，`postLoad` 再注册武将、模式和卡牌数据。引擎工作目录由引擎维护，避免回调中途抛错后跳过恢复。详见[扩展加载与新核心布局](implementation/extension-loading.md)。
+- 回归：在新核心布局核对工作目录和汉晋模式注册，并通过真实测试房间触发模式规则。旧核心布局的默认套件单独执行。
