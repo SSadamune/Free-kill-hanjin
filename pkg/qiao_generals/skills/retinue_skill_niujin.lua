@@ -18,7 +18,6 @@ skill.qiaoImplemented = true
 local SOURCE_KEY = "qiao_niujin_source"
 local ACTIVE_MARK = "qiao_niujin_window"
 local REWARD_SKILL = "#qiao_niujin_reward"
-local OPT_STOP = "#qiao__retinue_skill_niujin-stop"
 
 local CATEGORIES = {
   basic = { pattern = ".|.|.|.|.|basic", prompt = "#qiao__retinue_skill_niujin-basic" },
@@ -71,7 +70,6 @@ local function categoryChoices(remaining)
   for _, key in ipairs(ORDER) do
     if remaining[key] then table.insert(choices, key) end
   end
-  table.insert(choices, OPT_STOP)
   return choices
 end
 
@@ -101,7 +99,7 @@ skill:addEffect(fk.TurnEnd, {
         prompt = "#qiao__retinue_skill_niujin-choice",
         cancelable = true,
       })
-      if choice == nil or choice == "" or choice == OPT_STOP then break end
+      if choice == nil or choice == "" or choice == "Cancel" then break end
       local category = CATEGORIES[choice]
       if category == nil or not remaining[choice] then break end
       remaining[choice] = nil
@@ -134,11 +132,10 @@ Fk:loadTranslationTable {
   ["qiao__retinue_skill_niujin"] = "牛金",
   [":qiao__retinue_skill_niujin"] = "与你势力相同的角色回合结束时，你可以使用每种类别至多各一张牌，你以此法杀死角色后摸三张牌。",
   ["#qiao__retinue_skill_niujin-invoke"] = "牛金：你可以使用每种类别至多各一张牌",
-  ["#qiao__retinue_skill_niujin-choice"] = "牛金：选择一个尚未使用的类别，或结束",
+  ["#qiao__retinue_skill_niujin-choice"] = "牛金：选择一个尚未使用的类别，取消则结束",
   ["#qiao__retinue_skill_niujin-basic"] = "牛金：可以使用一张基本牌（可放弃）",
   ["#qiao__retinue_skill_niujin-trick"] = "牛金：可以使用一张锦囊牌（可放弃）",
   ["#qiao__retinue_skill_niujin-equip"] = "牛金：可以使用一张装备牌（可放弃）",
-  [OPT_STOP] = "结束",
 }
 
 return skill

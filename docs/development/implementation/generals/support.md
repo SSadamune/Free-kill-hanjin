@@ -105,9 +105,9 @@
 #### 集兵（HAN018 蹇硕）
 
 - **标识与依据**：运行时 ID `qiao__skill_han018_1`；源码 [skill_han018_1.lua](../../../../pkg/qiao_generals/skills/skill_han018_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)汉区 HAN018。
-- **实现与接口**：随汉区 25 技能骨架一并实装，骨架 `qiaoImplemented = true`；原资料未记录独立回调与请求细节。
-- **验证依据**：[han_standard.lua](../../../../tests/han_standard.lua) 共享汉区套件；结果见[共享验证证据](verification-evidence.md#汉区)。
-- **未完成与边界**：本组暂无更细的定向用例输出或人工验收；未完成边界沿用[汉包](han-standard.md#han-standard-boundary)。
+- **实现与接口**：摸牌时锁定同势力人数 X。回合结束用引擎的实际伤害历史计算本回合伤害，只有不足 X 时才触发失去体力并显示「集兵」。已达到 X 时由回合标记清理收尾。
+- **验证依据**：[han_standard.lua](../../../../tests/han_standard.lua) 覆盖不足 X 时扣体力与触发本地化、达到 X 时无触发，以及选择不发动。
+- **未完成与边界**：实际客户端日志与动画待点验。
 
 ### 魏
 

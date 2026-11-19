@@ -9,7 +9,7 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local X_MARK = "qiao__skill_han018_1_x"
+local X_MARK = "qiao__skill_han018_1_x-turn"
 
 -- 房间级延迟结算。只有集兵发动/获得后才安装；即使集兵在回合结束前失去，
 -- 该独立技能仍能完成 TurnEnd 惩罚。技能对象缓存，不重复 createSkill 同名。
@@ -28,22 +28,12 @@ end
 
 --- 本回合实际由 player 造成的伤害总和。只统计当前 Turn 事件范围内的 Damage。
 local function damageThisTurn(player)
-  local logic = player.room.logic
-  local current = logic and logic:getCurrentEvent()
-  local turn = current and current:findParent(GameEvent.Turn, true)
-  if turn == nil then return 0 end
-  local end_id = current.id
+  local events = player.room.logic:getActualDamageEvents(math.huge, function(event)
+    return event.data.from == player
+  end, Player.HistoryTurn)
   local total = 0
-  local events = logic.event_recorder[GameEvent.Damage] or {}
-  for i = #events, 1, -1 do
-    local event = events[i]
-    if event.id < turn.id then break end
-    if event.id <= end_id then
-      local data = event.data
-      if data and data.from == player and data.damage > 0 then
-        total = total + data.damage
-      end
-    end
+  for _, event in ipairs(events) do
+    total = total + event.data.damage
   end
   return total
 end
@@ -53,7 +43,9 @@ helper:addEffect(fk.TurnEnd, {
   anim_type = "negative",
   priority = 0,
   can_trigger = function(self, event, target, player, data)
-    return target == player and player:getMark(X_MARK) > 0
+    if target ~= player then return false end
+    local x = player:getMark(X_MARK)
+    return x > 0 and damageThisTurn(player) < x
   end,
   on_cost = Util.TrueFunc,
   on_use = function(self, event, target, player, data)
@@ -105,6 +97,7 @@ skill:addEffect(fk.DrawNCards, {
 })
 
 Fk:loadTranslationTable {
+  [helper.name] = "集兵",
   ["#qiao__skill_han018_1-invoke"] = "集兵：你可以多摸X张牌",
 }
 

@@ -155,6 +155,9 @@ function Testqiao_han008:testChuikongWinPreventsTargetDamage()
   inRoom(function() GameEvent.Phase:create(data):exec() end)
 
   lu.assertEquals(p1():usedSkillTimes(CK, Player.HistoryGame), 1)
+  local mark = "@@qiao__skill_han008_1_no_damage-turn"
+  lu.assertEquals(p2():getMark(mark), 1)
+  lu.assertEquals(Fk:translate(mark), "惴恐")
   inRoom(function()
     room:damage { from = p2(), to = p3(), damage = 1, skillName = "test" }
   end)

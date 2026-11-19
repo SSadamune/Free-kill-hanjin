@@ -76,6 +76,13 @@ local function tuxiDraw(room, onNotify)
   end
   table.insert(replies, "1")
   FkTest.setNextReplies(p(1), replies)
+  local invokePrompt
+  FkTest.setRoomBreakpoint(p(1), "AskForSkillInvoke", function(data)
+    if data[2] and data[2]:startsWith("#" .. TUXI .. "-invoke:") then
+      invokePrompt = data[2]
+    end
+    return false
+  end)
   inRoom(function()
     local original = room.doBroadcastNotify
     if onNotify ~= nil then
@@ -87,6 +94,7 @@ local function tuxiDraw(room, onNotify)
     room.logic:trigger(fk.DrawNCards, p(1), data)
     room.doBroadcastNotify = original
   end)
+  lu.assertEquals(invokePrompt, "#" .. TUXI .. "-invoke:::2")
   return c2, c3
 end
 

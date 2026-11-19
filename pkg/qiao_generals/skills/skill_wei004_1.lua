@@ -36,7 +36,7 @@ skill:addEffect(fk.DrawNCards, {
     local room = player.room
     if not room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_wei004_1-invoke:" .. data.n,
+      prompt = "#qiao__skill_wei004_1-invoke:::" .. data.n,
     }) then
       return false
     end

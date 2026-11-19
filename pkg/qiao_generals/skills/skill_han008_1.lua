@@ -12,7 +12,7 @@ local skill = fk.CreateSkill {
 
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
-local NO_DAMAGE = "qiao__skill_han008_1_no_damage-turn"
+local NO_DAMAGE = "@@qiao__skill_han008_1_no_damage-turn"
 local DAMAGE_DELAY_NAME = "#qiao_skill_han008_1_damage_delay"
 local OPTION_YES = "#qiao__skill_han008_1-yes"
 local OPTION_NO = "#qiao__skill_han008_1-no"
@@ -97,6 +97,7 @@ end)
 
 Fk:loadTranslationTable {
   ["qiao__skill_han008_1"] = "惴恐",
+  [NO_DAMAGE] = "惴恐",
   [":qiao__skill_han008_1"] = "其他角色的准备阶段，若你已受伤，你可以与其拼点。若你赢，防止其本回合造成伤害；若你没赢，其可以视为对你使用一张【杀】。",
   ["#qiao__skill_han008_1-invoke"] = "惴恐：你可以与 %dest 拼点",
   ["#qiao__skill_han008_1-slash"] = "惴恐：你可以视为对伏皇后使用一张【杀】",

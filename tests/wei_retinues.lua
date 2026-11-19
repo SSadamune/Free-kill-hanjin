@@ -309,7 +309,7 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
     "1",
     { "basic" },
     FkTest.ReplyCard(Fk:getCardById(slash), { p3() }),
-    { "#qiao__retinue_skill_niujin-stop" },
+    { "Cancel" },
   })
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
@@ -344,6 +344,11 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
 
   local captured
   skill_test.withSkillRequests(room, NJ, {
+    askToChoices = function(self, player, params, original)
+      lu.assertTrue(table.contains(params.choices, "Cancel"))
+      lu.assertFalse(table.contains(params.choices, "#qiao__retinue_skill_niujin-stop"))
+      return original(self, player, params)
+    end,
     askToUseCard = function(self, player, params, original)
       captured = params
       return original(self, player, params)
@@ -353,7 +358,7 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
       "1",
       { "basic" },
       FkTest.ReplyCard(Fk:getCardById(jink), {}),
-      { "#qiao__retinue_skill_niujin-stop" },
+      { "Cancel" },
     })
     inRoom(function()
       room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
