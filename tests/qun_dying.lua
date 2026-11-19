@@ -69,6 +69,20 @@ end
 
 -- 济世：红色装备牌当【桃】救起濒死，濒死结束后首次跨势力交换华佗 --------
 
+function Testqiao_qun_dying:testJishiDescriptionFollowsRoomSetting()
+  local room = FkTest.room
+  local rescue = "你可以将红色牌当【桃】对濒死角色使用"
+  local exchange = "，此濒死结算后，若此武将为客将，与你势力不同的角色依次选择是否用一个武将交换此武将"
+  inRoom(function()
+    for _, enabled in ipairs({ true, false }) do
+      room.settings.qiao_guest_replacement = enabled
+      local expected = rescue .. (enabled and exchange or "") .. "。"
+      lu.assertEquals(Fk:getDescription(JISHI, "zh_CN"), expected)
+      lu.assertEquals(Fk:getDescription(JISHI, "zh_CN", p(1)), expected)
+    end
+  end)
+end
+
 function Testqiao_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce()
   local room = FkTest.room
   local owner, exchanged, later = p(1), p(2), p(3)
