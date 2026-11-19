@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
@@ -10,41 +11,48 @@ extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 -- client delegates every non-HanJin room or skill back to the base handlers.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Qiao requires the hegemony extension")
-  local mode = require("packages.qiao.pkg.qiao_mode.mode").create(base)
+  local factory = require "packages.qiao.pkg.qiao_mode.mode"
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
   board.client_klass = require "packages.qiao.pkg.qiao_mode.client"
-  mode.game_name = base.game_name
-  extension:addGameMode(mode)
-  Fk:addGameMode(mode)
+  for _, name in ipairs(Modes.names) do
+    local mode = factory.create(base, name)
+    mode.game_name = base.game_name
+    extension:addGameMode(mode)
+    Fk:addGameMode(mode)
+  end
   Fk:loadDisabled()
 end)
 
 Fk:loadTranslationTable {
   ["qiao_wolves"] = "群狼环鼎",
-  ["help: qiao_wolves"] = "默认关闭。无论开关，鏖战均为【桃】只能当【杀】或【闪】使用或打出；"
-    .. "开启后仅额外启用历史事件（含赋礼、不进则退等）及奇珍规则。",
+  ["help: qiao_wolves"] = "开启历史事件与奇珍规则。",
   ["qiao_mode"] = "国战平行时空",
   ["han"] = "汉",
-  ["qiao_heg_mode"] = "大合集",
-  [":qiao_heg_mode"] = "继承国战规则；房主预先选择本局候选势力及允许上限，候选外不可选，"
-    .. "并遵守同房间上一局胜负及禁选记录。可设置野心家专属武将数量；客将候选可在最终选将前自愿重抽。",
+  [Modes.collection] = "大合集",
+  [":" .. Modes.collection] = "魏、蜀、吴、群固定纳入备选势力。可设置是否纳入汉、晋，以及是否禁用势力和启用客将替换规则。",
+  [Modes.free] = "自由模式",
+  [":" .. Modes.free] = "可自定义备选势力、允许势力上限及国战附加规则，使用汉晋武将和游戏牌。",
+  ["qiao_faction_ban_enabled"] = "势力禁用规则",
+  ["help: qiao_faction_ban_enabled"] = "随机选择四个势力备选，其余势力将被禁用",
+  ["qiao_guest_replacement"] = "客将替换规则",
+  ["help: qiao_guest_replacement"] = "主势力均被禁用的武将可以作为客将出场",
   ["qiao_candidate_kingdoms"] = "备选势力",
-  ["help: qiao_candidate_kingdoms"] = "房主预先选择本局可出现的常规势力；默认魏蜀吴群汉晋六势力。"
-    .. "候选外的主势力、客将势力及效忠版势力均不可选。",
+  ["help: qiao_candidate_kingdoms"] = "候选外的势力不会出现。",
+  ["qiao_collection_candidates_help"] = "魏、蜀、吴、群固定开启。",
   ["qiao_candidate_wei"] = "魏",
   ["qiao_candidate_shu"] = "蜀",
   ["qiao_candidate_wu"] = "吴",
   ["qiao_candidate_qun"] = "群",
   ["qiao_candidate_han"] = "汉",
   ["qiao_candidate_jin"] = "晋",
+  ["qiao_enable_han"] = "开启汉势力",
+  ["qiao_enable_jin"] = "开启晋势力",
   ["qiao_kingdom_limit"] = "本局允许势力上限",
-  ["help: qiao_kingdom_limit"] = "正整数，且不超过已选候选数；默认4，候选少于4项时取候选数。"
-    .. "候选多于上限时，按上一局必禁/必留规则随机禁到上限。",
+  ["help: qiao_kingdom_limit"] = "备选势力超出上限时，禁用多出的势力。",
   ["qiao_offer_count"] = "每人备选武将数",
-  ["qiao_rule_settings"] = "平行时空规则",
+  ["qiao_rule_settings"] = "国战模式规则",
   ["qiao_wild_count"] = "野心家专属武将数量",
-  ["help: qiao_wild_count"] = "随机保留至多此数量的野心家专属武将；未保留的原版按本局允许势力替换为效忠版。"
-    .. "默认4；设为0时原版全部排除，其效忠版仍可入池。",
+  ["help: qiao_wild_count"] = "将池中出现的野心家专属武将的数量上限",
   ["#QiaoFactionBan"] = "本局禁选势力：%arg；允许势力：%arg2",
   ["#QiaoChooseGenerals"] = "选择主将与副将",
   ["#QiaoChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",

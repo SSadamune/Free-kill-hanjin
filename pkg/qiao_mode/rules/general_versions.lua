@@ -138,7 +138,7 @@ end
 --- @param wildCount integer @ 允许保留的原版野心家专属武将数
 --- @param pick fun(list: string[], n: integer): string[]
 --- @param get fun(name: string): General
---- @param opts? { candidates?: string[], limit?: integer } @ 房主候选势力与允许上限；缺省六势力/4
+--- @param opts? { candidates?: string[], limit?: integer, guestReplacement?: boolean }
 function M.planPool(playerCount, names, previous, wildCount, pick, get, opts)
   assert(type(playerCount) == "number" and playerCount >= 1, "Invalid player count")
   assert(type(wildCount) == "number" and wildCount >= 0 and wildCount % 1 == 0,
@@ -192,7 +192,7 @@ function M.planPool(playerCount, names, previous, wildCount, pick, get, opts)
   -- only affiliations are outside the host's candidates is excluded.
   local kept, excluded = {}, {}
   for _, name in ipairs(candidates) do
-    if Guest.resolve(name, plan.allowed) ~= nil then
+    if Guest.resolve(name, plan.allowed, opts and opts.guestReplacement) ~= nil then
       table.insert(kept, name)
     else
       table.insert(excluded, name)

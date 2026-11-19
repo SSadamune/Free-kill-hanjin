@@ -1,4 +1,5 @@
 -- 明确由武将牌获得的后天技能：每房间、每张牌记录，不修改全局将牌定义。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 M.TAG="qiao_general_card_skills_v1"
 M.SOURCE="qiao__general_card_skill_source"
@@ -149,7 +150,7 @@ function M.installRevealAdapter()
   ServerPlayer.__qiao_card_skills=true
   local original=ServerPlayer.revealBySkillName
   ServerPlayer.revealBySkillName=function(player,name)
-    if player.room:getSettings("gameMode")=="qiao_heg_mode" then
+    if Modes.inRoom(player.room) then
       local effect=Fk.skills[name]
       local root=effect and effect:getSkeleton().name or name
       local E=require "packages.qiao.pkg.qiao_mode.rules.general_exchange"

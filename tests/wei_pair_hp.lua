@@ -56,7 +56,7 @@ Testqiao_wei_pair_hp = {}
 
 Testqiao_wei_pair_hp.setup = function()
   support.createRoom {
-    mode = "qiao_heg_mode",
+    mode = "qiao_free_mode",
     realSelection = true,
     settings = {
       qiao_candidate_kingdoms = { "wei", "jin", "han", "qun" },

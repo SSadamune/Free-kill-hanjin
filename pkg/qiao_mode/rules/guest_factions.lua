@@ -12,6 +12,11 @@ local M = {}
 M.guests = {} -- general name -> guest regular kingdoms
 M.key = "qiao_general_factions_v1"
 M.guest_key = "qiao_guest_generals_v1"
+M.settingKey = "qiao_guest_replacement"
+
+function M.replacementEnabled(room)
+  return not room or type(room.getSettings) ~= "function" or room:getSettings(M.settingKey) ~= false
+end
 
 local function validKingdoms(kingdoms)
   assert(type(kingdoms) == "table", "Guest factions must be a list")
@@ -49,8 +54,9 @@ end
 ---general stays a wild main general and never uses guest factions.
 ---@param name string
 ---@param allowed string[]
+---@param replacementEnabled? boolean
 ---@return table? @ { name, source = "original"|"guest"|"wild", kingdoms, guest?, wild? }
-function M.resolve(name, allowed)
+function M.resolve(name, allowed, replacementEnabled)
   local general = Fk.generals[name]
   if not general then return nil end
   if general.kingdom == "wild" then
@@ -62,6 +68,7 @@ function M.resolve(name, allowed)
   if #original > 0 then
     return { name = name, source = "original", kingdoms = original }
   end
+  if replacementEnabled == false then return nil end
   local guest = table.filter(M.guests[name] or {}, function(kingdom)
     return table.contains(allowed, kingdom)
   end)
@@ -103,7 +110,7 @@ function M.ensure(room, names)
   local changed = false
   for _, name in ipairs(names) do
     if not map[name] then
-      local entry = M.resolve(name, allowed)
+      local entry = M.resolve(name, allowed, M.replacementEnabled(room))
       if entry then
         map[name] = entry
         changed = true
@@ -127,7 +134,7 @@ function M.factionsOf(room, name)
   local map = room:getTag(M.key)
   if map and map[name] then return map[name] end
   local allowed = room:getBanner("all_kingdoms") or {}
-  return M.resolve(name, allowed)
+  return M.resolve(name, allowed, M.replacementEnabled(room))
 end
 
 ---@param room Room
@@ -227,7 +234,7 @@ function M.ensureFree(room, names)
   for _, name in ipairs(names) do
     local general = Fk.generals[name]
     if general then
-      local entry = map[name] or M.resolve(name, allowed)
+      local entry = map[name] or M.resolve(name, allowed, M.replacementEnabled(room))
       if not entry then
         if general.kingdom == "wild" then
           entry = { name = name, source = "wild", kingdoms = {}, wild = true }

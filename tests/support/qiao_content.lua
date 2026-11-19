@@ -1,8 +1,9 @@
 -- Test-only independent objects. Never synced or included by the release entry point.
 if Fk.packages.qiao_test_content then return end
 local pack = Package:new("qiao_test_content", Package.CardPack)
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 pack.extensionName = "qiao"
-pack.game_modes_whitelist = { "qiao_heg_mode" }
+pack.game_modes_whitelist = Modes.names
 Fk.packages[pack.name] = pack
 table.insert(Fk.package_names, pack.name)
 
@@ -167,5 +168,7 @@ for _, spec in ipairs(commanders) do
   })
 end
 
-table.insert(Fk.game_modes.qiao_heg_mode.whitelist, pack.name)
+for _, mode in ipairs(Modes.names) do
+  table.insert(Fk.game_modes[mode].whitelist, pack.name)
+end
 Fk:loadDisabled()

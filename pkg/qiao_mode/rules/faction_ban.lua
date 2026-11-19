@@ -13,6 +13,20 @@ M.defaultKingdoms = table.clone(BASE_KINGDOMS)
 M.candidateKey = "qiao_candidate_kingdoms"
 M.limitKey = "qiao_kingdom_limit"
 M.candidatePrefix = "qiao_candidate_"
+M.enabledKey = "qiao_faction_ban_enabled"
+M.optionalCollectionKingdoms = { "han", "jin" }
+
+function M.resolveCollectionSettings(get)
+  local candidates = { "wei", "shu", "wu", "qun" }
+  for _, kingdom in ipairs(M.optionalCollectionKingdoms) do
+    local value = get(M.candidatePrefix .. kingdom)
+    assert(value == nil or type(value) == "boolean", "Candidate switches must be booleans")
+    if value ~= false then table.insert(candidates, kingdom) end
+  end
+  local enabled = get(M.enabledKey)
+  assert(enabled == nil or type(enabled) == "boolean", "Faction ban setting must be boolean")
+  return { candidates = candidates, limit = enabled == false and #candidates or 4 }
+end
 
 function M.kingdomLabel(kingdom)
   local key = M.candidatePrefix .. kingdom

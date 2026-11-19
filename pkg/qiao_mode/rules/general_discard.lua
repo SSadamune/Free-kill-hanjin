@@ -6,16 +6,15 @@
 -- `findGeneral`, `findGenerals`, `askToChooseIniticalGeneral`) and several
 -- return paths, all of which eventually read or write `Room.general_pile`.
 -- We keep the discard set in a room tag, remove discarded names from the pile,
--- and wrap the engine's generic entry points only for `qiao_heg_mode`.
+-- and wrap the engine's generic entry points only in HanJin rooms.
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 
 M.key = "qiao_general_discard_v1"
-M.mode = "qiao_heg_mode"
 M.installed = false
 
 local function active(room)
-  return room and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == M.mode
+  return Modes.inRoom(room)
 end
 
 ---@param room Room

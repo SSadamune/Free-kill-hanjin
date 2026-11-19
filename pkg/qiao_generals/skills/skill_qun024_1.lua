@@ -25,7 +25,8 @@ local function candidatePool(player)
   local list = {}
   local used = Commander.usedLimitedRetinues(player.room)
   for general in pairs(Commander.retinues) do
-    if not Commander.isLimitedRetinue(general) or used[general] == nil then
+    if Commander.retinueAllowed(player.room, general)
+      and (not Commander.isLimitedRetinue(general) or used[general] == nil) then
       table.insert(list, general)
     end
   end

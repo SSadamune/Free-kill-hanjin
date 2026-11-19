@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 
 -- Display skill for qiao_heg_mode only (attached by the mode rule). It owns
@@ -11,7 +12,7 @@ local skill = fk.CreateSkill { name = "#qiao_adaptation_display" }
 -- draw pile at GamePrepared.
 skill:addEffect(fk.AfterDrawInitialCards, {
   can_refresh = function(self, event, target, player)
-    return target == player and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    return target == player and Modes.inRoom(player.room)
   end,
   on_refresh = function(self, event, target, player, data)
     A.stampCards(player.room, data.cards, { player })
@@ -19,7 +20,7 @@ skill:addEffect(fk.AfterDrawInitialCards, {
 })
 skill:addEffect(fk.AfterCardsMove, {
   can_refresh = function(self, event, target, player)
-    return player.seat == 1 and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    return player.seat == 1 and Modes.inRoom(player.room)
   end,
   on_refresh = function(self, event, target, player, data) A.stampMoved(player.room, data) end,
 })

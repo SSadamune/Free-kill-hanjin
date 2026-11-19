@@ -1,7 +1,8 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local skill = fk.CreateSkill { name = "#qiao_adaptation_rule", tags = { Skill.Compulsory } }
 local function eligible(target, player, data)
-  return target == player and player.room:getSettings("gameMode") == "qiao_heg_mode"
+  return target == player and Modes.inRoom(player.room)
     and A.isAdaptationCard(data.card, data)
 end
 
@@ -12,7 +13,7 @@ end
 skill:addEffect(fk.PreCardUse, {
   global = true, priority = -100, mute = true,
   can_trigger = function(self, event, target, player, data)
-    return target == player and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    return target == player and Modes.inRoom(player.room)
       and A.hasEffectEntry(data.card, data, "ignore_times")
   end,
   on_cost = Util.TrueFunc,
@@ -32,7 +33,7 @@ skill:addEffect(fk.AfterCardTargetDeclared, {
 skill:addEffect(fk.CardUseFinished, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    return target == player and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    return target == player and Modes.inRoom(player.room)
   end,
   on_refresh = function(self, event, target, player, data) A.clear(data) end,
 })

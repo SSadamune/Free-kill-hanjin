@@ -28,7 +28,7 @@ end
 
 local function create(options)
   options = options or {}
-  options.mode = "qiao_heg_mode"
+  options.mode = options.mode or "qiao_heg_mode"
   options.realSelection = true
   options.backend = options.backend or forcedBackend()
   options.settings = options.settings or {}
@@ -52,6 +52,19 @@ end
 
 local function wildNamesOf(names)
   return table.filter(names, function(name) return Fk.generals[name].kingdom == "wild" end)
+end
+
+function Testqiao_guest_allegiance:testGuestToggleExcludesGuestOnlyGeneralsInBothModes()
+  local name = "qiao_test__guest_dual_1"
+  for _, mode in ipairs({ "qiao_heg_mode", "qiao_free_mode" }) do
+    local room = create { mode = mode, settings = { qiao_guest_replacement = false } }
+    lu.assertEquals(room:getBanner("all_kingdoms"), { "wu", "qun", "han", "jin" })
+    lu.assertNil(Guest.factionsOf(room, name))
+    lu.assertTrue(table.contains(room.disabled_generals, name))
+    lu.assertFalse(table.contains(room.general_pile, name))
+    lu.assertEquals(room:getTag(Guest.guest_key), {})
+    support.clearRoom()
+  end
 end
 
 function Testqiao_guest_allegiance:testGuestResolutionOrder()

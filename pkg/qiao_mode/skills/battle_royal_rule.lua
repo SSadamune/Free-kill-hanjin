@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 
@@ -14,7 +15,7 @@ local skill = fk.CreateSkill {
 -- 是汉晋国战，避免改变普通国战房间的行为。
 local function inQiao(player)
   return player ~= nil and player.room ~= nil
-    and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(player.room)
 end
 
 skill:addEffect(fk.BeforeTurnStart, {

@@ -21,6 +21,7 @@
 -- explicit exceptions, e.g. `{ cross_kingdom = true }` for a future special
 -- rule that relaxes the default same-kingdom requirement.
 
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 local GeneralCardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 
@@ -362,7 +363,7 @@ function M.validate(room, first, second, options)
   end
 
   -- EM(WEI001) 霸者求贤状：被限制的将牌不能交换。只在汉晋房间生效。
-  if type(room.getSettings) == "function" and room:getSettings("gameMode") == "qiao_heg_mode" then
+  if type(room.getSettings) == "function" and Modes.inRoom(room) then
     local okWei, Wei = pcall(require, "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei")
     if okWei and Wei.isPositionRestricted
       and (Wei.isPositionRestricted(room, a.player, a.isDeputy)
@@ -1107,7 +1108,7 @@ end
 
 local function isQiaoRoom(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 local protection_installed = false

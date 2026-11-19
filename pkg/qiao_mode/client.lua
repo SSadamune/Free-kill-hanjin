@@ -1,4 +1,5 @@
 -- 汉晋使用引擎的客户端注册接口提供技能交互，不修改本体请求处理类。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local BaseClient = require "ltk.client.client"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
@@ -14,7 +15,7 @@ local MZ = "qiao__skill_han001_2"
 local function isQiaoMZ(request)
   if request.skill_name ~= MZ then return false end
   local room = request.room or Fk:currentRoom()
-  return room ~= nil and room:getSettings("gameMode") == "qiao_heg_mode"
+  return room ~= nil and Modes.inRoom(room)
 end
 
 local function recipientRequest(base, name)
@@ -116,7 +117,7 @@ end
 local function isQiaoMode()
   local room = Fk:currentRoom()
   if room == nil or type(room.getSettings) ~= "function" then return false end
-  return room:getSettings("gameMode") == "qiao_heg_mode"
+  return Modes.inRoom(room)
 end
 
 --- 脚注/虚拟牌提示的纯文本化：只覆盖 nocolor == true 的调用，继承

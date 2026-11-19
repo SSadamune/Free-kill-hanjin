@@ -59,7 +59,7 @@ python scripts/setup_dependencies.py
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 ```
 
-脚本会核验依赖，将本项目的游戏内容复制到 `packages/qiao/`，然后启动新月杀。创建房间时选择“大合集”。
+脚本会核验依赖，将本项目的游戏内容复制到 `packages/qiao/`，然后启动新月杀。创建房间时可选“大合集”或“自由模式”。两种模式使用同一套武将包和游戏牌包。自由模式提供更多房间设置。
 
 ### 测试用自由选将
 

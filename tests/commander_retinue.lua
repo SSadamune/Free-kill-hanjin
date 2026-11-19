@@ -3,12 +3,12 @@ local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local H = require "packages.hegemony.util"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local function setup()
+local function setupWithSettings(settings)
   -- Some command flows leave the process-global response pattern behind after
   -- their use/response window. Reset it so one test cannot make the next test's
   -- "play phase" look like a response window.
   Fk.currentResponsePattern = nil
-  local room = support.initQiaoRoom()
+  local room = support.createRoom { mode = "qiao_heg_mode", realSelection = true, settings = settings }
   FkTest.runInRoom(function()
     C.reset(room)
     for _, player in ipairs(room.players) do C.grantAbility(player) end
@@ -20,7 +20,7 @@ local function teardown()
   support.clearRoom()
 end
 
-Testqiao_commander_retinue = { setup = setup, tearDown = teardown }
+Testqiao_commander_retinue = { setup = function() setupWithSettings() end, tearDown = teardown }
 
 local function room() return FkTest.room end
 
@@ -73,6 +73,75 @@ end
 
 local function sourceOf(general)
   return C.source(room(), general)
+end
+
+local function prepareGuanyuBan(settings)
+  teardown()
+  setupWithSettings(settings)
+  local holder, borrower = room().players[1], room().players[2]
+  setHidden(borrower, "qiao_heg__shu001", "qiao_heg__shu003", "shu")
+  reveal(borrower, false)
+  setBlankDirect(borrower, true)
+  setHidden(holder, "qiao_heg__shu002", "qiao_heg__shu004", "shu")
+  reveal(holder, false)
+  return holder, borrower
+end
+
+local function assertGuanyuBlocked(settings)
+  local holder, borrower = prepareGuanyuBan(settings)
+  local name = "qiao_heg__shu002"
+  local retinue = "qiao_heg__retinue_zhoucang"
+  lu.assertEquals(borrower.deputyGeneral, "blank_shibing")
+  lu.assertEquals(C.availableRetinues(room(), "shu"), {})
+  lu.assertEquals(C.markSources(holder), {})
+  lu.assertFalse(C.sourceAuthorizedFor(room(), sourceOf(name), holder))
+  FkTest.runInRoom(function()
+    lu.assertFalse(C.assignRetinue(borrower, true, retinue))
+    local card = C.viewAsCardForClient(holder, name)
+    local skill = Fk.skills[C.ABILITY_SKILL]
+    lu.assertEquals(skill:beforeUse(holder, { from = holder, tos = {}, card = card }), C.ABILITY_SKILL)
+  end)
+  lu.assertEquals(holder:getMark("__heg_deputy"), "qiao_heg__shu004")
+  lu.assertFalse(C.limitedAbilityUsed(room(), name))
+  lu.assertFalse(C.limitedRetinueTaken(room(), retinue))
+end
+
+function Testqiao_commander_retinue:testIndividualRetinueBanBlocksBothEffects()
+  assertGuanyuBlocked { disabledGenerals = { "qiao_heg__retinue_zhoucang" } }
+end
+
+function Testqiao_commander_retinue:testWholePackRetinueBanBlocksBothEffects()
+  local retinue = Fk.generals["qiao_heg__retinue_zhoucang"]
+  assertGuanyuBlocked { disabledPack = { retinue.package.name } }
+end
+
+function Testqiao_commander_retinue:testRetinueWhitelistedInItsPackKeepsBothEffects()
+  -- This is the create-room payload when the pack whitelist retains the
+  -- commander, Zhou Cang, and enough generals to play.
+  local pack = Fk.generals["qiao_heg__retinue_zhoucang"].package
+  local disabled = {}
+  for _, general in ipairs(pack.generals) do
+    if C.isRetinue(general.name) and general.name ~= "qiao_heg__retinue_zhoucang" then
+      table.insert(disabled, general.name)
+    end
+  end
+  local holder, borrower = prepareGuanyuBan { disabledGenerals = disabled }
+  lu.assertEquals(borrower.deputyGeneral, "qiao_heg__retinue_zhoucang")
+  lu.assertEquals(C.markSources(holder), { "qiao_heg__shu002" })
+end
+
+function Testqiao_commander_retinue:testPartialRetinueBanKeepsOtherSoldierType()
+  teardown()
+  setupWithSettings { disabledGenerals = { "qiao_test__retinue_alpha" } }
+  local holder, target = room().players[1], room().players[2]
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
+  reveal(target, false)
+  setBlankDirect(target, true)
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  reveal(holder, false)
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
+  lu.assertEquals(C.availableRetinues(room(), "wei"), { "qiao_test__retinue_beta" })
+  lu.assertEquals(C.markSources(holder), {})
 end
 
 function Testqiao_commander_retinue:testIndependentRetinueContentAndPublicRegistration()

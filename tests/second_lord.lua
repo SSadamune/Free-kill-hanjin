@@ -6,21 +6,23 @@ local H = require "packages.hegemony.util"
 
 local G = content.generals
 
-local function create()
+local function create(options)
+  options = options or {}
   local backend = FkTest.createFakeRoom({ 1, 2, 3, 4, 5, 6, 7, 8 })
   -- Keep the deterministic ban plan away from Wei so succession candidates can
   -- legally join the dead monarch's faction.
   backend._session_data = json.encode {
     qiao_faction_ban_v1 = { version = 1, winners = { "wu", "qun" }, banned = {} },
   }
+  local settings = { qiao_wild_count = 0 }
+  for key, value in pairs(options.settings or {}) do settings[key] = value end
   return support.createRoom {
     mode = "qiao_heg_mode", realSelection = true, backend = backend,
-    settings = { qiao_wild_count = 0 },
+    settings = settings,
   }
 end
 
-local function setup()
-  local room = create()
+local function preparePlayers(room)
   FkTest.runInRoom(function()
     for index, player in ipairs(room.players) do
       local kingdom = index % 2 == 0 and "shu" or "qun"
@@ -30,6 +32,16 @@ local function setup()
     end
   end)
   return room
+end
+
+local function setup()
+  return preparePlayers(create())
+end
+
+--- Replace the setup room with one whose host settings were passed to Room:new.
+local function freshRoom(settings)
+  support.clearRoom()
+  return preparePlayers(create { settings = settings })
 end
 
 Testsecond_lord = { setup = setup, tearDown = support.clearRoom }
@@ -52,6 +64,26 @@ local function triggerTurnStart(p, firstChoice)
   FkTest.setNextReplies(p, { { firstChoice or "Cancel" }, { "Cancel" } })
   FkTest.runInRoom(function() room().logic:trigger(fk.TurnStart, p, {}) end)
   FkTest.cleanNextReplies(p)
+end
+
+--- Record ascension prompts so a blocked target can be distinguished from a
+--- rejected offer.
+local function captureAscensionPrompts()
+  local prompts = { convert = {}, succession = {} }
+  FkTest.runInRoom(function()
+    local r = room()
+    local original = r.askToChoice
+    function r:askToChoice(target, params)
+      local prompt = params and params.prompt
+      if prompt == "#QiaoSecondLordConvert" then
+        table.insert(prompts.convert, target.seat)
+      elseif prompt == "#QiaoSecondLordSuccession" then
+        table.insert(prompts.succession, target.seat)
+      end
+      return original(self, target, params)
+    end
+  end)
+  return prompts
 end
 
 local function markDead(p, kingdom)
@@ -723,4 +755,131 @@ function Testsecond_lord:testAscensionGrantsYinyangWhenOldPairWasEven()
   lu.assertEquals(p.maxHp, 3, "君张角+贾诩体力上限仍为3，不因升变额外+1")
   lu.assertEquals(p:getMark("@!!yinyangfish"), 1, "旧组合偶数、新组合奇数，升变应补发阴阳鱼")
 end
+function Testsecond_lord:testFirstTurnBannedLordTargetIsNotOffered()
+  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
+  end)
+  local prompts = captureAscensionPrompts()
+  triggerTurnStart(p, "Cancel")
+  lu.assertEquals(#prompts.convert, 0, "A banned target version must not be offered")
+  lu.assertEquals(p.general, "anjiang")
+  lu.assertEquals(p.kingdom, "unknown")
+end
+
+function Testsecond_lord:testBanningNormalVersionDoesNotBlockLordAscension()
+  freshRoom { disabledGenerals = { G.wei_normal.name } }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
+  end)
+  -- Only the normal version is banned; the lord target stays a separate version.
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+  lu.assertEquals(p.general, G.wei_monarch.name)
+  lu.assertEquals(p.kingdom, "wei")
+end
+
+function Testsecond_lord:testBannedPackBlocksLordAscension()
+  freshRoom { disabledPack = { content.pack.name } }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
+  end)
+  local prompts = captureAscensionPrompts()
+  triggerTurnStart(p, "Cancel")
+  lu.assertEquals(#prompts.convert, 0)
+  lu.assertEquals(p.general, "anjiang")
+end
+
+function Testsecond_lord:testWhitelistedTargetInBannedPackStillAscends()
+  -- Equivalent to the create-room whitelist expansion: the pack is not in
+  -- disabledPack, and every non-whitelisted general is in disabledGenerals.
+  local keep = { [G.wei_normal.name] = true, [G.wei_monarch.name] = true }
+  local disabled = {}
+  for _, general in pairs(G) do
+    if not keep[general.name] then table.insert(disabled, general.name) end
+  end
+  freshRoom { disabledGenerals = disabled }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+  lu.assertEquals(p.general, G.wei_monarch.name)
+  lu.assertEquals(p.kingdom, "wei")
+end
+
+function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
+  local function setupJin(targetRoom)
+    FkTest.runInRoom(function()
+      local p = targetRoom.players[1]
+      content.place(targetRoom, p, false, "qiao_heg__jin001")
+      content.place(targetRoom, p, true, "qiao_test__jin_2")
+      targetRoom:setPlayerProperty(p, "kingdom", "jin")
+      targetRoom:setPlayerMark(p, "__heg_kingdom", "jin")
+    end)
+  end
+
+  local room = freshRoom()
+  setupJin(room)
+  local ok
+  FkTest.runInRoom(function()
+    ok = A.ascend(room, room.players[1], "qiao_heg__em_jin001", "jin", { kind = "lord" })
+  end)
+  lu.assertTrue(ok, "A mode-disabled pack must not block in-game ascension")
+  lu.assertEquals(room.players[1].general, "qiao_heg__em_jin001")
+  lu.assertTrue(table.contains(room.disabled_packs, "qiao_bingqing"),
+    "Fixture must use a pack disabled by the mode whitelist")
+  local raw = cbor.decode(room.room:settings())
+  lu.assertFalse(table.contains(raw.disabledPack or {}, "qiao_bingqing"),
+    "The mode-level disable must not be present in the host settings")
+
+  room = freshRoom { disabledPack = { "qiao_bingqing" } }
+  setupJin(room)
+  FkTest.runInRoom(function()
+    ok = A.ascend(room, room.players[1], "qiao_heg__em_jin001", "jin", { kind = "lord" })
+  end)
+  lu.assertFalse(ok, "A host-banned pack must still block ascension")
+  lu.assertEquals(room.players[1].general, "qiao_heg__jin001")
+end
+
+function Testsecond_lord:testSuccessionSkipsBannedTargetAndAsksNextCandidate()
+  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  local lord, first, second = player(1), player(2), player(3)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(first, G.wei_normal.name, "qiao_test__qun_1", "qun")
+    hidden(second, G.wei_normal2.name, "qiao_test__qun_2", "qun")
+    room():setCurrent(first)
+  end)
+  local prompts = captureAscensionPrompts()
+  FkTest.setNextReplies(first, { { A.ASCEND_ACCEPT } })
+  FkTest.setNextReplies(second, { { A.ASCEND_ACCEPT } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+
+  lu.assertEquals(prompts.succession, { second.seat }, "Banned target must be skipped, not asked")
+  lu.assertEquals(first.general, "anjiang")
+  lu.assertEquals(second.general, G.wei_monarch2.name)
+  lu.assertEquals(second.kingdom, "wei")
+end
+
+function Testsecond_lord:testSuccessionWithoutAllowedTargetKeepsWildFallback()
+  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  local lord, candidate = player(1), player(2)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, "qiao_test__qun_1", "wei")
+    room():setCurrent(candidate)
+  end)
+  local prompts = captureAscensionPrompts()
+  FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+
+  lu.assertEquals(#prompts.succession, 0)
+  lu.assertEquals(candidate.general, "anjiang")
+  lu.assertEquals(candidate:getMark("__heg_kingdom"), "wild")
+  lu.assertFalse(A.has_lord(room(), "wei"))
+end
+
 return { name = "second_lord" }

@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
 -- The exchange rule needs to know which general card produced each skill use,
@@ -8,7 +9,7 @@ local skill = fk.CreateSkill { name = "#qiao_exchange_history" }
 
 local function inQiao(player)
   local room = player.room
-  return room ~= nil and room:getSettings("gameMode") == "qiao_heg_mode"
+  return room ~= nil and Modes.inRoom(room)
 end
 
 skill:addEffect(fk.SkillEffect, {
