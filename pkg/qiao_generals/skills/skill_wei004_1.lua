@@ -6,7 +6,13 @@
 -- 限定这批实体牌（cards 集合 / duration = turn）：直接使用/打出被禁止，仅开放
 -- 【杀】的使用与打出用途；其他来源的转化权限不因此失效。来源不绑定技能，
 -- 失去突袭不会撤销本回合已产生的限制。
+--
+-- 转换入口与卡面提示由独立状态骨架 qiao__wei_tuxi_state 提供（复用双刃的
+-- 接线方式）：失去突袭后仍可把这批牌当【杀】使用或打出；骨架只给本次获得的
+-- 实体牌加提示，且只通知持有者，回合结束/离手时清理。
 local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
+
+local STATE = "qiao__wei_tuxi_state"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_wei004_1",
@@ -87,6 +93,13 @@ skill:addEffect(fk.DrawNCards, {
       duration = "turn",
       reason = skill.name,
     })
+    -- 独立回合状态提供转换入口与本次获得的牌的卡面提示；不绑定突袭本体，
+    -- 因此失去突袭后仍可当【杀】使用或打出。
+    room:handleAddLoseSkills(player, STATE, STATE, false, true)
+    local state = Fk.skill_skels[STATE]
+    if state ~= nil and type(state.stampCards) == "function" then
+      state.stampCards(room, player, obtained)
+    end
   end,
 })
 
