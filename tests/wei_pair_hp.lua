@@ -81,6 +81,10 @@ function Testqiao_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   end
   lu.assertNil(Fk.skill_skels["qiao__skill_jin009_3"])
   lu.assertNil(P.YINGQI_SKILLS["qiao__skill_jin009_3"])
+  -- 应期只有牌面与配将计算：体力上限只在 broadcastGeneral 计算，骨架不注册任何
+  -- GameStart 触发，否则暗置武将的技能会在开局被假触发而预亮。
+  local yingqiSkeleton = assert(Fk.skill_skels[YINGQI])
+  lu.assertEquals(#yingqiSkeleton.effects, 0)
   -- 两处卡面文本统一到魏文本；同 ID 下晋条目不会把翻译覆盖成旧“阴阳鱼+2”。
   lu.assertEquals(Fk:translate(":" .. YINGQI),
     "锁定技，若你配将为多势力或客将，☯️+2。")
