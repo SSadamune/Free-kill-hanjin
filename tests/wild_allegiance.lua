@@ -5,20 +5,40 @@ local V = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 
 local G = content.generals
 
-local function create()
+local function create(options)
+  options = options or {}
   local backend = FkTest.createFakeRoom({ 1, 2, 3, 4, 5, 6, 7, 8 })
   -- Allow Wei/Shu/Han/Jin so the wild and loyalty tests have stable factions.
   backend._session_data = json.encode {
     qiao_faction_ban_v1 = { version = 1, winners = { "wu", "qun" }, banned = {} },
   }
+  local settings = { qiao_wild_count = 4 }
+  for key, value in pairs(options.settings or {}) do settings[key] = value end
   return support.createRoom {
     mode = "qiao_heg_mode", realSelection = true, backend = backend,
-    settings = { qiao_wild_count = 0 },
+    settings = settings,
+    -- Keep the opening wild pool deterministic so the ascension wild originals
+    -- are kept and their loyalty versions are derived-excluded from dealing;
+    -- the in-game allegiance ascent must still offer them.
+    configure = function(room)
+      local original = room.makeGeneralPile
+      local keep = {
+        [G.wild_simple.name] = true,
+        [G.wild_dual.name] = true,
+        [G.wild_blocked.name] = true,
+      }
+      function room:makeGeneralPile()
+        original(self)
+        self.general_pile = table.filter(self.general_pile, function(name)
+          local general = Fk.generals[name]
+          return general == nil or general.kingdom ~= "wild" or keep[name]
+        end)
+      end
+    end,
   }
 end
 
-local function setup()
-  local room = create()
+local function preparePlayers(room)
   FkTest.runInRoom(function()
     for index, player in ipairs(room.players) do
       local kingdom = index % 2 == 0 and "shu" or "qun"
@@ -28,6 +48,16 @@ local function setup()
     end
   end)
   return room
+end
+
+local function setup()
+  return preparePlayers(create())
+end
+
+--- Replace the setup room with one whose host settings were passed to Room:new.
+local function freshRoom(settings)
+  support.clearRoom()
+  return preparePlayers(create { settings = settings })
 end
 
 Testqiao_wild_allegiance = { setup = setup, tearDown = support.clearRoom }
@@ -190,6 +220,51 @@ function Testqiao_wild_allegiance:testStartingAsLoyaltyVersionIsNotAnAscension()
   lu.assertEquals(p.maxHp, 4)
   lu.assertEquals(p.hp, 4)
   lu.assertEquals(p:getMark(A.WILD_ASCENDED_MARK), 0)
+end
+
+function Testqiao_wild_allegiance:testDerivedOpeningExclusionDoesNotBlockLoyaltyAscension()
+  local p = player(1)
+  local original
+  FkTest.runInRoom(function()
+    makeWild(p, G.wild_simple.name, G.wei_deputy.name, "wei")
+    -- The opening plan keeps the wild original and appends its unkept loyalty
+    -- version to the runtime disable list; this is not a host ban.
+    lu.assertTrue(table.contains(room().disabled_generals, G.loyalty_simple.name))
+    original = cbor.decode(room().room:settings())
+    lu.assertFalse(table.contains(original.disabledGenerals or {}, G.loyalty_simple.name))
+  end)
+  lu.assertEquals(#A.wild_candidates(room(), p), 1)
+  FkTest.setNextReplies(p, { { A.WILD_ASCEND .. "::wei::" .. G.loyalty_simple.name } })
+  prepare(p)
+  lu.assertEquals(p.general, G.loyalty_simple.name)
+  lu.assertEquals(p.kingdom, "wei")
+end
+
+function Testqiao_wild_allegiance:testExplicitBanStillBlocksWhenAlsoDerivedExcluded()
+  freshRoom { disabledGenerals = { G.loyalty_simple.name } }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    makeWild(p, G.wild_simple.name, G.wei_deputy.name, "wei")
+    -- Overlap: the same version is both derived-excluded and explicitly banned.
+    lu.assertTrue(table.contains(room().disabled_generals, G.loyalty_simple.name))
+  end)
+  lu.assertEquals(#A.wild_candidates(room(), p), 0)
+  FkTest.setNextReplies(p, { { A.WILD_ASCEND .. "::wei::" .. G.loyalty_simple.name } })
+  prepare(p)
+  lu.assertEquals(p.general, "anjiang")
+  lu.assertEquals(p:getMark("__heg_kingdom"), "wei")
+end
+
+function Testqiao_wild_allegiance:testBannedPackBlocksLoyaltyAscension()
+  freshRoom { disabledPack = { content.pack.name } }
+  local p = player(1)
+  FkTest.runInRoom(function()
+    makeWild(p, G.wild_simple.name, G.wei_deputy.name, "wei")
+  end)
+  lu.assertEquals(#A.wild_candidates(room(), p), 0)
+  FkTest.setNextReplies(p, { { A.WILD_ASCEND .. "::wei::" .. G.loyalty_simple.name } })
+  prepare(p)
+  lu.assertEquals(p.general, "anjiang")
 end
 
 local function poolPick(list, n)
