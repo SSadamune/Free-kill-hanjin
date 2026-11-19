@@ -22,7 +22,7 @@
 - **实现与接口**：
   - 数值表示：引擎以**半格**保存体力贡献（1.5 体力记作 `3`，2.0 记作 `4`，2.5 记作 `5`）。国战双将体力上限为 `((主将贡献 + 主将调整) + (副将贡献 + 副将调整) + 应期半格修正) // 2`；半格合计为奇数时 `HalfMaxHpLeft` 标记为 `1`，表示 1 个“半个阴阳鱼”。应期的“☯️+2”是 **2 个半格**（1 点体力上限），不是两枚可消耗的阴阳鱼标记，因此不发放 `@!!yinyangfish` 或 `qiao_ascension_yinyang` 等标记，只在开局把组合上限补 1 点，并沿用引擎写入的奇偶余数标记。
   - 身份判定：`pair_hp.lua` 的 `qualifies(name)` 表示“配将”是否为多势力或客将——多势力看牌面 `kingdom + subkingdom` 的已知势力数大于 1（`faction_ban.affiliations`），不看本局禁选过滤后的结果；客将看 `guest_factions.guestKingdoms(name)` 非空。应期技能归属按技能名识别（`qiao__skill_wei002_3`），两版司马懿引用同一 ID，不按武将来源另设识别项；君主版／效忠版若沿用同名技能也会被识别；计算按每名角色的配将独立进行，同一配将组合由 `yinyang` 返回一次修正。
-  - 开局：`mode.lua` 覆盖 `HegLogic:broadcastGeneral`，先调用上游实现（按组合写入 `maxHp`、`hp`、`HalfMaxHpLeft`），再对每名角色执行 `PairHp.apply_start`。此时主将仍为 `anjiang`，实际配将从 `__heg_general`／`__heg_deputy` 标记读取，不等待明置。`apply_start` 只在模式开局广播路径补齐体力贡献，差值不大于 0 时不再调整；应期骨架的 `GameStart` 效果只调用 `register_start` 登记配将，不再调用 `apply_start`，不改变体力或引起额外明置。
+  - 开局：`mode.lua` 覆盖 `HegLogic:broadcastGeneral`，先调用上游实现（按组合写入 `maxHp`、`hp`、`HalfMaxHpLeft`），再对每名角色执行 `PairHp.apply_start`。此时主将仍为 `anjiang`，实际配将从 `__heg_general`／`__heg_deputy` 标记读取。`apply_start` 只在模式开局广播路径补齐体力贡献，差值不大于 0 时不再调整。应期保留牌面和配将用技能标识，骨架没有触发效果，因此暗置时不提供预亮按钮。
   - 升变：`rules/ascension.lua` 的 `pair_max_hp`、实际主副将读取与阴阳鱼奇偶判断改由 `pair_hp.lua` 提供；升变前后组合上限都按含应期的公式计算，所以“同体力主将升变”不会被误判为上限增加；升变收益仍按原公共流程（新组合上限更高时加 1 点上限并回复 1 点体力）。
   - 不重算：普通交换、移除、替换不调用 `apply_start`／`pair_max_hp`，已确定的体力上限不变；开局后属性变化不会撤回或追加应期收益。
   - 客户端与模式隔离：应期不新增客户端交互或私有字段；`maxHp`、`hp`、`HalfMaxHpLeft` 都是引擎已有公开属性／标记。只在 `qiao_heg_mode` 的 logic 上覆盖 `broadcastGeneral`，不修改上游 `hegemony` 包或其他模式。

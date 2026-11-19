@@ -8,7 +8,8 @@
 -- 群区 27 条技能记录（马术复用蜀马超）及黄巾雷使均已实装。
 -- 晋区29条技能记录及腹心死士/文虎亦已实装，应期复用魏司马懿的同一技能。
 -- 已实装条目通过骨架的 qiaoImplemented 或下方 implemented 白名单
--- 登记，并在加载时断言确有 effect。偏将的「限一」只在这里登记牌面标记，每局
+-- 登记，并在加载时断言确有 effect；应期是静态实现特例，只由配将体力路径完成，
+-- 因此改为断言不注册占位效果。偏将的「限一」只在这里登记牌面标记，每局
 -- 唯一取得与限一统领能力由公共规则实现。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local extension = Package:new("qiao_generals")
@@ -27,6 +28,7 @@ local Standard = require "packages.qiao.pkg.qiao_generals.data.standard"
 local ZhenShi = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 
 local Formation = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_formation"
 local Jin = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin"
@@ -274,9 +276,15 @@ Fk:addPostLoadFunc(function()
     ["qiao__skill_jin001_2"] = true,
   }
   --- 新的正式技能在自身骨架上显式赋 `qiaoImplemented = true`；
-  --- 旧白名单继续保留，避免破坏既有实装登记。两者都必须确有 effect。
+  --- 旧白名单继续保留，避免破坏既有实装登记。两者默认都必须确有 effect。
   local function isImplemented(skel)
     return implemented[skel.name] == true or skel.qiaoImplemented == true
+  end
+  --- 应期只由配将体力路径实现：体力贡献在 pair_hp 的 broadcastGeneral 与升变
+  --- 流程中计算，技能骨架不能注册占位效果（否则会在开局假触发预亮）。静态实现
+  --- 名单直接复用 PairHp.YINGQI_SKILLS，不另设第二份技能列表。
+  local function isStaticImplemented(skel)
+    return PairHp.YINGQI_SKILLS[skel.name] == true
   end
   local formal, retinues, retinue_skills, commanders, skills = 0, 0, 0, 0, 0
   for _, data in ipairs(Data.generals) do
@@ -312,7 +320,12 @@ Fk:addPostLoadFunc(function()
     for _, skill in ipairs(data.skills) do
       local skel = assert(Fk.skill_skels[skill.id], "Missing skill skeleton: " .. skill.id)
       if isImplemented(skel) then
-        assert(#skel.effects > 0, "Implemented skill must have an effect: " .. skill.id)
+        if isStaticImplemented(skel) then
+          assert(#skel.effects == 0,
+            "Static-implemented skill must not register effects: " .. skill.id)
+        else
+          assert(#skel.effects > 0, "Implemented skill must have an effect: " .. skill.id)
+        end
       else
         assert(#skel.effects == 0, "Formal display skill must have no effect: " .. skill.id)
       end
