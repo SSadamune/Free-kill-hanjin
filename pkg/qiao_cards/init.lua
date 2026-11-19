@@ -3,9 +3,11 @@
 -- This package owns the formal, independent HanJin card identities. It defines
 -- all 162 physical base positions from docs/rules/card-deck.md, the twelve lord-
 -- equipment replacement materials, and the seven faction tricks that stay
--- outside the default deck. Only the existing Thunder Slash positions (spade 9
--- and spade 10) keep a usable effect; every other card is an explicitly inert
--- shell whose card skill cannot be used.
+-- outside the default deck. All seven printed Thunder Slash positions share one
+-- identity and the real thunder-damage effect. Card usability follows
+-- data/reuse.lua: a type whose registry status is "reused" installs that
+-- implementation, while a non-reused status keeps the inert shell declared in
+-- data/cards.lua.
 --
 -- The runtime policy side reads the same identities through the HanJin card
 -- name and through extra_data. The public interface is exposed as
@@ -106,11 +108,11 @@ end
 
 local THUNDER_SLASH_DESCRIPTION = "基本牌<br/><b>时机</b>：出牌阶段<br/>"
   .. "<b>目标</b>：攻击范围内的一名角色<br/>"
-  .. "<b>效果</b>：对目标角色造成1点雷电伤害。<br/><b>应变·孤军</b>：此牌无视次数。"
-
-local THUNDER_SHELL_DESCRIPTION = "基本牌<br/><b>时机</b>：出牌阶段<br/>"
-  .. "<b>目标</b>：攻击范围内的一名角色<br/>"
   .. "<b>效果</b>：对目标角色造成1点雷电伤害。"
+
+-- 势备 ♠9/♠10 的雷杀孤军卡面原文。只由该实体牌位自身的应变条目动态追加，
+-- 其余雷杀牌位及虚拟牌不继承。
+local THUNDER_GUJUN_DESCRIPTION = "<b>应变·孤军</b>：此牌无视次数。"
 
 -- Reference implementations adapted into HanJin skills. These descriptions are
 -- the confirmed local 应变 card texts, not invented effects.
@@ -273,10 +275,19 @@ local DESCRIPTION_OVERRIDES = {
 
 local function cardDescription(cardType)
   if cardType.id == "qiao__thunder__slash" then return THUNDER_SLASH_DESCRIPTION end
-  if cardType.id == "qiao__thunder_shell__slash" then return THUNDER_SHELL_DESCRIPTION end
   local override = DESCRIPTION_OVERRIDES[cardType.id]
   if override then return override end
   return shellDescription(cardType)
+end
+
+local function adaptationDescription(self, entry)
+  if self.name == "qiao__thunder__slash" and entry.condition == "gujun"
+    and entry.effect == "ignore_times" then
+    return THUNDER_GUJUN_DESCRIPTION
+  end
+  local condition = CONDITION_TEXT[entry.condition] or entry.condition
+  local effect = EFFECT_TEXT[entry.effect] or entry.effect
+  return "<b>应变·" .. condition .. "</b>：" .. effect
 end
 
 local function dynamicDescription(self, player, lang)
@@ -287,9 +298,7 @@ local function dynamicDescription(self, player, lang)
     table.insert(lines, "<b>合纵</b>")
   end
   for _, entry in ipairs(data.qiao_adaptation or {}) do
-    local condition = CONDITION_TEXT[entry.condition] or entry.condition
-    local effect = EFFECT_TEXT[entry.effect] or entry.effect
-    table.insert(lines, "<b>应变·" .. condition .. "</b>：" .. effect)
+    table.insert(lines, adaptationDescription(self, entry))
   end
   if #lines > 0 then return base .. "<br/>" .. table.concat(lines, "<br/>") end
   return base
@@ -374,7 +383,7 @@ end
 
 local function adaptationId(partition, suitCode, rankCode)
   local key = positionId(partition, suitCode, rankCode)
-  -- Keep the existing public entry id of the two implemented Thunder Slashes.
+  -- Keep the existing public entry id of the 势备 ♠9/♠10 孤军 positions.
   if key == "shibei/S/9" or key == "shibei/S/10" then
     return "qiao_thunder_slash_gujun"
   end

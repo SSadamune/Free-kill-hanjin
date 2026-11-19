@@ -80,7 +80,7 @@
 
 1. `ignore_times` 表示“本次使用不计入次数”，MUST 同时满足“超过上限仍可选择/使用”和“本次不进入 `addCardUseHistory`”。
 2. 咆哮、连弩等状态型效果属于 `TargetModSkill.bypass_times`：只让 `withinTimesLimit` 返回真，绕过上限；本次使用照常计数。二者 MUST 分开实现，不能把状态型效果改成 `extraUse`。
-3. 正式牌包独立创建 `qiao__thunder__slash`（雷杀），恰好为♠9、♠10，`trueName == "slash"`、雷电伤害，并自带条目 `{ condition = "gujun", effect = "ignore_times" }`。该牌使用独立的 `qiao__thunder_slash_skill`，不复制上游 `slash_skill` 或 `thunder__slash_skill`。
+3. 正式牌包的七张雷杀共用 `qiao__thunder__slash`，`trueName == "slash"`，由独立的 `qiao__thunder_slash_skill` 结算雷电伤害。仅势备篇 ♠9、♠10 自带条目 `{ condition = "gujun", effect = "ignore_times" }`。
 
 ### 8.2 时点：选牌/选目标 → PreCardUse → 记数 → 应变常规结算
 

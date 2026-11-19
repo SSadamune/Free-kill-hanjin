@@ -354,11 +354,12 @@ function Testqiao_card_deck:testFormalPackagePublishesTheCompleteBaseTable()
   local thunder = table.filter(H.baseSlots, function(slot)
     return slot.card == "qiao__thunder__slash"
   end)
-  lu.assertEquals(#thunder, 2)
-  for _, slot in ipairs(thunder) do
-    lu.assertEquals(slot.partition, "shibei")
-    lu.assertEquals(slot.suit, Card.Spade)
-    lu.assertTrue(slot.number == 9 or slot.number == 10)
+  lu.assertEquals(#thunder, 7)
+  local thunderKeys = {}
+  for _, slot in ipairs(thunder) do thunderKeys[slot.id] = true end
+  for _, id in ipairs({ "standard1/C/6", "standard2/C/7", "standard2/C/8",
+    "shibei/C/5", "shibei/S/9", "shibei/S/10", "shibei/S/J" }) do
+    lu.assertTrue(thunderKeys[id], "Missing Thunder Slash position " .. id)
   end
 end
 
@@ -374,11 +375,10 @@ function Testqiao_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
       lu.assertTrue(H.isInert(card), "Deferred/missing card must stay inert: " .. slot.id)
     end
   end
-  -- All seven printed Thunder Slash positions share the base effect, but only
-  -- ♠9/♠10 carry the 孤军 entry.
+  -- All seven printed Thunder Slash positions share one identity and the base
+  -- effect, but only 势备 ♠9/♠10 carry the 孤军 entry.
   local thunder = table.filter(H.baseSlots, function(slot)
-    return table.find({ "qiao__thunder__slash", "qiao__thunder_shell__slash" },
-      function(name) return slot.card == name end) ~= nil
+    return slot.card == "qiao__thunder__slash"
   end)
   lu.assertEquals(#thunder, 7)
   local gujun = 0
@@ -386,10 +386,49 @@ function Testqiao_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
     local card = packageCard(slot.card, slot.suit, slot.number)
     lu.assertFalse(H.isInert(card))
     local entries = A.getEntries(card)
-    lu.assertEquals(#entries, slot.card == "qiao__thunder__slash" and 1 or 0)
-    if #entries == 1 then gujun = gujun + 1 end
+    local expected = slot.id == "shibei/S/9" or slot.id == "shibei/S/10"
+    lu.assertEquals(#entries, expected and 1 or 0)
+    if expected then
+      lu.assertEquals(entries[1].condition, "gujun")
+      lu.assertEquals(entries[1].effect, "ignore_times")
+      gujun = gujun + 1
+    end
   end
   lu.assertEquals(gujun, 2)
+end
+
+function Testqiao_card_deck:testThunderSlashDescriptionUsesEachPrintedSlotOnly()
+  local function face(suit, number)
+    local card = packageCard("qiao__thunder__slash", suit, number)
+    lu.assertNotNil(card, "Missing Thunder Slash " .. suit .. "/" .. number)
+    return card:getDynamicDescription(nil, "zh_CN")
+  end
+  local base = face(Card.Club, 6)
+  lu.assertTrue(base:find("对目标角色造成1点雷电伤害", 1, true) ~= nil)
+  lu.assertNil(base:find("孤军", 1, true))
+  lu.assertNil(base:find("合纵", 1, true))
+  for _, slot in ipairs({ { Card.Club, 7 }, { Card.Club, 8 } }) do
+    local text = face(slot[1], slot[2])
+    lu.assertNil(text:find("孤军", 1, true), "Non-孤军 Thunder Slash must not show 孤军")
+    lu.assertNil(text:find("合纵", 1, true), "Non-合纵 Thunder Slash must not show 合纵")
+  end
+  for _, number in ipairs({ 9, 10 }) do
+    local text = face(Card.Spade, number)
+    lu.assertTrue(text:find("<b>应变·孤军</b>：此牌无视次数。", 1, true) ~= nil,
+      "孤军 Thunder Slash must keep the printed 孤军 text")
+  end
+  for _, slot in ipairs({ { Card.Club, 5 }, { Card.Spade, 11 } }) do
+    local text = face(slot[1], slot[2])
+    lu.assertTrue(text:find("<b>合纵</b>", 1, true) ~= nil, "合纵 Thunder Slash must show 合纵")
+    lu.assertNil(text:find("孤军", 1, true), "合纵 Thunder Slash must not show 孤军")
+  end
+  -- The card type template and a virtual clone carry neither slot's markers.
+  local template = assert(Fk.all_card_types["qiao__thunder__slash"])
+  lu.assertNil((template.extra_data or {}).qiao_adaptation)
+  local clone = Fk:cloneCard("qiao__thunder__slash")
+  local cloneText = clone:getDynamicDescription(nil, "zh_CN")
+  lu.assertNil(cloneText:find("孤军", 1, true))
+  lu.assertNil(cloneText:find("合纵", 1, true))
 end
 
 function Testqiao_card_deck:testFormalLordEquipmentMatchesThePolicyTable()
@@ -470,17 +509,14 @@ function Testqiao_card_deck:testEveryAdaptationCardExposesTheConfirmedConditionT
       lu.assertEquals(Fk:translate(mark[1]), "·")
       lu.assertEquals(Fk:translate(mark[2]), group.text)
       local description = card:getDynamicDescription(room.players[1], "zh_CN")
-      if card.dynamicDesc then
-        lu.assertTrue(description:find("<b>应变·" .. conditionText .. "</b>：" .. effectText, 1, true) ~= nil,
-          "Missing dynamic face text for " .. key)
-      else
-        -- Cards with a fixed printed description (the two 雷杀) spell the
-        -- confirmed condition/effect out in their own verified text.
-        lu.assertTrue(description:find(conditionText, 1, true) ~= nil,
-          "Missing printed condition for " .. key)
-        lu.assertTrue(description:find(effectText, 1, true) ~= nil,
-          "Missing printed effect for " .. key)
+      lu.assertNotNil(card.dynamicDesc, "Adaptation card must use the dynamic description: " .. key)
+      local expectedEffect = effectText
+      if card.name == "qiao__thunder__slash" then
+        -- 势备 ♠9/♠10 保留卡面原文；效果标记仍为“无视次数”。
+        expectedEffect = "此牌无视次数。"
       end
+      lu.assertTrue(description:find("<b>应变·" .. conditionText .. "</b>：" .. expectedEffect, 1, true) ~= nil,
+        "Missing dynamic face text for " .. key)
       seen[key] = (seen[key] or 0) + 1
     end
   end

@@ -1,8 +1,9 @@
--- Independent HanJin card types. Card effects are intentionally not implemented:
--- every type except the two existing Thunder Slash positions is a non-useable
--- shell. Type/sub_type/attack_range describe the printed card, not an effect.
--- `derived` types are replacement materials and the seven faction tricks; they
--- are never part of the 162-slot default draw pile.
+-- Independent HanJin card types. Type/sub_type/attack_range describe the printed
+-- card, not an effect. The implementation status is registered per type in
+-- data/reuse.lua: a "reused" type installs that implementation, and the
+-- `qiao__inert`/`qiao__inert_equip` markers here are only the fallback shell for
+-- types that are not reused. `derived` types are replacement materials and the
+-- seven faction tricks; they are never part of the 162-slot default draw pile.
 local M = {}
 local Heg = require "packages.hegemony.util"
 
@@ -51,13 +52,11 @@ M.types = {
     is_damage = true, skill = "qiao__inert", inert = true },
   { id = "qiao__ice__slash", display = "冰杀", type = "basic", damage = fk.IceDamage,
     is_damage = true, skill = "qiao__ice_slash_skill", inert = false },
-  -- The two existing formal Thunder Slash positions keep the real effect.
+  -- All seven printed Thunder Slash positions share this identity and the real
+  -- effect. 应变 entries (仅势备 ♠9/♠10 的孤军) and 合纵 belong to the concrete
+  -- slot's extra_data, never to this type or to a virtual clone of it.
   { id = "qiao__thunder__slash", display = "雷杀", type = "basic", damage = fk.ThunderDamage,
-    is_damage = true, skill = "qiao__thunder_slash_skill", inert = false, fixed_desc = true },
-  -- Other printed Thunder Slash slots are separate inert shells. They never
-  -- inherit the 孤军 entry from the two functional positions.
-  { id = "qiao__thunder_shell__slash", display = "雷杀", type = "basic", damage = fk.ThunderDamage,
-    is_damage = true, skill = "qiao__thunder_slash_skill", inert = false, shell = true },
+    is_damage = true, skill = "qiao__thunder_slash_skill", inert = false },
 
   -- Normal and delayed tricks --------------------------------------------
   { id = "qiao__duel", display = "决斗", type = "trick", is_damage = true, skill = "qiao__inert", inert = true },

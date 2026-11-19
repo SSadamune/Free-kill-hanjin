@@ -26,7 +26,6 @@ local SLASH_NAMES = {
   "qiao__fire__slash",
   "qiao__thunder__slash",
   "qiao__ice__slash",
-  "qiao__thunder_shell__slash",
 }
 
 local function slashPolicy()

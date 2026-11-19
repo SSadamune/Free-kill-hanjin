@@ -19,8 +19,8 @@ Fk:loadTranslationTable {
   ["#qiao__five_elements_fan-choose"] = "五行鹤翎扇：选择转化后的属性【杀】",
 }
 
--- 每种属性只登记一个正式程序牌型。雷杀另有若干实体牌位共用的 shell 程序牌型，
--- 与正式雷杀同属“雷杀”，按同一属性的不同程序牌型处理，不重复列为选项。
+-- 每种属性只登记一个正式程序牌型。七张实体雷杀共用同一个雷杀程序牌型，
+-- 不再按实体牌位拆分，转化结果也只有一种雷杀。
 local RESULT_CARDS = {
   fire = "qiao__fire__slash",
   thunder = "qiao__thunder__slash",

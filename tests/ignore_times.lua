@@ -42,9 +42,9 @@ local function use(room, player, target, card)
   return data
 end
 
-function Testqiao_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSlashData()
+function Testqiao_ignore_times:testFormalPackKeepsSevenThunderSlashPositionsWithGujunOnSpadeNineAndTen()
   local cards = table.filter(Fk.cards, function(card) return card.name == CARD_NAME end)
-  lu.assertEquals(#cards, 2)
+  lu.assertEquals(#cards, 7)
   local nine, ten = physical(Card.Spade, 9), physical(Card.Spade, 10)
   lu.assertIsTrue(nine.package == Fk.packages.qiao_cards)
   lu.assertIsTrue(ten.package == Fk.packages.qiao_cards)
@@ -63,23 +63,39 @@ function Testqiao_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSlas
     lu.assertEquals(entries[1].condition, "gujun")
     lu.assertEquals(entries[1].effect, "ignore_times")
   end
+  -- The other printed positions share the identity and thunder resolution but
+  -- do not inherit 孤军.
+  for _, slot in ipairs({ { Card.Club, 5 }, { Card.Club, 6 }, { Card.Club, 7 },
+    { Card.Club, 8 }, { Card.Spade, 11 } }) do
+    local card = physical(slot[1], slot[2])
+    lu.assertEquals(card.damage_type, fk.ThunderDamage)
+    lu.assertEquals(card.skill.name, "qiao__thunder_slash_skill")
+    lu.assertFalse(A.isAdaptationCard(card))
+    lu.assertEquals(#A.getEntries(card), 0)
+  end
   local specs = table.filter(Fk.packages.qiao_cards.card_specs, function(spec)
     return spec[1] == CARD_NAME
   end)
-  lu.assertEquals(#specs, 2)
+  lu.assertEquals(#specs, 7)
+  local specKeys = {}
   for _, spec in ipairs(specs) do
     lu.assertEquals(spec[1], CARD_NAME)
-    lu.assertEquals(spec[2], Card.Spade)
-    lu.assertTrue(spec[3] == 9 or spec[3] == 10)
+    specKeys[tostring(spec[2]) .. "/" .. tostring(spec[3])] = true
   end
-  -- Both formal cards enter this room's actual deck; they are not printed on demand.
+  for _, suit in ipairs({ Card.Spade, Card.Club }) do
+    local numbers = suit == Card.Spade and { 9, 10, 11 } or { 5, 6, 7, 8 }
+    for _, number in ipairs(numbers) do
+      lu.assertTrue(specKeys[tostring(suit) .. "/" .. tostring(number)],
+        "Missing Thunder Slash spec " .. suit .. "/" .. number)
+    end
+  end
+  -- All seven printed cards enter this room's actual deck; none is printed on demand.
   local room = FkTest.room
   local inRoom = {}
   local function scan(ids) for _, id in ipairs(ids) do inRoom[id] = true end end
   scan(room.draw_pile)
   for _, p in ipairs(room.players) do scan(p:getCardIds("he")) end
-  lu.assertTrue(inRoom[nine.id])
-  lu.assertTrue(inRoom[ten.id])
+  for _, card in ipairs(cards) do lu.assertTrue(inRoom[card.id], "Thunder Slash outside the deck") end
 end
 
 function Testqiao_ignore_times:testSelectionAndTargetingOnlyExemptTheLimitWithoutSideEffects()

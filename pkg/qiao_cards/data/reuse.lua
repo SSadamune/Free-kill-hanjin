@@ -30,10 +30,10 @@ M.cards = {
   ["qiao__analeptic"] = { status = "reused", kind = "skill", upstream = "analeptic", skill = "analeptic_skill" },
   ["qiao__fire__slash"] = { status = "reused", kind = "skill", upstream = "fire__slash", skill = "fire__slash_skill" },
   ["qiao__ice__slash"] = { status = "reused", kind = "qiao_skill", upstream = "ice__slash", skill = "qiao__ice_slash_skill" },
-  -- The two original positions keep the HanJin adaptation-aware skill; other
-  -- printed Thunder Slash positions use the same base effect without 孤军.
+  -- All seven printed Thunder Slash positions share this identity and the HanJin
+  -- adaptation-aware skill. 孤军 comes from the 势备 ♠9/♠10 slots' own metadata,
+  -- not from the card type.
   ["qiao__thunder__slash"] = { status = "reused", kind = "thunder", upstream = "thunder__slash", skill = "qiao__thunder_slash_skill" },
-  ["qiao__thunder_shell__slash"] = { status = "reused", kind = "thunder", upstream = "thunder__slash", skill = "qiao__thunder_slash_skill" },
 
   -- Tricks ----------------------------------------------------------------
   ["qiao__duel"] = { status = "reused", kind = "skill", upstream = "duel", skill = "duel_skill" },
