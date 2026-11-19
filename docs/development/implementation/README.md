@@ -17,6 +17,7 @@
 
 - [鏖战状态](battle-royal.md)
 - [同一张牌的多次结算](card-resolution.md)
+- [扩展加载与新核心布局](extension-loading.md)
 - [效果指定的用牌目标条件](card-use-targets.md)
 - [统领与翼从](commander-retinue.md)
 - [指定额外目标](extra-targets.md)

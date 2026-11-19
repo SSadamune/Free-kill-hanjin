@@ -98,3 +98,10 @@
 原生国战测试中，比较 `ServerPlayer`、`Package` 是否为同一对象使用 `lu.assertIs`，或比较其 id。`lu.assertEquals` 可能递归遍历角色、房间和事件关联表，导致测试在实际技能流程已完成后超时。马隆锋械、君刘备天钺及将包登记用例已遇到此情况。不要仅根据 `scripts/test.py` 超时输出推断模块尚未加载：该入口捕获子进程输出，现已在超时分支补打已捕获内容。
 
 房间内清牌、安装武将等 helper 不得再次调用 `FkTest.runInRoom`；由外层测试统一进入房间协程。嵌套恢复同一协程会产生 critical，并让后续准备步骤没有执行，不能据此推断正式技能未注册。测试准备保留至少两个势力，避免明置准备将牌时提前结束游戏。
+
+## 新核心布局下扩展 postLoad 相对 require 失效（已修复）
+
+- 现象：使用 `packages/freekill-core` 布局时，qiao 的 `postLoad` 报 `module 'packages.qiao...' not found`，对应文件实际存在。
+- 根因：`ModManager:loadPackages` 在 `postLoad` 前把工作目录切回核心包；引擎沙箱将 `package` 置空，扩展不能调整 `package.path`。
+- 修复：qiao 首个 `postLoad` 回调切到扩展根目录，最后注册的回调恢复引擎目录。详见[扩展加载与新核心布局](implementation/extension-loading.md)。
+- 回归：macOS 客户端与 `freekill-asio` 服务端均加载 7 个扩展（含 qiao），440 将／1004 技能／179 牌无报错；现有套件运行在旧核心布局，不覆盖该问题。
