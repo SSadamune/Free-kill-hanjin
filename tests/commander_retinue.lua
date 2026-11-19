@@ -525,24 +525,27 @@ function Testqiao_commander_retinue:testRetinueChoiceOffersIndependentGeneralCar
   reveal(target, false)
   setBlankDirect(target, true)
 
-  local original = room().askToChooseGeneral
-  local captured
-  room().askToChooseGeneral = function(self, player, params)
-    captured = params
-    return params.generals[2]
-  end
-  local ok, err = pcall(reveal, sourceHolder, false)
-  room().askToChooseGeneral = original
-  assert(ok, err)
+  local captured, chosen
+  FkTest.setRoomBreakpoint(target, "AskForGeneral", function(data)
+    if captured then return false end
+    captured = data
+    local default = room().current_request.default_reply[target.id][1]
+    chosen = data[1][1] == default and data[1][2] or data[1][1]
+    FkTest.setNextReplies(target, { { chosen } })
+    return false
+  end)
+  reveal(sourceHolder, false)
 
   lu.assertNotNil(captured)
-  lu.assertEquals(#captured.generals, 2)
-  for _, name in ipairs(captured.generals) do
+  lu.assertEquals(captured[1], { "qiao_test__retinue_alpha", "qiao_test__retinue_beta" })
+  lu.assertEquals(captured[2], 1)
+  lu.assertTrue(captured[3])
+  for _, name in ipairs(captured[1]) do
     lu.assertTrue(C.isRetinue(name))
     lu.assertTrue(Fk.generals[name].hidden)
     lu.assertTrue(#Fk.generals[name]:getSkillNameList() > 0)
   end
-  lu.assertEquals(target.deputyGeneral, captured.generals[2])
+  lu.assertEquals(target.deputyGeneral, chosen)
 end
 
 function Testqiao_commander_retinue:testManualViewAsBeforeUsePaysTheChosenCost()
