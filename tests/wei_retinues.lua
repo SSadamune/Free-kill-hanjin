@@ -5,6 +5,7 @@
 --   python scripts/test.py --file tests/wei_retinues.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local ReqUseCard = require "ltk.core.request_type.use_card"
 
 local BZ = "qiao__retinue_skill_bingzhou_langqi"
@@ -408,24 +409,30 @@ function Testqiao_wei_retinues:testHuweijunClientSelectionExcludesEmptyBoardPlay
     lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
     local aux = assert(Fk.skills[AUX])
     local saved = aux._extra_data
-    aux._extra_data = {
+    local extra = {
       flag = nil,
       excludeIds = {},
       froms = clients,
       tos = clients,
       skillName = HW,
     }
+    aux._extra_data = extra
     local ok, err = pcall(function()
-      lu.assertFalse(aux:targetFilter(me, clients[1], {}, {}),
+      local handler = ReqActiveSkill:new(me, { AUX, "", true, extra })
+      handler:setup()
+      lu.assertFalse(handler:targetValidity(clients[1].id),
         "场上无牌的 p1 不能作为第一个选中者")
-      lu.assertFalse(aux:targetFilter(me, clients[2], {}, {}),
+      lu.assertFalse(handler:targetValidity(clients[2].id),
         "场上无牌的 p2 不能作为第一个选中者")
-      lu.assertTrue(aux:targetFilter(me, clients[3], {}, {}),
+      lu.assertTrue(handler:targetValidity(clients[3].id),
         "有装备的 p3 可以作为来源")
-      lu.assertTrue(aux:targetFilter(me, clients[1], { clients[3] }, {}),
+      handler:selectTarget(clients[3].id, { selected = true })
+      lu.assertTrue(handler:targetValidity(clients[1].id),
         "p3 的武器可以移动到空装备栏的 p1")
-      lu.assertFalse(aux:targetFilter(me, clients[2], { clients[1] }, {}),
+      handler.selected_targets = { clients[1].id }
+      lu.assertFalse(handler:targetValidity(clients[2].id),
         "p1 场上无牌，不能与 p2 组成移牌对")
+      handler:_finish()
     end)
     aux._extra_data = saved
     if not ok then error(err, 0) end
