@@ -40,6 +40,13 @@
 - 选将界面的客将重抽入口与本局势力提示已按请求数据实现，仍需在游戏客户端人工验收；自动化测试覆盖请求数据、客户端选将规则、服务端复核和状态落盘。
 - 战报、动画和断线重连显示不在本轮自动化范围内。
 
+### 客将插画
+
+- `GuestRedrawBox.qml` 按请求数据中的 `extraData.guestFactions` 识别当前牌面，候选、确认区与重抽沿用同一张卡片。自由选将补选的武将可按已同步的房间设定判断。
+- `QiaoRoom.qml` 根据 `Photo` 当前显示的主将和副将程序 ID 分别查询 `QiaoClient:isGuestPortrait`。该接口将客户端已有的 `all_kingdoms` 和 `qiao_guest_replacement` 交给 `Guest.resolve`，和服务端发将使用同一解析。房间摘要会恢复公开的 `all_kingdoms`，头像显示随引擎的武将属性更新，无需增发暗将身份或读取服务端的武将标记。
+- `GuestIllustration.js` 在选将、局内和图鉴共用 `SkinBank.getGeneralExtraPic(name, "guest/")`。缺图时选将和图鉴沿用原卡面，局内沿用引擎原头像。局内客将图放在 `PhotoBase` 的头像遮罩内，保留分栏和叠加效果。
+- 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。开关在当前分包内按 `Guest.registeredInPackage` 筛选，复用原武将卡片委托及详情入口。
+
 **已裁定。** 禁选前候选集 `C` 由房主预先选择，默认六势力；仅作为客将势力出现的势力不参与 `C` 的推断。客将、主势力和效忠版势力都只在 `C` 的允许集内可选；候选外不可选。候选数不超过房主允许上限时无额外禁选；超过上限时按[势力禁选](../../rules/faction-ban.md)的跨局必禁/必留规则随机到上限。
 
 `tests/guest_allegiance.lua` 已覆盖势力解析与配将、连续重抽、两人重抽、补发失败保留原候选、选将回复复核和客户端请求协议；`tests/standard_generals.lua` 覆盖正式客将登记与解析。界面显示、动画及断线重连的人工验收仍待完成。

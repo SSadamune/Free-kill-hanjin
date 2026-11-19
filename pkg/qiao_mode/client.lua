@@ -7,6 +7,7 @@ local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -127,6 +128,15 @@ function QiaoClient:canConsumeEdict(holderId)
   local request = self.current_request_handler
   return not self.observing and not self.replaying and request ~= nil
     and request:isInstanceOf(QiaoPlayCard) and request:canConsumeEdict(holderId)
+end
+
+-- The allowed factions and replacement setting are public room data. Resolve
+-- only the name already displayed by the photo, never its hidden counterpart.
+function QiaoClient:isGuestPortrait(name)
+  local allowed = self:getBanner("all_kingdoms")
+  if type(allowed) ~= "table" or not Guest.guests[name] then return false end
+  local entry = Guest.resolve(name, allowed, Guest.replacementEnabled(self))
+  return entry ~= nil and entry.source == "guest"
 end
 
 -- ClientBase.serialize assumes the concrete class is a direct Client subclass and

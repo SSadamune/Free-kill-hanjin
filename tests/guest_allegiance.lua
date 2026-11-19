@@ -4,6 +4,7 @@ local Pool = require "packages.qiao.pkg.qiao_mode.rules.general_pool"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
+local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 
 Testqiao_guest_allegiance = {
   setup = function()
@@ -77,6 +78,32 @@ function Testqiao_guest_allegiance:testGuestResolutionOrder()
   lu.assertEquals(guest.kingdoms, { "han" })
   lu.assertNil(Guest.resolve("qiao_test__guest_banned", allowed))
   lu.assertNil(Guest.resolve("qiao_test__wei_1", { "wu", "qun" }))
+end
+
+function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomResolution()
+  local client = QiaoClient:new(ClientInstance.client)
+  client.settings = { gameMode = "qiao_heg_mode" }
+  local guest, original = "qiao_test__guest_dual_1", "qiao_test__guest_partial"
+  lu.assertFalse(client:isGuestPortrait(guest))
+  client:setBanner("all_kingdoms", { "wu", "qun", "han", "jin" })
+  lu.assertTrue(client:isGuestPortrait(guest))
+  lu.assertFalse(client:isGuestPortrait(original))
+  lu.assertFalse(client:isGuestPortrait("anjiang"))
+  client.settings.qiao_guest_replacement = false
+  lu.assertFalse(client:isGuestPortrait(guest))
+end
+
+function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelectedPackage()
+  local name = "qiao_heg__han001"
+  local pack = Fk.generals[name].package.name
+  local guests = Guest.registeredInPackage(pack)
+  lu.assertTrue(table.contains(guests, name))
+  lu.assertFalse(table.contains(guests, "qiao_heg__han003"))
+  lu.assertFalse(table.contains(Guest.registeredInPackage("qiao_zhenshi"), name))
+  for _, general in ipairs(guests) do
+    lu.assertEquals(Fk.generals[general].package.name, pack)
+    lu.assertTrue(#Guest.guestKingdoms(general) > 0)
+  end
 end
 
 function Testqiao_guest_allegiance:testPairingUsesResolvedGuestFactions()

@@ -8,6 +8,7 @@ import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Models.Popups
 import LunarLtk.Pages.Popups
+import "GuestIllustration.js" as GuestIllustration
 
 pragma ComponentBehavior: Bound
 
@@ -211,6 +212,11 @@ GraphicsBox {
       draggable: !root.draggingCard || root.draggingCard === this
 
       readonly property var factions: root.dataModel.extraData.guestFactions[dataModel.name] || []
+      cardFrontSource: {
+        const guest = factions.length > 0 || (root.dataModel.extraData.freeAssign
+          && GuestIllustration.inRoom(dataModel.name));
+        return GuestIllustration.picture(dataModel.name, guest) ?? dataModel.frontSkin;
+      }
       readonly property var factionColors: ({ wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
                                                qun: "#92959a", han: "#aa832e", jin: "#845ba8" })
       Rectangle {
