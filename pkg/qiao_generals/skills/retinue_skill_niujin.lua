@@ -8,6 +8,7 @@
 -- Death 时向上追溯本次用牌，避免实体牌复用污染；奖励由房间级延迟监听执行，
 -- 不绑定持有者之后是否仍有技能。
 local H = require "packages.hegemony.util"
+local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
 
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_niujin",
@@ -106,7 +107,9 @@ skill:addEffect(fk.TurnEnd, {
       remaining[choice] = nil
       used = used + 1
 
-      local use = room:askToUseCard(player, {
+      -- 自由用牌窗口：声明 not_passive，客户端不提供【闪】【无懈可击】等
+      -- 无响应时机的被动牌；返回后由公共入口复核被动、禁止与目标。
+      local use = FreeUse.askToUseCard(player, {
         pattern = category.pattern,
         skill_name = skill.name,
         prompt = category.prompt,

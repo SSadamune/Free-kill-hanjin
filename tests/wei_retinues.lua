@@ -1,9 +1,11 @@
 -- WEI/QUN 翼从：并州狼骑、虎卫军、牛金。定向验收。
 -- 2026-11-14 历史运行 3/3；虎卫军第二步改为公开候选选牌
 -- （askToChooseCards / AskForCardsChosen）后需重跑本套件。
+-- 2026-11-19 牛金自由用牌补充 not_passive、客户端被动牌禁用与服务端注入拒绝。
 --   python scripts/test.py --file tests/wei_retinues.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local ReqUseCard = require "ltk.core.request_type.use_card"
 
 local BZ = "qiao__retinue_skill_bingzhou_langqi"
 local HW = "qiao__retinue_skill_huweijun"
@@ -323,6 +325,65 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
   lu.assertEquals(reward.cards, 3)
   lu.assertEquals(#p1():getCardIds("h"), 4)
   lu.assertEquals(p1():usedSkillTimes(NJ, Player.HistoryGame), 1)
+end
+
+--- 自由用牌窗口必须排除无响应时机的被动牌；客户端按同一请求数据禁止【闪】，
+--- 服务端即使收到注入的【闪】也按放弃处理，不产生用牌或击杀奖励。
+function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjectedJink()
+  local room = FkTest.room
+  grant(p1(), NJ)
+  local ids = setHand(room, p1(), {
+    { "qiao__jink", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 7 },
+  })
+  local jink, slash = ids[1], ids[2]
+  setHand(room, p2(), {})
+  setHand(room, p3(), {})
+  local uses = {}
+  installUseProbe(room, uses)
+
+  local captured
+  skill_test.withSkillRequests(room, NJ, {
+    askToUseCard = function(self, player, params, original)
+      captured = params
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(p1(), {
+      "1",
+      { "basic" },
+      FkTest.ReplyCard(Fk:getCardById(jink), {}),
+      { "#qiao__retinue_skill_niujin-stop" },
+    })
+    inRoom(function()
+      room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
+    end)
+  end)
+
+  lu.assertNotNil(captured, "牛金必须发出真实自由用牌请求")
+  lu.assertTrue(captured.extra_data ~= nil and captured.extra_data.not_passive == true,
+    "自由用牌请求必须声明 not_passive")
+  lu.assertTrue(captured.extra_data.bypass_times == true,
+    "效果内用牌仍应绕过通常次数")
+  lu.assertTrue(captured.extra_data.extraUse == true,
+    "效果内用牌仍不应占通常次数")
+  lu.assertTrue(table.contains(p1():getCardIds("h"), jink),
+    "服务端应拒绝注入的【闪】，牌留在手牌")
+  lu.assertNil(table.find(uses, function(use) return use.name == "qiao__jink" end),
+    "被拒绝的【闪】不得产生实际使用事件")
+
+  -- 真实客户端按同一请求数据判断：无响应时机的被动牌不可选，合法基本牌仍可选。
+  withClientRoom(room, function(clients)
+    local me = clients[1]
+    local handler = ReqUseCard:new(me, {
+      nil, captured.pattern, "", true, captured.extra_data,
+    })
+    handler:setup()
+    lu.assertFalse(handler:cardValidity(jink),
+      "客户端不应允许直接选中无响应时机的【闪】")
+    lu.assertTrue(handler:cardValidity(slash), "客户端仍应允许合法基本牌")
+    handler:_finish()
+  end)
 end
 
 -- 选人阶段：真实 ClientPlayer 与客户端房间下，场上无牌的角色不能成为移牌
