@@ -1,15 +1,25 @@
 """Build the user-installable extension from workspace assets only."""
+from datetime import date
 import os
 from pathlib import Path
+import subprocess
 import sys
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ENTRIES = ('init.lua', 'pkg', 'image', 'audio')
-OUTPUT = ROOT / '.dev/dist/qiao.zip'
+DIST_DIR = ROOT / '.dev/dist'
 
 
-def build(output=OUTPUT):
+def release_output_path():
+    commit = subprocess.check_output(
+        ['git', 'rev-parse', '--short=8', 'HEAD'], cwd=ROOT, text=True,
+    ).strip()
+    return DIST_DIR / f'qiao-{date.today().isoformat()}-{commit}.zip'
+
+
+def build(output=None):
+    output = release_output_path() if output is None else Path(output)
     files = []
     for entry in RELEASE_ENTRIES:
         source = ROOT / entry

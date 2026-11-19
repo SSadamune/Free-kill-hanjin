@@ -85,7 +85,9 @@ python scripts/build_release.py
 
 也可在 VS Code 的“终端 → 运行任务”中选择“平行时空：构建用户安装包”。
 
-生成 `.dev/dist/qiao.zip`。Windows 上构建成功后会自动在资源管理器中打开 `.dev/dist/`。将压缩包解压到用户游戏的 `packages/` 后得到 `packages/qiao/`。
+生成 `.dev/dist/qiao-YYYY-MM-DD-<短哈希>.zip`，文件名使用构建当天的本地日期和当前 Git `HEAD` 的短哈希。Windows 上构建成功后会自动在资源管理器中打开 `.dev/dist/`。将压缩包解压到用户游戏的 `packages/` 后得到 `packages/qiao/`。
+
+用 `python scripts/verify_image_assets.py --release` 校验当天、当前提交的安装包。校验其他构建时，在 `--release` 后传入 ZIP 路径。
 
 从旧版升级时，先移除旧扩展目录 `packages/hanjin/`，再安装 `packages/qiao/`，避免同时加载两份扩展。
 
