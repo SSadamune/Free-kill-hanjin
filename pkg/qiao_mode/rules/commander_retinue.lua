@@ -3,6 +3,7 @@
 local H = require "packages.hegemony.util"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local M = {}
 
 M.RULE_SKILL = "#qiao_commander_rule"
@@ -98,6 +99,10 @@ end
 
 function M.isRetinue(name)
   return type(name) == "string" and M.retinues[name] ~= nil
+end
+
+function M.retinueAllowed(room, name)
+  return M.isRetinue(name) and RoomBans.allows(room, name)
 end
 
 function M.isBlankSoldier(name)
@@ -255,6 +260,9 @@ end
 --- 限一视为用牌机会；临时占用期间同样不可再次发动。
 function M.abilityAvailable(room, source)
   if not M.sourceAbilityActive(room, source) then return false end
+  for _, retinue in ipairs(source.retinues) do
+    if not M.retinueAllowed(room, retinue) then return false end
+  end
   if M.abilityReserved(room, source.general) then return false end
   if M.isLimitedSource(source) and M.limitedAbilityUsed(room, source.general) then return false end
   return true
@@ -300,7 +308,9 @@ function M.availableRetinues(room, faction)
     if source.factions[faction] then
       for _, retinue in ipairs(source.retinues) do
         local taken = M.isLimitedRetinue(retinue) and used[retinue] ~= nil
-        if not taken then table.insertIfNeed(result, retinue) end
+        if not taken and M.retinueAllowed(room, retinue) then
+          table.insertIfNeed(result, retinue)
+        end
       end
     end
   end
@@ -335,12 +345,13 @@ function M.refreshAvailability(room)
     local faction = M.factionOf(player)
     local used = M.usedLimitedRetinues(room)
     for key, source in pairs(M.getSources(room)) do
-      if M.sourceAuthorizedFor(room, source, player) or source.factions[faction] then
+      local active = M.sourceAuthorizedFor(room, source, player)
+      if active or source.factions[faction] then
         local retinues = table.filter(source.retinues, function(name)
-          return not M.isLimitedRetinue(name) or not used[name]
+          return M.retinueAllowed(room, name) and (not M.isLimitedRetinue(name) or not used[name])
         end)
         table.insert(descriptions, { key = key, retinues = retinues,
-          active = M.sourceAuthorizedFor(room, source, player) })
+          active = active })
       end
     end
     table.sort(descriptions, function(a, b) return a.key < b.key end)
@@ -545,8 +556,8 @@ end
 M.requestConversion = requestConversion
 
 function M.assignRetinue(player, isDeputy, retinue)
-  if not M.isRetinue(retinue) then return false end
   local room = player.room
+  if not M.retinueAllowed(room, retinue) then return false end
   local old = positionName(player, isDeputy)
   if not M.isBlankSoldier(old) then return false end
   -- 偏将全场唯一：询问期间或重入时若已被取得，本次取得失败并保留白板。

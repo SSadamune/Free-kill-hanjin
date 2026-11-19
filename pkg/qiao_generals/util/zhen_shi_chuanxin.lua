@@ -9,7 +9,7 @@ function M.replaceDeputy(room,player,retinue,skillName)
   -- 君主武将牌不能被实际变更，包括暗置的牌；拒绝后由调用方执行“否则”。
   -- 在任何事件、离牌状态清理或将池移动之前返回。
   if E.isLordPosition(player,true) then return false end
-  if not Fk.generals[old] or C.isSoldier(old) or not C.isRetinue(retinue)
+  if not Fk.generals[old] or C.isSoldier(old) or not C.retinueAllowed(room,retinue)
     or C.limitedRetinueTaken(room,retinue) then return false end
   local data=H.GeneralTransformedData:new{
     who=player,isMain=false,isHidden=false,num=1,origName=old,skillName=skillName,

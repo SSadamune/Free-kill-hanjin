@@ -10,6 +10,7 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
+local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local M = {}
 
 M.RULE_SKILL = "#qiao_ascension_rule"
@@ -38,61 +39,6 @@ function M.faction_of(player)
   if player == nil then return "unknown" end
   if player.kingdom == "wild" then return player.role or "wild" end
   return player.kingdom or "unknown"
-end
-
---- 读取房间 native 原始设置的缓存。Room:initialize 会把模式级禁包追加到
---- 解码后的 settings.disabledPack，但不会改写 native CBOR；因此升变资格必须
---- 回到 room.room:settings() 的原始设置，房主禁包与模式自动禁包才能区分。
-local original_settings_cache = setmetatable({}, { __mode = "k" })
-
-local function originalSettings(room)
-  local cached = original_settings_cache[room]
-  if cached ~= nil then return cached end
-  local result
-  local native = room.room
-  if native ~= nil and type(native.settings) == "function" then
-    local ok, encoded = pcall(native.settings, native)
-    if ok and encoded ~= nil then
-      if type(encoded) == "table" then
-        result = encoded
-      else
-        local decodedOk, decoded = pcall(cbor.decode, encoded)
-        if decodedOk and type(decoded) == "table" then result = decoded end
-      end
-    end
-  end
-  -- 兼容没有 native 原始设置的测试替身；正常房间不会走到这里。
-  result = result or room.settings
-  original_settings_cache[room] = result
-  return result
-end
-
---- 按 RoomBase:getSettings 的优先级读取原始设置中的键。
-local function originalSetting(room, key)
-  local settings = originalSettings(room)
-  if type(settings) ~= "table" then return nil end
-  local mode = settings._mode
-  if type(mode) == "table" and mode[key] ~= nil then return mode[key] end
-  local game = settings._game
-  if type(game) == "table" and game[key] ~= nil then return game[key] end
-  return settings[key]
-end
-
---- 升变目标版本是否未被本房间房主禁将/禁包拦截。
---- 只判断目标版本自身：禁普通版不会连带君主版或效忠版，反之亦然。
---- 模式自动禁用的包不算房主禁包，不能阻止已登记版本的局内升变。君主版为
---- hidden，也不能改用 Fk:canUseGeneral 判断。
-local function version_allowed(room, name)
-  if room == nil or type(name) ~= "string" then return false end
-  local general = Fk.generals[name]
-  if general == nil then return false end
-  local explicit = originalSetting(room, "disabledGenerals") or {}
-  if table.contains(explicit, name) then return false end
-  local package = general.package and general.package.name
-  if package ~= nil and table.contains(originalSetting(room, "disabledPack") or {}, package) then
-    return false
-  end
-  return true
 end
 
 --- 国战双将体力上限：主将贡献 + 副将贡献（均含主将/副将调整），向下取整。
@@ -156,8 +102,7 @@ function M.lord_candidate(room, player, deadKingdom)
   if main == nil then return nil end
   if player.general ~= "anjiang" and Versions.is_lord(main) then return nil end
   local lord = Versions.lord_version(main)
-  -- version_allowed also rejects a missing lord version.
-  if not version_allowed(room, lord) or not Versions.lord_is_for(lord, deadKingdom) then return nil end
+  if not RoomBans.allows(room, lord) or not Versions.lord_is_for(lord, deadKingdom) then return nil end
   if player.kingdom == "wild" then return nil end
   if not isUnknown(player.kingdom) and player.kingdom ~= deadKingdom then return nil end
   if player.general == "anjiang" and player:prohibitReveal() then return nil end
@@ -180,7 +125,7 @@ function M.wild_candidates(room, player)
   local result, seen = {}, {}
   for _, loyalty in ipairs(Versions.loyalty_versions(main)) do
     local loyaltyGeneral = Fk.generals[loyalty]
-    if version_allowed(room, loyalty) then
+    if RoomBans.allows(room, loyalty) then
       local kingdoms = Guest.pairKingdoms(room, loyalty, deputy, allowed)
       if #kingdoms == 0 then
         -- Fallback for content placed directly by tests without a room pool
@@ -219,7 +164,7 @@ function M.ascend(room, player, newMain, kingdom, options)
   assert(options.kind ~= "loyalty" or Versions.is_loyalty(newMain),
     "Loyalty ascension needs a loyalty version")
   -- 防御性复核：提供选项前各入口已过滤；询问期间到提交前若目标被禁则不执行。
-  if not version_allowed(room, newMain) then return false end
+  if not RoomBans.allows(room, newMain) then return false end
 
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
@@ -408,7 +353,7 @@ function M.on_turn_start(room, player)
   local main = M.actual_main(player)
   if main == nil or Fk.generals[main] == nil or Fk.generals[main].kingdom == "wild" then return end
   local lord = Versions.lord_version(main)
-  if player:prohibitReveal() or not version_allowed(room, lord) then return end
+  if player:prohibitReveal() or not RoomBans.allows(room, lord) then return end
   local allowed = room:getBanner("all_kingdoms") or {}
   local kingdoms = table.filter(Versions.lord_kingdoms(lord), function(kingdom)
     return table.contains(allowed, kingdom)
