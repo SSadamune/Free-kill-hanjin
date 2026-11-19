@@ -2,10 +2,12 @@
 -- 规则依据：docs/rules/standard-generals.md 汉区 HAN005、
 -- docs/development/implementation/card-use-targets.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local MZ = "qiao__skill_han005_1"
 local GN = "qiao__skill_han005_2"
-local MARK = "qiao_skill_han005_2_source-noclear"
+local MARK = "@@qiao_skill_han005_2_source-noclear"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
 Testqiao_han005 = {}
@@ -119,6 +121,26 @@ function Testqiao_han005:testMouzhuGiveThenDifferentKingdomTargetNoDiscard()
     { "qiao__slash", Card.Club, 3 },
     { "qiao__jink", Card.Diamond, 4 },
   })
+
+  local equipment
+  inRoom(function()
+    local weapon = room:printCard("qiao__axe", Card.Diamond, 5)
+    room:moveCardTo(weapon, Card.PlayerEquip, p1(), fk.ReasonJustMove, "test", nil, true)
+    equipment = weapon.id
+    p1().phase = Player.Play
+  end)
+  client_room.run(room, function(clients)
+    local handler = ReqPlayCard:new(clients[1])
+    handler.skill_name = MZ
+    handler:setup()
+    handler:selectSkill(MZ, { selected = true })
+    lu.assertNil(handler.expanded_piles._equip)
+    lu.assertFalse(handler:cardValidity(mine[1]))
+    lu.assertFalse(handler:cardValidity(equipment))
+    handler:selectTarget(clients[3].id, { selected = true })
+    lu.assertTrue(handler:feasible())
+    handler:_finish()
+  end)
 
   FkTest.setNextReplies(p3(), {
     FkTest.ReplyChooseCards({ theirs[1] }),

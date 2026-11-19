@@ -55,7 +55,7 @@
 - **标识与依据**：运行时 ID `qiao__skill_han005_2`；源码 [skill_han005_2.lua](../../../../pkg/qiao_generals/skills/skill_han005_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)汉区 HAN005；出牌阶段主动技谋诛见[用牌目标与距离](active.md#han005-1)。
 - **实现与接口**：
   - `fk.Death` 触发，按公共死亡数据取 `data.killer`；无来源不建立印记，来源已死也照常记录、后续不再复结算。暗将死亡先经公共 `GameOverJudge` 翻正再触发。
-  - 印记 `qiao_skill_han005_2_source-noclear` 不带技能名双下划线前缀，避免 Exchange 按来源技能迁移；`-noclear` 使其不随死亡清标记消失，移将、失技、暗置后已建立印记持续。
+  - 来源角色显示公开印记 `@@qiao_skill_han005_2_source-noclear`。它不带技能名双下划线前缀，避免 Exchange 按来源技能迁移；`-noclear` 使其不随死亡清标记消失，移将、失技、暗置后已建立印记持续。
   - 伤害监听为房间级延迟技能（`DamageInflicted` + `global`），获得构难时安装，死亡建立印记时再次确保存在；不依赖死者当前 `hasSkill`，何进死后仍生效。
   - 只认正式普通杀牌名 `qiao__slash`，排除火／雷／冰杀，不以伤害属性代替牌名判断；印记角色作为来源（造成）或受伤者（受到）两个方向各 +1，每次伤害事件只加一次。
 - **验证依据**：[han005_hejin.lua](../../../../tests/han005_hejin.lua) 覆盖构难普通杀双向（暗将何进死亡后印记生效，来源造成／受到普通杀伤害各 +1）与属性杀排除（火杀仍为 1）；历史定向结果 3/3，见[共享验证证据](verification-evidence.md#han005_hejin)。
