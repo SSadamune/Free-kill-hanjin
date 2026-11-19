@@ -67,6 +67,20 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
+-- 溢出转野：引擎在触发 GeneralShown 前已把 kingdom 设为 wild，但溢出角色的
+-- 私有 role 仍是初始常规势力。上游 heg_rule 的 GeneralShown 会据此弹出
+-- “野心家建国”。必须在 priority 0 的上游处理之前归一 role；这里不返回
+-- true，保留上游其余明置流程（首亮、君主拉回、同势力胜负检查等）。
+skill:addEffect(fk.GeneralShown, {
+  priority = 1000,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and target.kingdom == "wild"
+  end,
+  on_trigger = function(self, event, target, player, data)
+    A.ensure_wild_role(player)
+  end,
+})
+
 -- 死亡继位窗口必须在游戏结束判定之前，且先于上游君主死亡转野。
 skill:addEffect(fk.BeforeGameOverJudge, {
   priority = 100,
