@@ -1,13 +1,13 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local Deck = __dofile("../../../tests/support/deck_content.lua")
-local Ban = require "packages.hanjin.pkg.hanjin_mode.rules.faction_ban"
-local Cards = require "packages.hanjin.pkg.hanjin_mode.rules.cards"
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-Testhanjin_card_deck = { tearDown = support.clearRoom }
+local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+Testqiao_card_deck = { tearDown = support.clearRoom }
 
 local function create(options)
   options = options or {}
-  options.mode = "hanjin_heg_mode"
+  options.mode = "qiao_heg_mode"
   options.realSelection = true
   return support.createRoom(options)
 end
@@ -16,7 +16,7 @@ local function formal(ids)
   local result = {}
   for _, id in ipairs(ids) do
     local card = Fk:getCardById(id)
-    if card.package == Fk.packages.hanjin_cards then table.insert(result, card) end
+    if card.package == Fk.packages.qiao_cards then table.insert(result, card) end
   end
   return result
 end
@@ -49,13 +49,13 @@ end
 
 local function slotKey(card)
   local data = card.extra_data or {}
-  if data.hanjin_partition and data.hanjin_suit and data.hanjin_number then
-    return data.hanjin_partition .. "/" .. data.hanjin_suit .. "/" .. data.hanjin_number
+  if data.qiao_partition and data.qiao_suit and data.qiao_number then
+    return data.qiao_partition .. "/" .. data.qiao_suit .. "/" .. data.qiao_number
   end
 end
 
 local function packageCard(name, suit, number)
-  return table.find(Fk.packages.hanjin_cards.cards, function(card)
+  return table.find(Fk.packages.qiao_cards.cards, function(card)
     return card.name == name and (suit == nil or card.suit == suit)
       and (number == nil or card.number == number)
   end)
@@ -68,7 +68,7 @@ local function findCard(cards, name, suit, number)
   end)
 end
 
-function Testhanjin_card_deck:testBaseTableHasExactly162UniquePrintedPositions()
+function Testqiao_card_deck:testBaseTableHasExactly162UniquePrintedPositions()
   lu.assertEquals(Cards.baseSlotCount, 162)
   lu.assertEquals(#Cards.basePositions, 162)
   local counts, seen = {}, {}
@@ -91,7 +91,7 @@ function Testhanjin_card_deck:testBaseTableHasExactly162UniquePrintedPositions()
   end
 end
 
-function Testhanjin_card_deck:testLordEquipmentTableCoversFourteenPositionsAndTwelveReplacements()
+function Testqiao_card_deck:testLordEquipmentTableCoversFourteenPositionsAndTwelveReplacements()
   lu.assertEquals(#Cards.lordEquipmentTable, 14)
   local replacements, none, multi = 0, 0, 0
   for _, spec in ipairs(Cards.lordEquipmentTable) do
@@ -109,7 +109,7 @@ function Testhanjin_card_deck:testLordEquipmentTableCoversFourteenPositionsAndTw
   end
 end
 
-function Testhanjin_card_deck:testWeiJinCrownUsesOrAndNeverAllOfThem()
+function Testqiao_card_deck:testWeiJinCrownUsesOrAndNeverAllOfThem()
   local crown = assert(table.find(Cards.lordEquipmentTable, function(spec)
     return spec.display == "虚妄之冕"
   end))
@@ -118,7 +118,7 @@ function Testhanjin_card_deck:testWeiJinCrownUsesOrAndNeverAllOfThem()
   lu.assertNil(crown.replacement)
 end
 
-function Testhanjin_card_deck:testSevenFactionTricksAndAllHejiPositionsAreRegistered()
+function Testqiao_card_deck:testSevenFactionTricksAndAllHejiPositionsAreRegistered()
   lu.assertEquals(#Cards.factionTrickTable, 7)
   local kingdoms = {}
   for _, spec in ipairs(Cards.factionTrickTable) do
@@ -137,7 +137,7 @@ function Testhanjin_card_deck:testSevenFactionTricksAndAllHejiPositionsAreRegist
   end
 end
 
-function Testhanjin_card_deck:testAdaptationTableHasSixteenGroupsOfThirtyFivePhysicalCards()
+function Testqiao_card_deck:testAdaptationTableHasSixteenGroupsOfThirtyFivePhysicalCards()
   lu.assertEquals(#Cards.adaptationGroups, 16)
   lu.assertEquals(Cards.adaptationCardCount, 35)
   local count, seen = 0, {}
@@ -182,7 +182,7 @@ function Testhanjin_card_deck:testAdaptationTableHasSixteenGroupsOfThirtyFivePhy
   lu.assertEquals(count, 35)
 end
 
-function Testhanjin_card_deck:testDefaultDeckRespectsCandidateFilterAndSevenTrickExclusion()
+function Testqiao_card_deck:testDefaultDeckRespectsCandidateFilterAndSevenTrickExclusion()
   local room = create()
   local cards = roomCards(room)
   local unavailable = unavailable(room)
@@ -199,11 +199,11 @@ function Testhanjin_card_deck:testDefaultDeckRespectsCandidateFilterAndSevenTric
   end
 end
 
-function Testhanjin_card_deck:testWeiJinOrAndReplacementPairsInActualDeck()
+function Testqiao_card_deck:testWeiJinOrAndReplacementPairsInActualDeck()
   local room = create { settings = {
-    hanjin_wild_count = 0,
-    hanjin_candidate_kingdoms = { "wei", "shu" },
-    hanjin_kingdom_limit = 2,
+    qiao_wild_count = 0,
+    qiao_candidate_kingdoms = { "wei", "shu" },
+    qiao_kingdom_limit = 2,
   } }
   local cards = roomCards(room)
   -- 魏 allowed: 虚妄之冕 stays even though 晋 is unavailable.
@@ -228,11 +228,11 @@ function Testhanjin_card_deck:testWeiJinOrAndReplacementPairsInActualDeck()
   lu.assertEquals(#table.filter(cards, Cards.isHeji), 12)
 end
 
-function Testhanjin_card_deck:testUnavailableBothWeiAndJinRemovesCrownWithoutReplacement()
+function Testqiao_card_deck:testUnavailableBothWeiAndJinRemovesCrownWithoutReplacement()
   local room = create { settings = {
-    hanjin_wild_count = 0,
-    hanjin_candidate_kingdoms = { "shu", "wu" },
-    hanjin_kingdom_limit = 2,
+    qiao_wild_count = 0,
+    qiao_candidate_kingdoms = { "shu", "wu" },
+    qiao_kingdom_limit = 2,
   } }
   local cards = roomCards(room)
   lu.assertNil(findCard(cards, "虚妄之冕"))
@@ -240,7 +240,7 @@ function Testhanjin_card_deck:testUnavailableBothWeiAndJinRemovesCrownWithoutRep
   lu.assertEquals(#cards, Cards.baseSlotCount - 2)
 end
 
-function Testhanjin_card_deck:testAdaptationMetadataOnActualCardsMatchesTheTable()
+function Testqiao_card_deck:testAdaptationMetadataOnActualCardsMatchesTheTable()
   local room = create()
   local groups = {}
   local count = 0
@@ -260,7 +260,7 @@ function Testhanjin_card_deck:testAdaptationMetadataOnActualCardsMatchesTheTable
   lu.assertEquals(keys, 16)
 end
 
-function Testhanjin_card_deck:testSyntheticBaseTableBuildsExactlyThePrintedPositions()
+function Testqiao_card_deck:testSyntheticBaseTableBuildsExactlyThePrintedPositions()
   local room = create()
   local ids = Deck.drawIds()
   lu.assertEquals(#ids, 162 + 12 + 7)
@@ -279,7 +279,7 @@ function Testhanjin_card_deck:testSyntheticBaseTableBuildsExactlyThePrintedPosit
   lu.assertEquals(adaptations, 35)
 end
 
-function Testhanjin_card_deck:testSyntheticReplacementPairsAndWeiJinOr()
+function Testqiao_card_deck:testSyntheticReplacementPairsAndWeiJinOr()
   local room = create()
   local ids = Deck.drawIds()
   local function build(unavailable)
@@ -319,7 +319,7 @@ function Testhanjin_card_deck:testSyntheticReplacementPairsAndWeiJinOr()
   lu.assertEquals(#qunResult, 162)
 end
 
-function Testhanjin_card_deck:testSyntheticTricksCanOnlyEnterByExplicitSpecialMeans()
+function Testqiao_card_deck:testSyntheticTricksCanOnlyEnterByExplicitSpecialMeans()
   local room = create()
   local ids = Deck.drawIds()
   local trick = Fk:getCardById(Deck.trickIds[2]) -- 号令天下, 魏
@@ -331,8 +331,8 @@ function Testhanjin_card_deck:testSyntheticTricksCanOnlyEnterByExplicitSpecialMe
   lu.assertFalse(table.contains(excluded, trick.id))
 end
 
-function Testhanjin_card_deck:testFormalPackagePublishesTheCompleteBaseTable()
-  local H = assert(Fk.packages.hanjin_cards.hanjin_cards)
+function Testqiao_card_deck:testFormalPackagePublishesTheCompleteBaseTable()
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
   lu.assertEquals(H.baseSlotCount, 162)
   lu.assertEquals(#H.baseSlots, 162)
   lu.assertEquals(H.partitions.standard1, 52)
@@ -352,7 +352,7 @@ function Testhanjin_card_deck:testFormalPackagePublishesTheCompleteBaseTable()
       "Missing physical card for base slot " .. slot.id)
   end
   local thunder = table.filter(H.baseSlots, function(slot)
-    return slot.card == "hanjin__thunder__slash"
+    return slot.card == "qiao__thunder__slash"
   end)
   lu.assertEquals(#thunder, 2)
   for _, slot in ipairs(thunder) do
@@ -362,12 +362,12 @@ function Testhanjin_card_deck:testFormalPackagePublishesTheCompleteBaseTable()
   end
 end
 
-function Testhanjin_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
-  local H = assert(Fk.packages.hanjin_cards.hanjin_cards)
+function Testqiao_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
   for _, slot in ipairs(H.baseSlots) do
     local card = packageCard(slot.card, slot.suit, slot.number)
     local reuse = assert(H.reuse[slot.card], "Missing reuse decision: " .. slot.card)
-    lu.assertEquals(card.extra_data.hanjin_inert, reuse.status ~= "reused")
+    lu.assertEquals(card.extra_data.qiao_inert, reuse.status ~= "reused")
     if reuse.status == "reused" then
       lu.assertFalse(H.isInert(card), "Reused card must not be inert: " .. slot.id)
     else
@@ -377,7 +377,7 @@ function Testhanjin_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
   -- All seven printed Thunder Slash positions share the base effect, but only
   -- ♠9/♠10 carry the 孤军 entry.
   local thunder = table.filter(H.baseSlots, function(slot)
-    return table.find({ "hanjin__thunder__slash", "hanjin__thunder_shell__slash" },
+    return table.find({ "qiao__thunder__slash", "qiao__thunder_shell__slash" },
       function(name) return slot.card == name end) ~= nil
   end)
   lu.assertEquals(#thunder, 7)
@@ -386,14 +386,14 @@ function Testhanjin_card_deck:testCardsFollowTheDeclaredReuseOrShellDecision()
     local card = packageCard(slot.card, slot.suit, slot.number)
     lu.assertFalse(H.isInert(card))
     local entries = A.getEntries(card)
-    lu.assertEquals(#entries, slot.card == "hanjin__thunder__slash" and 1 or 0)
+    lu.assertEquals(#entries, slot.card == "qiao__thunder__slash" and 1 or 0)
     if #entries == 1 then gujun = gujun + 1 end
   end
   lu.assertEquals(gujun, 2)
 end
 
-function Testhanjin_card_deck:testFormalLordEquipmentMatchesThePolicyTable()
-  local H = assert(Fk.packages.hanjin_cards.hanjin_cards)
+function Testqiao_card_deck:testFormalLordEquipmentMatchesThePolicyTable()
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
   for _, spec in ipairs(Cards.lordEquipmentTable) do
     local found
     for _, lord in pairs(H.lordEquipment) do
@@ -412,7 +412,7 @@ function Testhanjin_card_deck:testFormalLordEquipmentMatchesThePolicyTable()
   end
 end
 
-function Testhanjin_card_deck:testAdaptationMetadataUsesTheExactPrintedSlots()
+function Testqiao_card_deck:testAdaptationMetadataUsesTheExactPrintedSlots()
   local room = create()
   local expected, seen = {}, {}
   for _, group in ipairs(Cards.adaptationGroups) do
@@ -440,7 +440,7 @@ function Testhanjin_card_deck:testAdaptationMetadataUsesTheExactPrintedSlots()
   lu.assertEquals(count, 35)
 end
 
-function Testhanjin_card_deck:testEveryAdaptationCardExposesTheConfirmedConditionTextAndEffect()
+function Testqiao_card_deck:testEveryAdaptationCardExposesTheConfirmedConditionTextAndEffect()
   local room = create()
   local groups = {}
   for _, group in ipairs(Cards.adaptationGroups) do
@@ -455,9 +455,9 @@ function Testhanjin_card_deck:testEveryAdaptationCardExposesTheConfirmedConditio
       cards = cards + 1
       local key = display(card) .. "/" .. entry.condition .. "/" .. entry.effect
       local group = assert(groups[key], "Unexpected adaptation entry " .. key)
-      local conditionText = Fk:translate("hanjin_condition_" .. entry.condition)
-      local effectText = Fk:translate("hanjin_adaptation_" .. entry.effect)
-      lu.assertNotEquals(conditionText, "hanjin_condition_" .. entry.condition)
+      local conditionText = Fk:translate("qiao_condition_" .. entry.condition)
+      local effectText = Fk:translate("qiao_adaptation_" .. entry.effect)
+      lu.assertNotEquals(conditionText, "qiao_condition_" .. entry.condition)
       lu.assertEquals(effectText, group.text)
       lu.assertEquals(display(card), group.display)
       lu.assertTrue(A.isAdaptationCard(card))
@@ -466,7 +466,7 @@ function Testhanjin_card_deck:testEveryAdaptationCardExposesTheConfirmedConditio
       lu.assertEquals(#tips, 1)
       lu.assertEquals(tips[1].content, conditionText .. "·" .. effectText)
       local mark = A.markValue(entry)
-      lu.assertEquals(mark, { "·", "hanjin_adaptation_" .. entry.effect })
+      lu.assertEquals(mark, { "·", "qiao_adaptation_" .. entry.effect })
       lu.assertEquals(Fk:translate(mark[1]), "·")
       lu.assertEquals(Fk:translate(mark[2]), group.text)
       local description = card:getDynamicDescription(room.players[1], "zh_CN")
@@ -493,11 +493,11 @@ function Testhanjin_card_deck:testEveryAdaptationCardExposesTheConfirmedConditio
   lu.assertEquals(count, 16)
 end
 
-function Testhanjin_card_deck:testEveryAdaptationEffectHasARegisteredHandler()
+function Testqiao_card_deck:testEveryAdaptationEffectHasARegisteredHandler()
   local room = create()
   local seen = 0
   for _, group in ipairs(Cards.adaptationGroups) do
-    local card = Fk:cloneCard("hanjin__slash")
+    local card = Fk:cloneCard("qiao__slash")
     A.setCardEntries(card, {
       { id = "probe_" .. seen, condition = group.condition, effect = group.effect },
     })
@@ -511,7 +511,7 @@ function Testhanjin_card_deck:testEveryAdaptationEffectHasARegisteredHandler()
   lu.assertEquals(seen, 16)
 end
 
-function Testhanjin_card_deck:testHejiMarkersBelongToTheirOwnPrintedPositions()
+function Testqiao_card_deck:testHejiMarkersBelongToTheirOwnPrintedPositions()
   local room = create()
   local expected = {}
   for _, slot in ipairs(Cards.hejiSlots) do
@@ -529,9 +529,9 @@ function Testhanjin_card_deck:testHejiMarkersBelongToTheirOwnPrintedPositions()
   lu.assertEquals(count, 12)
 end
 
-function Testhanjin_card_deck:testSevenFactionTricksExistOnlyOutsideTheDefaultDrawPile()
+function Testqiao_card_deck:testSevenFactionTricksExistOnlyOutsideTheDefaultDrawPile()
   local room = create()
-  local H = assert(Fk.packages.hanjin_cards.hanjin_cards)
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
   local inPile = {}
   for _, id in ipairs(room.draw_pile) do inPile[id] = true end
   for _, player in ipairs(room.players) do
@@ -548,31 +548,53 @@ function Testhanjin_card_deck:testSevenFactionTricksExistOnlyOutsideTheDefaultDr
   lu.assertEquals(seen, 7)
 end
 
-function Testhanjin_card_deck:testNationalAndOrdinaryNullificationStayDistinct()
+function Testqiao_card_deck:testFactionTrickShellMetadataFollowsItsReuseDecision()
+  local room = create()
+  local H = assert(Fk.packages.qiao_cards.qiao_cards)
+  local seen = 0
+  for _, trick in pairs(H.factionTricks) do
+    local card = packageCard(trick.card, trick.suit, trick.number)
+    lu.assertNotNil(card, "Missing faction trick " .. trick.display)
+    local position = assert(H.getSlot(card), "Missing faction trick position " .. trick.display)
+    local reused = assert(H.reuse[trick.card], "Missing reuse decision " .. trick.display).status == "reused"
+    lu.assertEquals(card.extra_data.qiao_inert, not reused,
+      "势力锦囊的牌元数据空壳标记应与复用决定一致: " .. trick.display)
+    lu.assertEquals(position.inert, not reused,
+      "势力锦囊的牌位空壳标记应与复用决定一致: " .. trick.display)
+    lu.assertEquals(H.isInert(card), not reused,
+      "势力锦囊的运行时空壳判定应与复用决定一致: " .. trick.display)
+    lu.assertEquals(room:getCardArea(card.id), Card.Void,
+      "势力锦囊默认位于游戏外: " .. trick.display)
+    seen = seen + 1
+  end
+  lu.assertEquals(seen, 7)
+end
+
+function Testqiao_card_deck:testNationalAndOrdinaryNullificationStayDistinct()
   local national, ordinary = 0, 0
   for _, slot in ipairs(Cards.basePositions) do
     local card
-    for _, entry in ipairs(Fk.packages.hanjin_cards.hanjin_cards.baseSlots) do
+    for _, entry in ipairs(Fk.packages.qiao_cards.qiao_cards.baseSlots) do
       if entry.partition == slot.partition and entry.suit == slot.suit
         and entry.number == slot.number then card = entry; break end
     end
     lu.assertNotNil(card, "Missing base position")
     if card.display == "无懈可击·国" then
       national = national + 1
-      lu.assertEquals(card.card, "hanjin__guozhan__nullification")
+      lu.assertEquals(card.card, "qiao__guozhan__nullification")
     elseif card.display == "无懈可击" then
       ordinary = ordinary + 1
-      lu.assertEquals(card.card, "hanjin__nullification")
+      lu.assertEquals(card.card, "qiao__nullification")
     end
   end
   lu.assertEquals(national, 4)
   lu.assertEquals(ordinary, 2)
 end
 
-function Testhanjin_card_deck:testEveryReplacementMaterialCanOccupyItsSharedSlot()
+function Testqiao_card_deck:testEveryReplacementMaterialCanOccupyItsSharedSlot()
   local room = create()
   local draw, void = {}, {}
-  for _, card in ipairs(Fk.packages.hanjin_cards.cards) do
+  for _, card in ipairs(Fk.packages.qiao_cards.cards) do
     table.insert(card.is_derived and void or draw, card.id)
   end
   local function build(unavailable)
@@ -606,11 +628,11 @@ function Testhanjin_card_deck:testEveryReplacementMaterialCanOccupyItsSharedSlot
   lu.assertNil(findCard(cards, "虚妄之冕"))
 end
 
-function Testhanjin_card_deck:testQunEquipmentKeepsOnlyItsOwnHejiMarkers()
+function Testqiao_card_deck:testQunEquipmentKeepsOnlyItsOwnHejiMarkers()
   local room = create { settings = {
-    hanjin_wild_count = 0,
-    hanjin_candidate_kingdoms = { "qun", "wei" },
-    hanjin_kingdom_limit = 2,
+    qiao_wild_count = 0,
+    qiao_candidate_kingdoms = { "qun", "wei" },
+    qiao_kingdom_limit = 2,
   } }
   local cards = roomCards(room)
   local shenshou = findCard(cards, "神授思召")
@@ -623,4 +645,4 @@ function Testhanjin_card_deck:testQunEquipmentKeepsOnlyItsOwnHejiMarkers()
   lu.assertNil(findCard(cards, "青龙偃月刀"))
 end
 
-return { name = "hanjin_card_deck" }
+return { name = "qiao_card_deck" }

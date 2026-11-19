@@ -4,12 +4,12 @@
 -- 夹具：真实汉晋国战房间 + 明确白板双将；输入走官方回复队列或限定技能桩。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local WEIMU = "hanjin__skill_qun007_3"
-local BEIGE = "hanjin__skill_qun012_1"
-local QINGCHENG = "hanjin__skill_qun018_2"
-local HUANGJIN = "hanjin__retinue_skill_huangjin_leishi"
-local HISTORY = "hanjin__qun_damage_history"
-local SLASH = "hanjin__slash"
+local WEIMU = "qiao__skill_qun007_3"
+local BEIGE = "qiao__skill_qun012_1"
+local QINGCHENG = "qiao__skill_qun018_2"
+local HUANGJIN = "qiao__retinue_skill_huangjin_leishi"
+local HISTORY = "qiao__qun_damage_history"
+local SLASH = "qiao__slash"
 local KINGDOMS = { "qun", "qun", "qun", "qun", "qun", "qun", "qun", "qun" }
 
 local function room() return FkTest.room end
@@ -83,10 +83,10 @@ local function useSlash(from, to)
   end)
 end
 
-Testhanjin_qun_judgement = { tearDown = support.clearRoom }
+Testqiao_qun_judgement = { tearDown = support.clearRoom }
 
-Testhanjin_qun_judgement.setup = function()
-  local r = support.initHanjinRoom()
+Testqiao_qun_judgement.setup = function()
+  local r = support.initQiaoRoom()
   inRoom(function()
     local skill_test = __dofile("../../../tests/support/skill_test.lua")
     skill_test.installBlankGenerals(r, KINGDOMS)
@@ -96,11 +96,11 @@ Testhanjin_qun_judgement.setup = function()
 end
 
 -- 帷幕：成为黑色锦囊目标时取消该目标，未取消的红色延时锦囊仍按普通牌移动。
-function Testhanjin_qun_judgement:testWeimuCancelsOnlyBlackTrickTarget()
+function Testqiao_qun_judgement:testWeimuCancelsOnlyBlackTrickTarget()
   local p1, p2 = p(1), p(2)
   grant(p2, WEIMU)
   local black = inRoom(function()
-    return room():printCard("hanjin__indulgence", Card.Spade, 6)
+    return room():printCard("qiao__indulgence", Card.Spade, 6)
   end)
   inRoom(function()
     room():useCard(UseCardData:new {
@@ -110,7 +110,7 @@ function Testhanjin_qun_judgement:testWeimuCancelsOnlyBlackTrickTarget()
   lu.assertEquals(inRoom(function() return room():getCardArea(black.id) end), Card.DiscardPile)
 
   local red = inRoom(function()
-    return room():printCard("hanjin__indulgence", Card.Heart, 6)
+    return room():printCard("qiao__indulgence", Card.Heart, 6)
   end)
   inRoom(function()
     room():useCard(UseCardData:new {
@@ -122,15 +122,15 @@ function Testhanjin_qun_judgement:testWeimuCancelsOnlyBlackTrickTarget()
 end
 
 -- 悲歌 · 红桃：弃一张牌后由受伤者判定，判定为红桃则其回复1点体力。
-function Testhanjin_qun_judgement:testBeigeHeartRecoversDamagedPlayer()
+function Testqiao_qun_judgement:testBeigeHeartRecoversDamagedPlayer()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, BEIGE)
   clearHand(p2)
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
-  seedJudgeCard("hanjin__jink", Card.Heart, 9)
+  seedJudgeCard("qiao__jink", Card.Heart, 9)
   inRoom(function() p2.hp = 3 end)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   FkTest.setNextReplies(p2, { "" })
 
   useSlash(p1, p2)
@@ -140,31 +140,31 @@ function Testhanjin_qun_judgement:testBeigeHeartRecoversDamagedPlayer()
 end
 
 -- 悲歌 · 黑桃：来源叠置是定向操作，已叠置不能再翻回平置。
-function Testhanjin_qun_judgement:testBeigeSpadeStacksSourceWithoutFlippingBack()
+function Testqiao_qun_judgement:testBeigeSpadeStacksSourceWithoutFlippingBack()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, BEIGE)
   clearHand(p2)
   clearHand(p3)
   give(p3, SLASH, Card.Club, 2)
   give(p3, SLASH, Card.Club, 3)
-  seedJudgeCard("hanjin__jink", Card.Spade, 9)
+  seedJudgeCard("qiao__jink", Card.Spade, 9)
   inRoom(function() p2.hp = 3 end)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ firstHandId(p3) }) })
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ firstHandId(p3) }) })
   FkTest.setNextReplies(p2, { "" })
   useSlash(p1, p2)
   lu.assertFalse(inRoom(function() return p1.faceup end))
 
   -- 第二次黑桃判定：已经叠置，不再翻回。
   inRoom(function() p2.hp = 3 end)
-  seedJudgeCard("hanjin__jink", Card.Spade, 8)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ firstHandId(p3) }) })
+  seedJudgeCard("qiao__jink", Card.Spade, 8)
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ firstHandId(p3) }) })
   FkTest.setNextReplies(p2, { "" })
   useSlash(p1, p2)
   lu.assertFalse(inRoom(function() return p1.faceup end))
 end
 
 -- 倾城：本阶段一次，交换双方全部手牌。
-function Testhanjin_qun_judgement:testQingchengSwapsAllHandcardsOncePerPhase()
+function Testqiao_qun_judgement:testQingchengSwapsAllHandcardsOncePerPhase()
   local p1, p2 = p(1), p(2)
   grant(p1, QINGCHENG)
   clearHand(p1)
@@ -189,13 +189,13 @@ function Testhanjin_qun_judgement:testQingchengSwapsAllHandcardsOncePerPhase()
 end
 
 -- 黄巾雷使 · 黑色：本回合首个非手牌伤害 +1。
-function Testhanjin_qun_judgement:testHuangjinBlackIncreasesFirstNonHandcardDamage()
+function Testqiao_qun_judgement:testHuangjinBlackIncreasesFirstNonHandcardDamage()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, HUANGJIN)
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
-  seedJudgeCard("hanjin__jink", Card.Spade, 9)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  seedJudgeCard("qiao__jink", Card.Spade, 9)
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   inRoom(function()
     local before = p2.hp
     room():damage { from = p1, to = p2, damage = 1 }
@@ -204,13 +204,13 @@ function Testhanjin_qun_judgement:testHuangjinBlackIncreasesFirstNonHandcardDama
 end
 
 -- 黄巾雷使 · 红色：伤害来源获得最终判定牌。
-function Testhanjin_qun_judgement:testHuangjinRedGivesJudgeCardToSource()
+function Testqiao_qun_judgement:testHuangjinRedGivesJudgeCardToSource()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, HUANGJIN)
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
-  local judgeId = seedJudgeCard("hanjin__jink", Card.Heart, 9)
-  FkTest.setNextReplies(p3, { "1", FkTest.ReplyDiscard({ paid }) })
+  local judgeId = seedJudgeCard("qiao__jink", Card.Heart, 9)
+  FkTest.setNextReplies(p3, { FkTest.ReplyDiscard({ paid }) })
   inRoom(function()
     local before = p2.hp
     room():damage { from = p1, to = p2, damage = 1 }
@@ -220,7 +220,7 @@ function Testhanjin_qun_judgement:testHuangjinRedGivesJudgeCardToSource()
 end
 
 -- 黄巾雷使 · 晚获翼从：本回合首个机会已在没有持有者时消耗，之后取得也不重开。
-function Testhanjin_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstChance()
+function Testqiao_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstChance()
   local p1, p2, p3 = p(1), p(2), p(3)
   lu.assertTrue(inRoom(function() return room():hasSkill(HISTORY) end))
   -- 无持有者时的首个合格伤害：记录器已常驻，机会被消耗。
@@ -230,13 +230,15 @@ function Testhanjin_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstC
   clearHand(p3)
   give(p3, SLASH, Card.Club, 2)
   local asked = 0
-  local original = room().askToSkillInvoke
+  local originalInvoke = room().askToSkillInvoke
+  local originalDiscard = room().askToDiscard
   room().askToSkillInvoke = function(self, player, params)
-    if params and params.skill_name == HUANGJIN then
-      asked = asked + 1
-      return true
-    end
-    return original(self, player, params)
+    if params and params.skill_name == HUANGJIN then asked = asked + 1 end
+    return originalInvoke(self, player, params)
+  end
+  room().askToDiscard = function(self, player, params)
+    if params and params.skill_name == HUANGJIN then asked = asked + 1 end
+    return originalDiscard(self, player, params)
   end
   local ok, err = pcall(function()
     inRoom(function()
@@ -246,27 +248,27 @@ function Testhanjin_qun_judgement:testHuangjinLateAcquisitionDoesNotReopenFirstC
     end)
     lu.assertEquals(asked, 0)
   end)
-  room().askToSkillInvoke = original
+  room().askToSkillInvoke = originalInvoke
+  room().askToDiscard = originalDiscard
   assert(ok, err)
 end
 
 -- 黄巾雷使 · 直接渠道：使用手牌的【杀】伤害不开放机会；同回合随后由技能
 -- 造成的伤害才是首次符合描述的伤害。
-function Testhanjin_qun_judgement:testHuangjinIgnoresHandcardSlashDamage()
+function Testqiao_qun_judgement:testHuangjinIgnoresHandcardSlashDamage()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p3, HUANGJIN)
   clearHand(p2)
   clearHand(p3)
   local paid = give(p3, SLASH, Card.Club, 2)
-  give(p2, "hanjin__jink", Card.Heart, 2)
-  seedJudgeCard("hanjin__jink", Card.Spade, 9)
+  give(p2, "qiao__jink", Card.Heart, 2)
+  seedJudgeCard("qiao__jink", Card.Spade, 9)
 
   local asked = 0
-  local original = room().askToSkillInvoke
-  room().askToSkillInvoke = function(self, player, params)
+  local original = room().askToDiscard
+  room().askToDiscard = function(self, player, params)
     if params and params.skill_name == HUANGJIN then
       asked = asked + 1
-      return true
     end
     return original(self, player, params)
   end
@@ -283,8 +285,8 @@ function Testhanjin_qun_judgement:testHuangjinIgnoresHandcardSlashDamage()
     end)
     lu.assertEquals(asked, 1)
   end)
-  room().askToSkillInvoke = original
+  room().askToDiscard = original
   assert(ok, err)
 end
 
-return { name = "hanjin_qun_judgement" }
+return { name = "qiao_qun_judgement" }

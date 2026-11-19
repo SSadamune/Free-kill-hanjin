@@ -1,8 +1,8 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-Testhanjin_ignore_times = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+Testqiao_ignore_times = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
-local CARD_NAME = "hanjin__thunder__slash"
+local CARD_NAME = "qiao__thunder__slash"
 
 local function physical(suit, number)
   return assert(table.find(Fk.cards, function(card)
@@ -42,19 +42,19 @@ local function use(room, player, target, card)
   return data
 end
 
-function Testhanjin_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSlashData()
+function Testqiao_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSlashData()
   local cards = table.filter(Fk.cards, function(card) return card.name == CARD_NAME end)
   lu.assertEquals(#cards, 2)
   local nine, ten = physical(Card.Spade, 9), physical(Card.Spade, 10)
-  lu.assertIsTrue(nine.package == Fk.packages.hanjin_cards)
-  lu.assertIsTrue(ten.package == Fk.packages.hanjin_cards)
-  lu.assertEquals(nine.extensionName or nine.package.extensionName, "hanjin")
+  lu.assertIsTrue(nine.package == Fk.packages.qiao_cards)
+  lu.assertIsTrue(ten.package == Fk.packages.qiao_cards)
+  lu.assertEquals(nine.extensionName or nine.package.extensionName, "qiao")
   lu.assertNotEquals(nine.id, ten.id)
   for _, card in ipairs({ nine, ten }) do
     lu.assertEquals(card.trueName, "slash")
     lu.assertEquals(card.type, Card.TypeBasic)
     lu.assertEquals(card.damage_type, fk.ThunderDamage)
-    lu.assertEquals(card.skill.name, "hanjin__thunder_slash_skill")
+    lu.assertEquals(card.skill.name, "qiao__thunder_slash_skill")
     lu.assertNotEquals(card.skill.name, "slash_skill")
     lu.assertNotEquals(card.skill.name, "thunder__slash_skill")
     lu.assertTrue(A.isAdaptationCard(card))
@@ -63,7 +63,7 @@ function Testhanjin_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSl
     lu.assertEquals(entries[1].condition, "gujun")
     lu.assertEquals(entries[1].effect, "ignore_times")
   end
-  local specs = table.filter(Fk.packages.hanjin_cards.card_specs, function(spec)
+  local specs = table.filter(Fk.packages.qiao_cards.card_specs, function(spec)
     return spec[1] == CARD_NAME
   end)
   lu.assertEquals(#specs, 2)
@@ -82,12 +82,12 @@ function Testhanjin_ignore_times:testFormalPackKeepsSpadeNineAndTenWithThunderSl
   lu.assertTrue(inRoom[ten.id])
 end
 
-function Testhanjin_ignore_times:testSelectionAndTargetingOnlyExemptTheLimitWithoutSideEffects()
+function Testqiao_ignore_times:testSelectionAndTargetingOnlyExemptTheLimitWithoutSideEffects()
   local room = FkTest.room
   local player, adjacent, distant = room.players[1], room.players[2], room.players[4]
   local card = physical(Card.Spade, 9)
   local events = 0
-  local skel = fk.CreateSkill { name = "#hanjin_test_ignore_times_selection_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_ignore_times_selection_observer" }
   skel:addEffect(A.Triggered, {
     global = true,
     can_refresh = function(self, event, target, player, data) return target == player end,
@@ -112,7 +112,7 @@ function Testhanjin_ignore_times:testSelectionAndTargetingOnlyExemptTheLimitWith
   end)
 end
 
-function Testhanjin_ignore_times:testGujunRequiresKnownKingdomAndNoLivingSameKingdomPlayer()
+function Testqiao_ignore_times:testGujunRequiresKnownKingdomAndNoLivingSameKingdomPlayer()
   local room = FkTest.room
   local player = room.players[1]
   local card = physical(Card.Spade, 9)
@@ -133,12 +133,12 @@ function Testhanjin_ignore_times:testGujunRequiresKnownKingdomAndNoLivingSameKin
   end)
 end
 
-function Testhanjin_ignore_times:testFullLimitUseUnderGujunDoesNotCountButStillDealsThunderDamage()
+function Testqiao_ignore_times:testFullLimitUseUnderGujunDoesNotCountButStillDealsThunderDamage()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 9)
   local damageType
-  local skel = fk.CreateSkill { name = "#hanjin_test_ignore_times_damage_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_ignore_times_damage_observer" }
   skel:addEffect(fk.DamageInflicted, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -167,7 +167,7 @@ function Testhanjin_ignore_times:testFullLimitUseUnderGujunDoesNotCountButStillD
   lu.assertTrue(A.getResult(data).entries[1].satisfied)
 end
 
-function Testhanjin_ignore_times:testUnderTheLimitGujunUseAlsoDoesNotCount()
+function Testqiao_ignore_times:testUnderTheLimitGujunUseAlsoDoesNotCount()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 10)
@@ -184,7 +184,7 @@ function Testhanjin_ignore_times:testUnderTheLimitGujunUseAlsoDoesNotCount()
   lu.assertEquals(A.getResult(data).triggered_count, 1)
 end
 
-function Testhanjin_ignore_times:testWithoutGujunFullLimitIsUnavailableAndNormalUseCounts()
+function Testqiao_ignore_times:testWithoutGujunFullLimitIsUnavailableAndNormalUseCounts()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 9)
@@ -206,7 +206,7 @@ function Testhanjin_ignore_times:testWithoutGujunFullLimitIsUnavailableAndNormal
   lu.assertNil(A.getResult(data).effects.ignore_times)
 end
 
-function Testhanjin_ignore_times:testGujunLostAfterOneExemptUseMakesTheNextUseCountAndThenBlock()
+function Testqiao_ignore_times:testGujunLostAfterOneExemptUseMakesTheNextUseCountAndThenBlock()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local nine, ten = physical(Card.Spade, 9), physical(Card.Spade, 10)
@@ -234,7 +234,7 @@ function Testhanjin_ignore_times:testGujunLostAfterOneExemptUseMakesTheNextUseCo
 end
 
 local function lateStateChange(room, player, kingdom)
-  local skel = fk.CreateSkill { name = "#hanjin_test_ignore_times_late_state_change" }
+  local skel = fk.CreateSkill { name = "#qiao_test_ignore_times_late_state_change" }
   skel:addEffect(fk.PreCardUse, {
     global = true, priority = -200,
     can_trigger = function(self, event, target, p, data)
@@ -248,7 +248,7 @@ local function lateStateChange(room, player, kingdom)
   room:addSkill(skill)
 end
 
-function Testhanjin_ignore_times:testLockedGujunSurvivesAStateLossBeforeResolution()
+function Testqiao_ignore_times:testLockedGujunSurvivesAStateLossBeforeResolution()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 9)
@@ -266,7 +266,7 @@ function Testhanjin_ignore_times:testLockedGujunSurvivesAStateLossBeforeResoluti
   lu.assertTrue(A.getResult(data).entries[1].triggered)
 end
 
-function Testhanjin_ignore_times:testLockedMissingGujunCannotBeRetroactivelyEnabled()
+function Testqiao_ignore_times:testLockedMissingGujunCannotBeRetroactivelyEnabled()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 10)
@@ -285,7 +285,7 @@ function Testhanjin_ignore_times:testLockedMissingGujunCannotBeRetroactivelyEnab
   lu.assertFalse(A.getResult(data).entries[1].triggered)
 end
 
-function Testhanjin_ignore_times:testDistanceIsStillEnforcedWhenTimesAreBypassed()
+function Testqiao_ignore_times:testDistanceIsStillEnforcedWhenTimesAreBypassed()
   local room = FkTest.room
   local player, adjacent, distant = room.players[1], room.players[2], room.players[4]
   local card = physical(Card.Spade, 9)
@@ -301,7 +301,7 @@ function Testhanjin_ignore_times:testDistanceIsStillEnforcedWhenTimesAreBypassed
   end)
 end
 
-function Testhanjin_ignore_times:testPaoxiaoOnlyBypassesLimitAndStillCounts()
+function Testqiao_ignore_times:testPaoxiaoOnlyBypassesLimitAndStillCounts()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 9)
@@ -325,7 +325,7 @@ function Testhanjin_ignore_times:testPaoxiaoOnlyBypassesLimitAndStillCounts()
   lu.assertFalse(A.getResult(data).triggered)
 end
 
-function Testhanjin_ignore_times:testCrossbowOnlyBypassesLimitAndStillCounts()
+function Testqiao_ignore_times:testCrossbowOnlyBypassesLimitAndStillCounts()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = physical(Card.Spade, 10)
@@ -348,7 +348,7 @@ function Testhanjin_ignore_times:testCrossbowOnlyBypassesLimitAndStillCounts()
   lu.assertFalse(A.getResult(data).triggered)
 end
 
-function Testhanjin_ignore_times:testOriginalAdaptationOrderEmitsOneIgnoreTimesSuccessEvent()
+function Testqiao_ignore_times:testOriginalAdaptationOrderEmitsOneIgnoreTimesSuccessEvent()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = Fk:cloneCard(CARD_NAME)
@@ -357,7 +357,7 @@ function Testhanjin_ignore_times:testOriginalAdaptationOrderEmitsOneIgnoreTimesS
     { id = "draw", condition = "canqu", effect = "draw" },
   })
   local seen = {}
-  local skel = fk.CreateSkill { name = "#hanjin_test_ignore_times_order_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_ignore_times_order_observer" }
   skel:addEffect(A.Triggered, {
     global = true,
     can_refresh = function(self, event, target, player, data) return target == player end,
@@ -384,7 +384,7 @@ function Testhanjin_ignore_times:testOriginalAdaptationOrderEmitsOneIgnoreTimesS
   lu.assertEquals(A.getResult(data).effects.ignore_times, 1)
 end
 
-function Testhanjin_ignore_times:testOtherEntriesKeepOneTokenOneEntryRule()
+function Testqiao_ignore_times:testOtherEntriesKeepOneTokenOneEntryRule()
   local room = FkTest.room
   local player, target = room.players[1], room.players[2]
   local card = Fk:cloneCard(CARD_NAME)
@@ -393,7 +393,7 @@ function Testhanjin_ignore_times:testOtherEntriesKeepOneTokenOneEntryRule()
     { id = "damage", condition = "canqu", effect = "damage" },
   })
   local seen = {}
-  local skel = fk.CreateSkill { name = "#hanjin_test_ignore_times_token_observer" }
+  local skel = fk.CreateSkill { name = "#qiao_test_ignore_times_token_observer" }
   skel:addEffect(A.Triggered, {
     global = true,
     can_refresh = function(self, event, target, player, data) return target == player end,
@@ -418,4 +418,4 @@ function Testhanjin_ignore_times:testOtherEntriesKeepOneTokenOneEntryRule()
   lu.assertEquals(A.getResult(data).entries[2].ignored_by, "test_source")
 end
 
-return { name = "hanjin_ignore_times" }
+return { name = "qiao_ignore_times" }

@@ -1,14 +1,14 @@
 -- Full-table shells for deck-policy tests only. They are not formal HanJin
 -- content, are never added to the mode whitelist, and therefore never enter a
 -- real room's draw pile. They let the deck builder be exercised end-to-end
--- while pkg/hanjin_cards is still being completed.
-if Fk.packages.hanjin_deck_test_content then return end
-local pack = Package:new("hanjin_deck_test_content", Package.CardPack)
-pack.extensionName = "hanjin"
+-- while pkg/qiao_cards is still being completed.
+if Fk.packages.qiao_deck_test_content then return end
+local pack = Package:new("qiao_deck_test_content", Package.CardPack)
+pack.extensionName = "qiao"
 Fk.packages[pack.name] = pack
 table.insert(Fk.package_names, pack.name)
 
-local Cards = require "packages.hanjin.pkg.hanjin_mode.rules.cards"
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 -- Resolve formal identities first so test-only registrations cannot shadow them.
 Cards.installCardMetadata()
 
@@ -32,7 +32,7 @@ end
 local counter = 0
 local function nextName(prefix)
   counter = counter + 1
-  return "hanjin_deck_test__" .. prefix .. "_" .. counter
+  return "qiao_deck_test__" .. prefix .. "_" .. counter
 end
 
 local function add(prefix, display, ctype, subtype, suit, number, extra)
@@ -69,7 +69,7 @@ for _, position in ipairs(Cards.basePositions) do
   end
   if marked then extra[Cards.HEJI_KEY] = true end
   if group then
-    extra.hanjin_adaptation = { { condition = group.condition, effect = group.effect } }
+    extra.qiao_adaptation = { { condition = group.condition, effect = group.effect } }
   end
   local card = add("base", display, special and Card.TypeEquip or Card.TypeBasic,
     special and Card.SubtypeWeapon or Card.SubtypeNone, position.suit, position.number, extra)

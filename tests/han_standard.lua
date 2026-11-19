@@ -2,11 +2,11 @@
 -- 默认国战套件用例；复用真实汉晋测试房间、真实目标/伤害/回合事件。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local SY = "hanjin__skill_han002_1"
-local DS = "hanjin__skill_han002_2"
-local JB = "hanjin__skill_han018_1"
+local SY = "qiao__skill_han002_1"
+local DS = "qiao__skill_han002_2"
+local JB = "qiao__skill_han018_1"
 
-Testhanjin_han_standard = {}
+Testqiao_han_standard = {}
 
 local function inRoom(fn)
   local result
@@ -51,14 +51,14 @@ local function setHand(room, player, specs)
 end
 
 local function prepare()
-  local room = support.createRoom { mode = "hanjin_heg_mode" }
+  local room = support.createRoom { mode = "qiao_heg_mode" }
   inRoom(function()
     for i, player in ipairs(room.players) do
       local kingdom = i <= 3 and "han" or "wei"
       player:revealGeneral(false, true)
       player:revealGeneral(true, true)
-      room:changeHero(player, "hanjin_test__han_1", true, false, false, false, false)
-      room:changeHero(player, "hanjin_test__han_2", true, true, false, false, false)
+      room:changeHero(player, "qiao_test__han_1", true, false, false, false, false)
+      room:changeHero(player, "qiao_test__han_2", true, true, false, false, false)
       player.kingdom = kingdom
       room:setPlayerProperty(player, "kingdom", kingdom)
       room:setPlayerMark(player, "__heg_general", player.general)
@@ -67,10 +67,10 @@ local function prepare()
       room:setPlayerMark(player, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(player, "__heg_wild", 0)
     end
-    room:changeHero(p1(), "hanjin__han002", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han002")
-    room:changeHero(p2(), "hanjin__han018", true, false, false, false, false)
-    room:setPlayerMark(p2(), "__heg_general", "hanjin__han018")
+    room:changeHero(p1(), "qiao_heg__han002", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han002")
+    room:changeHero(p2(), "qiao_heg__han018", true, false, false, false, false)
+    room:setPlayerMark(p2(), "__heg_general", "qiao_heg__han018")
     for _, player in ipairs(room.players) do player.hp = player.maxHp end
     p1().hp = 3
     p2().hp = 4
@@ -78,10 +78,10 @@ local function prepare()
   return room
 end
 
-Testhanjin_han_standard.setup = function()
+Testqiao_han_standard.setup = function()
   prepare()
 end
-Testhanjin_han_standard.tearDown = support.clearRoom
+Testqiao_han_standard.tearDown = support.clearRoom
 
 local function useSlash(room, from, to)
   inRoom(function()
@@ -93,13 +93,13 @@ local function useSlash(room, from, to)
   end)
 end
 
-function Testhanjin_han_standard:testFixtureHasFormalSkills()
+function Testqiao_han_standard:testFixtureHasFormalSkills()
   lu.assertTrue(p1():hasSkill(SY))
   lu.assertTrue(p1():hasSkill(DS))
   lu.assertTrue(p2():hasSkill(JB))
 end
 
-function Testhanjin_han_standard:testShiyuanGreaterBranchOncePerTurn()
+function Testqiao_han_standard:testShiyuanGreaterBranchOncePerTurn()
   local room = FkTest.room
   setHand(room, p1(), {})
   setHand(room, p2(), {})
@@ -118,7 +118,7 @@ function Testhanjin_han_standard:testShiyuanGreaterBranchOncePerTurn()
   lu.assertEquals(p1():usedSkillTimes(SY, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_han_standard:testShiyuanNotGreaterBranchOncePerTurn()
+function Testqiao_han_standard:testShiyuanNotGreaterBranchOncePerTurn()
   local room = FkTest.room
   setHand(room, p1(), {})
   setHand(room, p2(), {})
@@ -136,7 +136,7 @@ function Testhanjin_han_standard:testShiyuanNotGreaterBranchOncePerTurn()
   lu.assertEquals(p1():usedSkillTimes(SY, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_han_standard:testDushiOnlyProhibitsOthersPeach()
+function Testqiao_han_standard:testDushiOnlyProhibitsOthersPeach()
   local room = FkTest.room
   p1().hp = p1().maxHp - 2
   p2().hp = p2().maxHp - 2
@@ -163,7 +163,7 @@ function Testhanjin_han_standard:testDushiOnlyProhibitsOthersPeach()
   lu.assertEquals(p2().hp, before + 1)
 end
 
-function Testhanjin_han_standard:testDushiHiddenKillerGetsSkill()
+function Testqiao_han_standard:testDushiHiddenKillerGetsSkill()
   local room = FkTest.room
   p1().hp = 1
   inRoom(function()
@@ -173,7 +173,7 @@ function Testhanjin_han_standard:testDushiHiddenKillerGetsSkill()
   lu.assertTrue(p2():hasSkill(DS, false, true))
 end
 
-function Testhanjin_han_standard:testJibingCountsSameKingdomIncludingSelfAndPenalizes()
+function Testqiao_han_standard:testJibingCountsSameKingdomIncludingSelfAndPenalizes()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p2(), "han")
@@ -191,7 +191,7 @@ function Testhanjin_han_standard:testJibingCountsSameKingdomIncludingSelfAndPena
   lu.assertEquals(p2().hp, 3)
 end
 
-function Testhanjin_han_standard:testJibingDeclineDoesNotDrawExtraOrLoseHp()
+function Testqiao_han_standard:testJibingDeclineDoesNotDrawExtraOrLoseHp()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p2(), "han")
@@ -208,7 +208,7 @@ function Testhanjin_han_standard:testJibingDeclineDoesNotDrawExtraOrLoseHp()
   lu.assertEquals(p2().hp, 4)
 end
 
-function Testhanjin_han_standard:testJibingDamageAtLeastXNoHpLoss()
+function Testqiao_han_standard:testJibingDamageAtLeastXNoHpLoss()
   local room = FkTest.room
   setKingdom(room, p1(), "han")
   setKingdom(room, p2(), "han")
@@ -219,7 +219,7 @@ function Testhanjin_han_standard:testJibingDamageAtLeastXNoHpLoss()
   p2().hp = 4
 
   -- 真实伤害事件，发生在摸牌阶段结束、回合结束之前。
-  local name = "#hanjin_han_standard_draw_damage_probe"
+  local name = "#qiao_han_standard_draw_damage_probe"
   local skel = fk.CreateSkill { name = name }
   skel:addEffect(fk.EventPhaseEnd, {
     global = true,
@@ -244,4 +244,4 @@ function Testhanjin_han_standard:testJibingDamageAtLeastXNoHpLoss()
   lu.assertEquals(p2().hp, 4)
 end
 
-return { name = "hanjin_han_standard" }
+return { name = "qiao_han_standard" }

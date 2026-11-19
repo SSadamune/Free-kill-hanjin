@@ -1,20 +1,20 @@
 -- 群势力标准包第一批（本批 A）：除疠、离间、闭月、猛撼、雷击、雄异、死谏、随势。
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
--- 规则依据：rules/standard-generals.md 群区、rules/generals/qun016-tianfeng.md、
+-- 规则依据：docs/rules/standard-generals.md 群区、docs/rules/generals/qun016-tianfeng.md、
 -- docs/development/implementation/generals/qun-standard.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local CHULI = "hanjin__skill_qun001_2"
-local LIJIAN = "hanjin__skill_qun003_1"
-local BIYUE = "hanjin__skill_qun003_2"
-local MENGHAN = "hanjin__skill_qun008_2"
-local LEIJI = "hanjin__skill_qun010_1"
-local XIONGYI = "hanjin__skill_qun013_2"
-local SIJIAN = "hanjin__skill_qun016_1"
-local SUISHI = "hanjin__skill_qun016_2"
-local QINGCHENG = "hanjin__skill_qun018_2"
+local CHULI = "qiao__skill_qun001_2"
+local LIJIAN = "qiao__skill_qun003_1"
+local BIYUE = "qiao__skill_qun003_2"
+local MENGHAN = "qiao__skill_qun008_2"
+local LEIJI = "qiao__skill_qun010_1"
+local XIONGYI = "qiao__skill_qun013_2"
+local SIJIAN = "qiao__skill_qun016_1"
+local SUISHI = "qiao__skill_qun016_2"
+local QINGCHENG = "qiao__skill_qun018_2"
 
 local DEFAULT_KINGDOMS = { "qun", "qun", "wei", "wei", "shu", "shu", "wu", "wu" }
 
@@ -124,7 +124,7 @@ local function installDuelProbe(name)
   skel:addEffect(fk.CardUsing, {
     global = true,
     can_trigger = function(self, event, target, player, data)
-      return data.card ~= nil and data.card.name == "hanjin__duel"
+      return data.card ~= nil and data.card.name == "qiao__duel"
     end,
     on_cost = Util.TrueFunc,
     on_use = function(self, event, target, player, data)
@@ -144,23 +144,23 @@ local function installDuelProbe(name)
   return seen
 end
 
-Testhanjin_qun_basic = { tearDown = support.clearRoom }
+Testqiao_qun_basic = { tearDown = support.clearRoom }
 
-Testhanjin_qun_basic.setup = function()
-  local r = support.initHanjinRoom()
+Testqiao_qun_basic.setup = function()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
 end
 
 -- 除疠：两名候选势力互不相同；只有真正失去黑桃牌的角色摸一张。
-function Testhanjin_qun_basic:testChuliTwoCandidatesSpadeDraws()
+function Testqiao_qun_basic:testChuliTwoCandidatesSpadeDraws()
   local p1, p3, p5 = p(1), p(3), p(5) -- 1 qun, 3 wei, 5 shu
   clearCards(p1)
   clearCards(p3)
   clearCards(p5)
   grant(p1, CHULI)
-  local mine = give(p1, "hanjin__jink", Card.Heart, 2)
-  local spade = give(p3, "hanjin__jink", Card.Spade, 3)
-  local heart = give(p5, "hanjin__jink", Card.Heart, 4)
+  local mine = give(p1, "qiao__jink", Card.Heart, 2)
+  local spade = give(p3, "qiao__jink", Card.Spade, 3)
+  local heart = give(p5, "qiao__jink", Card.Heart, 4)
   setPlayPhase(p1)
 
   local picks = {}
@@ -180,9 +180,9 @@ function Testhanjin_qun_basic:testChuliTwoCandidatesSpadeDraws()
   lu.assertEquals(room():getCardArea(heart), Card.DiscardPile)
 end
 
--- 离间：使用正式 hanjin__duel，由后选男性使用、先选者为目标；
+-- 离间：使用正式 qiao__duel，由后选男性使用、先选者为目标；
 -- 原生 unoffsetable 覆盖该决斗，决斗内仍可打【杀】。
-function Testhanjin_qun_basic:testLijianFormalDuelUsedBySelectedMale()
+function Testqiao_qun_basic:testLijianFormalDuelUsedBySelectedMale()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
@@ -193,7 +193,7 @@ function Testhanjin_qun_basic:testLijianFormalDuelUsedBySelectedMale()
     p2.hp, p3.hp = p2.maxHp, p3.maxHp
   end)
   grant(p1, LIJIAN)
-  local pay = give(p1, "hanjin__jink", Card.Heart, 2)
+  local pay = give(p1, "qiao__jink", Card.Heart, 2)
   setPlayPhase(p1)
   local seen = installDuelProbe("#qun_lijian_probe")
   FkTest.setNextReplies(p2, { "" })
@@ -203,7 +203,7 @@ function Testhanjin_qun_basic:testLijianFormalDuelUsedBySelectedMale()
 
   lu.assertEquals(room():getCardArea(pay), Card.DiscardPile)
   lu.assertEquals(#seen, 1)
-  lu.assertEquals(seen[1].name, "hanjin__duel") -- 正式牌，不是上游决斗
+  lu.assertEquals(seen[1].name, "qiao__duel") -- 正式牌，不是上游决斗
   lu.assertEquals(seen[1].from, p3.id)          -- 由后选男性使用
   lu.assertEquals(seen[1].tos[1], p2.id)
   lu.assertTrue(table.contains(seen[1].unoffsetable, p2.id)) -- 原生不可抵消
@@ -212,13 +212,13 @@ function Testhanjin_qun_basic:testLijianFormalDuelUsedBySelectedMale()
 end
 
 -- 猛撼：弃置基本牌后目标获得此【杀】，已声明用牌继续结算。
-function Testhanjin_qun_basic:testMenghanBasicObtainsSlashAndUseContinues()
+function Testqiao_qun_basic:testMenghanBasicObtainsSlashAndUseContinues()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
   grant(p1, MENGHAN)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 7)
-  local basic = give(p2, "hanjin__jink", Card.Heart, 5)
+  local slash = give(p1, "qiao__slash", Card.Spade, 7)
+  local basic = give(p2, "qiao__jink", Card.Heart, 5)
   inRoom(function() p2.hp = p2.maxHp end)
   FkTest.setNextReplies(p2, { "" })
 
@@ -237,7 +237,7 @@ function Testhanjin_qun_basic:testMenghanBasicObtainsSlashAndUseContinues()
 end
 
 -- 雷击：一次「使用闪」与一次「打出闪」各只询问一次，黑桃造成 2 点雷电伤害。
-function Testhanjin_qun_basic:testLeijiOneAskPerJinkAndSpadeDamage()
+function Testqiao_qun_basic:testLeijiOneAskPerJinkAndSpadeDamage()
   local p1, p2, p3 = p(1), p(2), p(3)
   clearCards(p1)
   clearCards(p2)
@@ -246,10 +246,10 @@ function Testhanjin_qun_basic:testLeijiOneAskPerJinkAndSpadeDamage()
   inRoom(function()
     p2.hp, p3.hp = p2.maxHp, p3.maxHp
   end)
-  local jink1 = Fk:getCardById(give(p1, "hanjin__jink", Card.Heart, 2))
-  local jink2 = Fk:getCardById(give(p1, "hanjin__jink", Card.Diamond, 3))
-  seedJudgeCard("hanjin__jink", Card.Spade, 9)
-  seedJudgeCard("hanjin__jink", Card.Spade, 8)
+  local jink1 = Fk:getCardById(give(p1, "qiao__jink", Card.Heart, 2))
+  local jink2 = Fk:getCardById(give(p1, "qiao__jink", Card.Diamond, 3))
+  seedJudgeCard("qiao__jink", Card.Spade, 9)
+  seedJudgeCard("qiao__jink", Card.Spade, 8)
 
   local asks = 0
   withStubs(LEIJI, {
@@ -278,7 +278,7 @@ function Testhanjin_qun_basic:testLeijiOneAskPerJinkAndSpadeDamage()
 end
 
 -- 雄异：同势力（含自己）各摸三张；并列最少时回复 1 点体力。
-function Testhanjin_qun_basic:testXiongyiSameKingdomDrawsAndTieMinimumRecovers()
+function Testqiao_qun_basic:testXiongyiSameKingdomDrawsAndTieMinimumRecovers()
   local p1, p2 = p(1), p(2) -- 均为 qun，qun 人数与其余势力并列最少
   clearCards(p1)
   clearCards(p2)
@@ -296,17 +296,17 @@ end
 
 -- 性别元数据：真实双将以女性为主将时，离间/倾城的目标过滤拒女性、接受男性。
 -- 这里直接读两个技能的 target_filter，而不是镜像性别表。
-function Testhanjin_qun_basic:testMaleOnlyFiltersUseRegisteredGeneralGender()
+function Testqiao_qun_basic:testMaleOnlyFiltersUseRegisteredGeneralGender()
   local p1, p2, p3 = p(1), p(2), p(3)
   inRoom(function()
     skill_test.installDualGenerals(room(), p1, {
-      main = "hanjin__qun003", deputy = "hanjin_test__wei_1", kingdom = "qun",
+      main = "qiao_heg__qun003", deputy = "qiao_test__wei_1", kingdom = "qun",
     })
     skill_test.installDualGenerals(room(), p2, {
-      main = "hanjin__qun012", deputy = "hanjin_test__wei_2", kingdom = "qun",
+      main = "qiao_heg__qun012", deputy = "qiao_test__wei_2", kingdom = "qun",
     })
     skill_test.installDualGenerals(room(), p3, {
-      main = "hanjin__qun002", deputy = "hanjin_test__wei_1", kingdom = "qun",
+      main = "qiao_heg__qun002", deputy = "qiao_test__wei_1", kingdom = "qun",
     })
   end)
   clearCards(p1)
@@ -368,13 +368,13 @@ end
 
 -- 除疠客户端可用性：真实 ClientPlayer 没有 room 字段，出牌阶段走
 -- ReqPlayCard.setup → skillButtonValidity → ActiveSkill:canUse。
-function Testhanjin_qun_basic:testChuliClientAvailabilityWithoutPlayerRoom()
+function Testqiao_qun_basic:testChuliClientAvailabilityWithoutPlayerRoom()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
   grant(p1, CHULI)
-  local mine = give(p1, "hanjin__jink", Card.Heart, 2)
-  give(p2, "hanjin__jink", Card.Spade, 3)
+  local mine = give(p1, "qiao__jink", Card.Heart, 2)
+  give(p2, "qiao__jink", Card.Spade, 3)
   inRoom(function() p1.phase = Player.Play end)
 
   withClientRoom(room(), function(clients)
@@ -411,31 +411,31 @@ end
 
 -- 五个同类主动入口的真实客户端按钮校验：乱武、狂斧、祸水、倾城、骁逆。
 -- 每个技能在当前场景至少一个合法用例；倾城另外触达目标筛选（男收女拒）。
-function Testhanjin_qun_basic:testQunActiveSkillButtonsOnRealClientPlayer()
+function Testqiao_qun_basic:testQunActiveSkillButtonsOnRealClientPlayer()
   local p1, p2, p3, p4 = p(1), p(2), p(3), p(4)
   for _, player in ipairs({ p1, p2, p3, p4 }) do clearCards(player) end
   -- p4 换成女性主将（蔡文姬），用于倾城目标筛选的拒绝分支；势力保持 wei，
   -- 以便骁逆仍有「其他势力」候选。
   inRoom(function()
     skill_test.installDualGenerals(room(), p4, {
-      main = "hanjin__qun012", deputy = "hanjin_test__wei_2", kingdom = "wei",
+      main = "qiao_heg__qun012", deputy = "qiao_test__wei_2", kingdom = "wei",
     })
   end)
   clearCards(p4)
-  give(p1, "hanjin__jink", Card.Spade, 2)   -- 祸水支付用的黑牌
-  give(p1, "hanjin__peach", Card.Heart, 3)  -- 倾城的手牌数比较
-  give(p2, "hanjin__jink", Card.Heart, 4)
-  give(p4, "hanjin__jink", Card.Heart, 5)
+  give(p1, "qiao__jink", Card.Spade, 2)   -- 祸水支付用的黑牌
+  give(p1, "qiao__peach", Card.Heart, 3)  -- 倾城的手牌数比较
+  give(p2, "qiao__jink", Card.Heart, 4)
+  give(p4, "qiao__jink", Card.Heart, 5)
   local equipId = give(p2, "jueying", Card.Spade, 5) -- 狂斧需要场上装备
   inRoom(function() room():moveCardIntoEquip(p2, equipId, "test", true, p2) end)
   inRoom(function() p1.phase = Player.Play end)
 
   local cases = {
-    { name = "hanjin__skill_qun007_2", label = "乱武" },
-    { name = "hanjin__skill_qun017_1", label = "狂斧" },
-    { name = "hanjin__skill_qun018_1", label = "祸水" },
-    { name = "hanjin__skill_qun018_2", label = "倾城" },
-    { name = "hanjin__skill_qun027_2", label = "骁逆" },
+    { name = "qiao__skill_qun007_2", label = "乱武" },
+    { name = "qiao__skill_qun017_1", label = "狂斧" },
+    { name = "qiao__skill_qun018_1", label = "祸水" },
+    { name = "qiao__skill_qun018_2", label = "倾城" },
+    { name = "qiao__skill_qun027_2", label = "骁逆" },
   }
 
   withClientRoom(room(), function(clients)
@@ -474,12 +474,12 @@ local function installProhibitSlashTargets()
   end
 end
 
-function Testhanjin_qun_basic:testProhibitedSlashTargetsDisableClientButtons()
+function Testqiao_qun_basic:testProhibitedSlashTargetsDisableClientButtons()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
-  give(p1, "hanjin__jink", Card.Spade, 2)
-  give(p2, "hanjin__jink", Card.Heart, 4)
+  give(p1, "qiao__jink", Card.Spade, 2)
+  give(p2, "qiao__jink", Card.Heart, 4)
   local equipId = give(p2, "jueying", Card.Spade, 5)
   inRoom(function() room():moveCardIntoEquip(p2, equipId, "test", true, p2) end)
   inRoom(function() p1.phase = Player.Play end)
@@ -487,7 +487,7 @@ function Testhanjin_qun_basic:testProhibitedSlashTargetsDisableClientButtons()
 
   withClientRoom(room(), function(clients)
     local me = clients[1]
-    for _, name in ipairs({ "hanjin__skill_qun017_1", "hanjin__skill_qun027_2" }) do
+    for _, name in ipairs({ "qiao__skill_qun017_1", "qiao__skill_qun027_2" }) do
       local handler = clientPlayHandler(me, name)
       lu.assertFalse(handler:skillButtonValidity(name),
         name .. "：全体目标被禁止时客户端应禁用")
@@ -497,7 +497,7 @@ function Testhanjin_qun_basic:testProhibitedSlashTargetsDisableClientButtons()
 end
 
 -- 闭月：结束阶段入口按摸牌前是否空手决定张数。
-function Testhanjin_qun_basic:testBiyueEmptyHandDrawsTwo()
+function Testqiao_qun_basic:testBiyueEmptyHandDrawsTwo()
   local p1 = p(1)
   grant(p1, BIYUE)
   clearCards(p1)
@@ -506,26 +506,26 @@ function Testhanjin_qun_basic:testBiyueEmptyHandDrawsTwo()
   lu.assertEquals(p1:getHandcardNum(), 2)
 end
 
-function Testhanjin_qun_basic:testBiyueWithHandDrawsOne()
+function Testqiao_qun_basic:testBiyueWithHandDrawsOne()
   local p1 = p(1)
   grant(p1, BIYUE)
   clearCards(p1)
-  give(p1, "hanjin__slash", Card.Spade, 3)
+  give(p1, "qiao__slash", Card.Spade, 3)
   FkTest.setNextReplies(p1, { "1" })
   triggerPhaseStart(p1, Player.Finish)
   lu.assertEquals(p1:getHandcardNum(), 2) -- 原有 1 张 + 摸 1 张
 end
 
 -- 死谏：失去最后的手牌后，弃置一名其他角色的一张牌；只含手牌和装备。
-function Testhanjin_qun_basic:testSijianLastHandcardDiscardsOtherCard()
+function Testqiao_qun_basic:testSijianLastHandcardDiscardsOtherCard()
   local p1, p2 = p(1), p(2)
   -- 先清空再授予死谏：清空手牌本身就是“失去最后的手牌”，会在授予后误触发。
   clearCards(p1)
   clearCards(p2)
   grant(p1, SIJIAN)
-  local mine = give(p1, "hanjin__slash", Card.Spade, 3)
-  local victim = give(p2, "hanjin__jink", Card.Heart, 4)
-  give(p2, "hanjin__peach", Card.Heart, 5)
+  local mine = give(p1, "qiao__slash", Card.Spade, 3)
+  local victim = give(p2, "qiao__jink", Card.Heart, 4)
+  give(p2, "qiao__peach", Card.Heart, 5)
 
   local invoked = 0
   withStubs(SIJIAN, {
@@ -542,14 +542,14 @@ function Testhanjin_qun_basic:testSijianLastHandcardDiscardsOtherCard()
 end
 
 -- 死谏：手里还有牌时失去一张手牌不触发，避免“空手任意移动”重复发动。
-function Testhanjin_qun_basic:testSijianNotTriggeredWhileStillHoldingHandcards()
+function Testqiao_qun_basic:testSijianNotTriggeredWhileStillHoldingHandcards()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
   grant(p1, SIJIAN)
-  local one = give(p1, "hanjin__slash", Card.Spade, 3)
-  give(p1, "hanjin__jink", Card.Heart, 4)
-  give(p2, "hanjin__peach", Card.Heart, 5)
+  local one = give(p1, "qiao__slash", Card.Spade, 3)
+  give(p1, "qiao__jink", Card.Heart, 4)
+  give(p2, "qiao__peach", Card.Heart, 5)
 
   local invoked = 0
   withStubs(SIJIAN, {
@@ -563,7 +563,7 @@ function Testhanjin_qun_basic:testSijianNotTriggeredWhileStillHoldingHandcards()
 end
 
 -- 随势：其他角色进入濒死时，来源与自己势力相同则摸一张牌。
-function Testhanjin_qun_basic:testSuishiEnterDyingDrawsForSameKingdomKiller()
+function Testqiao_qun_basic:testSuishiEnterDyingDrawsForSameKingdomKiller()
   local p1, p2 = p(1), p(2) -- 同为 qun
   grant(p1, SUISHI)
   clearCards(p1)
@@ -576,18 +576,18 @@ function Testhanjin_qun_basic:testSuishiEnterDyingDrawsForSameKingdomKiller()
 end
 
 -- 随势：同势力其他角色死亡时，本人在失去体力和弃置所有手牌中选择。
-function Testhanjin_qun_basic:testSuishiDeathChoiceDiscardsAllHandcards()
+function Testqiao_qun_basic:testSuishiDeathChoiceDiscardsAllHandcards()
   local p1, p2 = p(1), p(2) -- 同为 qun
   grant(p1, SUISHI)
   clearCards(p1)
   clearCards(p2)
-  give(p1, "hanjin__slash", Card.Spade, 3)
-  give(p1, "hanjin__jink", Card.Heart, 4)
+  give(p1, "qiao__slash", Card.Spade, 3)
+  give(p1, "qiao__jink", Card.Heart, 4)
   local hp = p1.hp
 
   skill_test.withSkillRequests(room(), SUISHI, {
     askToChoice = function()
-      return "#hanjin__skill_qun016_2-discard"
+      return "#qiao__skill_qun016_2-discard"
     end,
   }, function()
     inRoom(function()
@@ -599,4 +599,4 @@ function Testhanjin_qun_basic:testSuishiDeathChoiceDiscardsAllHandcards()
   lu.assertEquals(p1.hp, hp)
 end
 
-return { name = "hanjin_qun_basic" }
+return { name = "qiao_qun_basic" }

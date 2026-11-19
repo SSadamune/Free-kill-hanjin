@@ -1,26 +1,26 @@
 -- JIN011/JIN012/JIN014 晋标准包首批：果毅、慈威、弘训、膂力、夺气。
--- 规则依据：rules/generals/jin011-zhanghu-yuechen.md、
--- rules/generals/jin012-yanghuiyu.md、rules/generals/jin014-wenyang.md。
+-- 规则依据：docs/rules/generals/jin011-zhanghu-yuechen.md、
+-- docs/rules/generals/jin012-yanghuiyu.md、docs/rules/generals/jin014-wenyang.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local GUOYI = "hanjin__skill_jin011_1"
+local GUOYI = "qiao__skill_jin011_1"
 local GUOYI_ACTIVE = GUOYI
-local GUOYI_EQUIP = "hanjin__skill_jin011_1-equip"
-local GUOYI_HAND = "hanjin__skill_jin011_1-hand"
+local GUOYI_EQUIP = "qiao__skill_jin011_1-equip"
+local GUOYI_HAND = "qiao__skill_jin011_1-hand"
 
-local CIWEI = "hanjin__skill_jin012_1"
+local CIWEI = "qiao__skill_jin012_1"
 
-local HONGXUN = "hanjin__skill_jin012_2"
+local HONGXUN = "qiao__skill_jin012_2"
 
-local LVLI = "hanjin__skill_jin014_1"
-local LVLI_DRAW = "hanjin__skill_jin014_1-draw"
-local LVLI_RECOVER = "hanjin__skill_jin014_1-recover"
+local LVLI = "qiao__skill_jin014_1"
+local LVLI_DRAW = "qiao__skill_jin014_1-draw"
+local LVLI_RECOVER = "qiao__skill_jin014_1-recover"
 
-local DUOQI = "hanjin__skill_jin014_2"
+local DUOQI = "qiao__skill_jin014_2"
 
-Testhanjin_jin_basic = {}
-Testhanjin_jin_basic.tearDown = support.clearRoom
+Testqiao_jin_basic = {}
+Testqiao_jin_basic.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -72,14 +72,14 @@ local function install(room, general)
   inRoom(function()
     skill_test.installDualGenerals(room, room.players[1], {
       main = general,
-      deputy = "hanjin_test__jin_2",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
   end)
 end
 
 local function prepare(general)
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(room, { "jin", "jin", "wei" }) end)
   install(room, general)
   resetCards(room)
@@ -100,7 +100,7 @@ end
 --- 在真实 Turn 的 TurnStart 时机执行 fn，保证 room.current 就是该角色。
 local function runTurnStart(room, player, fn)
   local fired = false
-  local skel = fk.CreateSkill { name = "#hanjin_jin_basic_turn_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin_basic_turn_probe" }
   skel:addEffect(fk.TurnStart, {
     global = true,
     can_refresh = function(self, event, target, probe_player)
@@ -136,8 +136,8 @@ end
 
 -- 果毅 ---------------------------------------------------------------------
 
-function Testhanjin_jin_basic:testGuoyiBothBranchesAndDamage()
-  local room = prepare("hanjin__jin011")
+function Testqiao_jin_basic:testGuoyiBothBranchesAndDamage()
+  local room = prepare("qiao_heg__jin011")
   local p = p1()
   local basics = setHand(room, p, { { "slash" }, { "jink" } })
   local equip = addEquip(room, p2(), "jueying")
@@ -157,8 +157,8 @@ function Testhanjin_jin_basic:testGuoyiBothBranchesAndDamage()
   lu.assertEquals(p:usedSkillTimes(GUOYI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_basic:testGuoyiOneBranchOnlyNoDamage()
-  local room = prepare("hanjin__jin011")
+function Testqiao_jin_basic:testGuoyiOneBranchOnlyNoDamage()
+  local room = prepare("qiao_heg__jin011")
   local p = p1()
   local basics = setHand(room, p, { { "slash" }, { "jink" } })
   local h2 = setHand(room, p2(), { { "peach" } })[1]
@@ -175,8 +175,8 @@ function Testhanjin_jin_basic:testGuoyiOneBranchOnlyNoDamage()
   lu.assertEquals(p:usedSkillTimes(GUOYI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_basic:testGuoyiTargetWithBothBranchesChoosesOne()
-  local room = prepare("hanjin__jin011")
+function Testqiao_jin_basic:testGuoyiTargetWithBothBranchesChoosesOne()
+  local room = prepare("qiao_heg__jin011")
   local p = p1()
   local basics = setHand(room, p, { { "slash" }, { "jink" } })
   local equip = addEquip(room, p2(), "jueying")
@@ -205,8 +205,8 @@ function Testhanjin_jin_basic:testGuoyiTargetWithBothBranchesChoosesOne()
   lu.assertEquals(p2().hp, before - 1)
 end
 
-function Testhanjin_jin_basic:testGuoyiRejectsMismatchedCardAndTargetCounts()
-  local room = prepare("hanjin__jin011")
+function Testqiao_jin_basic:testGuoyiRejectsMismatchedCardAndTargetCounts()
+  local room = prepare("qiao_heg__jin011")
   local p = p1()
   local basics = setHand(room, p, { { "slash" }, { "jink" } })
   local equip = addEquip(room, p2(), "jueying")
@@ -223,8 +223,8 @@ end
 
 -- 慈威 ---------------------------------------------------------------------
 
-function Testhanjin_jin_basic:testCiweiSecondRealUseNullifiesBasicTarget()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testCiweiSecondRealUseNullifiesBasicTarget()
+  local room = prepare("qiao_heg__jin012")
   local p, user, victim = p1(), p2(), p3()
   local equipped = give(room, user, { { "jueying" } })[1]
   local responded = give(room, user, { { "jink" } })[1]
@@ -233,7 +233,7 @@ function Testhanjin_jin_basic:testCiweiSecondRealUseNullifiesBasicTarget()
   local hp = victim.hp
 
   FkTest.setNextReplies(p, {
-    "1", FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
+    FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
   })
   runTurnStart(room, user, function()
     -- 已在 TurnStart 的房间协程内，直接执行真实用牌事件，不再嵌套 runInRoom。
@@ -250,8 +250,8 @@ function Testhanjin_jin_basic:testCiweiSecondRealUseNullifiesBasicTarget()
   lu.assertEquals(p:usedSkillTimes(CIWEI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_basic:testCiweiCommonTrickTargetNullified()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testCiweiCommonTrickTargetNullified()
+  local room = prepare("qiao_heg__jin012")
   local p, user, victim = p1(), p2(), p3()
   local equipped = give(room, user, { { "jueying" } })[1]
   local duel = give(room, user, { { "duel" } })[1]
@@ -259,7 +259,7 @@ function Testhanjin_jin_basic:testCiweiCommonTrickTargetNullified()
   local hp = victim.hp
 
   FkTest.setNextReplies(p, {
-    "1", FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
+    FkTest.ReplyDiscard({ cost }), FkTest.ReplyChoosePlayer({ victim }),
   })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { user }, card = Fk:getCardById(equipped) }
@@ -271,14 +271,14 @@ function Testhanjin_jin_basic:testCiweiCommonTrickTargetNullified()
   lu.assertEquals(p:usedSkillTimes(CIWEI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_basic:testCiweiEquipmentBranchChainsUser()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testCiweiEquipmentBranchChainsUser()
+  local room = prepare("qiao_heg__jin012")
   local p, user = p1(), p2()
   local first = give(room, user, { { "slash" } })[1]
   local equip = give(room, user, { { "jueying" } })[1]
   local cost = give(room, p, { { "peach" } })[1]
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ cost }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ cost }) })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { p3() }, card = Fk:getCardById(first) }
     room:useCard { from = user, tos = { user }, card = Fk:getCardById(equip) }
@@ -289,14 +289,14 @@ function Testhanjin_jin_basic:testCiweiEquipmentBranchChainsUser()
   lu.assertEquals(p:usedSkillTimes(CIWEI, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_basic:testCiweiDelayedTrickBranchChainsUser()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testCiweiDelayedTrickBranchChainsUser()
+  local room = prepare("qiao_heg__jin012")
   local p, user, victim = p1(), p2(), p3()
   local first = give(room, user, { { "slash" } })[1]
   local delayed = give(room, user, { { "indulgence" } })[1]
   local cost = give(room, p, { { "peach" } })[1]
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ cost }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ cost }) })
   runTurnStart(room, user, function()
     room:useCard { from = user, tos = { victim }, card = Fk:getCardById(first) }
     room:useCard { from = user, tos = { victim }, card = Fk:getCardById(delayed) }
@@ -309,8 +309,8 @@ end
 
 -- 弘训 ---------------------------------------------------------------------
 
-function Testhanjin_jin_basic:testHongxunWoundedAndChainedBothExecute()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testHongxunWoundedAndChainedBothExecute()
+  local room = prepare("qiao_heg__jin012")
   local p = p1()
   inRoom(function()
     p.hp = p.maxHp - 1
@@ -324,8 +324,8 @@ function Testhanjin_jin_basic:testHongxunWoundedAndChainedBothExecute()
   lu.assertFalse(p.chained)
 end
 
-function Testhanjin_jin_basic:testHongxunSameKingdomOnlyAndConditionsSeparate()
-  local room = prepare("hanjin__jin012")
+function Testqiao_jin_basic:testHongxunSameKingdomOnlyAndConditionsSeparate()
+  local room = prepare("qiao_heg__jin012")
   local p, ally, other = p1(), p2(), p3()
 
   -- 同势力已受伤：摸一张。
@@ -358,8 +358,8 @@ end
 
 -- 膂力 ---------------------------------------------------------------------
 
-function Testhanjin_jin_basic:testLvliDrawToCurrentHp()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliDrawToCurrentHp()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   inRoom(function() p.hp = 3 end)
   FkTest.setNextReplies(p, { "1", { LVLI_DRAW } })
@@ -370,8 +370,8 @@ function Testhanjin_jin_basic:testLvliDrawToCurrentHp()
   lu.assertEquals(p:usedSkillTimes(LVLI, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_jin_basic:testLvliDiscardAllHandAndRecoverToCount()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliDiscardAllHandAndRecoverToCount()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   setHand(room, p, { { "slash" }, { "jink" } })
   inRoom(function() p.hp = 1 end)
@@ -384,8 +384,8 @@ function Testhanjin_jin_basic:testLvliDiscardAllHandAndRecoverToCount()
   lu.assertEquals(p:usedSkillTimes(LVLI, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_jin_basic:testLvliSecondOptionAvailabilityAndNoHpReduction()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliSecondOptionAvailabilityAndNoHpReduction()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   setHand(room, p, { { "slash" }, { "jink" } })
   inRoom(function() p.hp = 3 end)
@@ -409,8 +409,8 @@ function Testhanjin_jin_basic:testLvliSecondOptionAvailabilityAndNoHpReduction()
   lu.assertEquals(p.hp, 3) -- 弃置2张后回复至2，不把较高的体力降为2
 end
 
-function Testhanjin_jin_basic:testLvliDrawOptionHiddenWhenHandNotBelowHp()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliDrawOptionHiddenWhenHandNotBelowHp()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   setHand(room, p, { { "slash" }, { "jink" } })
   inRoom(function() p.hp = 2 end)
@@ -434,12 +434,12 @@ function Testhanjin_jin_basic:testLvliDrawOptionHiddenWhenHandNotBelowHp()
   lu.assertEquals(p.hp, 2)
 end
 
-function Testhanjin_jin_basic:testLvliResolvesInDamageBeforeDamaged()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliResolvesInDamageBeforeDamaged()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   inRoom(function() p.hp = 3 end)
   local order
-  local skel = fk.CreateSkill { name = "#hanjin_jin_basic_damaged_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin_basic_damaged_probe" }
   skel:addEffect(fk.Damaged, {
     global = true,
     can_refresh = function(self, event, target, player)
@@ -459,8 +459,8 @@ function Testhanjin_jin_basic:testLvliResolvesInDamageBeforeDamaged()
   lu.assertEquals(#p:getCardIds("h"), 3)
 end
 
-function Testhanjin_jin_basic:testLvliEmptyHandOnlyDrawOptionAndOncePerTurn()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testLvliEmptyHandOnlyDrawOptionAndOncePerTurn()
+  local room = prepare("qiao_heg__jin014")
   local p = p1()
   inRoom(function() p.hp = 3 end)
 
@@ -488,8 +488,8 @@ end
 
 -- 夺气 ---------------------------------------------------------------------
 
-function Testhanjin_jin_basic:testDuoqiTurnEndQueuesExtraTurn()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testDuoqiTurnEndQueuesExtraTurn()
+  local room = prepare("qiao_heg__jin014")
   local p, turnPlayer = p1(), p2()
   FkTest.setNextReplies(p, { "1" })
 
@@ -505,8 +505,8 @@ function Testhanjin_jin_basic:testDuoqiTurnEndQueuesExtraTurn()
   room.extra_turn_list = {}
 end
 
-function Testhanjin_jin_basic:testDuoqiNotFinishPhaseAndNeedsEmptyHand()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testDuoqiNotFinishPhaseAndNeedsEmptyHand()
+  local room = prepare("qiao_heg__jin014")
   local p, turnPlayer = p1(), p2()
   inRoom(function() room.current = turnPlayer end)
 
@@ -525,8 +525,8 @@ function Testhanjin_jin_basic:testDuoqiNotFinishPhaseAndNeedsEmptyHand()
   lu.assertEquals(p:usedSkillTimes(DUOQI, Player.HistoryGame), 0)
 end
 
-function Testhanjin_jin_basic:testDuoqiLimitedToOncePerGame()
-  local room = prepare("hanjin__jin014")
+function Testqiao_jin_basic:testDuoqiLimitedToOncePerGame()
+  local room = prepare("qiao_heg__jin014")
   local p, turnPlayer = p1(), p2()
   FkTest.setNextReplies(p, { "1" })
   inRoom(function()
@@ -543,4 +543,4 @@ function Testhanjin_jin_basic:testDuoqiLimitedToOncePerGame()
   lu.assertEquals(p:usedSkillTimes(DUOQI, Player.HistoryGame), 1)
 end
 
-return { name = "hanjin_jin_basic" }
+return { name = "qiao_jin_basic" }

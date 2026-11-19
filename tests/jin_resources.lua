@@ -1,20 +1,20 @@
 -- JIN002/JIN007/JIN008 资源类技能与腹心死士：泰然、夷灭、恤下、宜室、识度。
--- 规则依据：rules/generals/jin002-simashi.md、jin007-wangyuanji.md、
+-- 规则依据：docs/rules/generals/jin002-simashi.md、jin007-wangyuanji.md、
 -- jin008-xiahouhui.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local H = require "packages.hegemony.util"
 
-local TAIRAN = "hanjin__skill_jin002_1"
-local YIMIE = "hanjin__skill_jin002_2"
-local XUXIA = "hanjin__skill_jin007_2"
-local YISHI = "hanjin__skill_jin008_1"
-local SHIDU = "hanjin__skill_jin008_2"
-local FUXIN = "hanjin__retinue_skill_fuxin_sishi"
-local RULE = "hanjin__jin_resources_rule"
+local TAIRAN = "qiao__skill_jin002_1"
+local YIMIE = "qiao__skill_jin002_2"
+local XUXIA = "qiao__skill_jin007_2"
+local YISHI = "qiao__skill_jin008_1"
+local SHIDU = "qiao__skill_jin008_2"
+local FUXIN = "qiao__retinue_skill_fuxin_sishi"
+local RULE = "qiao__jin_resources_rule"
 
-Testhanjin_jin_resources = {}
-Testhanjin_jin_resources.tearDown = support.clearRoom
+Testqiao_jin_resources = {}
+Testqiao_jin_resources.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -63,14 +63,14 @@ local function install(room, player, main, deputy, kingdom)
   inRoom(function()
     skill_test.installDualGenerals(room, player, {
       main = main,
-      deputy = deputy or "hanjin_test__jin_2",
+      deputy = deputy or "qiao_test__jin_2",
       kingdom = kingdom or "jin",
     })
   end)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(room, { "jin", "jin", "wei" }) end)
   resetCards(room)
   return room
@@ -103,10 +103,10 @@ end
 
 -- 泰然 ---------------------------------------------------------------------
 
-function Testhanjin_jin_resources:testTairanRecordsAndSettlesAtTurnEnd()
+function Testqiao_jin_resources:testTairanRecordsAndSettlesAtTurnEnd()
   local room = prepare()
   local p = p1()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   local card = setHand(room, p, { { "jink" } })[1]
   inRoom(function() p.hp = p.maxHp end)
 
@@ -117,18 +117,18 @@ function Testhanjin_jin_resources:testTairanRecordsAndSettlesAtTurnEnd()
 
   lu.assertEquals(p.hp, p.maxHp - 1)
   lu.assertEquals(#p:getCardIds("h"), 0)
-  lu.assertEquals(#p:getTableMark("hanjin_jin002_1_records-turn"), 1)
+  lu.assertEquals(#p:getTableMark("qiao_jin002_1_records-turn"), 1)
 
   triggerTurnEnd(room, p)
   lu.assertEquals(p.hp, p.maxHp)
   lu.assertEquals(#p:getCardIds("h"), 1)
-  lu.assertEquals(#p:getTableMark("hanjin_jin002_1_records-turn"), 0)
+  lu.assertEquals(#p:getTableMark("qiao_jin002_1_records-turn"), 0)
 end
 
-function Testhanjin_jin_resources:testTairanTwoRecordsSettleSeparatelyAfterSkillLoss()
+function Testqiao_jin_resources:testTairanTwoRecordsSettleSeparatelyAfterSkillLoss()
   local room = prepare()
   local p = p1()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   inRoom(function() p.hp = p.maxHp end)
 
   for _ = 1, 2 do
@@ -138,7 +138,7 @@ function Testhanjin_jin_resources:testTairanTwoRecordsSettleSeparatelyAfterSkill
       askToNumber = function() return 1 end,
     }, function() triggerPlayStart(room, p) end)
   end
-  lu.assertEquals(#p:getTableMark("hanjin_jin002_1_records-turn"), 2)
+  lu.assertEquals(#p:getTableMark("qiao_jin002_1_records-turn"), 2)
   lu.assertEquals(p.hp, p.maxHp - 2)
 
   -- 后续不得依赖当前仍有泰然。
@@ -151,16 +151,16 @@ function Testhanjin_jin_resources:testTairanTwoRecordsSettleSeparatelyAfterSkill
   lu.assertEquals(#p:getCardIds("h"), 2)
 end
 
-function Testhanjin_jin_resources:testTairanRecordsActualLossBeforeRescue()
+function Testqiao_jin_resources:testTairanRecordsActualLossBeforeRescue()
   local room = prepare()
   local p = p1()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   local card = setHand(room, p, { { "jink" } })[1]
   inRoom(function() p.hp = 1 end)
 
   -- 模拟濒死救回：在 HpChanged 后插入回复1，旧的前后体力差会错误记0。
   local healed = false
-  local skel = fk.CreateSkill { name = "#hanjin_jin_resources_rescue_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin_resources_rescue_probe" }
   skel:addEffect(fk.HpChanged, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -181,7 +181,7 @@ function Testhanjin_jin_resources:testTairanRecordsActualLossBeforeRescue()
     askToNumber = function() return 1 end,
   }, function() triggerPlayStart(room, p) end)
 
-  local records = p:getTableMark("hanjin_jin002_1_records-turn")
+  local records = p:getTableMark("qiao_jin002_1_records-turn")
   lu.assertEquals(#records, 1)
   lu.assertEquals(records[1].hp, 1) -- 实际失去1，不因救回变0
   lu.assertEquals(records[1].cards, 1)
@@ -193,10 +193,10 @@ end
 
 -- 夷灭 ---------------------------------------------------------------------
 
-function Testhanjin_jin_resources:testYimieDoublesOnlyEligibleDamageOnce()
+function Testqiao_jin_resources:testYimieDoublesOnlyEligibleDamageOnce()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   inRoom(function()
     p.hp = 3
     target.hp = 3
@@ -213,10 +213,10 @@ function Testhanjin_jin_resources:testYimieDoublesOnlyEligibleDamageOnce()
   lu.assertEquals(p:usedSkillTimes(YIMIE, Player.HistoryGame), 1)
 end
 
-function Testhanjin_jin_resources:testYimieRequiresTargetHpNotLower()
+function Testqiao_jin_resources:testYimieRequiresTargetHpNotLower()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   inRoom(function()
     p.hp = 4
     target.hp = 3
@@ -228,10 +228,10 @@ end
 
 -- 恤下 ---------------------------------------------------------------------
 
-function Testhanjin_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
+function Testqiao_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin007")
+  install(room, p, "qiao_heg__jin007")
   inRoom(function() target:hideGeneral(true) end)
   local hand = setHand(room, p, { { "jink" }, { "peach" } })
   local before = #target:getCardIds("h")
@@ -245,10 +245,10 @@ function Testhanjin_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
   lu.assertEquals(p:usedSkillTimes(XUXIA, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_jin_resources:testXuxiaNeedsFewerRevealedAndTwoCards()
+function Testqiao_jin_resources:testXuxiaNeedsFewerRevealedAndTwoCards()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin007")
+  install(room, p, "qiao_heg__jin007")
   setHand(room, p, { { "jink" } })
 
   -- 目标明置数与王元姬相同：不触发。
@@ -263,10 +263,10 @@ end
 
 -- 宜室 ---------------------------------------------------------------------
 
-function Testhanjin_jin_resources:testYishiGivesOneThenGainsOne()
+function Testqiao_jin_resources:testYishiGivesOneThenGainsOne()
   local room = prepare()
   local p, proposer, owner = p1(), p2(), p3()
-  install(room, p, "hanjin__jin008")
+  install(room, p, "qiao_heg__jin008")
   local cards = setHand(room, owner, { { "jink" }, { "peach" }, { "slash" } })
   local beforeP = #p:getCardIds("h")
   local beforeProposer = #proposer:getCardIds("h")
@@ -286,10 +286,10 @@ function Testhanjin_jin_resources:testYishiGivesOneThenGainsOne()
   lu.assertEquals(p:usedEffectTimes(YISHI, Player.HistoryTurn), 1)
 end
 
-function Testhanjin_jin_resources:testYishiUsesProposerKingdomNotOwner()
+function Testqiao_jin_resources:testYishiUsesProposerKingdomNotOwner()
   local room = prepare()
   local p, proposer, owner = p1(), p2(), p3()
-  install(room, p, "hanjin__jin008")
+  install(room, p, "qiao_heg__jin008")
   local cards = setHand(room, owner, { { "jink" }, { "peach" } })
 
   -- 弃置操作者是异势力 p3，即使被弃牌属于同势力 p2，也不触发。
@@ -303,10 +303,10 @@ end
 
 -- 识度 ---------------------------------------------------------------------
 
-function Testhanjin_jin_resources:testShiduWinsThenGivesHalfCurrentHand()
+function Testqiao_jin_resources:testShiduWinsThenGivesHalfCurrentHand()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin008")
+  install(room, p, "qiao_heg__jin008")
   local high = setHand(room, p, { { "jink", Card.Spade, 13 }, { "peach" } })
   local low = setHand(room, target, { { "slash", Card.Spade, 2 }, { "jink" } })
 
@@ -329,10 +329,10 @@ function Testhanjin_jin_resources:testShiduWinsThenGivesHalfCurrentHand()
   lu.assertEquals(#target:getCardIds("h"), 1)
 end
 
-function Testhanjin_jin_resources:testShiduTieDoesNotGainHand()
+function Testqiao_jin_resources:testShiduTieDoesNotGainHand()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin008")
+  install(room, p, "qiao_heg__jin008")
   local mine = setHand(room, p, { { "jink", Card.Spade, 13 } })
   local theirs = setHand(room, target, { { "slash", Card.Spade, 13 }, { "peach" } })
 
@@ -349,11 +349,11 @@ end
 
 -- 腹心死士 -----------------------------------------------------------------
 
-function Testhanjin_jin_resources:testFuxinUnusedLimitedGivesCard()
+function Testqiao_jin_resources:testFuxinUnusedLimitedGivesCard()
   local room = prepare()
   local holder, turnPlayer = p1(), p2()
-  install(room, holder, "hanjin_test__jin_1")
-  install(room, turnPlayer, "hanjin__jin002")
+  install(room, holder, "qiao_test__jin_1")
+  install(room, turnPlayer, "qiao_heg__jin002")
   local own = setHand(room, holder, { { "jink" } })[1]
   setHand(room, turnPlayer, {})
   inRoom(function()
@@ -369,10 +369,10 @@ function Testhanjin_jin_resources:testFuxinUnusedLimitedGivesCard()
   lu.assertEquals(#turnPlayer:getCardIds("h"), 1)
 end
 
-function Testhanjin_jin_resources:testFuxinSelfTargetOnlyDrawsNoSelfGive()
+function Testqiao_jin_resources:testFuxinSelfTargetOnlyDrawsNoSelfGive()
   local room = prepare()
   local p = p1()
-  install(room, p, "hanjin__jin002")
+  install(room, p, "qiao_heg__jin002")
   inRoom(function() room:handleAddLoseSkills(p, FUXIN, nil, false, true) end)
   setHand(room, p, {})
 
@@ -383,11 +383,11 @@ function Testhanjin_jin_resources:testFuxinSelfTargetOnlyDrawsNoSelfGive()
   lu.assertEquals(#p:getCardIds("h"), 1)
 end
 
-function Testhanjin_jin_resources:testFuxinUsedLimitedSlashUsesTurnPlayersRange()
+function Testqiao_jin_resources:testFuxinUsedLimitedSlashUsesTurnPlayersRange()
   local room = prepare()
   local holder, turnPlayer, victim = p1(), p2(), room.players[4]
-  install(room, holder, "hanjin_test__jin_1")
-  install(room, turnPlayer, "hanjin_test__jin_1")
+  install(room, holder, "qiao_test__jin_1")
+  install(room, turnPlayer, "qiao_test__jin_1")
   inRoom(function()
     room:handleAddLoseSkills(holder, FUXIN, nil, false, true)
     victim.hp = 3
@@ -397,7 +397,7 @@ function Testhanjin_jin_resources:testFuxinUsedLimitedSlashUsesTurnPlayersRange(
 
   -- 用测试限定技制造“本回合发动过限定技”的真实技能使用历史。
   local probeSkel = fk.CreateSkill {
-    name = "#hanjin_jin_resources_limited_probe",
+    name = "#qiao_jin_resources_limited_probe",
     tags = { Skill.Limited },
   }
   probeSkel:addEffect("active", {
@@ -423,10 +423,10 @@ function Testhanjin_jin_resources:testFuxinUsedLimitedSlashUsesTurnPlayersRange(
   lu.assertEquals(victim.hp, 2)
 end
 
-function Testhanjin_jin_resources:testXuxiaRealDarkSourceIsRegisteredAndTriggers()
+function Testqiao_jin_resources:testXuxiaRealDarkSourceIsRegisteredAndTriggers()
   local room = prepare()
   local p, target = p1(), p2()
-  install(room, p, "hanjin__jin007")
+  install(room, p, "qiao_heg__jin007")
   inRoom(function()
     p:hideGeneral(false)
     p:hideGeneral(true)
@@ -460,4 +460,4 @@ function Testhanjin_jin_resources:testXuxiaRealDarkSourceIsRegisteredAndTriggers
   lu.assertTrue(H.getGeneralsRevealedNum(p) >= 1)
   lu.assertEquals(#target:getCardIds("h"), before + 2)
 end
-return { name = "hanjin_jin_resources" }
+return { name = "qiao_jin_resources" }

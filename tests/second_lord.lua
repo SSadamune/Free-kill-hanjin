@@ -1,7 +1,8 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.ascension"
-local V = require "packages.hanjin.pkg.hanjin_mode.rules.general_versions"
+local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
+local V = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local H = require "packages.hegemony.util"
 
 local G = content.generals
 
@@ -10,11 +11,11 @@ local function create()
   -- Keep the deterministic ban plan away from Wei so succession candidates can
   -- legally join the dead monarch's faction.
   backend._session_data = json.encode {
-    hanjin_faction_ban_v1 = { version = 1, winners = { "wu", "qun" }, banned = {} },
+    qiao_faction_ban_v1 = { version = 1, winners = { "wu", "qun" }, banned = {} },
   }
   return support.createRoom {
-    mode = "hanjin_heg_mode", realSelection = true, backend = backend,
-    settings = { hanjin_wild_count = 0 },
+    mode = "qiao_heg_mode", realSelection = true, backend = backend,
+    settings = { qiao_wild_count = 0 },
   }
 end
 
@@ -23,8 +24,8 @@ local function setup()
   FkTest.runInRoom(function()
     for index, player in ipairs(room.players) do
       local kingdom = index % 2 == 0 and "shu" or "qun"
-      content.setupHidden(room, player, "hanjin_test__" .. kingdom .. "_1",
-        "hanjin_test__" .. kingdom .. "_2", kingdom)
+      content.setupHidden(room, player, "qiao_test__" .. kingdom .. "_1",
+        "qiao_test__" .. kingdom .. "_2", kingdom)
       room:setPlayerProperty(player, "kingdom", kingdom)
     end
   end)
@@ -164,6 +165,72 @@ function Testsecond_lord:testAscensionRevealsMainAndSyncsKingdomAndSkills()
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
 
+function Testsecond_lord:testRealZhangjiaoAscensionClearsOldfakesAndKeepsIndependentSource()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "qiao_heg__qun010", "qiao_heg__qun002", "qun")
+    room():addFakeSkill(p, "qiao__skill_qun010_1")
+    room():addFakeSkill(p, "qiao__skill_qun010_2")
+    p:prelightSkill("qiao__skill_qun010_1", true)
+    p:prelightSkill("qiao__skill_qun010_2", true)
+    -- 鬼道另有独立实际来源：清理旧主将 fake 时不能删除它。
+    p:addSkill(Fk.skills["qiao__skill_qun010_2"])
+    room():setBanner("all_kingdoms", { "qun" })
+    lu.assertTrue(p:hasSkill("qiao__skill_qun010_2"))
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+
+  lu.assertEquals(p.general, "qiao_heg__em_qun010")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
+  lu.assertEquals(p.role, "qun")
+  lu.assertTrue(p:hasSkill("qiao__skill_em_qun010_1"), "弘法应可获取")
+  lu.assertTrue(p:hasSkill("qiao__em_qun010_banner"), "弘法应实际授予黄巾天兵符")
+  lu.assertTrue(p:hasSkill("qiao__skill_em_qun010_2"), "悟心正常")
+  lu.assertTrue(p:hasSkill("qiao__skill_em_qun010_3"), "问道正常")
+  lu.assertFalse(p:hasSkill("qiao__skill_qun010_1"), "旧雷击 fake 应清理")
+  lu.assertFalse(p:isFakeSkill("qiao__skill_qun010_1"))
+  lu.assertTrue(p:hasSkill("qiao__skill_qun010_2"), "独立鬼道来源应保留")
+  lu.assertFalse(p:isFakeSkill("qiao__skill_qun010_2"),
+    "旧主将的鬼道 fake 可清，但独立实际来源不可误删")
+end
+
+function Testsecond_lord:testHiddenDeputySameSkillFakeIsPreserved()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "qiao_heg__qun010", G.qun_deputy.name, "qun")
+    room():addFakeSkill(p, "qiao__skill_qun010_1")
+    room():addFakeSkill(p, "qiao__skill_qun010_2")
+    p:prelightSkill("qiao__skill_qun010_1", true)
+    p:prelightSkill("qiao__skill_qun010_2", true)
+    room():setBanner("all_kingdoms", { "qun" })
+    lu.assertTrue(p:isFakeSkill("qiao__skill_qun010_1"))
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+
+  lu.assertEquals(p.general, "qiao_heg__em_qun010")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
+  lu.assertTrue(p:isFakeSkill("qiao__skill_qun010_1"),
+    "暗副将仍印刷同名雷击，fake 不应被旧主将清理")
+  lu.assertTrue(p:isFakeSkill("qiao__skill_qun010_2"),
+    "暗副将仍印刷同名鬼道，fake 不应被旧主将清理")
+  lu.assertTrue(table.contains(p.prelighted_skills, Fk.skills["qiao__skill_qun010_1"]))
+  lu.assertTrue(p:hasSkill("qiao__skill_qun010_1"))
+  lu.assertTrue(p:hasSkill("qiao__skill_qun010_2"))
+end
+
+function Testsecond_lord:testRealLiubeiLordSkillIsInstalled()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "qiao_heg__shu001", "qiao_test__shu_2", "shu")
+    room():setBanner("all_kingdoms", { "shu" })
+    A.ascend(room(), p, "qiao_heg__em_shu001", "shu", { kind = "lord" })
+  end)
+  lu.assertEquals(p.general, "qiao_heg__em_shu001")
+  lu.assertTrue(p:hasSkill("qiao__skill_em_shu001_1"),
+    "章武应作为国战君主技能获取")
+  lu.assertFalse(p:hasSkill("qiao__skill_shu001_1"), "旧仁德应移除")
+end
+
 function Testsecond_lord:testSuccessionOrderFirstAcceptorAndRevealSync()
   local lord, first, second, other = player(1), player(2), player(3), player(4)
   FkTest.runInRoom(function()
@@ -172,8 +239,8 @@ function Testsecond_lord:testSuccessionOrderFirstAcceptorAndRevealSync()
     lord:hideGeneral(true)
     room():setPlayerProperty(lord, "kingdom", "wei")
 
-    hidden(first, G.wei_normal.name, "hanjin_test__qun_1", "qun")
-    hidden(second, G.wei_normal2.name, "hanjin_test__qun_2", "qun")
+    hidden(first, G.wei_normal.name, "qiao_test__qun_1", "qun")
+    hidden(second, G.wei_normal2.name, "qiao_test__qun_2", "qun")
     room():setCurrent(first)
   end)
   FkTest.setNextReplies(first, { { "Cancel" } })
@@ -194,8 +261,8 @@ function Testsecond_lord:testSuccessionStopsAtFirstAcceptor()
   local lord, first, second = player(1), player(2), player(3)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    hidden(first, G.wei_normal.name, "hanjin_test__qun_1", "qun")
-    hidden(second, G.wei_normal2.name, "hanjin_test__qun_2", "qun")
+    hidden(first, G.wei_normal.name, "qiao_test__qun_1", "qun")
+    hidden(second, G.wei_normal2.name, "qiao_test__qun_2", "qun")
     room():setCurrent(first)
   end)
   FkTest.setNextReplies(first, { { A.ASCEND_ACCEPT } })
@@ -210,14 +277,14 @@ function Testsecond_lord:testSuccessionAsksFromCurrentSeatInActionOrder()
   local asked = {}
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    hidden(first, G.wei_normal.name, "hanjin_test__qun_1", "qun")
-    hidden(second, G.wei_normal2.name, "hanjin_test__qun_2", "qun")
-    hidden(third, G.wei_normal3.name, "hanjin_test__qun_1", "qun")
+    hidden(first, G.wei_normal.name, "qiao_test__qun_1", "qun")
+    hidden(second, G.wei_normal2.name, "qiao_test__qun_2", "qun")
+    hidden(third, G.wei_normal3.name, "qiao_test__qun_1", "qun")
     room():setCurrent(second)
     local currentRoom = room()
     local original = currentRoom.askToChoice
     function currentRoom:askToChoice(target, params)
-      if params and params.prompt == "#HanjinSecondLordSuccession" then
+      if params and params.prompt == "#QiaoSecondLordSuccession" then
         table.insert(asked, target.seat)
       end
       return original(self, target, params)
@@ -235,15 +302,14 @@ function Testsecond_lord:testSuccessionHpAndConsumableMarks()
   local lord, candidate = player(1), player(2)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    room():changeHero(candidate, G.wei_normal.name, false, false, false, false, false)
-    room():setPlayerMark(candidate, "__heg_general", G.wei_normal.name)
-    room():changeHero(candidate, G.wei_deputy.name, false, true, false, false, false)
-    room():setPlayerMark(candidate, "__heg_deputy", G.wei_deputy.name)
-    candidate:hideGeneral(false) -- main hidden, deputy stays revealed
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    candidate.deputyGeneral = G.wei_deputy.name
+    room():setPlayerMark(candidate, "hasShownDeputyGeneral", 1)
     room():setPlayerProperty(candidate, "kingdom", "wei")
     room():setPlayerMark(candidate, "__heg_kingdom", "wei")
     room():setPlayerProperty(candidate, "maxHp", 3)
     room():setPlayerProperty(candidate, "hp", 3)
+    H.judegHegMark(candidate)
     room():setCurrent(candidate)
   end)
   FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
@@ -254,32 +320,48 @@ function Testsecond_lord:testSuccessionHpAndConsumableMarks()
   lu.assertEquals(candidate.hp, 4)
   lu.assertEquals(candidate:getMark("@!!companion"), 1)
   lu.assertEquals(candidate:getMark("@!!yinyangfish"), 1)
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
 end
-
 function Testsecond_lord:testSpentMarksAreNotGrantedAgainWhenAlreadyRevealed()
   local lord, candidate = player(1), player(2)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    revealed(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    H.judegHegMark(candidate)
+    candidate:revealGeneral(false)
+    candidate:revealGeneral(true)
+  end)
+  lu.assertEquals(candidate:getMark("@!!companion"), 1, "真实双亮应先领到珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 1, "真实双亮应先领到阴阳鱼")
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
+  FkTest.runInRoom(function()
+    H.removeHegMark(room(), candidate, "companion")
+    H.removeHegMark(room(), candidate, "yinyangfish")
+    candidate:hideGeneral(false)
+    room():setPlayerProperty(candidate, "kingdom", "wei")
+    room():setPlayerMark(candidate, "__heg_kingdom", "wei")
     room():setPlayerProperty(candidate, "maxHp", 3)
     room():setPlayerProperty(candidate, "hp", 3)
     room():setCurrent(candidate)
   end)
+  lu.assertEquals(candidate:getMark("@!!companion"), 0, "先实际花掉珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0, "先实际花掉阴阳鱼")
   FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
   FkTest.runInRoom(function() room():killPlayer { who = lord } end)
-  -- Both cards were already revealed before the ascension, so the ascension is
-  -- not the first full reveal and must not grant/spend a new mark.
-  lu.assertEquals(candidate:getMark("@!!companion"), 0)
-  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0)
+  lu.assertEquals(candidate:getMark("@!!companion"), 0, "已领过后花掉，升变不得重发珠联")
+  lu.assertEquals(candidate:getMark("@!!yinyangfish"), 0, "已领过后花掉，升变不得重发阴阳鱼")
+  lu.assertEquals(candidate:getMark(A.COMPANION_MARK), 1)
+  lu.assertEquals(candidate:getMark(A.YINYANG_MARK), 1)
 end
-
 function Testsecond_lord:testNoSuccessorConvertsFactionAndKeepsExistingWild()
   local lord, hiddenAlly, revealedAlly, wildAlly = player(1), player(2), player(3), player(4)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    hidden(hiddenAlly, G.wei_normal.name, "hanjin_test__qun_1", "wei")
+    hidden(hiddenAlly, G.wei_normal.name, "qiao_test__qun_1", "wei")
     revealed(revealedAlly, G.wei_normal2.name, G.wei_deputy.name, "wei")
-    revealed(wildAlly, "hanjin_test__wild_1", "hanjin_test__qun_2", "wild")
+    revealed(wildAlly, "qiao_test__wild_1", "qiao_test__qun_2", "wild")
     room():setPlayerMark(wildAlly, "__heg_wild", 1)
     room():setCurrent(revealedAlly)
   end)
@@ -303,7 +385,7 @@ function Testsecond_lord:testOverpopulatedCandidateIsNotAsked()
   local allies = { player(3), player(4), player(5) }
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    hidden(candidate, G.wei_normal.name, "hanjin_test__qun_1", "wei")
+    hidden(candidate, G.wei_normal.name, "qiao_test__qun_1", "wei")
     for _, ally in ipairs(allies) do
       revealed(ally, G.wei_normal2.name, G.wei_deputy.name, "wei")
     end
@@ -357,7 +439,7 @@ function Testsecond_lord:testSuccessorDoesNotRestoreExistingWild()
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
     hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
-    revealed(wildAlly, "hanjin_test__wild_1", G.wei_deputy.name, "wild")
+    revealed(wildAlly, "qiao_test__wild_1", G.wei_deputy.name, "wild")
     room():setPlayerMark(wildAlly, "__heg_kingdom", "wei")
     room():setCurrent(candidate)
   end)
@@ -398,7 +480,7 @@ function Testsecond_lord:testUnifiedVersionRegistryQueries()
 end
 
 function Testsecond_lord:testWinnerWithLordEndsForUniqueFactionAboveHalf()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local winner
   FkTest.runInRoom(function()
@@ -416,7 +498,7 @@ function Testsecond_lord:testWinnerWithLordEndsForUniqueFactionAboveHalf()
 end
 
 function Testsecond_lord:testWinnerWithoutLordEndsForUniqueFactionAboveHalf()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local winner
   FkTest.runInRoom(function()
@@ -433,7 +515,7 @@ function Testsecond_lord:testWinnerWithoutLordEndsForUniqueFactionAboveHalf()
 end
 
 function Testsecond_lord:testWinnerWithAndWithoutLordSameUniqueFaction()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local withoutLord, withLord
   FkTest.runInRoom(function()
@@ -453,15 +535,15 @@ function Testsecond_lord:testWinnerWithAndWithoutLordSameUniqueFaction()
 end
 
 function Testsecond_lord:testWinnerMultipleFactionsDoNotEndDespiteLordAndMajority()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local winner
   FkTest.runInRoom(function()
     revealed(player(1), G.wei_monarch.name, G.wei_deputy.name, "wei")
     revealed(player(2), G.wei_normal.name, G.wei_deputy.name, "wei")
     revealed(player(3), G.wei_normal2.name, G.wei_deputy.name, "wei")
     revealed(player(4), G.wei_normal3.name, G.wei_deputy.name, "wei")
-    revealed(player(5), "hanjin_test__wei_4", "hanjin_test__qun_1", "wei")
-    revealed(player(6), G.shu_plain.name, "hanjin_test__shu_2", "shu")
+    revealed(player(5), "qiao_test__wei_4", "qiao_test__qun_1", "wei")
+    revealed(player(6), G.shu_plain.name, "qiao_test__shu_2", "shu")
     markDead(player(7), "shu")
     markDead(player(8), "shu")
     winner = mode:getWinner(player(8))
@@ -471,12 +553,12 @@ function Testsecond_lord:testWinnerMultipleFactionsDoNotEndDespiteLordAndMajorit
 end
 
 function Testsecond_lord:testWinnerRejectsRegularAndOverpopulationWild()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2, dead = player(1), player(2), player(6)
   local winner
   FkTest.runInRoom(function()
     revealed(p1, G.wei_monarch.name, G.wei_deputy.name, "wei")
-    revealed(p2, "hanjin_test__wild_1", G.wei_deputy.name, "wild")
+    revealed(p2, "qiao_test__wild_1", G.wei_deputy.name, "wild")
     room():setPlayerMark(p2, "__heg_kingdom", "wei")
     for index = 3, 8 do markDead(player(index), "shu") end
     winner = mode:getWinner(dead)
@@ -488,11 +570,11 @@ function Testsecond_lord:testWinnerRejectsRegularAndOverpopulationWild()
 end
 
 function Testsecond_lord:testWinnerTreatsEachWildAsSeparateFaction()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local winner
   FkTest.runInRoom(function()
-    revealed(player(1), "hanjin_test__wild_1", "hanjin_test__qun_1", "wild")
-    revealed(player(2), "hanjin_test__wild_2", "hanjin_test__qun_2", "wild")
+    revealed(player(1), "qiao_test__wild_1", "qiao_test__qun_1", "wild")
+    revealed(player(2), "qiao_test__wild_2", "qiao_test__qun_2", "wild")
     for index = 3, 8 do markDead(player(index), "shu") end
     winner = mode:getWinner(player(6))
   end)
@@ -501,11 +583,11 @@ function Testsecond_lord:testWinnerTreatsEachWildAsSeparateFaction()
 end
 
 function Testsecond_lord:testWinnerSingleWildWins()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1 = player(1)
   local winner
   FkTest.runInRoom(function()
-    revealed(p1, "hanjin_test__wild_1", "hanjin_test__qun_1", "wild")
+    revealed(p1, "qiao_test__wild_1", "qiao_test__qun_1", "wild")
     for index = 2, 8 do markDead(player(index), "shu") end
     winner = mode:getWinner(player(6))
   end)
@@ -514,7 +596,7 @@ function Testsecond_lord:testWinnerSingleWildWins()
 end
 
 function Testsecond_lord:testWinnerHiddenGeneralsFollowExpectedFactionSemantics()
-  local mode = Fk.game_modes.hanjin_heg_mode
+  local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2 = player(1), player(2)
   local allHidden, matchingHidden, differentHidden
   FkTest.runInRoom(function()
@@ -541,10 +623,10 @@ end
 function Testsecond_lord:testRealDeathEndsGameForUniqueRegularFactionAboveHalf()
   FkTest.runInRoom(function()
     for index = 1, 5 do
-      revealed(player(index), "hanjin_test__wei_" .. index, "hanjin_test__qun_" .. index, "wei")
+      revealed(player(index), "qiao_test__wei_" .. index, "qiao_test__qun_" .. index, "wei")
     end
     for index = 6, 8 do
-      revealed(player(index), "hanjin_test__shu_" .. index, "hanjin_test__qun_" .. index, "shu")
+      revealed(player(index), "qiao_test__shu_" .. index, "qiao_test__qun_" .. index, "shu")
     end
   end)
   for index = 8, 6, -1 do
@@ -557,7 +639,7 @@ function Testsecond_lord:testRealDeathEndsGameForUniqueRegularFactionAboveHalf()
     lu.assertEquals(summary[player(index).seat].win, "Game Win")
   end
   lu.assertEquals(summary[player(6).seat].win, "Game Lose")
-  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  local saved = json.decode(room().room:getSessionData()).qiao_faction_ban_v1
   lu.assertEquals(saved.winners, { "wei" })
 end
 
@@ -566,7 +648,7 @@ function Testsecond_lord:testRealDeathSuccessionThenGameOver()
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
     hidden(successor, G.wei_normal.name, G.wei_deputy.name, "wei")
-    revealed(ally, "hanjin_test__wei_3", "hanjin_test__qun_3", "wei")
+    revealed(ally, "qiao_test__wei_3", "qiao_test__qun_3", "wei")
     for index = 4, 8 do markDead(player(index), "shu") end
     room():setCurrent(successor)
   end)
@@ -580,7 +662,7 @@ function Testsecond_lord:testRealDeathSuccessionThenGameOver()
   lu.assertEquals(summary[successor.seat].win, "Game Win")
   lu.assertEquals(summary[ally.seat].win, "Game Win")
   lu.assertEquals(summary[lord.seat].win, "Game Lose")
-  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  local saved = json.decode(room().room:getSessionData()).qiao_faction_ban_v1
   lu.assertEquals(saved.winners, { "wei" })
 end
 
@@ -600,7 +682,7 @@ function Testsecond_lord:testRealNoSuccessorConvertsLastAllyToWildAndWins()
   local summary = room():getBanner("GameSummary")
   lu.assertEquals(summary[ally.seat].win, "Game Win")
   -- A wild victory must not be recorded as a regular kingdom win.
-  local saved = json.decode(room().room:getSessionData()).hanjin_faction_ban_v1
+  local saved = json.decode(room().room:getSessionData()).qiao_faction_ban_v1
   lu.assertEquals(saved.winners, {})
 end
 
@@ -623,4 +705,22 @@ function Testsecond_lord:testRealNoSuccessorMultipleWildsKeepGameRunning()
   lu.assertFalse(room().game_finished)
 end
 
+function Testsecond_lord:testAscensionGrantsYinyangWhenOldPairWasEven()
+  local p = player(1)
+  FkTest.runInRoom(function()
+    hidden(p, "qiao_heg__qun010", "qiao_heg__qun007", "qun")
+    for i = 2, 8 do
+      room():setPlayerProperty(player(i), "kingdom", "shu")
+      room():setPlayerMark(player(i), "__heg_kingdom", "shu")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun", "han", "jin" })
+    p.deputyGeneral = "qiao_heg__qun007"
+    room():setPlayerMark(p, "hasShownDeputyGeneral", 1)
+    room():setCurrent(p)
+  end)
+  triggerTurnStart(p, A.ASCEND_ACCEPT)
+  lu.assertEquals(p.general, "qiao_heg__em_qun010")
+  lu.assertEquals(p.maxHp, 3, "君张角+贾诩体力上限仍为3，不因升变额外+1")
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 1, "旧组合偶数、新组合奇数，升变应补发阴阳鱼")
+end
 return { name = "second_lord" }

@@ -1,15 +1,15 @@
 -- HAN001 刘协：天命、密诏。默认国战套件用例。
--- 规则依据：rules/generals/han001-liuxie.md 第 2、3 节。
+-- 规则依据：docs/rules/generals/han001-liuxie.md 第 2、3 节。
 -- 验收依据：docs/development/implementation/generals/support.md#han001-1、pindian.md#han001-2。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local TM = "hanjin__skill_han001_1"
-local MZ = "hanjin__skill_han001_2"
+local TM = "qiao__skill_han001_1"
+local MZ = "qiao__skill_han001_2"
 local probeSerial = 0
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han001 = {}
+Testqiao_han001 = {}
 
 local function inRoom(fn)
   local result
@@ -98,7 +98,7 @@ end
 
 local function installMoveProbe(room, player, records)
   probeSerial = probeSerial + 1
-  local name = "#hanjin_han001_move_probe_" .. probeSerial
+  local name = "#qiao_han001_move_probe_" .. probeSerial
   local skel = fk.CreateSkill { name = name }
   skel:addEffect(fk.AfterCardsMove, {
     global = true,
@@ -122,7 +122,7 @@ local function installMoveProbe(room, player, records)
 end
 
 local function installUseProbe(room, uses)
-  local skel = fk.CreateSkill { name = "#hanjin_han001_use_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_han001_use_probe" }
   skel:addEffect(fk.CardUsing, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -153,7 +153,7 @@ local function installUseProbe(room, uses)
 end
 
 local function installDamageProbe(room, damages)
-  local skel = fk.CreateSkill { name = "#hanjin_han001_damage_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_han001_damage_probe" }
   skel:addEffect(fk.Damage, {
     global = true,
     can_refresh = function(self, event, target, player)
@@ -168,7 +168,7 @@ end
 
 local function installPindianProbe(room, log)
   probeSerial = probeSerial + 1
-  local name = "#hanjin_han001_pindian_probe_" .. probeSerial
+  local name = "#qiao_han001_pindian_probe_" .. probeSerial
   local skel = fk.CreateSkill { name = name }
   skel:addEffect(fk.PindianFinished, {
     global = true,
@@ -195,7 +195,7 @@ local function useSlash(room, from, to, name)
     room:useCard {
       from = from,
       tos = { to },
-      card = Fk:cloneCard(name or "hanjin__slash"),
+      card = Fk:cloneCard(name or "qiao__slash"),
     }
   end)
 end
@@ -238,7 +238,7 @@ local function activateSecret(room, player, to, cards)
 end
 
 local function secretMinimum(player)
-  return Fk.skills[MZ]:getMinCardNum(player)
+  return inRoom(function() return Fk.skills[MZ]:getMinCardNum(player) end)
 end
 
 --- 构造真实的 ClientPlayer 形态（没有 room 字段），并临时让 Fk:currentRoom()
@@ -274,8 +274,8 @@ local function initializeGenerals(room)
       -- 先通过引擎明置接口清理原来源，再安装本用例的已知双将。
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -284,21 +284,21 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(room.players[1], "hanjin__han001", true, false, false, false, false)
-    room:setPlayerMark(room.players[1], "__heg_general", "hanjin__han001")
+    room:changeHero(room.players[1], "qiao_heg__han001", true, false, false, false, false)
+    room:setPlayerMark(room.players[1], "__heg_general", "qiao_heg__han001")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han001.setup = function()
+Testqiao_han001.setup = function()
   prepare()
 end
-Testhanjin_han001.tearDown = support.clearRoom
+Testqiao_han001.tearDown = support.clearRoom
 
 local function p1() return FkTest.room.players[1] end
 local function p2() return FkTest.room.players[2] end
@@ -309,7 +309,7 @@ local function p6() return FkTest.room.players[6] end
 local function p7() return FkTest.room.players[7] end
 local function p8() return FkTest.room.players[8] end
 
-function Testhanjin_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGenerals()
+function Testqiao_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGenerals()
   local room = FkTest.room
   inRoom(function()
     p1():hideGeneral(false)
@@ -320,8 +320,8 @@ function Testhanjin_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGen
   initializeGenerals(room)
   lu.assertFalse(p1():isFakeSkill(TM))
   lu.assertEquals(p1():getMark("__heg_wild"), 0)
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
@@ -329,12 +329,12 @@ function Testhanjin_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGen
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testTM01DiscardTwoThenDrawTwo()
+function Testqiao_han001:testTM01DiscardTwoThenDrawTwo()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   local records = {}
   installMoveProbe(room, p1(), records)
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyDiscard({ ids[1], ids[2] }), "" })
@@ -345,10 +345,10 @@ function Testhanjin_han001:testTM01DiscardTwoThenDrawTwo()
   lu.assertTrue(table.find(records, function(r) return r[1] == "draw" and r[2] == 2 end) ~= nil)
 end
 
-function Testhanjin_han001:testTM02ExactlyTwoHandCards()
+function Testqiao_han001:testTM02ExactlyTwoHandCards()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 2)
@@ -357,11 +357,11 @@ function Testhanjin_han001:testTM02ExactlyTwoHandCards()
   end
 end
 
-function Testhanjin_han001:testTM03OneHandCardAndEquipment()
+function Testqiao_han001:testTM03OneHandCardAndEquipment()
   local room = FkTest.room
-  local hand = setHand(room, p1(), { { "hanjin__slash" } })
+  local hand = setHand(room, p1(), { { "qiao__slash" } })
   local equip = addEquip(room, p1(), "jueying")
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(room:getCardArea(hand[1]), Card.DiscardPile)
@@ -369,11 +369,11 @@ function Testhanjin_han001:testTM03OneHandCardAndEquipment()
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testTM04NoHandCardsStillDraws()
+function Testqiao_han001:testTM04NoHandCardsStillDraws()
   local room = FkTest.room
   setHand(room, p1(), {})
   local equip = addEquip(room, p1(), "jueying")
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 2)
@@ -381,36 +381,36 @@ function Testhanjin_han001:testTM04NoHandCardsStillDraws()
 
   clearCards(room, p1(), "e")
   setHand(room, p1(), {})
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testTM05DeclineDoesNothing()
+function Testqiao_han001:testTM05DeclineDoesNothing()
   local room = FkTest.room
-  local hand = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local hand = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():getCardIds("h"), hand)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 0)
 
   setHand(room, p1(), {})
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 0)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 0)
 end
 
-function Testhanjin_han001:testTM06AllSlashCategoriesTriggerButOtherCardsDoNot()
+function Testqiao_han001:testTM06AllSlashCategoriesTriggerButOtherCardsDoNot()
   local room = FkTest.room
   p1().hp = 20
   local count = 0
-  for _, name in ipairs({ "hanjin__slash", "hanjin__fire__slash", "hanjin__thunder__slash" }) do
-    local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-    setHand(room, p3(), { { "hanjin__slash" } })
+  for _, name in ipairs({ "qiao__slash", "qiao__fire__slash", "qiao__thunder__slash" }) do
+    local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+    setHand(room, p3(), { { "qiao__slash" } })
     FkTest.setNextReplies(p1(), { "1", "" })
     useSlash(room, p3(), p1(), name)
     count = count + 1
@@ -419,16 +419,16 @@ function Testhanjin_han001:testTM06AllSlashCategoriesTriggerButOtherCardsDoNot()
 
   -- 转化/虚拟牌仍以 trueName 识别；上面的 clone 已经是无实体子牌的虚拟杀。
   local before = p1():usedSkillTimes(TM, Player.HistoryGame)
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   inRoom(function()
-    room:useCard { from = p1(), tos = { p1() }, card = Fk:cloneCard("hanjin__peach") }
+    room:useCard { from = p1(), tos = { p1() }, card = Fk:cloneCard("qiao__peach") }
   end)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), before)
 end
 
-function Testhanjin_han001:testTM07EachTargetEventOnceAndNoTurnLimit()
+function Testqiao_han001:testTM07EachTargetEventOnceAndNoTurnLimit()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   FkTest.setNextReplies(p1(), { "1", "" })
   FkTest.setNextReplies(p2(), { "" })
@@ -436,37 +436,37 @@ function Testhanjin_han001:testTM07EachTargetEventOnceAndNoTurnLimit()
     room:useCard {
       from = p3(),
       tos = { p1(), p2() },
-      card = Fk:cloneCard("hanjin__slash"),
+      card = Fk:cloneCard("qiao__slash"),
     }
   end)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
 
-  ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 2)
 end
 
-function Testhanjin_han001:testTM08aRemovedBeforeTargetConfirmed()
+function Testqiao_han001:testTM08aRemovedBeforeTargetConfirmed()
   local room = FkTest.room
-  installTestSkill(room, "#hanjin_han001_cancel_before", {
+  installTestSkill(room, "#qiao_han001_cancel_before", {
     { fk.TargetConfirming, {
       global = true,
       can_refresh = function(self, event, target) return target == p1() end,
       on_refresh = function(self, event, target) event.data:cancelTarget(target) end,
     } },
   })
-  local hand = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local hand = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 0)
   lu.assertEquals(p1():getCardIds("h"), hand)
 end
 
-function Testhanjin_han001:testTM08bCancelledAfterTriggerKeepsResult()
+function Testqiao_han001:testTM08bCancelledAfterTriggerKeepsResult()
   local room = FkTest.room
-  installTestSkill(room, "#hanjin_han001_cancel_after", {
+  installTestSkill(room, "#qiao_han001_cancel_after", {
     { fk.TargetConfirmed, {
       global = true,
       priority = -100,
@@ -474,20 +474,20 @@ function Testhanjin_han001:testTM08bCancelledAfterTriggerKeepsResult()
       on_refresh = function(self, event, target) event.data:cancelTarget(target) end,
     } },
   })
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testTM09DrawHappensBeforeResponse()
+function Testqiao_han001:testTM09DrawHappensBeforeResponse()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   local jink = inRoom(function() return room:printCard("jink", Card.Heart, 1) end)
   putOnDrawPile(room, jink)
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), {
     "1",
     FkTest.ReplyCard(jink),
@@ -498,9 +498,9 @@ function Testhanjin_han001:testTM09DrawHappensBeforeResponse()
   lu.assertTrue(room:getCardArea(jink.id) ~= Card.DrawPile)
 end
 
-function Testhanjin_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
+function Testqiao_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
   local room = FkTest.room
-  installTestSkill(room, "#hanjin_han001_repeat_settlement", {
+  installTestSkill(room, "#qiao_han001_repeat_settlement", {
     { fk.CardUsing, {
       global = true,
       can_refresh = function(self, event, target, player, data)
@@ -512,7 +512,7 @@ function Testhanjin_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
     } },
   })
   local confirmed = 0
-  installTestSkill(room, "#hanjin_han001_confirmed_count", {
+  installTestSkill(room, "#qiao_han001_confirmed_count", {
     { fk.TargetConfirmed, {
       global = true,
       can_refresh = function(self, event, target, player)
@@ -521,8 +521,8 @@ function Testhanjin_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
       on_refresh = function() confirmed = confirmed + 1 end,
     } },
   })
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(confirmed, 1)
@@ -530,19 +530,19 @@ function Testhanjin_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testTM11ShortDiscardAndZeroDiscard()
+function Testqiao_han001:testTM11ShortDiscardAndZeroDiscard()
   local room = FkTest.room
   p1().hp = 20
-  installTestSkill(room, "#hanjin_han001_prohibit_peach", {
+  installTestSkill(room, "#qiao_han001_prohibit_peach", {
     { "prohibit", {
-      prohibit_discard = function(self, player, card) return card.name == "hanjin__peach" end,
+      prohibit_discard = function(self, player, card) return card.name == "qiao__peach" end,
     } },
   })
   local ids = setHand(room, p1(), {
-    { "hanjin__peach" }, { "hanjin__peach" }, { "hanjin__slash" },
+    { "qiao__peach" }, { "qiao__peach" }, { "qiao__slash" },
   })
   local equip = addEquip(room, p1(), "jueying")
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   inRoom(function() p1().hp = p1().maxHp end)
@@ -552,16 +552,16 @@ function Testhanjin_han001:testTM11ShortDiscardAndZeroDiscard()
   lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
 
-  ids = setHand(room, p1(), { { "hanjin__peach" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  ids = setHand(room, p1(), { { "qiao__peach" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
   inRoom(function() p1().hp = p1().maxHp end)
   lu.assertEquals(room:getCardArea(ids[1]), Card.PlayerHand)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 2)
 
-  ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   inRoom(function() p1().hp = p1().maxHp end)
   FkTest.setNextReplies(p1(), { "1", "" })
   useSlash(room, p3(), p1())
@@ -570,14 +570,14 @@ function Testhanjin_han001:testTM11ShortDiscardAndZeroDiscard()
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 3)
 end
 
-function Testhanjin_han001:testTM12DiscardChainResolvesBeforeDraw()
+function Testqiao_han001:testTM12DiscardChainResolvesBeforeDraw()
   local room = FkTest.room
-  local extra = inRoom(function() return room:printCard("hanjin__jink", Card.Heart, 2) end)
+  local extra = inRoom(function() return room:printCard("qiao__jink", Card.Heart, 2) end)
   local done = false
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  installTestSkill(room, "#hanjin_han001_discard_chain", {
+  installTestSkill(room, "#qiao_han001_discard_chain", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -593,19 +593,19 @@ function Testhanjin_han001:testTM12DiscardChainResolvesBeforeDraw()
       end,
     } },
   })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyDiscard({ ids[1], ids[2] }), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 4)
   lu.assertEquals(room:getCardArea(extra.id), Card.PlayerHand)
 end
 
-function Testhanjin_han001:testTM13DeathInDiscardChainStopsDraw()
+function Testqiao_han001:testTM13DeathInDiscardChainStopsDraw()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  installTestSkill(room, "#hanjin_han001_discard_death", {
+  installTestSkill(room, "#qiao_han001_discard_death", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -620,21 +620,21 @@ function Testhanjin_han001:testTM13DeathInDiscardChainStopsDraw()
       end,
     } },
   })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyDiscard({ ids[1], ids[2] }) })
   useSlash(room, p3(), p1())
   lu.assertTrue(p1().dead)
   lu.assertEquals(#p1():getCardIds("h"), 1)
 end
 
-function Testhanjin_han001:testTM14IllegalPaymentsAreNormalized()
+function Testqiao_han001:testTM14IllegalPaymentsAreNormalized()
   local room = FkTest.room
   inRoom(function() p1().hp = p1().maxHp end)
   -- 只交 1 张：服务端补足到 2。
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyDiscard({ ids[1] }), "" })
   useSlash(room, p3(), p1())
   inRoom(function() p1().hp = p1().maxHp end)
@@ -643,9 +643,9 @@ function Testhanjin_han001:testTM14IllegalPaymentsAreNormalized()
 
   -- 交 3 张：服务端截断到 2。
   ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyDiscard({ ids[1], ids[2], ids[3] }), "" })
   useSlash(room, p3(), p1())
   inRoom(function() p1().hp = p1().maxHp end)
@@ -654,11 +654,11 @@ function Testhanjin_han001:testTM14IllegalPaymentsAreNormalized()
 
   -- 装备牌不能补足，也不能被弃置。
   ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
   local equip = addEquip(room, p1(), "jueying")
   lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), {
     "1", FkTest.ReplyDiscard({ equip, ids[1] }), "",
   })
@@ -670,10 +670,10 @@ function Testhanjin_han001:testTM14IllegalPaymentsAreNormalized()
 
   -- 仍属于他人的牌不能作为自己的弃牌。
   ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
-  local other = addHand(room, p2(), { { "hanjin__slash" } })[1]
-  setHand(room, p3(), { { "hanjin__slash" } })
+  local other = addHand(room, p2(), { { "qiao__slash" } })[1]
+  setHand(room, p3(), { { "qiao__slash" } })
   for _, id in ipairs(ids) do
     lu.assertEquals(room:getCardArea(id), Card.PlayerHand)
   end
@@ -684,7 +684,7 @@ function Testhanjin_han001:testTM14IllegalPaymentsAreNormalized()
   lu.assertEquals(#discarded, 2)
 end
 
-function Testhanjin_han001:testMZ01OncePerPlayPhaseAndOnlyInIdlePlayPhase()
+function Testqiao_han001:testMZ01OncePerPlayPhaseAndOnlyInIdlePlayPhase()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -701,10 +701,10 @@ function Testhanjin_han001:testMZ01OncePerPlayPhaseAndOnlyInIdlePlayPhase()
   setHand(room, p7(), {})
   setHand(room, p8(), {})
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" }, { "hanjin__jink" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" }, { "qiao__jink" },
   })
   local seenCanUse = {}
-  installTestSkill(room, "#hanjin_han001_mz_phase_probe", {
+  installTestSkill(room, "#qiao_han001_mz_phase_probe", {
     { fk.BeforePlayCard, {
       global = true,
       can_refresh = function(self, event, target, player) return player == room.players[1] end,
@@ -720,12 +720,12 @@ function Testhanjin_han001:testMZ01OncePerPlayPhaseAndOnlyInIdlePlayPhase()
   lu.assertTrue(table.find(seenCanUse, function(v) return v == false end) ~= nil)
 
   -- 取消发动选择不计次。
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   runPlayPhase(room, p1(), { "" })
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 
   -- 其他角色的出牌阶段与自己的非出牌阶段不会提供发动。
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   FkTest.setNextReplies(p2(), { "" })
   inRoom(function()
     GameEvent.Turn:create(TurnData:new(p2(), "game_rule", { Player.Play })):exec()
@@ -738,7 +738,7 @@ function Testhanjin_han001:testMZ01OncePerPlayPhaseAndOnlyInIdlePlayPhase()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testMZ02EachExtraPlayPhaseGetsOneUse()
+function Testqiao_han001:testMZ02EachExtraPlayPhaseGetsOneUse()
   local room = FkTest.room
   setHand(room, p2(), {})
   setHand(room, p3(), {})
@@ -748,14 +748,14 @@ function Testhanjin_han001:testMZ02EachExtraPlayPhaseGetsOneUse()
   setHand(room, p7(), {})
   setHand(room, p8(), {})
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__jink" }, { "qiao__peach" },
   })
   runPlayPhase(room, p1(), { FkTest.ReplyUseSkill(MZ, { p2() }, { ids[1], ids[2] }), "" })
   runPlayPhase(room, p1(), { FkTest.ReplyUseSkill(MZ, { p2() }, { ids[3], ids[4] }), "" })
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 2)
 end
 
-function Testhanjin_han001:testMZ04DeadUnknownAndUnusedAllowedKingdomsDoNotCount()
+function Testqiao_han001:testMZ04DeadUnknownAndUnusedAllowedKingdomsDoNotCount()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -774,7 +774,7 @@ function Testhanjin_han001:testMZ04DeadUnknownAndUnusedAllowedKingdomsDoNotCount
   inRoom(function() room:setBanner("all_kingdoms", old) end)
 end
 
-function Testhanjin_han001:testMZ05WildsAreIndependentAndExcludedOnlyWhenSelf()
+function Testqiao_han001:testMZ05WildsAreIndependentAndExcludedOnlyWhenSelf()
   local room = FkTest.room
   setKingdom(room, p2(), "wild")
   setKingdom(room, p3(), "wild")
@@ -789,7 +789,7 @@ function Testhanjin_han001:testMZ05WildsAreIndependentAndExcludedOnlyWhenSelf()
   lu.assertEquals(secretMinimum(p1()), 3)
 end
 
-function Testhanjin_han001:testMZ06GuestOrChangedKingdomUsesCurrentFaction()
+function Testqiao_han001:testMZ06GuestOrChangedKingdomUsesCurrentFaction()
   local room = FkTest.room
   setKingdom(room, p1(), "qun")
   setKingdom(room, p2(), "han")
@@ -802,7 +802,7 @@ function Testhanjin_han001:testMZ06GuestOrChangedKingdomUsesCurrentFaction()
   lu.assertEquals(secretMinimum(p1()), 3)
 end
 
-function Testhanjin_han001:testMZ07HiddenGeneralRevealsBeforeLockingX()
+function Testqiao_han001:testMZ07HiddenGeneralRevealsBeforeLockingX()
   local room = FkTest.room
   setHand(room, p2(), {})
   setHand(room, p3(), {})
@@ -812,7 +812,7 @@ function Testhanjin_han001:testMZ07HiddenGeneralRevealsBeforeLockingX()
   setHand(room, p7(), {})
   setHand(room, p8(), {})
   local ids = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
   inRoom(function()
     p1().kingdom = "unknown"
@@ -824,19 +824,19 @@ function Testhanjin_han001:testMZ07HiddenGeneralRevealsBeforeLockingX()
   end)
   lu.assertEquals(secretMinimum(p1()), 2)
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })
-  lu.assertEquals(p1().general, "hanjin__han001")
+  lu.assertEquals(p1().general, "qiao_heg__han001")
   lu.assertEquals(p1().kingdom, "han")
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
   lu.assertEquals(#p2():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testMZ08XZeroStillNeedsOneCard()
+function Testqiao_han001:testMZ08XZeroStillNeedsOneCard()
   local room = FkTest.room
   for i = 2, 8 do setKingdom(room, FkTest.room.players[i], "han") end
   setHand(room, p1(), {})
   lu.assertEquals(secretMinimum(p1()), 1)
   lu.assertFalse(Fk.skills[MZ]:canUse(p1()))
-  local ids = setHand(room, p1(), { { "hanjin__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" } })
   lu.assertTrue(Fk.skills[MZ]:canUse(p1()))
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
@@ -845,7 +845,7 @@ function Testhanjin_han001:testMZ08XZeroStillNeedsOneCard()
   lu.assertEquals(#p2():getCardIds("h"), 1)
 end
 
-function Testhanjin_han001:testMZ09CannotPayWhenFewerThanMaxOneX()
+function Testqiao_han001:testMZ09CannotPayWhenFewerThanMaxOneX()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -854,10 +854,10 @@ function Testhanjin_han001:testMZ09CannotPayWhenFewerThanMaxOneX()
   setKingdom(room, p6(), "shu")
   setKingdom(room, p7(), "wei")
   setKingdom(room, p8(), "han")
-  local ids = setHand(room, p1(), { { "hanjin__slash" } })
-  local other = addHand(room, p2(), { { "hanjin__jink" } })[1]
+  local ids = setHand(room, p1(), { { "qiao__slash" } })
+  local other = addHand(room, p2(), { { "qiao__jink" } })[1]
   local judge = inRoom(function()
-    return room:printCard("hanjin__indulgence", Card.Spade, 2)
+    return room:printCard("qiao__indulgence", Card.Spade, 2)
   end)
   inRoom(function()
     room:moveCardTo(judge, Card.PlayerJudge, p1(), fk.ReasonJustMove, "test", nil, false)
@@ -869,7 +869,7 @@ function Testhanjin_han001:testMZ09CannotPayWhenFewerThanMaxOneX()
   lu.assertEquals(room:getCardArea(judge), Card.PlayerJudge)
 end
 
-function Testhanjin_han001:testMZ03XCountsDistinctDifferentKingdoms()
+function Testqiao_han001:testMZ03XCountsDistinctDifferentKingdoms()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -880,12 +880,12 @@ function Testhanjin_han001:testMZ03XCountsDistinctDifferentKingdoms()
   setKingdom(room, p8(), "han")
   lu.assertEquals(secretMinimum(p1()), 2)
   local cards = setHand(room, p1(), {
-    { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" },
+    { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" },
   })
   setHand(room, p2(), {})
-  setHand(room, p3(), { { "hanjin__slash", Card.Spade, 9 } })
-  setHand(room, p4(), { { "hanjin__jink", Card.Heart, 2 } })
-  local bcard = addHand(room, p2(), { { "hanjin__slash", Card.Spade, 10 } })[1]
+  setHand(room, p3(), { { "qiao__slash", Card.Spade, 9 } })
+  setHand(room, p4(), { { "qiao__jink", Card.Heart, 2 } })
+  local bcard = addHand(room, p2(), { { "qiao__slash", Card.Spade, 10 } })[1]
   local ccard = p4():getCardIds("h")[1]
   FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p4() }) })
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ bcard }) })
@@ -895,14 +895,14 @@ function Testhanjin_han001:testMZ03XCountsDistinctDifferentKingdoms()
   lu.assertTrue(#p2():getCardIds("h") >= 2)
 end
 
-function Testhanjin_han001:testMZ10HandAndEquipmentCanBeGiven()
+function Testqiao_han001:testMZ10HandAndEquipmentCanBeGiven()
   local room = FkTest.room
-  installTestSkill(room, "#hanjin_han001_prohibit_peach_give", {
+  installTestSkill(room, "#qiao_han001_prohibit_peach_give", {
     { "prohibit", {
-      prohibit_discard = function(self, player, card) return card.name == "hanjin__peach" end,
+      prohibit_discard = function(self, player, card) return card.name == "qiao__peach" end,
     } },
   })
-  local ids = setHand(room, p1(), { { "hanjin__peach" } })
+  local ids = setHand(room, p1(), { { "qiao__peach" } })
   local equip = addEquip(room, p1(), "jueying")
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
@@ -912,9 +912,9 @@ function Testhanjin_han001:testMZ10HandAndEquipmentCanBeGiven()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testMZ11InvalidReceiverOrCardsAreRejected()
+function Testqiao_han001:testMZ11InvalidReceiverOrCardsAreRejected()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
   activateSecret(room, p1(), p1(), { ids[1], ids[2] })
@@ -932,16 +932,16 @@ function Testhanjin_han001:testMZ11InvalidReceiverOrCardsAreRejected()
   lu.assertEquals(p2():getCardIds("h"), {})
 
   setDead(room, p2())
-  ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })
   lu.assertEquals(p1():getCardIds("h"), ids)
 end
 
-function Testhanjin_han001:testMZ12CancelDoesNotCountAndFailedPindianDoesNotRefund()
+function Testqiao_han001:testMZ12CancelDoesNotCountAndFailedPindianDoesNotRefund()
   local room = FkTest.room
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   runPlayPhase(room, p1(), { "" })
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 0)
 
@@ -951,13 +951,13 @@ function Testhanjin_han001:testMZ12CancelDoesNotCountAndFailedPindianDoesNotRefu
   lu.assertEquals(#p1():getCardIds("h"), 0)
 end
 
-function Testhanjin_han001:testMZ13GiveChainChangesKingdomButDoesNotRefund()
+function Testqiao_han001:testMZ13GiveChainChangesKingdomButDoesNotRefund()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   setHand(room, p3(), {})
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_give_kingdom", {
+  installTestSkill(room, "#qiao_han001_give_kingdom", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -977,14 +977,14 @@ function Testhanjin_han001:testMZ13GiveChainChangesKingdomButDoesNotRefund()
   lu.assertEquals(#p1():getCardIds("h"), 0)
 end
 
-function Testhanjin_han001:testMZ14GiveChainMovesBHandBeforePindian()
+function Testqiao_han001:testMZ14GiveChainMovesBHandBeforePindian()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 5 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 5 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local moved = false
-  installTestSkill(room, "#hanjin_han001_give_chain_move", {
+  installTestSkill(room, "#qiao_han001_give_chain_move", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -1013,11 +1013,11 @@ function Testhanjin_han001:testMZ14GiveChainMovesBHandBeforePindian()
   lu.assertEquals(log[1].reason, MZ)
 end
 
-function Testhanjin_han001:testMZ15EmptyReceiverCanPindianAfterGiving()
+function Testqiao_han001:testMZ15EmptyReceiverCanPindianAfterGiving()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 7 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 7 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local log = {}
   installPindianProbe(room, log)
@@ -1030,9 +1030,9 @@ function Testhanjin_han001:testMZ15EmptyReceiverCanPindianAfterGiving()
   lu.assertIs(log[1].from, p2())
 end
 
-function Testhanjin_han001:testMZ16NoLegalThirdEndsAfterGiving()
+function Testqiao_han001:testMZ16NoLegalThirdEndsAfterGiving()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
   local uses = {}
@@ -1043,11 +1043,11 @@ function Testhanjin_han001:testMZ16NoLegalThirdEndsAfterGiving()
   lu.assertEquals(#uses, 0)
 end
 
-function Testhanjin_han001:testMZ17ThirdMustBeAnotherLegalLivingPindianTarget()
+function Testqiao_han001:testMZ17ThirdMustBeAnotherLegalLivingPindianTarget()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 4 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 4 } })[1]
   setDead(room, p4())
   for i = 5, 8 do setHand(room, FkTest.room.players[i], {}) end
   local captured
@@ -1071,11 +1071,11 @@ function Testhanjin_han001:testMZ17ThirdMustBeAnotherLegalLivingPindianTarget()
   lu.assertFalse(captured.cancelable)
 end
 
-function Testhanjin_han001:testMZ18BMayUseReceivedOrOriginalCard()
+function Testqiao_han001:testMZ18BMayUseReceivedOrOriginalCard()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 8 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 8 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local log = {}
   installPindianProbe(room, log)
@@ -1086,10 +1086,14 @@ function Testhanjin_han001:testMZ18BMayUseReceivedOrOriginalCard()
   lu.assertEquals(#log, 1)
   lu.assertEquals(log[1].fromCard.subcards[1], ids[1])
 
+  -- 进入下一个出牌阶段：按引擎 Phase:clear 的契约清除阶段历史，
+  -- 只清阶段范围，保留回合/整局历史。
+  inRoom(function() room:clearHistory(Player.HistoryPhase) end)
+
   -- 另一个出牌阶段：B 使用原有手牌。
-  local bcard = setHand(room, p2(), { { "hanjin__slash", Card.Spade, 3 } })[1]
-  ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 6 } })[1]
+  local bcard = setHand(room, p2(), { { "qiao__slash", Card.Spade, 3 } })[1]
+  ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 6 } })[1]
   log = {}
   installPindianProbe(room, log)
   FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p3() }) })
@@ -1100,7 +1104,7 @@ function Testhanjin_han001:testMZ18BMayUseReceivedOrOriginalCard()
   lu.assertEquals(log[1].fromCard.subcards[1], bcard)
 end
 
-function Testhanjin_han001:testMZ19WinnerUsesVirtualSlash()
+function Testqiao_han001:testMZ19WinnerUsesVirtualSlash()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -1109,9 +1113,9 @@ function Testhanjin_han001:testMZ19WinnerUsesVirtualSlash()
   setKingdom(room, p6(), "shu")
   setKingdom(room, p7(), "wei")
   setKingdom(room, p8(), "han")
-  local cards = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  local bcard = addHand(room, p2(), { { "hanjin__slash", Card.Spade, 10 } })[1]
-  local ccard = addHand(room, p3(), { { "hanjin__jink", Card.Heart, 5 } })[1]
+  local cards = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  local bcard = addHand(room, p2(), { { "qiao__slash", Card.Spade, 10 } })[1]
+  local ccard = addHand(room, p3(), { { "qiao__jink", Card.Heart, 5 } })[1]
   setHand(room, p4(), {})
   local uses, damages = {}, {}
   installUseProbe(room, uses)
@@ -1130,12 +1134,12 @@ function Testhanjin_han001:testMZ19WinnerUsesVirtualSlash()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryPhase), 1)
 end
 
-function Testhanjin_han001:testMZ19bTieHasNoSlashAndReverseWinnerSlash()
+function Testqiao_han001:testMZ19bTieHasNoSlashAndReverseWinnerSlash()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 7 }, { "hanjin__jink", Card.Heart, 7 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 }, { "qiao__jink", Card.Heart, 7 } })
   setHand(room, p2(), {})
   local ccards = setHand(room, p3(), {
-    { "hanjin__jink", Card.Heart, 7 }, { "hanjin__jink", Card.Heart, 10 },
+    { "qiao__jink", Card.Heart, 7 }, { "qiao__jink", Card.Heart, 10 },
   })
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local uses = {}
@@ -1146,9 +1150,13 @@ function Testhanjin_han001:testMZ19bTieHasNoSlashAndReverseWinnerSlash()
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })
   lu.assertEquals(#uses, 0)
 
-  ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
-  ccards = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 10 }, { "hanjin__jink", Card.Heart, 10 } })
-  local bcard = addHand(room, p2(), { { "hanjin__slash", Card.Spade, 5 } })[1]
+  -- 进入下一个出牌阶段：按引擎 Phase:clear 的契约清除阶段历史，
+  -- 只清阶段范围，保留回合/整局历史。
+  inRoom(function() room:clearHistory(Player.HistoryPhase) end)
+
+  ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
+  ccards = setHand(room, p3(), { { "qiao__jink", Card.Heart, 10 }, { "qiao__jink", Card.Heart, 10 } })
+  local bcard = addHand(room, p2(), { { "qiao__slash", Card.Spade, 5 } })[1]
   FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p3() }) })
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ bcard }) })
   FkTest.setNextReplies(p3(), { FkTest.ReplyChooseCards({ ccards[1] }), "" })
@@ -1158,15 +1166,15 @@ function Testhanjin_han001:testMZ19bTieHasNoSlashAndReverseWinnerSlash()
   lu.assertIs(uses[1].tos[1], p2())
 end
 
-function Testhanjin_han001:testMZ20ModifiedPindianNumberControlsWinner()
+function Testqiao_han001:testMZ20ModifiedPindianNumberControlsWinner()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 5 }, { "hanjin__jink", Card.Heart, 5 },
+    { "qiao__slash", Card.Spade, 5 }, { "qiao__jink", Card.Heart, 5 },
   })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 8 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 8 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_pindian_number", {
+  installTestSkill(room, "#qiao_han001_pindian_number", {
     { fk.PindianCardsDisplayed, {
       global = true,
       can_refresh = function(self, event, target, owner) return owner == room.players[1] end,
@@ -1185,11 +1193,11 @@ function Testhanjin_han001:testMZ20ModifiedPindianNumberControlsWinner()
   lu.assertIs(uses[1].from, p2())
 end
 
-function Testhanjin_han001:testMZ21PindianReasonAndCards()
+function Testqiao_han001:testMZ21PindianReasonAndCards()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local log = {}
   installPindianProbe(room, log)
@@ -1205,13 +1213,13 @@ function Testhanjin_han001:testMZ21PindianReasonAndCards()
   lu.assertNotEquals(room:getCardArea(ccard), Card.PlayerHand)
 end
 
-function Testhanjin_han001:testMZ22ProhibitedPindianEndsAfterGiving()
+function Testqiao_han001:testMZ22ProhibitedPindianEndsAfterGiving()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 4 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 4 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_prohibit_pindian", {
+  installTestSkill(room, "#qiao_han001_prohibit_pindian", {
     { "prohibit", {
       prohibit_pindian = function(self, from, to) return from == p2() and to == p3() end,
     } },
@@ -1224,13 +1232,13 @@ function Testhanjin_han001:testMZ22ProhibitedPindianEndsAfterGiving()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testMZ23PindianDeathPreventsSlash()
+function Testqiao_han001:testMZ23PindianDeathPreventsSlash()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 4 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 4 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_pindian_death", {
+  installTestSkill(room, "#qiao_han001_pindian_death", {
     { fk.PindianFinished, {
       global = true,
       can_refresh = function(self, event, target, owner) return owner == room.players[1] end,
@@ -1250,13 +1258,13 @@ function Testhanjin_han001:testMZ23PindianDeathPreventsSlash()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testMZ24SlashIsVirtualWithoutInheritedCardData()
+function Testqiao_han001:testMZ24SlashIsVirtualWithoutInheritedCardData()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__fire__slash", Card.Spade, 9 }, { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__fire__slash", Card.Spade, 9 }, { "qiao__jink", Card.Heart, 2 },
   })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local uses = {}
   installUseProbe(room, uses)
@@ -1267,15 +1275,15 @@ function Testhanjin_han001:testMZ24SlashIsVirtualWithoutInheritedCardData()
   lu.assertEquals(#uses, 1)
   lu.assertTrue(uses[1].card:isVirtual())
   lu.assertEquals(#uses[1].card.subcards, 0)
-  lu.assertEquals(uses[1].card.name, "hanjin__slash")
+  lu.assertEquals(uses[1].card.name, "qiao__slash")
   lu.assertEquals(uses[1].card.suit, Card.NoSuit)
 end
 
-function Testhanjin_han001:testMZ25ExplicitTargetIgnoresSlashDistance()
+function Testqiao_han001:testMZ25ExplicitTargetIgnoresSlashDistance()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p8(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p8(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 3, 7 do setHand(room, FkTest.room.players[i], {}) end
   local uses = {}
   installUseProbe(room, uses)
@@ -1288,11 +1296,11 @@ function Testhanjin_han001:testMZ25ExplicitTargetIgnoresSlashDistance()
   lu.assertIs(uses[1].tos[1], p8())
 end
 
-function Testhanjin_han001:testMZ26SlashDoesNotConsumeNormalUseCount()
+function Testqiao_han001:testMZ26SlashDoesNotConsumeNormalUseCount()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   inRoom(function() p2():addCardUseHistory("slash", 2) end)
   local before = p2():usedCardTimes("slash", Player.HistoryTurn)
@@ -1306,13 +1314,13 @@ function Testhanjin_han001:testMZ26SlashDoesNotConsumeNormalUseCount()
   lu.assertTrue(uses[1].extraUse)
 end
 
-function Testhanjin_han001:testMZ27ProhibitedUseOrTargetSkipsSlash()
+function Testqiao_han001:testMZ27ProhibitedUseOrTargetSkipsSlash()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_prohibit_slash_use", {
+  installTestSkill(room, "#qiao_han001_prohibit_slash_use", {
     { "prohibit", {
       prohibit_use = function(self, player, card)
         return player == p2() and card.trueName == "slash"
@@ -1328,13 +1336,13 @@ function Testhanjin_han001:testMZ27ProhibitedUseOrTargetSkipsSlash()
   lu.assertEquals(p1():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testMZ27bProhibitedTargetSkipsSlash()
+function Testqiao_han001:testMZ27bProhibitedTargetSkipsSlash()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_prohibit_slash_target", {
+  installTestSkill(room, "#qiao_han001_prohibit_slash_target", {
     { "prohibit", {
       is_prohibited = function(self, from, to, card)
         return card ~= nil and card.trueName == "slash" and to == p3()
@@ -1349,11 +1357,11 @@ function Testhanjin_han001:testMZ27bProhibitedTargetSkipsSlash()
   lu.assertEquals(#uses, 0)
 end
 
-function Testhanjin_han001:testMZ28DodgeAndDamageUseNormalSlashFlow()
+function Testqiao_han001:testMZ28DodgeAndDamageUseNormalSlashFlow()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3, }, { "jink", Card.Heart, 2 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3, }, { "jink", Card.Heart, 2 } })[1]
   local dodge = p3():getCardIds("h")[2]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local uses, damages = {}, {}
@@ -1368,13 +1376,13 @@ function Testhanjin_han001:testMZ28DodgeAndDamageUseNormalSlashFlow()
   lu.assertEquals(uses[1].finished, 1)
 end
 
-function Testhanjin_han001:testMZ29aDeathAfterGivingStopsThirdSelection()
+function Testqiao_han001:testMZ29aDeathAfterGivingStopsThirdSelection()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_death_after_give", {
+  installTestSkill(room, "#qiao_han001_death_after_give", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -1396,13 +1404,13 @@ function Testhanjin_han001:testMZ29aDeathAfterGivingStopsThirdSelection()
   lu.assertEquals(#p2():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testMZ29bDeathAfterPindianKeepsEstablishedFlow()
+function Testqiao_han001:testMZ29bDeathAfterPindianKeepsEstablishedFlow()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
-  installTestSkill(room, "#hanjin_han001_death_after_pindian", {
+  installTestSkill(room, "#qiao_han001_death_after_pindian", {
     { fk.PindianFinished, {
       global = true,
       can_refresh = function(self, event, target, owner) return owner == room.players[1] end,
@@ -1421,11 +1429,11 @@ function Testhanjin_han001:testMZ29bDeathAfterPindianKeepsEstablishedFlow()
   lu.assertEquals(#uses, 1)
 end
 
-function Testhanjin_han001:testMZ30ThirdSelectionCannotBeCancelled()
+function Testqiao_han001:testMZ30ThirdSelectionCannotBeCancelled()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 } })
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 } })
   setHand(room, p2(), {})
-  local ccard = setHand(room, p3(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local ccard = setHand(room, p3(), { { "qiao__jink", Card.Heart, 3 } })[1]
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local captured
   local original = room.askToChoosePlayers
@@ -1444,9 +1452,9 @@ function Testhanjin_han001:testMZ30ThirdSelectionCannotBeCancelled()
   lu.assertEquals(#log, 1)
 end
 
-function Testhanjin_han001:testHG01MainAndDeputySourceAndHiddenReveal()
+function Testqiao_han001:testHG01MainAndDeputySourceAndHiddenReveal()
   local room = FkTest.room
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
   activateSecret(room, p1(), p2(), p1():getCardIds("h"))
@@ -1454,8 +1462,8 @@ function Testhanjin_han001:testHG01MainAndDeputySourceAndHiddenReveal()
 
   -- 副将位置：技能来源为副将，发动时只明置副将。
   inRoom(function()
-    room:changeHero(p2(), "hanjin__han001", true, true, false, false, false)
-    room:setPlayerMark(p2(), "__heg_deputy", "hanjin__han001")
+    room:changeHero(p2(), "qiao_heg__han001", true, true, false, false, false)
+    room:setPlayerMark(p2(), "__heg_deputy", "qiao_heg__han001")
     room:setPlayerMark(p2(), "__heg_kingdom", "han")
     p2().kingdom = "unknown"
     room:setPlayerProperty(p2(), "kingdom", "unknown")
@@ -1463,21 +1471,21 @@ function Testhanjin_han001:testHG01MainAndDeputySourceAndHiddenReveal()
     p2():prelightSkill(Fk.skills[MZ], true)
     room:setPlayerProperty(p2(), "hp", p2().maxHp)
   end)
-  local ids = setHand(room, p2(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p2(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), {})
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   activateSecret(room, p2(), p3(), { ids[1], ids[2] })
-  lu.assertEquals(p2().deputyGeneral, "hanjin__han001")
+  lu.assertEquals(p2().deputyGeneral, "qiao_heg__han001")
   lu.assertNotEquals(p2().general, "anjiang")
   lu.assertEquals(p2():usedSkillTimes(MZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testHG01bHiddenTianmingRevealsBeforeDiscardChain()
+function Testqiao_han001:testHG01bHiddenTianmingRevealsBeforeDiscardChain()
   local room = FkTest.room
-  setHand(room, p3(), { { "hanjin__slash" } })
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p3(), { { "qiao__slash" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   inRoom(function()
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han001")
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han001")
     room:setPlayerMark(p1(), "__heg_kingdom", "han")
     p1().kingdom = "unknown"
     room:setPlayerProperty(p1(), "kingdom", "unknown")
@@ -1485,7 +1493,7 @@ function Testhanjin_han001:testHG01bHiddenTianmingRevealsBeforeDiscardChain()
     p1():prelightSkill(Fk.skills[TM], true)
   end)
   local atDiscard
-  installTestSkill(room, "#hanjin_han001_tm_hidden_probe", {
+  installTestSkill(room, "#qiao_han001_tm_hidden_probe", {
     { fk.AfterCardsMove, {
       global = true,
       can_refresh = function(self, event, target, owner, data)
@@ -1512,23 +1520,23 @@ function Testhanjin_han001:testHG01bHiddenTianmingRevealsBeforeDiscardChain()
   FkTest.setNextReplies(p1(), { "1", "1", "" })
   useSlash(room, p3(), p1())
   lu.assertNotNil(atDiscard)
-  lu.assertEquals(atDiscard.general, "hanjin__han001")
+  lu.assertEquals(atDiscard.general, "qiao_heg__han001")
   lu.assertEquals(atDiscard.kingdom, "han")
   table.sort(atDiscard.cards)
   table.sort(ids)
   lu.assertEquals(atDiscard.cards, ids)
-  lu.assertEquals(p1().general, "hanjin__han001")
+  lu.assertEquals(p1().general, "qiao_heg__han001")
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
   lu.assertEquals(#p1():getCardIds("h"), 2)
 end
 
-function Testhanjin_han001:testHG02LostOrExchangedSkillCannotBeUsedByOldHolder()
+function Testqiao_han001:testHG02LostOrExchangedSkillCannotBeUsedByOldHolder()
   local room = FkTest.room
   inRoom(function()
     room:handleAddLoseSkills(p1(), "-" .. MZ, nil, false, true)
   end)
   lu.assertFalse(p1():hasSkill(MZ))
-  local before = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local before = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   activateSecret(room, p1(), p2(), { before[1], before[2] })
   lu.assertEquals(p1():getCardIds("h"), before)
@@ -1536,21 +1544,21 @@ function Testhanjin_han001:testHG02LostOrExchangedSkillCannotBeUsedByOldHolder()
   lu.assertTrue(p3():hasSkill(MZ))
 
   inRoom(function()
-    room:changeHero(p1(), "hanjin_test__han_1", true, false, false, false, false)
+    room:changeHero(p1(), "qiao_test__han_1", true, false, false, false, false)
   end)
   lu.assertFalse(p1():hasSkill(MZ))
   lu.assertFalse(p1():hasSkill(TM))
 end
 
-function Testhanjin_han001:testHG03MizhaoSlashTriggersTianmingOnce()
+function Testqiao_han001:testHG03MizhaoSlashTriggersTianmingOnce()
   local room = FkTest.room
   grant(p3(), TM)
   local ids = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 10 }, { "hanjin__jink", Card.Heart, 10 },
+    { "qiao__slash", Card.Spade, 10 }, { "qiao__jink", Card.Heart, 10 },
   })
   setHand(room, p2(), {})
   local ccards = setHand(room, p3(), {
-    { "hanjin__jink", Card.Heart, 3 }, { "hanjin__slash" }, { "hanjin__jink" },
+    { "qiao__jink", Card.Heart, 3 }, { "qiao__slash" }, { "qiao__jink" },
   })
   for i = 4, 8 do setHand(room, FkTest.room.players[i], {}) end
   local pindians, uses = {}, {}
@@ -1571,14 +1579,14 @@ function Testhanjin_han001:testHG03MizhaoSlashTriggersTianmingOnce()
   lu.assertEquals(p3():usedSkillTimes(TM, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han001:testHG04DoubleHiddenKeepsCorrectSourceAndFaction()
+function Testqiao_han001:testHG04DoubleHiddenKeepsCorrectSourceAndFaction()
   local room = FkTest.room
   setHand(room, p2(), {})
   for i = 3, 8 do setHand(room, FkTest.room.players[i], {}) end
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   inRoom(function()
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han001")
-    room:setPlayerMark(p1(), "__heg_deputy", "hanjin_test__han_1")
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han001")
+    room:setPlayerMark(p1(), "__heg_deputy", "qiao_test__han_1")
     room:setPlayerMark(p1(), "__heg_kingdom", "han")
     room:setPlayerMark(p1(), "__heg_wild", 0)
     p1().kingdom = "unknown"
@@ -1591,20 +1599,20 @@ function Testhanjin_han001:testHG04DoubleHiddenKeepsCorrectSourceAndFaction()
   lu.assertEquals(p1().deputyGeneral, "anjiang")
   lu.assertEquals(secretMinimum(p1()), 2)
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })
-  lu.assertEquals(p1().general, "hanjin__han001")
+  lu.assertEquals(p1().general, "qiao_heg__han001")
   lu.assertEquals(p1().deputyGeneral, "anjiang")
   lu.assertEquals(p1().kingdom, "han")
 end
 
-function Testhanjin_han001:testHG05DefaultSuiteAndRoomIsolation()
-  lu.assertTrue(table.contains(Fk.packages.hanjin_generals.game_modes_whitelist, "hanjin_heg_mode"))
-  lu.assertTrue(table.contains(Fk.game_modes.hanjin_heg_mode.whitelist, "hanjin_generals"))
-  lu.assertEquals(FkTest.room:getSettings("gameMode"), "hanjin_heg_mode")
+function Testqiao_han001:testHG05DefaultSuiteAndRoomIsolation()
+  lu.assertTrue(table.contains(Fk.packages.qiao_generals.game_modes_whitelist, "qiao_heg_mode"))
+  lu.assertTrue(table.contains(Fk.game_modes.qiao_heg_mode.whitelist, "qiao_generals"))
+  lu.assertEquals(FkTest.room:getSettings("gameMode"), "qiao_heg_mode")
   lu.assertNotNil(Fk.skills[TM])
   lu.assertNotNil(Fk.skills[MZ])
 end
 
-function Testhanjin_han001:testMZ31RealClientPlayerWithoutRoomComputesKnownFaction()
+function Testqiao_han001:testMZ31RealClientPlayerWithoutRoomComputesKnownFaction()
   local room = FkTest.room
   setKingdom(room, p2(), "han")
   setKingdom(room, p3(), "wei")
@@ -1613,7 +1621,7 @@ function Testhanjin_han001:testMZ31RealClientPlayerWithoutRoomComputesKnownFacti
   setKingdom(room, p6(), "shu")
   setKingdom(room, p7(), "wei")
   setKingdom(room, p8(), "han")
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   lu.assertEquals(secretMinimum(p1()), 2)
   asClient(room, function(clients)
     local me = clients[1]
@@ -1623,11 +1631,11 @@ function Testhanjin_han001:testMZ31RealClientPlayerWithoutRoomComputesKnownFacti
     local skill = Fk.skills[MZ]
     lu.assertEquals(skill:getMinCardNum(me), 2)
     lu.assertTrue(skill:canUse(me))
-    lu.assertEquals(skill:prompt(me), "#hanjin__skill_han001_2-prompt:::2")
+    lu.assertEquals(skill:prompt(me), "#qiao__skill_han001_2-prompt:::2")
   end)
 end
 
-function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
+function Testqiao_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
   local room = FkTest.room
   setKingdom(room, p2(), "wei")
   setKingdom(room, p3(), "han")
@@ -1637,7 +1645,7 @@ function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
   setKingdom(room, p7(), "han")
   setKingdom(room, p8(), "han")
   inRoom(function()
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han001")
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han001")
     room:setPlayerMark(p1(), "__heg_kingdom", "wei")
     room:setPlayerMark(p1(), "__heg_wild", 0)
     p1().kingdom = "unknown"
@@ -1645,7 +1653,7 @@ function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
     p1():hideGeneral(false)
     p1():prelightSkill(Fk.skills[MZ], true)
   end)
-  setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" }, { "hanjin__peach" } })
+  setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" }, { "qiao__peach" } })
   for i = 2, 8 do setHand(room, FkTest.room.players[i], {}) end
   -- 自身暗置时应按公开标记预测为魏；魏不计入 X，故是汉、蜀、群三个势力。
   lu.assertEquals(secretMinimum(p1()), 3)
@@ -1657,13 +1665,13 @@ function Testhanjin_han001:testMZ32ClientWithoutRoomPredictsHiddenOwnFaction()
     local skill = Fk.skills[MZ]
     lu.assertEquals(skill:getMinCardNum(me), 3)
     lu.assertTrue(skill:canUse(me))
-    lu.assertEquals(skill:prompt(me), "#hanjin__skill_han001_2-prompt:::3")
+    lu.assertEquals(skill:prompt(me), "#qiao__skill_han001_2-prompt:::3")
   end)
 end
 
-function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection()
+function Testqiao_han001:testMZ33ClientRecipientClickReplacesPreviousSelection()
   local room = FkTest.room
-  local ids = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   asClient(room, function(clients)
     local me, first, second = clients[1], clients[2], clients[3]
     local skill = Fk.skills[MZ]
@@ -1673,11 +1681,11 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
 
     -- 只登记一个共享 Engine 的 boardgame；汉晋与上游国战指向同一注册。
     local base = Fk:getBoardGame("new_heg_mode")
-    local board = Fk:getBoardGame("hanjin_heg_mode")
+    local board = Fk:getBoardGame("qiao_heg_mode")
     lu.assertIs(board, base)
     lu.assertIs(board.engine, Fk)
-    lu.assertIs(board.client_klass, require "packages.hanjin.pkg.hanjin_mode.client")
-    lu.assertNil(Fk.boardgames.hanjin)
+    lu.assertIs(board.client_klass, require "packages.qiao.pkg.qiao_mode.client")
+    lu.assertNil(Fk.boardgames.qiao)
 
     local function handlerFor(handlerClass, mode)
       room.settings.gameMode = mode
@@ -1694,7 +1702,7 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
     for _, handlerClass in ipairs({ client.request_handlers.PlayCard,
       client.request_handlers.AskForUseActiveSkill }) do
       -- 汉晋房间：点击新收牌者替换旧收牌者。
-      local handler = handlerFor(handlerClass, "hanjin_heg_mode")
+      local handler = handlerFor(handlerClass, "qiao_heg_mode")
       handler:update("Photo", first.id, "click", { selected = true })
       lu.assertEquals(handler.selected_targets, { first.id })
       lu.assertTrue(handler:feasible())
@@ -1720,15 +1728,15 @@ function Testhanjin_han001:testMZ33ClientRecipientClickReplacesPreviousSelection
       lu.assertEquals(normal.selected_targets, { first.id, second.id })
       normal:_finish()
     end
-    room.settings.gameMode = "hanjin_heg_mode"
+    room.settings.gameMode = "qiao_heg_mode"
   end)
 end
 
-function Testhanjin_han001:testCardFootnoteStripsRichTextOnlyInHanjinMode()
+function Testqiao_han001:testCardFootnoteStripsRichTextOnlyInQiaoMode()
   local room = FkTest.room
   local me, to = p1(), FkTest.room.players[2]
-  local slashId = setHand(room, me, { { "hanjin__slash" } })[1]
-  local board = Fk:getBoardGame("hanjin_heg_mode")
+  local slashId = setHand(room, me, { { "qiao__slash" } })[1]
+  local board = Fk:getBoardGame("qiao_heg_mode")
   -- ##UseCardTo 是真实的脚注日志类型（不含 card 字段），无需自造翻译。
   local msg = { type = "##UseCardTo", from = me.id, to = { to.id } }
   local oldGeneral, oldDeputy = me.general, me.deputyGeneral
@@ -1740,8 +1748,8 @@ function Testhanjin_han001:testCardFootnoteStripsRichTextOnlyInHanjinMode()
   end
 
   local ok, err = pcall(function()
-    me.general = "hanjin__jin011" -- 张虎&乐綝，正式将 ID
-    me.deputyGeneral = "hanjin_test__wei_1"
+    me.general = "qiao_heg__jin011" -- 张虎&乐綝，正式将 ID
+    me.deputyGeneral = "qiao_test__wei_1"
     asClient(room, function(clients)
       local client = board.client_klass:new(ClientInstance.client)
       client.players = clients
@@ -1751,7 +1759,7 @@ function Testhanjin_han001:testCardFootnoteStripsRichTextOnlyInHanjinMode()
       end
 
       -- 路径 1：SetCardFootnote（setCardNote → parseMsg(msg, true)）
-      room.settings.gameMode = "hanjin_heg_mode"
+      room.settings.gameMode = "qiao_heg_mode"
       client:setCardNote({ slashId, -1 }, msg, false)
       lu.assertEquals(1, #notified)
       lu.assertEquals("SetCardFootnote", notified[1].name)
@@ -1788,4 +1796,4 @@ function Testhanjin_han001:testCardFootnoteStripsRichTextOnlyInHanjinMode()
   if not ok then error(err) end
 end
 
-return { name = "hanjin_han001" }
+return { name = "qiao_han001" }

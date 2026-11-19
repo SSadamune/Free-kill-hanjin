@@ -2,11 +2,11 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local XIEZHENG = "hanjin__skill_jin003_2"
-local BEISHI = "hanjin__skill_jin004_2"
+local XIEZHENG = "qiao__skill_jin003_2"
+local BEISHI = "qiao__skill_jin004_2"
 
-Testhanjin_jin_reactive = {}
-Testhanjin_jin_reactive.tearDown = support.clearRoom
+Testqiao_jin_reactive = {}
+Testqiao_jin_reactive.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -15,12 +15,12 @@ local function inRoom(fn)
 end
 
 local function prepare(main)
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "wei" })
     skill_test.installDualGenerals(room, room.players[1], {
       main = main,
-      deputy = "hanjin_test__jin_2",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = room.players[1]
@@ -41,8 +41,8 @@ local function give(room, player, specs)
   return ids
 end
 
-function Testhanjin_jin_reactive:testXiezhengBasicAsSlashActuallyUsed()
-  local room = prepare("hanjin__jin003")
+function Testqiao_jin_reactive:testXiezhengBasicAsSlashActuallyUsed()
+  local room = prepare("qiao_heg__jin003")
   local p, user, victim = room.players[1], room.players[2], room.players[3]
   local basic = give(room, user, { { "slash", Card.Spade, 3 } })[1]
   inRoom(function() victim.hp = 4 end)
@@ -57,8 +57,8 @@ function Testhanjin_jin_reactive:testXiezhengBasicAsSlashActuallyUsed()
   lu.assertEquals(room:getCardArea(basic), Card.DiscardPile)
 end
 
-function Testhanjin_jin_reactive:testXiezhengRefusalEntersPenalty()
-  local room = prepare("hanjin__jin003")
+function Testqiao_jin_reactive:testXiezhengRefusalEntersPenalty()
+  local room = prepare("qiao_heg__jin003")
   local p, user, victim = room.players[1], room.players[2], room.players[3]
   local theirs = give(room, user, { { "peach", Card.Heart, 7 } })[1]
   inRoom(function()
@@ -96,8 +96,8 @@ function Testhanjin_jin_reactive:testXiezhengRefusalEntersPenalty()
   lu.assertTrue(table.contains(p:getCardIds("h"), theirs))
 end
 
-function Testhanjin_jin_reactive:testXiezhengExplicitVictimBeyondAttackRange()
-  local room = prepare("hanjin__jin003")
+function Testqiao_jin_reactive:testXiezhengExplicitVictimBeyondAttackRange()
+  local room = prepare("qiao_heg__jin003")
   local p, user, victim = room.players[1], room.players[2], room.players[5]
   local basic = give(room, user, { { "jink", Card.Heart, 3 } })[1]
   inRoom(function() victim.hp = 4 end)
@@ -110,39 +110,72 @@ function Testhanjin_jin_reactive:testXiezhengExplicitVictimBeyondAttackRange()
   lu.assertEquals(room:getCardArea(basic), Card.DiscardPile)
 end
 
-function Testhanjin_jin_reactive:testBeishiDistantOtherVictimDoesNotAvoidHpLoss()
-  local room = prepare("hanjin__jin004")
+function Testqiao_jin_reactive:testBeishiDistantOtherVictimDoesNotAvoidHpLoss()
+  local room = prepare("qiao_heg__jin004")
   local p, source, other = room.players[1], room.players[2], room.players[4]
   local mine = give(room, p, { { "jink", Card.Heart, 4 } })[1]
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4; other.hp = 4 end)
   lu.assertFalse(p:inMyAttackRange(other))
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { other }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { other }) })
   inRoom(function() room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) } end)
   lu.assertEquals(other.hp, 3)
   lu.assertEquals(p.hp, 3)
 end
 
-function Testhanjin_jin_reactive:testBeishiDamagesOriginalUserAvoidsHpLoss()
-  local room = prepare("hanjin__jin004")
+function Testqiao_jin_reactive:testBeishiFreeUseRejectsInjectedPassiveCard()
+  local room = prepare("qiao_heg__jin004")
+  local p, source = room.players[1], room.players[2]
+  local discarded = give(room, p, { { "jink", Card.Heart, 4 } })[1]
+  local injected = give(room, p, { { "jink", Card.Diamond, 6 } })[1]
+  local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
+  inRoom(function() p.hp = 4 end)
+
+  local captured
+  skill_test.withSkillRequests(room, BEISHI, {
+    askToUseCard = function(self, player, params, original)
+      captured = params
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(p, {
+      FkTest.ReplyDiscard({ discarded }),
+      FkTest.ReplyCard(Fk:getCardById(injected), {}),
+    })
+    inRoom(function()
+      room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) }
+    end)
+  end)
+
+  lu.assertNotNil(captured, "悖弑必须发出真实的自由用牌请求")
+  lu.assertEquals(captured.pattern, ".")
+  lu.assertTrue(captured.extra_data ~= nil and captured.extra_data.not_passive == true,
+    "悖弑自由用牌请求必须声明 not_passive")
+  lu.assertTrue(table.contains(p:getCardIds("h"), injected),
+    "服务端应在 validateUse 被动分支早拒注入的【闪】")
+  lu.assertEquals(p.hp, 3, "拒绝用牌后仍按未造成伤害失去1点体力")
+end
+
+function Testqiao_jin_reactive:testBeishiDamagesOriginalUserAvoidsHpLoss()
+  local room = prepare("qiao_heg__jin004")
   local p, source = room.players[1], room.players[2]
   local mine = give(room, p, { { "jink", Card.Heart, 4 } })[1]
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4; source.hp = 4 end)
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { source }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), FkTest.ReplyCard(Fk:getCardById(slash), { source }) })
   inRoom(function() room:useCard { from = source, tos = { p }, card = Fk:getCardById(slash) } end)
   lu.assertEquals(source.hp, 3)
   lu.assertEquals(p.hp, 4)
 end
 
-function Testhanjin_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDamage()
-  local room = prepare("hanjin__jin004")
+function Testqiao_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDamage()
+  local room = prepare("qiao_heg__jin004")
   local p, source = room.players[1], room.players[2]
   local mine = give(room, p, { { "jink", Card.Heart, 4 } })[1]
   local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
   inRoom(function() p.hp = 4 end)
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ mine }), "" })
+  FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), "" })
   inRoom(function()
     room:useCard {
       from = source,
@@ -156,5 +189,5 @@ function Testhanjin_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDama
   lu.assertEquals(p.hp, 3)
 end
 
-return { name = "hanjin_jin_reactive" }
+return { name = "qiao_jin_reactive" }
 

@@ -1,0 +1,73 @@
+-- 铜雀：每回合限一次，你使用应变牌时，可以无视一项应变条件。
+--
+-- 规则基线：docs/rules/card-deck.md「普通锦囊与装备的审阅结论 · 铜雀」、
+-- 《势备应变牌堆差异》「每回合限一次，且自己选择是否发动。时机在使用牌时」
+-- 与「同一张牌有多个应变条件时，只能声明其中一个」。
+--   * 时机在 fk.AfterCardUseDeclared：在 PreCardUse 锁定“无视次数”之后、应变
+--     常规结算之前，因此【铜雀】来不及补上已经使用的雷【杀】「孤军 → 无视次数」，
+--     该条目不出现在可选项里。
+--   * 自己选择是否发动，并自己选择本次无视的条目；任一步取消都不消耗本回合次数。
+--   * 一个令牌只作用于一条被明确指定的条目，不能开启全部条目。
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+
+local skill = fk.CreateSkill {
+  name = "qiao__bronze_sparrow_skill",
+  attached_equip = "qiao__bronze_sparrow",
+}
+
+Fk:loadTranslationTable {
+  ["qiao__bronze_sparrow_skill"] = "铜雀",
+  ["#qiao__bronze_sparrow-invoke"] = "铜雀：是否无视本次的一项应变条件",
+  ["#qiao__bronze_sparrow-choose"] = "铜雀：选择本次无视的应变条件",
+  ["qiao__bronze_sparrow_option"] = "%arg（%arg2）",
+}
+
+--- 本次使用中【铜雀】可忽略的条目。“无视次数”在 PreCardUse 已经锁定，
+--- 此后的令牌无法追认，故不作为选项。
+local function ignorableEntries(use)
+  return table.filter(A.getEntries(use.card, use), function(entry)
+    return type(entry.effect) == "string" and entry.effect ~= ""
+      and entry.effect ~= "ignore_times"
+  end)
+end
+
+skill:addEffect(fk.AfterCardUseDeclared, {
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player:hasSkill(skill.name)
+      and player:usedSkillTimes(skill.name, Player.HistoryTurn) == 0
+      and A.isAdaptationCard(data.card, data)
+      and #ignorableEntries(data) > 0
+  end,
+  on_cost = function(self, event, target, player, data)
+    local room = player.room
+    if not room:askToSkillInvoke(player, {
+      skill_name = skill.name,
+      prompt = "#qiao__bronze_sparrow-invoke",
+    }) then
+      return false
+    end
+    local entries = ignorableEntries(data)
+    local choices = {}
+    for index, entry in ipairs(entries) do
+      choices[index] = "qiao__bronze_sparrow_option:::" .. index
+        .. ":qiao_condition_" .. entry.condition
+    end
+    local choice = room:askToChoice(player, {
+      choices = choices,
+      skill_name = skill.name,
+      cancelable = true,
+      prompt = "#qiao__bronze_sparrow-choose",
+    })
+    if choice == nil or choice == "Cancel" then return false end
+    local picked = entries[table.indexOf(choices, choice)]
+    if picked == nil then return false end
+    event:setCostData(self, { entry_id = picked.id })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    player:setSkillUseHistory(skill.name, 1, Player.HistoryTurn)
+    A.grantIgnore(data, skill.name, event:getCostData(self).entry_id)
+  end,
+})
+
+return skill

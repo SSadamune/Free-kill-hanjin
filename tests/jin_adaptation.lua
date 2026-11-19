@@ -1,20 +1,20 @@
 -- JIN004/JIN013/JIN015 晋应变批次定向用例。
--- 规则依据：rules/generals/jin004-jiachong.md、jin013-wangjun.md、
--- jin015-shibao.md 及 rules/adaptation.md。测试只使用正式晋武将、真实请求与
+-- 规则依据：docs/rules/generals/jin004-jiachong.md、jin013-wangjun.md、
+-- jin015-shibao.md 及 docs/rules/adaptation.md。测试只使用正式晋武将、真实请求与
 -- 正式汉晋牌；不另建测试专用技能内容。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local TONGFA = "hanjin__skill_jin004_1"
-local CHENGLIU = "hanjin__skill_jin013_1"
-local QIANQU = "hanjin__skill_jin015_1"
+local TONGFA = "qiao__skill_jin004_1"
+local CHENGLIU = "qiao__skill_jin013_1"
+local QIANQU = "qiao__skill_jin015_1"
 
 local function adaptation()
-  return require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
+  return require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 end
 
-Testhanjin_jin_adaptation = {}
-Testhanjin_jin_adaptation.tearDown = support.clearRoom
+Testqiao_jin_adaptation = {}
+Testqiao_jin_adaptation.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -66,14 +66,14 @@ local function install(room, general)
   inRoom(function()
     skill_test.installDualGenerals(room, room.players[1], {
       main = general,
-      deputy = "hanjin_test__jin_2",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
   end)
 end
 
 local function prepare(general)
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(room, { "jin", "jin", "wei" }) end)
   install(room, general)
   resetCards(room)
@@ -87,7 +87,7 @@ local function p3() return FkTest.room.players[3] end
 --- 在真实 TurnStart 中执行 fn，令 room.current 为 player。
 local function runTurnStart(room, player, fn)
   local fired = false
-  local skel = fk.CreateSkill { name = "#hanjin_jin_adaptation_turn_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin_adaptation_turn_probe" }
   skel:addEffect(fk.TurnStart, {
     global = true,
     can_refresh = function(self, event, target, probe_player)
@@ -106,13 +106,13 @@ local function runTurnStart(room, player, fn)
 end
 
 -- 通法的令牌在 AfterCardUseDeclared 才登记，晚于公共应变 prepare。
-function Testhanjin_jin_adaptation:testLateIgnoreTokenAfterPrepareIsReadByResolve()
-  local room = prepare("hanjin__jin004")
+function Testqiao_jin_adaptation:testLateIgnoreTokenAfterPrepareIsReadByResolve()
+  local room = prepare("qiao_heg__jin004")
   local user = p2()
   local data = UseCardData:new {
     from = user,
     tos = { p3() },
-    card = Fk:cloneCard("hanjin_test__blank_basic"),
+    card = Fk:cloneCard("qiao_test__blank_basic"),
     extra_data = {},
   }
   adaptation().setCardEntries(data.card, {
@@ -131,12 +131,12 @@ function Testhanjin_jin_adaptation:testLateIgnoreTokenAfterPrepareIsReadByResolv
 end
 
 -- 通法：同势力使用者交给贾充一张牌，令牌只令本次一个未满足条目成立。
-function Testhanjin_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
-  local room = prepare("hanjin__jin004")
+function Testqiao_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
+  local room = prepare("qiao_heg__jin004")
   local jiaChong, user, target = p1(), p2(), p3()
-  local gift = give(room, user, { { "hanjin__peach" } })[1]
+  local gift = give(room, user, { { "qiao__peach" } })[1]
   inRoom(function() user.hp = 2 end)
-  local usedCard = Fk:cloneCard("hanjin__slash")
+  local usedCard = Fk:cloneCard("qiao__slash")
   adaptation().setCardEntries(usedCard, {
     { id = "tongfa_canqu", condition = "canqu", effect = "draw" },
   })
@@ -157,12 +157,12 @@ function Testhanjin_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
 end
 
 -- 乘流：伤害牌在本次使用中附富甲条目并改为雷电伤害，结算后可横置实际受伤者。
-function Testhanjin_jin_adaptation:testChengliuThunderAndChainActualVictim()
-  local room = prepare("hanjin__jin013")
+function Testqiao_jin_adaptation:testChengliuThunderAndChainActualVictim()
+  local room = prepare("qiao_heg__jin013")
   local wangJun, target = p1(), p2()
-  local slash = setHand(room, wangJun, { { "hanjin__slash" } })[1]
+  local slash = setHand(room, wangJun, { { "qiao__slash" } })[1]
   local damageType
-  local skel = fk.CreateSkill { name = "#hanjin_jin013_damage_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin013_damage_probe" }
   skel:addEffect(fk.DamageCaused, {
     global = true,
     can_refresh = function(self, event, target_player, player)
@@ -184,13 +184,13 @@ function Testhanjin_jin_adaptation:testChengliuThunderAndChainActualVictim()
 end
 
 -- 乘流：富甲不成立时仍能横置实际受伤者；雷伤不因后续可选技能未触发而误加。
-function Testhanjin_jin_adaptation:testChengliuChainWithoutFujia()
-  local room = prepare("hanjin__jin013")
+function Testqiao_jin_adaptation:testChengliuChainWithoutFujia()
+  local room = prepare("qiao_heg__jin013")
   local wangJun, target = p1(), p2()
-  local slash = setHand(room, wangJun, { { "hanjin__slash" } })[1]
-  give(room, target, { { "hanjin__peach" }, { "hanjin__peach" } })
+  local slash = setHand(room, wangJun, { { "qiao__slash" } })[1]
+  give(room, target, { { "qiao__peach" }, { "qiao__peach" } })
   local damageType
-  local skel = fk.CreateSkill { name = "#hanjin_jin013_no_fujia_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin013_no_fujia_probe" }
   skel:addEffect(fk.DamageCaused, {
     global = true,
     can_refresh = function(self, event, target_player, player)
@@ -212,11 +212,11 @@ function Testhanjin_jin_adaptation:testChengliuChainWithoutFujia()
 end
 
 -- 前驱：真实使用无距离杀，助战弃目标装备；造成伤害后当前回合角色获得此杀并摸牌。
-function Testhanjin_jin_adaptation:testQianquUsesRealSlashAndRewardsCurrentTurn()
-  local room = prepare("hanjin__jin015")
+function Testqiao_jin_adaptation:testQianquUsesRealSlashAndRewardsCurrentTurn()
+  local room = prepare("qiao_heg__jin015")
   local shiBao, turnPlayer, target = p1(), p2(), p3()
-  local slash = setHand(room, shiBao, { { "hanjin__slash" } })[1]
-  local helper = give(room, turnPlayer, { { "hanjin__jink" } })[1]
+  local slash = setHand(room, shiBao, { { "qiao__slash" } })[1]
+  local helper = give(room, turnPlayer, { { "qiao__jink" } })[1]
   local equip = addEquip(room, target, "jueying")
   local hp = target.hp
 
@@ -225,7 +225,7 @@ function Testhanjin_jin_adaptation:testQianquUsesRealSlashAndRewardsCurrentTurn(
     FkTest.ReplyCard(Fk:getCardById(slash), { target }),
   })
   FkTest.setNextReplies(turnPlayer, { FkTest.ReplyDiscard({ helper }) })
-  skill_test.withSkillRequests(room, "#hanjin_adaptation_rule", {
+  skill_test.withSkillRequests(room, "#qiao_adaptation_rule", {
     askToChooseCard = function() return equip end,
   }, function()
     inRoom(function()
@@ -241,4 +241,4 @@ function Testhanjin_jin_adaptation:testQianquUsesRealSlashAndRewardsCurrentTurn(
   lu.assertEquals(#turnPlayer:getCardIds("h"), 2)
 end
 
-return { name = "hanjin_jin_adaptation" }
+return { name = "qiao_jin_adaptation" }

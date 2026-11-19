@@ -1,12 +1,12 @@
 # 效果指定的用牌目标条件：实现与验证
 
-游戏语义见[对应规则](../../../rules/card-use-targets.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
+游戏语义见[对应规则](../../rules/card-use-targets.md)；当前实装与待办见[开发状态](../status.md)。本页保留接口、接线和验收依据，不替代规则裁定，历史覆盖说明不代表已完成全部人工验收。
 
 ## 实现约定
 
 调用入口应明确传入“沿用原条件”“仅放宽指定限制”或“使用效果自定目标条件”，而非从是否为转化牌、牌名或目标人数推断。界面候选与服务端提交复核须使用同一规则，显式目标条件须与目标数量分别传递。
 
-实现位于 `pkg/hanjin_mode/rules/card_use_targets.lua`，房间内筛选代理及宣告复核位于 `skills/card_use_targets.lua`。原牌面条件、仅无距离限制和显式条件三种策略与目标数量分别传递；普通上游国战房间不安装汉晋行为。
+实现位于 `pkg/qiao_mode/rules/card_use_targets.lua`，房间内筛选代理及宣告复核位于 `skills/card_use_targets.lua`。原牌面条件、仅无距离限制和显式条件三种策略与目标数量分别传递；普通上游国战房间不安装汉晋行为。
 
 周仓接入的显式条件增加 `in_attack_range_of = <公开角色 ID>`：目标须在该锚点角色的攻击范围内，距离关系不改用实际使用者计算。条件保持声明式并与目标数量分别传递；选择和执行须沿用同一策略，不能在 `useCard` 时重新套用默认条件。周仓的实牌入口及范围方向回归见[翼从技能](generals/retinues.md#zhoucang)。
 
@@ -14,7 +14,9 @@
 
 ### 执行入口与次数
 
-- `askToUseCard` 返回已选择并复核的使用数据，由调用者执行一次。
+- `askToUseCard` 返回已选择并复核的使用数据，由调用者执行一次。请求的 `names/card_name/name` 是策略白名单，转发给 `Room:askToUseCard` 前必须由公共入口派生引擎 `pattern`（同名转化取 `trueName`，如杀派生 `slash`）；不能只删 `names` 后把 nil `pattern` 交给请求层/AI。
+- `explicit` policy 可带 `fixed_targets`（玩家或 ID 列表）。`C.askToUseCard` 在返回前按固定目标复核；目标数量或身份不符即返回 nil，调用方仍需执行一次。固定目标不替代原有牌面目标/禁止检查。
+- 真实请求选择/AI 约束使用锁定引擎的 `extra_data.exclusive_targets`（`Card:getAvailableTargets` 按 ID 过滤）；挑衅同时设置该字段和 `fixed_targets`，前者约束选择端，后者保留服务端复核。
 - `selectVirtualCard` 强制上游选择阶段 `skip = true`，附加服务端令牌并复核后返回，完全不执行卡牌。公共转换等需把使用数据交回引擎的入口使用此接口。
 - `askToUseVirtualCard` 是选择并执行入口：内部先调用 `selectVirtualCard`，验证成功后执行一次 `room:useCard`。包括调用者传入 `skip` 的情况，它都遵循此执行契约；只需选择时必须调用 `selectVirtualCard`，不得再次执行已使用的返回数据。
 - `useVirtualCard`／`useCard` 对已构造的使用数据先附加策略并复核，再执行一次。目标不合法、取消或验证失败时不产生使用、移牌及伤害副作用。
@@ -39,3 +41,9 @@
 魏包已接入的代表性入口：神速使用 `bypassDistance` 策略选择并执行一次无距离限制的【杀】；伪溃、驱虎没赢后的【杀】及并州狼骑的【决斗】使用 `explicit` 策略处理效果指定的使用者和目标。技能效果中的用牌不占通常出杀次数；目标策略不额外豁免独立禁止。对应的真实使用、来源与目标断言分别见[阶段组](generals/phases.md)、[主动组](generals/active.md)及[翼从组](generals/retinues.md)。
 
 本规范不自动为未来技能或任意第三方用牌入口赋予目标策略。新入口须显式接入并补充相应牌的复杂目标回归；人工客户端视觉、联网与重连验收仍待完成。
+
+本轮同类风险核对覆盖 `pkg/` 中全部 `askToUseCard`、`askToUseVirtualCard`、`askToResponse` 调用上下文，包含正式武将、授予技能、翼从及其公共助手。朱儁的无显式 pattern 请求由公共派生修复覆盖；何进与文虎的虚拟牌 name 参数按既有接口处理；其余直接用牌／响应分支已有 pattern，仁德等直接虚拟牌入口使用 name/subcards 契约，未发现其他需修复的同根缺失。该结果属于静态调用核对及代表性真实请求回归，不代表逐将运行了原生 SmartAI 或完成客户端人工验收。
+
+## 自由用牌
+
+风物和四海归平使用 `free_use.askToUseCard`，悖弑在目标策略请求中同样声明 `not_passive`。该请求只给出一次用牌机会，客户端过滤需有响应事件的牌，服务端按请求和现有目标规则复核结果。`askToUseCard` 返回待执行数据，各技能负责执行一次。正式响应窗口沿用现有响应流程。

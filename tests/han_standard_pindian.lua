@@ -6,22 +6,22 @@
 -- 本文件尚未在本轮执行；由第一组串行统一运行：
 --   python scripts/test.py --file tests/han_standard_pindian.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
-local History = require "packages.hanjin.pkg.hanjin_generals.util.han_history"
+local History = require "packages.qiao.pkg.qiao_generals.util.han_history"
 
-local LJ = "hanjin__skill_han006_1"
-local DZ = "hanjin__skill_han006_2"
-local CZ = "hanjin__skill_han010_1"
-local FY = "hanjin__skill_han013_1"
+local LJ = "qiao__skill_han006_1"
+local DZ = "qiao__skill_han006_2"
+local CZ = "qiao__skill_han010_1"
+local FY = "qiao__skill_han013_1"
 
-local NEXT_DAMAGE = "hanjin_skill_han006_1_next_damage-turn"
-local LIANJI_TARGETS = "hanjin__skill_han006_1-given_targets-phase"
-local OPTION_LOSE_HP = "#hanjin__skill_han013_1-lose_hp"
-local OPTION_END_PHASE = "#hanjin__skill_han013_1-end_phase"
+local NEXT_DAMAGE = "qiao_skill_han006_1_next_damage-turn"
+local LIANJI_TARGETS = "qiao__skill_han006_1-given_targets-phase"
+local OPTION_LOSE_HP = "#qiao__skill_han013_1-lose_hp"
+local OPTION_END_PHASE = "#qiao__skill_han013_1-end_phase"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 local probeSerial = 0
 
-Testhanjin_han_standard_pindian = {}
+Testqiao_han_standard_pindian = {}
 
 local function inRoom(fn)
   local result
@@ -101,8 +101,8 @@ end
 
 local function installUseProbe(room, uses)
   probeSerial = probeSerial + 1
-  local key = "__hanjin_pindian_use_probe_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_pindian_use_probe_" .. probeSerial }
+  local key = "__qiao_pindian_use_probe_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_pindian_use_probe_" .. probeSerial }
   skel:addEffect(fk.CardUseFinished, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -128,8 +128,8 @@ end
 --- 在 TargetConfirmed 观察承诏当次的无视防具标记；此时技能已写入标记。
 local function installArmorProbe(room, records)
   probeSerial = probeSerial + 1
-  local key = "__hanjin_pindian_armor_probe_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_pindian_armor_probe_" .. probeSerial }
+  local key = "__qiao_pindian_armor_probe_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_pindian_armor_probe_" .. probeSerial }
   skel:addEffect(fk.PreCardEffect, {
     global = true,
     priority = -100,
@@ -163,8 +163,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -185,8 +185,8 @@ local function setP1(room, main, deputy)
     p:revealGeneral(true, true)
     -- 主副互换且同名技能跨位置时，先清空两栏旧将，再按目标顺序挂载；
     -- 否则后一次 changeHero 会按技能名移除刚挂上的另一栏来源。
-    room:changeHero(p, "hanjin_test__han_2", true, true, false, false, false)
-    room:changeHero(p, "hanjin_test__han_1", true, false, false, false, false)
+    room:changeHero(p, "qiao_test__han_2", true, true, false, false, false)
+    room:changeHero(p, "qiao_test__han_1", true, false, false, false, false)
     room:changeHero(p, main, true, false, false, false, false)
     room:changeHero(p, deputy, true, true, false, false, false)
     p.kingdom = "han"
@@ -200,33 +200,33 @@ local function setP1(room, main, deputy)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
-  setP1(room, "hanjin_test__han_1", "hanjin__han006")
+  setP1(room, "qiao_test__han_1", "qiao_heg__han006")
   return room
 end
 
-Testhanjin_han_standard_pindian.setup = function()
+Testqiao_han_standard_pindian.setup = function()
   prepare()
 end
-Testhanjin_han_standard_pindian.tearDown = support.clearRoom
+Testqiao_han_standard_pindian.tearDown = support.clearRoom
 
 -- 公共装配 -----------------------------------------------------------------
 
-function Testhanjin_han_standard_pindian:testSkillsAreImplementedAndExplicitlyMarked()
+function Testqiao_han_standard_pindian:testSkillsAreImplementedAndExplicitlyMarked()
   for _, id in ipairs({ LJ, DZ, CZ, FY }) do
     local skel = Fk.skill_skels[id]
     lu.assertNotNil(skel)
     lu.assertTrue(#skel.effects > 0)
-    lu.assertTrue(skel.hanjinImplemented == true)
+    lu.assertTrue(skel.qiaoImplemented == true)
   end
 end
 
 -- 连计 ---------------------------------------------------------------------
 
-function Testhanjin_han_standard_pindian:testLianjiGivesHandThenBoostsNextDamageOnce()
+function Testqiao_han_standard_pindian:testLianjiGivesHandThenBoostsNextDamageOnce()
   local room = FkTest.room
-  local cards = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local cards = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   local given = cards[1]
 
@@ -249,9 +249,9 @@ function Testhanjin_han_standard_pindian:testLianjiGivesHandThenBoostsNextDamage
   lu.assertEquals(p2().hp, p2().maxHp - 3)
 end
 
-function Testhanjin_han_standard_pindian:testLianjiEachRecipientOncePerPhaseButOtherRecipientsRemain()
+function Testqiao_han_standard_pindian:testLianjiEachRecipientOncePerPhaseButOtherRecipientsRemain()
   local room = FkTest.room
-  local cards = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__jink" } })
+  local cards = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
   setHand(room, p3(), {})
 
@@ -260,7 +260,7 @@ function Testhanjin_han_standard_pindian:testLianjiEachRecipientOncePerPhaseButO
   lu.assertEquals(p1():usedSkillTimes(LJ, Player.HistoryGame), 1)
 
   -- 同一阶段再次指定 p2：服务端复核拒绝，不重复交牌/叠加下一次伤害。
-  local more = setHand(room, p1(), { { "hanjin__slash" }, { "hanjin__peach" } })
+  local more = setHand(room, p1(), { { "qiao__slash" }, { "qiao__peach" } })
   activate(room, p1(), LJ, { p2() }, { more[1] })
   lu.assertEquals(#p2():getCardIds("h"), 1)
   lu.assertEquals(p2():getMark(NEXT_DAMAGE), 1)
@@ -273,15 +273,15 @@ end
 
 -- 定著 ---------------------------------------------------------------------
 
-function Testhanjin_han_standard_pindian:testDingzhuUsesGainedHistoryNotCurrentHand()
+function Testqiao_han_standard_pindian:testDingzhuUsesGainedHistoryNotCurrentHand()
   local room = FkTest.room
   setHand(room, p2(), {})
-  setHand(room, p3(), { { "hanjin__slash" } })
+  setHand(room, p3(), { { "qiao__slash" } })
   setHand(room, p4(), {})
   History.clear(room)
 
   -- p2 本回合得到一张牌后立刻失去它；仍满足“得到过牌”。
-  local gained = addHand(room, p2(), { { "hanjin__jink", Card.Heart, 2 } })[1]
+  local gained = addHand(room, p2(), { { "qiao__jink", Card.Heart, 2 } })[1]
   inRoom(function()
     room:moveCardTo({ gained }, Card.DiscardPile, nil, fk.ReasonJustMove, "test", nil, false)
   end)
@@ -320,16 +320,16 @@ function Testhanjin_han_standard_pindian:testDingzhuUsesGainedHistoryNotCurrentH
   lu.assertEquals(p1():usedSkillTimes(DZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han_standard_pindian:testDingzhuIsUnavailableAsMainGeneral()
+function Testqiao_han_standard_pindian:testDingzhuIsUnavailableAsMainGeneral()
   local room = FkTest.room
-  setP1(room, "hanjin__han006", "hanjin_test__han_2")
+  setP1(room, "qiao_heg__han006", "qiao_test__han_2")
   lu.assertTrue(p1():hasSkill(LJ))
   lu.assertFalse(p1():hasSkill(DZ))
 
   setHand(room, p2(), {})
   setHand(room, p4(), {})
   History.clear(room)
-  addHand(room, p2(), { { "hanjin__jink", Card.Heart, 2 } })
+  addHand(room, p2(), { { "qiao__jink", Card.Heart, 2 } })
   local uses = {}
   installUseProbe(room, uses)
   FkTest.setNextReplies(p1(), {})
@@ -341,12 +341,12 @@ function Testhanjin_han_standard_pindian:testDingzhuIsUnavailableAsMainGeneral()
   lu.assertEquals(p1():usedSkillTimes(DZ, Player.HistoryGame), 0)
 
   -- 改为副将后同一场景可发动。
-  setP1(room, "hanjin_test__han_1", "hanjin__han006")
+  setP1(room, "qiao_test__han_1", "qiao_heg__han006")
   lu.assertTrue(p1():hasSkill(DZ))
   setHand(room, p2(), {})
   setHand(room, p4(), {})
   History.clear(room)
-  addHand(room, p2(), { { "hanjin__jink", Card.Heart, 2 } })
+  addHand(room, p2(), { { "qiao__jink", Card.Heart, 2 } })
   local deputyUses = {}
   installUseProbe(room, deputyUses)
   FkTest.setNextReplies(p1(), {
@@ -363,16 +363,16 @@ end
 
 -- 承诏 ---------------------------------------------------------------------
 
-function Testhanjin_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnoresArmor()
+function Testqiao_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnoresArmor()
   local room = FkTest.room
-  setP1(room, "hanjin__han010", "hanjin_test__han_2")
+  setP1(room, "qiao_heg__han010", "qiao_test__han_2")
   setHand(room, p1(), {})
-  setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })
+  setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })
   History.clear(room)
 
   local gained = addHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 10 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 10 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   local uses, armor = {}, {}
   installUseProbe(room, uses)
@@ -406,8 +406,8 @@ function Testhanjin_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgno
 
   -- 本回合只得一张：不提供发动。
   History.clear(room)
-  setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })
-  setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })
+  setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })
+  setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })
   local before = #uses
   FkTest.setNextReplies(p1(), {})
   inRoom(function()
@@ -417,15 +417,15 @@ function Testhanjin_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgno
   lu.assertEquals(p1():usedSkillTimes(CZ, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han_standard_pindian:testChengzhaoNoSlashWhenPindianNotWon()
+function Testqiao_han_standard_pindian:testChengzhaoNoSlashWhenPindianNotWon()
   local room = FkTest.room
-  setP1(room, "hanjin__han010", "hanjin_test__han_2")
+  setP1(room, "qiao_heg__han010", "qiao_test__han_2")
   setHand(room, p1(), {})
-  setHand(room, p2(), { { "hanjin__jink", Card.Heart, 10 } })
+  setHand(room, p2(), { { "qiao__jink", Card.Heart, 10 } })
   History.clear(room)
   local gained = addHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 10 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 10 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   local uses = {}
   installUseProbe(room, uses)
@@ -448,11 +448,11 @@ end
 
 -- 奋钺 ---------------------------------------------------------------------
 
-function Testhanjin_han_standard_pindian:testFenyueFireSlashConsumesNextCardRestriction()
+function Testqiao_han_standard_pindian:testFenyueFireSlashConsumesNextCardRestriction()
   local room = FkTest.room
-  setP1(room, "hanjin__han013", "hanjin_test__han_2")
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 5 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  setP1(room, "qiao_heg__han013", "qiao_test__han_2")
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 5 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })[1]
   local uses = {}
   installUseProbe(room, uses)
 
@@ -460,26 +460,26 @@ function Testhanjin_han_standard_pindian:testFenyueFireSlashConsumesNextCardRest
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ p2card }) })
   activate(room, p1(), FY, { p2() }, {})
   lu.assertEquals(#uses, 1)
-  lu.assertEquals(uses[1].card.name, "hanjin__fire__slash")
+  lu.assertEquals(uses[1].card.name, "qiao__fire__slash")
   lu.assertIs(uses[1].tos[1], p2())
   lu.assertEquals(uses[1].card.skillName, FY)
   lu.assertTrue(table.contains(uses[1].disresponsive, p2()))
 
   -- 火杀已经消费“下张牌”；之后普通杀不再继承该限制。
-  setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })
+  setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })
   setHand(room, p2(), {})
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(#uses, 2)
   lu.assertFalse(table.contains(uses[2].disresponsive, p2()))
 end
 
-function Testhanjin_han_standard_pindian:testFenyueNextUsedCardIsDisresponsiveAfterHighPointWin()
+function Testqiao_han_standard_pindian:testFenyueNextUsedCardIsDisresponsiveAfterHighPointWin()
   local room = FkTest.room
-  setP1(room, "hanjin__han013", "hanjin_test__han_2")
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 9 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  setP1(room, "qiao_heg__han013", "qiao_test__han_2")
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 9 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })[1]
   local uses = {}
   installUseProbe(room, uses)
 
@@ -488,21 +488,21 @@ function Testhanjin_han_standard_pindian:testFenyueNextUsedCardIsDisresponsiveAf
   activate(room, p1(), FY, { p2() }, {})
   lu.assertEquals(#uses, 0)
 
-  setHand(room, p1(), { { "hanjin__slash", Card.Spade, 10 } })
+  setHand(room, p1(), { { "qiao__slash", Card.Spade, 10 } })
   setHand(room, p2(), {})
   inRoom(function()
-    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("hanjin__slash") }
+    room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
   end)
   lu.assertEquals(#uses, 1)
   lu.assertIs(uses[1].tos[1], p2())
   lu.assertTrue(table.contains(uses[1].disresponsive, p2()))
 end
 
-function Testhanjin_han_standard_pindian:testFenyueRestrictionCoversNonTargetNullifier()
+function Testqiao_han_standard_pindian:testFenyueRestrictionCoversNonTargetNullifier()
   local room = FkTest.room
-  setP1(room, "hanjin__han013", "hanjin_test__han_2")
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 9 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  setP1(room, "qiao_heg__han013", "qiao_test__han_2")
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 9 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 3 } })[1]
   setHand(room, p3(), {})
   local uses = {}
   installUseProbe(room, uses)
@@ -515,19 +515,19 @@ function Testhanjin_han_standard_pindian:testFenyueRestrictionCoversNonTargetNul
   -- 下张牌是【决斗】，目标为 C；未成为目标的 B 仍在 UseCardData 的
   -- disresponsiveList 中，因此 B 也不能用【无懈可击】响应。
   inRoom(function()
-    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("hanjin__duel") }
+    room:useCard { from = p1(), tos = { p3() }, card = Fk:cloneCard("qiao__duel") }
   end)
   lu.assertEquals(#uses, 1)
   lu.assertIs(uses[1].tos[1], p3())
   lu.assertTrue(table.contains(uses[1].disresponsive, p2()))
 end
 
-function Testhanjin_han_standard_pindian:testFenyueLoseChoosesHpOrEndPhase()
+function Testqiao_han_standard_pindian:testFenyueLoseChoosesHpOrEndPhase()
   local room = FkTest.room
-  setP1(room, "hanjin__han013", "hanjin_test__han_2")
+  setP1(room, "qiao_heg__han013", "qiao_test__han_2")
   inRoom(function() p1().hp = p1().maxHp end)
-  local p1card = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 3 } })[1]
-  local p2card = setHand(room, p2(), { { "hanjin__jink", Card.Heart, 10 } })[1]
+  local p1card = setHand(room, p1(), { { "qiao__slash", Card.Spade, 3 } })[1]
+  local p2card = setHand(room, p2(), { { "qiao__jink", Card.Heart, 10 } })[1]
 
   local choices
   local original = room.askToChoice
@@ -551,9 +551,9 @@ function Testhanjin_han_standard_pindian:testFenyueLoseChoosesHpOrEndPhase()
   lu.assertEquals(p1():usedSkillTimes(FY, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han_standard_pindian:testFenyueFactionCountDeduplicatesAndCountsWildSeparately()
+function Testqiao_han_standard_pindian:testFenyueFactionCountDeduplicatesAndCountsWildSeparately()
   local room = FkTest.room
-  setP1(room, "hanjin__han013", "hanjin_test__han_2")
+  setP1(room, "qiao_heg__han013", "qiao_test__han_2")
   for i = 2, 8 do setKingdom(room, room.players[i], "han") end
   lu.assertEquals(Fk.skill_skels[FY]:getMaxUseTime(p1(), Player.HistoryPhase), 1)
 
@@ -568,4 +568,4 @@ function Testhanjin_han_standard_pindian:testFenyueFactionCountDeduplicatesAndCo
   lu.assertEquals(Fk.skill_skels[FY]:getMaxUseTime(p1(), Player.HistoryPhase), 3)
 end
 
-return { name = "hanjin_han_standard_pindian" }
+return { name = "qiao_han_standard_pindian" }

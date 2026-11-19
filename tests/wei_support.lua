@@ -1,18 +1,18 @@
 -- 魏标准包：持重、突袭、放逐定向验收文件。
--- 规则依据：rules/standard-generals.md 魏区、rules/generals/wei014-caopi.md、
+-- 规则依据：docs/rules/standard-generals.md 魏区、docs/rules/generals/wei014-caopi.md、
 -- rulebook/terms/general-op-terms/stack.md、docs/development/implementation/only-as.md。
 -- 本轮已定向运行本文件（真实伤害/翻面/请求入口，无 mock）：
 --   python scripts/test.py --file tests/wei_support.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
-local O = require "packages.hanjin.pkg.hanjin_mode.rules.only_as"
+local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 
-local CHIZHONG = "hanjin__skill_wei003_2"
-local TUXI = "hanjin__skill_wei004_1"
-local FANGZHU = "hanjin__skill_wei014_2"
+local CHIZHONG = "qiao__skill_wei003_2"
+local TUXI = "qiao__skill_wei004_1"
+local FANGZHU = "qiao__skill_wei014_2"
 
 local DEFAULT_KINGDOMS = { "wei", "wei", "wei", "wei", "wei", "wei", "wei", "wei" }
 
-Testhanjin_wei_support = {}
+Testqiao_wei_support = {}
 
 local function inRoom(fn)
   local result
@@ -56,8 +56,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i] or "wei"
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -75,24 +75,24 @@ local function initializeGenerals(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wei_support.setup = function() prepare() end
-Testhanjin_wei_support.tearDown = support.clearRoom
+Testqiao_wei_support.setup = function() prepare() end
+Testqiao_wei_support.tearDown = support.clearRoom
 
 -- 持重：手牌数多于体力值时，选择体力值+1张以上并全部分配 -------------------
-function Testhanjin_wei_support:testChizhongDistributesMoreThanHp()
+function Testqiao_wei_support:testChizhongDistributesMoreThanHp()
   local room = FkTest.room
   grant(p(1), CHIZHONG)
   local given = setHand(room, p(1), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__peach", Card.Diamond, 3 },
-    { "hanjin__duel", Card.Club, 4 },
-    { "hanjin__dismantlement", Card.Spade, 5 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__peach", Card.Diamond, 3 },
+    { "qiao__duel", Card.Club, 4 },
+    { "qiao__dismantlement", Card.Spade, 5 },
   })
   setHand(room, p(2), {})
   -- 其他角色处于摸牌阶段、自己不在摸牌阶段：持重仍可发动。
@@ -110,7 +110,7 @@ function Testhanjin_wei_support:testChizhongDistributesMoreThanHp()
     FkTest.ReplyChooseCardAndPlayers({ p(2) }, { given[1], given[2], given[3], given[4], given[5] }),
   })
   inRoom(function()
-    local card = room:printCard("hanjin__peach", Card.Heart, 6)
+    local card = room:printCard("qiao__peach", Card.Heart, 6)
     room:obtainCard(p(1), card, false, fk.ReasonJustMove)
     extra = card.id
   end)
@@ -123,12 +123,12 @@ function Testhanjin_wei_support:testChizhongDistributesMoreThanHp()
 end
 
 -- 突袭：少摸等量张并获得手牌；展示后仅当杀，失技能不撤销 -----------------
-function Testhanjin_wei_support:testTuxiDrawReductionAndTurnRestriction()
+function Testqiao_wei_support:testTuxiDrawReductionAndTurnRestriction()
   local room = FkTest.room
   grant(p(1), TUXI)
   setHand(room, p(1), {})
-  local c2 = setHand(room, p(2), { { "hanjin__jink", Card.Heart, 2 } })[1]
-  local c3 = setHand(room, p(3), { { "hanjin__peach", Card.Diamond, 3 } })[1]
+  local c2 = setHand(room, p(2), { { "qiao__jink", Card.Heart, 2 } })[1]
+  local c3 = setHand(room, p(3), { { "qiao__peach", Card.Diamond, 3 } })[1]
 
   local data = DrawNCardsData:new {
     who = p(1),
@@ -151,18 +151,18 @@ function Testhanjin_wei_support:testTuxiDrawReductionAndTurnRestriction()
   lu.assertTrue(table.contains(p(1):getCardIds(Player.Hand), c2))
   lu.assertTrue(table.contains(p(1):getCardIds(Player.Hand), c3))
   lu.assertTrue(O.isForbidden(p(1), Fk:getCardById(c2)))
-  lu.assertTrue(table.contains(O.availableTargets(room, p(1), c2, "use"), "hanjin__slash"))
+  lu.assertTrue(table.contains(O.availableTargets(room, p(1), c2, "use"), "qiao__slash"))
 
   -- 失去技能不取消已产生的本回合限制。
   inRoom(function()
     room:handleAddLoseSkills(p(1), "-" .. TUXI, nil, false, true)
   end)
   lu.assertTrue(O.isForbidden(p(1), Fk:getCardById(c2)))
-  lu.assertTrue(table.contains(O.availableTargets(room, p(1), c2, "use"), "hanjin__slash"))
+  lu.assertTrue(table.contains(O.availableTargets(room, p(1), c2, "use"), "qiao__slash"))
 end
 
 -- 放逐：叠置并摸2，足额弃4平置，牌名字数>7失去体力；不足4不进入弃牌分支 --
-function Testhanjin_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
+function Testqiao_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
   local room = FkTest.room
   grant(p(1), FANGZHU)
   -- 连续三次受伤用于覆盖不同分支；固定施放者体力，避免第三次伤害进入濒死。
@@ -172,10 +172,10 @@ function Testhanjin_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
   end)
   setHand(room, p(1), {})
   local four = setHand(room, p(2), {
-    { "hanjin__dismantlement", Card.Spade, 1 },
-    { "hanjin__dismantlement", Card.Heart, 2 },
-    { "hanjin__duel", Card.Club, 3 },
-    { "hanjin__duel", Card.Diamond, 4 },
+    { "qiao__dismantlement", Card.Spade, 1 },
+    { "qiao__dismantlement", Card.Heart, 2 },
+    { "qiao__duel", Card.Club, 3 },
+    { "qiao__duel", Card.Diamond, 4 },
   })
   local hp = p(2).hp
 
@@ -198,7 +198,7 @@ function Testhanjin_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
 
   -- 不足四张：不提供弃牌分支，保持叠置也不失去体力。
   local hp2 = p(2).hp
-  setHand(room, p(2), { { "hanjin__peach", Card.Heart, 7 } })
+  setHand(room, p(2), { { "qiao__peach", Card.Heart, 7 } })
   FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(2) }) })
   inRoom(function() room:damage { from = p(3), to = p(1), damage = 1 } end)
   lu.assertFalse(p(2).faceup)
@@ -210,10 +210,10 @@ function Testhanjin_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
     if not p(2).faceup then p(2):turnOver() end
   end)
   lu.assertTrue(p(2).faceup)
-  setHand(room, p(2), { { "hanjin__peach", Card.Heart, 8 } })
+  setHand(room, p(2), { { "qiao__peach", Card.Heart, 8 } })
   FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(2) }) })
   inRoom(function() room:damage { from = p(3), to = p(1), damage = 1 } end)
   lu.assertFalse(p(2).faceup)
 end
 
-return { name = "hanjin_wei_support" }
+return { name = "qiao_wei_support" }

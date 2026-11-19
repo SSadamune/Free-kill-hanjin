@@ -1,22 +1,23 @@
 -- WEI 标准包：受伤／伤害类 8 技能定向验收文件。
--- 规则依据：rules/standard-generals.md 魏区原文、rules/generals/wei016-yuejin.md、
+-- 规则依据：docs/rules/standard-generals.md 魏区原文、docs/rules/generals/wei016-yuejin.md、
 -- rulebook/events/damage.md、rulebook/topics/skill-effect-classification.md。
 -- 由 Codex 统一并入默认国战套件前，可先定向运行：
 --   python scripts/test.py --file tests/wei_damage.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local JIANXIONG = "hanjin__skill_wei001_1"
-local LANGGU = "hanjin__skill_wei002_1"
-local GANGLIE = "hanjin__skill_wei003_1"
-local LUOYI = "hanjin__skill_wei005_1"
-local YIJI = "hanjin__skill_wei006_2"
-local JIEMING = "hanjin__skill_wei013_2"
-local XINGSHANG = "hanjin__skill_wei014_1"
-local XIAOGUO = "hanjin__skill_wei016_1"
+local JIANXIONG = "qiao__skill_wei001_1"
+local LANGGU = "qiao__skill_wei002_1"
+local GANGLIE = "qiao__skill_wei003_1"
+local LUOYI = "qiao__skill_wei005_1"
+local YIJI = "qiao__skill_wei006_2"
+local JIEMING = "qiao__skill_wei013_2"
+local XINGSHANG = "qiao__skill_wei014_1"
+local XIAOGUO = "qiao__skill_wei016_1"
 
 local DEFAULT_KINGDOMS = { "wei", "wei", "wei", "wei", "wei", "wei", "wei", "wei" }
 
-Testhanjin_wei_damage = {}
+Testqiao_wei_damage = {}
 
 local function inRoom(fn)
   local result
@@ -95,8 +96,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i] or "wei"
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -113,19 +114,19 @@ local function initializeGenerals(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wei_damage.setup = function() prepare() end
-Testhanjin_wei_damage.tearDown = support.clearRoom
+Testqiao_wei_damage.setup = function() prepare() end
+Testqiao_wei_damage.tearDown = support.clearRoom
 
 -- 奸雄：先摸一张，再足额弃一张牌取得伤害牌 -------------------------------
-function Testhanjin_wei_damage:testJianxiongDrawThenDiscardForDamageCard()
+function Testqiao_wei_damage:testJianxiongDrawThenDiscardForDamageCard()
   local room = FkTest.room
-  local peach = setHand(room, p(1), { { "hanjin__peach" } })[1]
-  local slash = setHand(room, p(2), { { "hanjin__slash" } })[1]
+  local peach = setHand(room, p(1), { { "qiao__peach" } })[1]
+  local slash = setHand(room, p(2), { { "qiao__slash" } })[1]
   grant(p(1), JIANXIONG)
 
   FkTest.setNextReplies(p(1), {
@@ -145,10 +146,10 @@ function Testhanjin_wei_damage:testJianxiongDrawThenDiscardForDamageCard()
 end
 
 -- 狼顾：获得来源的一张牌 ---------------------------------------------------
-function Testhanjin_wei_damage:testLanggouObtainsSourceCard()
+function Testqiao_wei_damage:testLanggouObtainsSourceCard()
   local room = FkTest.room
   setHand(room, p(1), {})
-  local stolen = setHand(room, p(2), { { "hanjin__peach" } })[1]
+  local stolen = setHand(room, p(2), { { "qiao__peach" } })[1]
   grant(p(1), LANGGU)
 
   FkTest.setNextReplies(p(1), { "1", stolen })
@@ -161,14 +162,14 @@ function Testhanjin_wei_damage:testLanggouObtainsSourceCard()
 end
 
 -- 刚烈：红色伤害来源，黑色弃置来源一张牌 --------------------------------
-function Testhanjin_wei_damage:testGanglieRedAndBlackBranches()
+function Testqiao_wei_damage:testGanglieRedAndBlackBranches()
   local room = FkTest.room
   grant(p(1), GANGLIE)
   setHand(room, p(1), {})
 
   -- 红色判定：对来源造成1点伤害。
-  seedDrawPile(room, { { "hanjin__peach", Card.Heart, 2 } })
-  setHand(room, p(2), { { "hanjin__peach" } })
+  seedDrawPile(room, { { "qiao__peach", Card.Heart, 2 } })
+  setHand(room, p(2), { { "qiao__peach" } })
   local hp2 = p(2).hp
   FkTest.setNextReplies(p(1), { "1" })
   inRoom(function()
@@ -177,8 +178,8 @@ function Testhanjin_wei_damage:testGanglieRedAndBlackBranches()
   lu.assertEquals(p(2).hp, hp2 - 1)
 
   -- 黑色判定：弃置来源一张牌。
-  seedDrawPile(room, { { "hanjin__slash", Card.Spade, 5 } })
-  local victim = setHand(room, p(2), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  seedDrawPile(room, { { "qiao__slash", Card.Spade, 5 } })
+  local victim = setHand(room, p(2), { { "qiao__jink", Card.Heart, 3 } })[1]
   FkTest.setNextReplies(p(1), { "1", victim })
   inRoom(function()
     room:damage { from = p(2), to = p(1), damage = 1 }
@@ -187,17 +188,18 @@ function Testhanjin_wei_damage:testGanglieRedAndBlackBranches()
 end
 
 -- 裸衣：摸牌阶段结束弃牌，失去技能后本回合加伤仍有效 --------------------
-function Testhanjin_wei_damage:testLuoyiBonusSurvivesSkillLoss()
+function Testqiao_wei_damage:testLuoyiBonusSurvivesSkillLoss()
   local room = FkTest.room
   local ids = setHand(room, p(1), {
-    { "hanjin__peach", Card.Heart, 2 },
-    { "hanjin__slash", Card.Spade, 3 },
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 3 },
   })
   local discard, slash = ids[1], ids[2]
   setHand(room, p(2), {})
   grant(p(1), LUOYI)
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ discard }) })
+  -- 弃牌请求本身就是发动确认，没有单独的 askToSkillInvoke 回复。
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ discard }) })
   triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
   lu.assertEquals(p(1):getCardIds(Player.Hand)[1], slash)
 
@@ -212,13 +214,73 @@ function Testhanjin_wei_damage:testLuoyiBonusSurvivesSkillLoss()
   lu.assertEquals(p(2).hp, hp2 - 2)
 end
 
+-- 裸衣：取消唯一弃牌请求即不发动；请求提示写明消耗与加伤 -----------------
+function Testqiao_wei_damage:testLuoyiCancelDoesNotActivate()
+  local room = FkTest.room
+  local ids = setHand(room, p(1), {
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 3 },
+  })
+  local peach, slash = ids[1], ids[2]
+  setHand(room, p(2), {})
+  grant(p(1), LUOYI)
+
+  FkTest.setNextReplies(p(1), { "" })
+  triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
+
+  lu.assertEquals(p(1):usedSkillTimes(LUOYI, Player.HistoryGame), 0)
+  lu.assertEquals(room:getCardArea(peach), Card.PlayerHand)
+
+  -- 未发动则本回合的【杀】仍是原伤害。
+  local hp2 = p(2).hp
+  inRoom(function()
+    room:useCard { from = p(1), tos = { p(2) }, card = Fk:getCardById(slash) }
+  end)
+  lu.assertEquals(p(2).hp, hp2 - 1)
+end
+
+function Testqiao_wei_damage:testLuoyiCostRequestExplainsBonus()
+  local room = FkTest.room
+  setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })
+  setHand(room, p(2), {})
+  grant(p(1), LUOYI)
+
+  local request
+  skill_test.withSkillRequests(room, LUOYI, {
+    askToSkillInvoke = function()
+      error("裸衣不应再单独询问是否发动")
+    end,
+    askToDiscard = function(self, who, params, original)
+      if who.id ~= p(1).id then return original(self, who, params) end
+      request = params
+      return {}
+    end,
+  }, function()
+    triggerPhase(room, p(1), Player.Draw, fk.EventPhaseEnd)
+  end)
+
+  lu.assertNotNil(request, "裸衣应发起一次弃牌请求")
+  lu.assertEquals(request.cancelable, true)
+  lu.assertEquals(request.skip, true)
+  lu.assertEquals(request.min_num, 1)
+  lu.assertEquals(request.max_num, 1)
+  lu.assertEquals(request.prompt, "#qiao__skill_wei005_1-discard")
+  local text = Fk:translate(request.prompt)
+  lu.assertTrue(text:find("弃置一张牌发动", 1, true) ~= nil,
+    "请求提示应写明弃牌是发动消耗：" .. text)
+  lu.assertTrue(text:find("伤害+1", 1, true) ~= nil,
+    "请求提示应写明本回合加伤：" .. text)
+  -- 请求返回空（无合法成本）不发动。
+  lu.assertEquals(p(1):usedSkillTimes(LUOYI, Player.HistoryGame), 0)
+end
+
 -- 遗计：一次伤害事件发动一次，先1~2张给一人，其余给一人 -----------------
-function Testhanjin_wei_damage:testYijiOneEventTwoGives()
+function Testqiao_wei_damage:testYijiOneEventTwoGives()
   local room = FkTest.room
   grant(p(1), YIJI)
   local top = seedDrawPile(room, {
-    { "hanjin__peach", Card.Heart, 4 },
-    { "hanjin__peach", Card.Heart, 5 },
+    { "qiao__peach", Card.Heart, 4 },
+    { "qiao__peach", Card.Heart, 5 },
   })
   local first, second = top[2], top[1] -- 后插入的 top[2] 是最顶牌
 
@@ -238,7 +300,7 @@ function Testhanjin_wei_damage:testYijiOneEventTwoGives()
 end
 
 -- 节命：同一次2点伤害按点数逐次调度两次 ---------------------------------
-function Testhanjin_wei_damage:testJiemingTriggersPerDamagePoint()
+function Testqiao_wei_damage:testJiemingTriggersPerDamagePoint()
   local room = FkTest.room
   grant(p(1), JIEMING)
   setHand(room, p(2), {})
@@ -259,13 +321,13 @@ function Testhanjin_wei_damage:testJiemingTriggersPerDamagePoint()
 end
 
 -- 行殇：获得死亡角色所有牌；无牌时改为回复1点体力 -----------------------
-function Testhanjin_wei_damage:testXingshangTakesCardsOrRecovers()
+function Testqiao_wei_damage:testXingshangTakesCardsOrRecovers()
   local room = FkTest.room
   grant(p(1), XINGSHANG)
   setHand(room, p(1), {})
   local xsIds = setHand(room, p(2), {
-    { "hanjin__peach", Card.Heart, 6 },
-    { "hanjin__jink", Card.Diamond, 7 },
+    { "qiao__peach", Card.Heart, 6 },
+    { "qiao__jink", Card.Diamond, 7 },
   })
   local c1, c2 = xsIds[1], xsIds[2]
   FkTest.setNextReplies(p(1), { "1" })
@@ -289,7 +351,7 @@ function Testhanjin_wei_damage:testXingshangTakesCardsOrRecovers()
   local judgeHp = p(1).hp
   local judge
   inRoom(function()
-    local card = room:printCard("hanjin__indulgence", Card.Spade, 1)
+    local card = room:printCard("qiao__indulgence", Card.Spade, 1)
     room:moveCardTo(card, Card.PlayerJudge, p(2), fk.ReasonJustMove, "test", nil, false)
     judge = card.id
   end)
@@ -302,33 +364,94 @@ function Testhanjin_wei_damage:testXingshangTakesCardsOrRecovers()
 end
 
 -- 骁果：基本牌多于装备牌造成伤害；相等时摸一张 ---------------------------
-function Testhanjin_wei_damage:testXiaoguoDamageVersusDraw()
+function Testqiao_wei_damage:testXiaoguoDamageVersusDraw()
   local room = FkTest.room
   grant(p(1), XIAOGUO)
   local ids = setHand(room, p(1), {
-    { "hanjin__slash", Card.Spade, 8 },
-    { "hanjin__peach", Card.Heart, 9 },
+    { "qiao__slash", Card.Spade, 8 },
+    { "qiao__peach", Card.Heart, 9 },
   })
   local b1, b2 = ids[1], ids[2]
   clearCards(room, p(2), "h")
-  local equip = addEquip(room, p(2), "hanjin__chixiao_sword", Card.Heart, 9)
+  local equip = addEquip(room, p(2), "qiao__chixiao_sword", Card.Heart, 9)
   local hp2 = p(2).hp
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ b1, b2 }) })
+  -- 弃牌请求本身就是发动确认，没有单独的 askToSkillInvoke 回复。
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ b1, b2 }) })
   triggerPhase(room, p(2), Player.Start)
   lu.assertEquals(p(2).hp, hp2 - 1)
   lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
 
   -- 相等：1张基本牌对1张装备牌，改为摸一张牌。
   clearCards(room, p(3), "h")
-  local equipA = addEquip(room, p(3), "hanjin__chixiao_sword", Card.Heart, 9)
-  addEquip(room, p(3), "hanjin__linxiao_yuyu", Card.Spade, 5)
-  local basic = setHand(room, p(1), { { "hanjin__slash", Card.Spade, 10 } })[1]
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ basic }) })
+  local equipA = addEquip(room, p(3), "qiao__chixiao_sword", Card.Heart, 9)
+  addEquip(room, p(3), "qiao__linxiao_yuyu", Card.Spade, 5)
+  local basic = setHand(room, p(1), { { "qiao__slash", Card.Spade, 10 } })[1]
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ basic }) })
   FkTest.setNextReplies(p(3), { FkTest.ReplyDiscard({ equipA }) })
   triggerPhase(room, p(3), Player.Start)
   lu.assertEquals(#p(1):getCardIds(Player.Hand), 1)
   lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 2)
 end
 
-return { name = "hanjin_wei_damage" }
+-- 骁果：取消唯一弃牌请求即不发动，不弃基本牌、不弃装备、不造成伤害 ------
+function Testqiao_wei_damage:testXiaoguoCancelDoesNotActivate()
+  local room = FkTest.room
+  grant(p(1), XIAOGUO)
+  local basic = setHand(room, p(1), { { "qiao__slash", Card.Spade, 8 } })[1]
+  clearCards(room, p(2), "h")
+  local equip = addEquip(room, p(2), "qiao__chixiao_sword", Card.Heart, 9)
+  local hp2 = p(2).hp
+
+  FkTest.setNextReplies(p(1), { "" })
+  triggerPhase(room, p(2), Player.Start)
+
+  lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 0)
+  lu.assertEquals(room:getCardArea(basic), Card.PlayerHand)
+  lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
+  lu.assertEquals(p(2).hp, hp2)
+end
+
+function Testqiao_wei_damage:testXiaoguoCostRequestNamesTargetAndFollowUp()
+  local room = FkTest.room
+  grant(p(1), XIAOGUO)
+  setHand(room, p(1), {
+    { "qiao__slash", Card.Spade, 8 },
+    { "qiao__peach", Card.Heart, 9 },
+  })
+  clearCards(room, p(2), "he")
+
+  local request
+  skill_test.withSkillRequests(room, XIAOGUO, {
+    askToSkillInvoke = function()
+      error("骁果不应再单独询问是否发动")
+    end,
+    askToDiscard = function(self, who, params, original)
+      if who.id ~= p(1).id then return original(self, who, params) end
+      request = params
+      return {}
+    end,
+  }, function()
+    triggerPhase(room, p(2), Player.Start)
+  end)
+
+  lu.assertNotNil(request, "骁果应发起一次弃牌请求")
+  lu.assertEquals(request.cancelable, true)
+  lu.assertEquals(request.skip, true)
+  lu.assertEquals(request.min_num, 1)
+  lu.assertEquals(request.max_num, 2)
+  -- Ltk.processPrompt 的参数位依次是 #键:来源:目标:参数；%dest 取第 3 段目标。
+  lu.assertEquals(request.prompt,
+    "#qiao__skill_wei016_1-discard:" .. p(1).id .. ":" .. p(2).id .. ":2")
+  local text = Fk:translate("#qiao__skill_wei016_1-discard")
+  lu.assertTrue(text:find("%dest", 1, true) ~= nil,
+    "提示应使用 %dest 指向目标：" .. text)
+  lu.assertTrue(text:find("造成1点伤害", 1, true) ~= nil,
+    "提示应写明后续伤害：" .. text)
+  lu.assertTrue(text:find("摸一张牌", 1, true) ~= nil,
+    "提示应写明另一后续：" .. text)
+  -- 请求返回空（无合法成本）不发动。
+  lu.assertEquals(p(1):usedSkillTimes(XIAOGUO, Player.HistoryGame), 0)
+end
+
+return { name = "qiao_wei_damage" }

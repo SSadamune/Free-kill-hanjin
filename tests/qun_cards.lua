@@ -4,16 +4,16 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local WUSHUANG = "hanjin__skill_qun002_1"
-local XIAOMENG = "hanjin__skill_qun002_2"
-local DUANBING = "hanjin__skill_wu016_1"
-local LUANJI = "hanjin__skill_qun004_1"
-local SHUANGXIONG = "hanjin__skill_qun005_1"
-local LUANWU = "hanjin__skill_qun007_2"
-local KUANGFU = "hanjin__skill_qun017_1"
-local XIAONI = "hanjin__skill_qun027_2"
-local RULE = "hanjin__qun_cards_rule"
-local STATE = "hanjin__qun_cards_state"
+local WUSHUANG = "qiao__skill_qun002_1"
+local XIAOMENG = "qiao__skill_qun002_2"
+local DUANBING = "qiao__skill_wu016_1"
+local LUANJI = "qiao__skill_qun004_1"
+local SHUANGXIONG = "qiao__skill_qun005_1"
+local LUANWU = "qiao__skill_qun007_2"
+local KUANGFU = "qiao__skill_qun017_1"
+local XIAONI = "qiao__skill_qun027_2"
+local RULE = "qiao__qun_cards_rule"
+local STATE = "qiao__qun_cards_state"
 
 local DEFAULT_KINGDOMS = { "qun", "qun", "qun", "qun", "qun", "qun", "qun", "qun" }
 
@@ -48,7 +48,7 @@ local function setKingdom(player, kingdom)
 end
 local function prepare()
   Fk.currentResponsePattern = nil
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS)
     -- 模式未接线时由测试显式安装独立房间规则；Codex 接线后避免重复安装。
@@ -67,18 +67,18 @@ local function runActiveSkill(player, skillName, targetIds, subcards)
   end)
 end
 
-Testhanjin_qun_cards = { setup = prepare, tearDown = teardown }
+Testqiao_qun_cards = { setup = prepare, tearDown = teardown }
 
 -- 无双按当前响应数 +1，短兵再 +1：目标需要三张【闪】；只给两张仍会受到伤害。
-function Testhanjin_qun_cards:testWushuangStacksWithDuanbing()
+function Testqiao_qun_cards:testWushuangStacksWithDuanbing()
   local p1, p2 = p(1), p(2)
   grant(p1, WUSHUANG)
   grant(p1, DUANBING)
   clearCards(p1)
   clearCards(p2)
-  local slash = give(p1, "hanjin__slash", Card.Spade, 8)
-  local jink1 = give(p2, "hanjin__jink", Card.Heart, 2)
-  local jink2 = give(p2, "hanjin__jink", Card.Diamond, 3)
+  local slash = give(p1, "qiao__slash", Card.Spade, 8)
+  local jink1 = give(p2, "qiao__jink", Card.Heart, 2)
+  local jink2 = give(p2, "qiao__jink", Card.Diamond, 3)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
@@ -103,11 +103,11 @@ function Testhanjin_qun_cards:testWushuangStacksWithDuanbing()
 end
 
 -- 乱武要求真实使用【杀】且目标包含最近角色；其余角色取消则各失去 1 点体力。
-function Testhanjin_qun_cards:testLuanwuRealSlashIncludesNearest()
+function Testqiao_qun_cards:testLuanwuRealSlashIncludesNearest()
   local p1, p2 = p(1), p(2)
   grant(p1, LUANWU)
   for i = 1, 8 do clearCards(p(i)) end
-  local slash = give(p2, "hanjin__slash", Card.Spade, 9)
+  local slash = give(p2, "qiao__slash", Card.Spade, 9)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
@@ -142,12 +142,12 @@ function Testhanjin_qun_cards:testLuanwuRealSlashIncludesNearest()
 end
 
 -- 狂斧弃置自己的装备且本次【杀】造成伤害：摸两张牌。
-function Testhanjin_qun_cards:testKuangfuOwnEquipmentDamageDrawsTwo()
+function Testqiao_qun_cards:testKuangfuOwnEquipmentDamageDrawsTwo()
   local p1, p2 = p(1), p(2)
   grant(p1, KUANGFU)
   clearCards(p1)
   clearCards(p2)
-  local equip = give(p1, "hanjin__chitu", Card.Heart, 5)
+  local equip = give(p1, "qiao__chitu", Card.Heart, 5)
   inRoom(function()
     room():moveCardTo({ equip }, Card.PlayerEquip, p1, fk.ReasonPut, "test", nil, true)
     room().current = p1
@@ -171,12 +171,12 @@ end
 
 -- 乱击响应摸牌由独立房间规则完成：response.from 定位本次使用者，且不需要
 -- 袁绍仍持有乱击。
-function Testhanjin_qun_cards:testLuanjiDrawRuleUsesResponseFromWithoutSkill()
+function Testqiao_qun_cards:testLuanjiDrawRuleUsesResponseFromWithoutSkill()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
-  local jink = give(p2, "hanjin__jink", Card.Heart, 2)
-  local aoe = Fk:cloneCard("hanjin__archery_attack")
+  local jink = give(p2, "qiao__jink", Card.Heart, 2)
+  local aoe = Fk:cloneCard("qiao__archery_attack")
   aoe.skillName = LUANJI
   local before = #p2:getCardIds("h")
   local asked = 0
@@ -199,11 +199,11 @@ end
 
 -- 狂斧的后续摸牌由独立房间规则按 use.extra_data 的 user 结算，不需要潘凤仍
 -- 持有狂斧。
-function Testhanjin_qun_cards:testKuangfuRuleSettlesWithoutSkill()
+function Testqiao_qun_cards:testKuangfuRuleSettlesWithoutSkill()
   local p1, p2 = p(1), p(2)
   clearCards(p1)
   clearCards(p2)
-  local slash = Fk:cloneCard("hanjin__slash")
+  local slash = Fk:cloneCard("qiao__slash")
   slash.skillName = KUANGFU
   inRoom(function()
     room().logic:trigger(fk.CardUseFinished, p1, {
@@ -211,33 +211,33 @@ function Testhanjin_qun_cards:testKuangfuRuleSettlesWithoutSkill()
       card = slash,
       tos = { p2 },
       damageDealt = { [p2] = 1 },
-      extra_data = { hanjin_qun017 = { user = p1.id, self = true } },
+      extra_data = { qiao_qun017 = { user = p1.id, self = true } },
     })
   end)
   lu.assertEquals(#p1:getCardIds("h"), 2)
 end
 
 -- 乱击花色记录由房间规则每回合清理，即使袁绍已失去乱击也不会跨回合残留。
-function Testhanjin_qun_cards:testLuanjiSuitMarkClearsAfterSkillLost()
+function Testqiao_qun_cards:testLuanjiSuitMarkClearsAfterSkillLost()
   local p1 = p(1)
   grant(p1, LUANJI)
   inRoom(function()
-    room():setPlayerMark(p1, "@[hanjin_luanji_suits]", { Card.Heart })
+    room():setPlayerMark(p1, "@[qiao_luanji_suits]", { Card.Heart })
     room():handleAddLoseSkills(p1, "-" .. LUANJI, nil, false, true)
     room().logic:trigger(fk.TurnEnd, p1, {})
   end)
-  lu.assertEquals(#p1:getTableMark("@[hanjin_luanji_suits]"), 0)
+  lu.assertEquals(#p1:getTableMark("@[qiao_luanji_suits]"), 0)
 end
 
 -- 虓猛：吕布使用转化【决斗】，由当前回合角色（不是吕布）追加一名不同势力目标，
 -- 整次决斗真实结算到新增目标。
-function Testhanjin_qun_cards:testXiaomengCurrentTurnAddsDifferentKingdomToConvertedDuel()
+function Testqiao_qun_cards:testXiaomengCurrentTurnAddsDifferentKingdomToConvertedDuel()
   local p1, p2, p3, p4 = p(1), p(2), p(3), p(4)
   grant(p1, XIAOMENG)
   setKingdom(p3, "wei")
   setKingdom(p4, "shu")
   for _, q in ipairs({ p1, p3, p4 }) do clearCards(q) end
-  local sub = give(p1, "hanjin__jink", Card.Spade, 4)
+  local sub = give(p1, "qiao__jink", Card.Spade, 4)
   inRoom(function()
     room().current = p2
     p1.hp = p1.maxHp
@@ -245,7 +245,7 @@ function Testhanjin_qun_cards:testXiaomengCurrentTurnAddsDifferentKingdomToConve
     p3.hp = p3.maxHp
     p4.hp = p4.maxHp
   end)
-  local duel = Fk:cloneCard("hanjin__duel")
+  local duel = Fk:cloneCard("qiao__duel")
   duel.skillName = SHUANGXIONG
   duel:addSubcard(sub)
   FkTest.setNextReplies(p2, { FkTest.ReplyChoosePlayer({ p4 }) })
@@ -267,14 +267,14 @@ end
 
 -- 双雄：真实摸牌阶段结束弃红牌，本回合将黑色牌当【决斗】使用；决斗令自己
 -- 受到伤害后，结束阶段收回该伤害牌的实体牌。覆盖转化权限与独立收牌。
-function Testhanjin_qun_cards:testShuangxiongConvertDuelAndRetrieveDamageCard()
+function Testqiao_qun_cards:testShuangxiongConvertDuelAndRetrieveDamageCard()
   local p1, p2 = p(1), p(2)
   grant(p1, SHUANGXIONG)
   clearCards(p1)
   clearCards(p2)
-  local red = give(p1, "hanjin__peach", Card.Heart, 3)
-  local black = give(p1, "hanjin__jink", Card.Spade, 5)
-  local p2Slash = give(p2, "hanjin__slash", Card.Spade, 8)
+  local red = give(p1, "qiao__peach", Card.Heart, 3)
+  local black = give(p1, "qiao__jink", Card.Spade, 5)
+  local p2Slash = give(p2, "qiao__slash", Card.Spade, 8)
   inRoom(function()
     room().current = p1
     p1.hp = p1.maxHp
@@ -313,8 +313,8 @@ function Testhanjin_qun_cards:testShuangxiongConvertDuelAndRetrieveDamageCard()
     FkTest.ReplyDiscard({ red }), -- 弃置红牌
     "",                           -- 决斗中不打出【杀】
   })
-  -- 双雄两处发动都走同一技能名：直接确认发动，避免“无【杀】可响应”时
-  -- 响应请求被跳过导致结束阶段收牌回复错位。
+  -- 摸牌阶段结束的弃牌请求已并入发动确认；结束阶段的收牌仍单独确认发动，
+  -- 直接确认以免“无【杀】可响应”时响应请求被跳过导致收牌回复错位。
   skill_test.withSkillRequests(room(), SHUANGXIONG, {
     askToSkillInvoke = function() return true end,
   }, function()
@@ -331,16 +331,16 @@ end
 
 -- 骁逆：一次多目标【杀】中一名目标用【闪】，另一名受伤；用牌结束后由未受伤
 -- 的原目标弃置两张牌。
-function Testhanjin_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
+function Testqiao_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p1, XIAONI)
   setKingdom(p2, "wei")
   setKingdom(p3, "shu")
   for _, q in ipairs({ p1, p2, p3 }) do clearCards(q) end
-  local jink = give(p3, "hanjin__jink", Card.Heart, 2)
-  local c1 = give(p3, "hanjin__slash", Card.Spade, 3)
-  local c2 = give(p3, "hanjin__peach", Card.Heart, 4)
-  local c3 = give(p3, "hanjin__analeptic", Card.Diamond, 5)
+  local jink = give(p3, "qiao__jink", Card.Heart, 2)
+  local c1 = give(p3, "qiao__slash", Card.Spade, 3)
+  local c2 = give(p3, "qiao__peach", Card.Heart, 4)
+  local c3 = give(p3, "qiao__analeptic", Card.Diamond, 5)
   inRoom(function()
     room().current = p1
     p1.phase = Player.Play
@@ -371,4 +371,4 @@ function Testhanjin_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
   lu.assertFalse(table.contains(p3:getCardIds("h"), c2))
 end
 
-return { name = "hanjin_qun_cards" }
+return { name = "qiao_qun_cards" }

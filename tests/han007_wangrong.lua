@@ -1,16 +1,16 @@
 -- HAN007 王荣：敏思、追德。默认国战套件用例（加入 tests/all.lua 后生效）。
--- 规则依据：rules/generals/han007-wangrong.md、rules/general-principles.md。
+-- 规则依据：docs/rules/generals/han007-wangrong.md、docs/rules/general-principles.md。
 -- 验收依据：docs/development/implementation/generals/support.md#han007-1、damage.md#han007-2。
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local MS = "hanjin__skill_han007_1"
-local ZD = "hanjin__skill_han007_2"
-local MS_AUX = "#hanjin__skill_han007_1_aux"
-local ZD_AUX = "#hanjin__skill_han007_2_aux"
+local MS = "qiao__skill_han007_1"
+local ZD = "qiao__skill_han007_2"
+local MS_AUX = "#qiao__skill_han007_1_aux"
+local ZD_AUX = "#qiao__skill_han007_2_aux"
 
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wei", "han" }
 
-Testhanjin_han007 = {}
+Testqiao_han007 = {}
 
 local function inRoom(fn)
   local result
@@ -100,8 +100,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       p:revealGeneral(false, true)
       p:revealGeneral(true, true)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(p, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(p, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       p.kingdom = kingdom
       room:setPlayerProperty(p, "kingdom", kingdom)
       room:setPlayerMark(p, "__heg_general", p.general)
@@ -110,34 +110,34 @@ local function initializeGenerals(room)
       room:setPlayerMark(p, "__heg_init_kingdom", kingdom)
       room:setPlayerMark(p, "__heg_wild", 0)
     end
-    room:changeHero(p1(), "hanjin__han007", true, false, false, false, false)
-    room:setPlayerMark(p1(), "__heg_general", "hanjin__han007")
+    room:changeHero(p1(), "qiao_heg__han007", true, false, false, false, false)
+    room:setPlayerMark(p1(), "__heg_general", "qiao_heg__han007")
     for _, p in ipairs(room.players) do p.hp = p.maxHp end
   end)
   return room
 end
 
 local function prepare()
-  return initializeGenerals(support.initHanjinRoom())
+  return initializeGenerals(support.initQiaoRoom())
 end
 
-Testhanjin_han007.setup = function()
+Testqiao_han007.setup = function()
   prepare()
 end
-Testhanjin_han007.tearDown = support.clearRoom
+Testqiao_han007.tearDown = support.clearRoom
 
-function Testhanjin_han007:testMinsiDiscardsHandSum13DrawsTwiceShowsAndLimitsPhase()
+function Testqiao_han007:testMinsiDiscardsHandSum13DrawsTwiceShowsAndLimitsPhase()
   local room = FkTest.room
   local ids = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 1 },   -- A = 1
-    { "hanjin__jink", Card.Heart, 12 },   -- Q = 12
-    { "hanjin__peach", Card.Heart, 7 },   -- kept; not part of this draw
+    { "qiao__slash", Card.Spade, 1 },   -- A = 1
+    { "qiao__jink", Card.Heart, 12 },   -- Q = 12
+    { "qiao__peach", Card.Heart, 7 },   -- kept; not part of this draw
   })
   local drawn = seedDrawPile(room, {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__slash", Card.Spade, 3 },
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__slash", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__slash", Card.Spade, 3 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 6 },
   })
 
   local shown = {}
@@ -185,15 +185,15 @@ function Testhanjin_han007:testMinsiDiscardsHandSum13DrawsTwiceShowsAndLimitsPha
   lu.assertIs(canUseDuringPhase[2], false)
 end
 
-function Testhanjin_han007:testMinsiAllowsHandAndEquipmentCards()
+function Testqiao_han007:testMinsiAllowsHandAndEquipmentCards()
   local room = FkTest.room
-  local hand = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 8 } })
+  local hand = setHand(room, p1(), { { "qiao__slash", Card.Spade, 8 } })
   local equip = addEquip(room, p1(), "jueying", Card.Spade, 5)
   seedDrawPile(room, {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__slash", Card.Spade, 3 },
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__slash", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__slash", Card.Spade, 3 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 6 },
   })
 
   runPlayPhase(room, p1(), {
@@ -208,21 +208,21 @@ function Testhanjin_han007:testMinsiAllowsHandAndEquipmentCards()
   lu.assertEquals(p1():usedSkillTimes(MS, Player.HistoryGame), 1)
 end
 
-function Testhanjin_han007:testMinsiDrawnHeartsDoNotCountForHandLimit()
+function Testqiao_han007:testMinsiDrawnHeartsDoNotCountForHandLimit()
   local room = FkTest.room
   p1().hp = 1
   local ids = setHand(room, p1(), {
-    { "hanjin__slash", Card.Spade, 1 },   -- A, cost
-    { "hanjin__jink", Card.Heart, 12 },   -- Q, cost
-    { "hanjin__peach", Card.Heart, 7 },   -- old heart, must still count
+    { "qiao__slash", Card.Spade, 1 },   -- A, cost
+    { "qiao__jink", Card.Heart, 12 },   -- Q, cost
+    { "qiao__peach", Card.Heart, 7 },   -- old heart, must still count
   })
   local drawnHearts = seedDrawPile(room, {
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__jink", Card.Heart, 3 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__jink", Card.Heart, 3 },
   })
   local drawnSpades = seedDrawPile(room, {
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__slash", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 6 },
   })
 
   local captured
@@ -256,17 +256,17 @@ function Testhanjin_han007:testMinsiDrawnHeartsDoNotCountForHandLimit()
   for _, id in ipairs(drawnHearts) do lu.assertTrue(table.contains(hand, id)) end
 end
 
-function Testhanjin_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination()
+function Testqiao_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination()
   local room = FkTest.room
   local hearts = setHand(room, p1(), {
-    { "hanjin__jink", Card.Heart, 1 },
-    { "hanjin__peach", Card.Heart, 1 },
-    { "hanjin__slash", Card.Spade, 9 },
+    { "qiao__jink", Card.Heart, 1 },
+    { "qiao__peach", Card.Heart, 1 },
+    { "qiao__slash", Card.Spade, 9 },
   })
   setHand(room, p2(), {})
   local drawn = seedDrawPile(room, {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__slash", Card.Spade, 2 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__slash", Card.Spade, 2 },
   })
   local shown = {}
   installTestSkill(room, "#han007_zhuide_show_probe", {
@@ -311,11 +311,11 @@ function Testhanjin_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombinati
   lu.assertEquals(room:getCardArea(hearts[3]), Card.DiscardPile)
 end
 
-function Testhanjin_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseLimit()
+function Testqiao_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseLimit()
   local room = FkTest.room
   local hearts = setHand(room, p1(), {
-    { "hanjin__slash", Card.Heart, 13 },  -- K of hearts
-    { "hanjin__jink", Card.Spade, 9 },
+    { "qiao__slash", Card.Heart, 13 },  -- K of hearts
+    { "qiao__jink", Card.Spade, 9 },
   })
   setHand(room, p2(), {})
   grant(p2(), MS)
@@ -323,10 +323,10 @@ function Testhanjin_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseL
   inRoom(function() p2():addSkillUseHistory(MS, 1) end)
   lu.assertEquals(p2():usedSkillTimes(MS, Player.HistoryPhase), 1)
 
-  local firstDraw = seedDrawPile(room, { { "hanjin__slash", Card.Spade, 2 } })
+  local firstDraw = seedDrawPile(room, { { "qiao__slash", Card.Spade, 2 } })
   local extraDraw = seedDrawPile(room, {
-    { "hanjin__slash", Card.Spade, 3 },
-    { "hanjin__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 3 },
+    { "qiao__slash", Card.Spade, 4 },
   })
 
   -- 主将暗置：死亡流程先由国战公共时机翻开武将，追德仍应触发。
@@ -347,7 +347,7 @@ function Testhanjin_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseL
     room:killPlayer { who = p1(), killer = p2(), extra_data = { ignorePunishment = true } }
   end)
 
-  lu.assertEquals(p1().general, "hanjin__han007")
+  lu.assertEquals(p1().general, "qiao_heg__han007")
   lu.assertTrue(p1().dead)
   -- 受赠者摸 1 张后以刚得到的红桃 K 额外发动敏思：弃 K，摸 2。
   lu.assertEquals(room:getCardArea(hearts[1]), Card.DiscardPile)
@@ -361,4 +361,4 @@ function Testhanjin_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseL
   lu.assertEquals(p2():usedSkillTimes(MS, Player.HistoryGame), 1)
 end
 
-return { name = "hanjin_han007" }
+return { name = "qiao_han007" }

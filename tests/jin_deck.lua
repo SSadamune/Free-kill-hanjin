@@ -1,13 +1,13 @@
 -- JIN009 权变/骤霆：真实用牌入口与处理区顶牌。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
-local D = require "packages.hanjin.pkg.hanjin_generals.util.jin_deck"
+local D = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 
-local QIANBIAN = "hanjin__skill_jin009_1"
-local ZHOUTING = "hanjin__skill_jin009_2"
+local QIANBIAN = "qiao__skill_jin009_1"
+local ZHOUTING = "qiao__skill_jin009_2"
 
-Testhanjin_jin_deck = {}
-Testhanjin_jin_deck.tearDown = support.clearRoom
+Testqiao_jin_deck = {}
+Testqiao_jin_deck.tearDown = support.clearRoom
 
 local function inRoom(fn)
   local result
@@ -37,7 +37,7 @@ local function give(room, player, specs)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "wei" })
     for _, p in ipairs(room.players) do
@@ -47,8 +47,8 @@ local function prepare()
       end
     end
     skill_test.installDualGenerals(room, room.players[1], {
-      main = "hanjin__jin009",
-      deputy = "hanjin_test__jin_2",
+      main = "qiao_heg__jin009",
+      deputy = "qiao_test__jin_2",
       kingdom = "jin",
     })
     room.current = room.players[1]
@@ -73,7 +73,7 @@ end
 
 -- 权变 ---------------------------------------------------------------------
 
-function Testhanjin_jin_deck:testQianbianFirstHeartBansHandNotResponse()
+function Testqiao_jin_deck:testQianbianFirstHeartBansHandNotResponse()
   local room = prepare()
   local p, target = room.players[1], room.players[2]
   local cards = give(room, p, {
@@ -86,7 +86,7 @@ function Testhanjin_jin_deck:testQianbianFirstHeartBansHandNotResponse()
 
   -- 在真实 Phase 事件内用牌，HistoryPhase 才能定位；在 PhaseEnd 清理前捕获。
   local fired = false
-  local skel = fk.CreateSkill { name = "#hanjin_jin_deck_phase_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_jin_deck_phase_probe" }
   skel:addEffect(fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target2, player, data)
@@ -122,7 +122,7 @@ end
 
 -- 骤霆 ---------------------------------------------------------------------
 
-function Testhanjin_jin_deck:testZhoutingUsesProcessingTopThenStopsOnUnusable()
+function Testqiao_jin_deck:testZhoutingUsesProcessingTopThenStopsOnUnusable()
   local room = prepare()
   local p, target = room.players[1], room.players[2]
   inRoom(function() target.hp = 4 end)
@@ -149,7 +149,7 @@ function Testhanjin_jin_deck:testZhoutingUsesProcessingTopThenStopsOnUnusable()
   lu.assertEquals(room:getCardArea(jink), Card.DiscardPile)
 end
 
-function Testhanjin_jin_deck:testZhoutingCannotSubstituteHandCard()
+function Testqiao_jin_deck:testZhoutingCannotSubstituteHandCard()
   local room = prepare()
   local p, target = room.players[1], room.players[2]
   local hand = give(room, p, { { "slash", Card.Heart, 6 } })[1]
@@ -171,4 +171,4 @@ function Testhanjin_jin_deck:testZhoutingCannotSubstituteHandCard()
   lu.assertTrue(table.contains(p:getCardIds("h"), hand))
 end
 
-return { name = "hanjin_jin_deck" }
+return { name = "qiao_jin_deck" }

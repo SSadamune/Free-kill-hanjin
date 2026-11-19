@@ -1,0 +1,79 @@
+-- QUN018 邹氏 · 倾城
+--
+-- 出牌阶段限一次：选择一名手牌数小于等于你的其他男性角色，你与其交换全部
+-- 手牌。交换的是双方当前的全部手牌，不要求双方都有牌；次数按本阶段记录，
+-- 不能借由“没有可交换的牌”跳过限制后再发动。
+-- 保留来源：使用一次移牌事件交换两边手牌，不逐张获得/交给。
+local skill = fk.CreateSkill {
+  name = "qiao__skill_qun018_2",
+}
+skill.qiaoImplemented = true
+
+---@param room Room|ClientRoom|nil
+---@param player ServerPlayer|ClientPlayer
+---@return ServerPlayer[]|ClientPlayer[]
+local function candidates(room, player)
+  if room == nil then return {} end
+  local handCount = #player:getCardIds("h")
+  return table.filter(room:getPresentPlayers(), function(p)
+    return p ~= player and not p.dead and not p:isRemoved() and p:isMale()
+      and #p:getCardIds("h") <= handCount
+  end)
+end
+
+skill:addEffect("active", {
+  anim_type = "control",
+  target_num = 1,
+  prompt = "#qiao__skill_qun018_2-prompt",
+  target_filter = function(self, player, to_select, selected)
+    -- 客户端目标筛选同样走公开房间；ClientPlayer 没有 room 字段。
+    return #selected == 0 and table.contains(candidates(Fk:currentRoom(), player), to_select)
+  end,
+  can_use = function(self, player)
+    local room = Fk:currentRoom()
+    return player.phase == Player.Play
+      and player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
+      and #candidates(room, player) > 0
+  end,
+  on_use = function(self, room, effect)
+    local player = effect.from
+    local to = effect.tos and effect.tos[1]
+    if player == nil or to == nil or player.dead or to.dead or to:isRemoved() then return end
+    if not table.contains(candidates(room, player), to) then return end
+
+    local mine = player:getCardIds("h")
+    local theirs = to:getCardIds("h")
+    local moves = {}
+    if #mine > 0 then
+      table.insert(moves, {
+        ids = mine,
+        from = player,
+        to = to,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonExchange,
+        skillName = skill.name,
+        proposer = player,
+      })
+    end
+    if #theirs > 0 then
+      table.insert(moves, {
+        ids = theirs,
+        from = to,
+        to = player,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonExchange,
+        skillName = skill.name,
+        proposer = player,
+      })
+    end
+    if #moves > 0 then room:moveCards(table.unpack(moves)) end
+  end,
+})
+
+Fk:loadTranslationTable {
+  ["qiao__skill_qun018_2"] = "倾城",
+  [":qiao__skill_qun018_2"] = "出牌阶段限一次，你可以选择一名手牌数小于等于你的其他男性角色，你与其交换手牌。",
+  ["#qiao__skill_qun018_2-prompt"] = "倾城：选择一名手牌数不大于你的其他男性角色，交换手牌",
+}
+
+return skill

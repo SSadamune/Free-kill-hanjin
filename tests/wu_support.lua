@@ -1,19 +1,19 @@
 -- 吴势力标准包：主动与支持组 9 技能定向验证。
--- 规则依据：rules/standard-generals.md 吴区、rules/generals/wu005-zhouyu.md、
--- rules/generals/wu015a-zhangzhao.md、rules/equipment-movement.md。
+-- 规则依据：docs/rules/standard-generals.md 吴区、docs/rules/generals/wu005-zhouyu.md、
+-- docs/rules/generals/wu015a-zhangzhao.md、docs/rules/equipment-movement.md。
 -- 夹具使用白板双将并重算 hp，避免随机初始双将的额外触发干扰。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local ZHI = "hanjin__skill_wu001_1"
-local QI = "hanjin__skill_wu002_1"
-local YINGZI = "hanjin__skill_wu005_1"
-local FANJIAN = "hanjin__skill_wu005_2"
-local JIEYIN = "hanjin__skill_wu008_1"
-local XIAOJI = "hanjin__skill_wu008_2"
-local YINGHUN = "hanjin__skill_wu009_1"
-local ZHIJIAN = "hanjin__skill_wu015a_1"
-local GUZHENG = "hanjin__skill_wu015a_2"
+local ZHI = "qiao__skill_wu001_1"
+local QI = "qiao__skill_wu002_1"
+local YINGZI = "qiao__skill_wu005_1"
+local FANJIAN = "qiao__skill_wu005_2"
+local JIEYIN = "qiao__skill_wu008_1"
+local XIAOJI = "qiao__skill_wu008_2"
+local YINGHUN = "qiao__skill_wu009_1"
+local ZHIJIAN = "qiao__skill_wu015a_1"
+local GUZHENG = "qiao__skill_wu015a_2"
 
 local DEFAULT_KINGDOMS = { "wu", "wu", "wu", "wu", "wu", "wu", "wu", "wu" }
 
@@ -85,7 +85,7 @@ local function initializeGenerals(room)
 end
 
 local function prepare()
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   initializeGenerals(r)
   return r
 end
@@ -114,19 +114,19 @@ local function asClient(room, fn)
   if not ok then error(err) end
 end
 
-Testhanjin_wu_support = {}
-Testhanjin_wu_support.setup = prepare
-Testhanjin_wu_support.tearDown = support.clearRoom
+Testqiao_wu_support = {}
+Testqiao_wu_support.setup = prepare
+Testqiao_wu_support.tearDown = support.clearRoom
 
-function Testhanjin_wu_support:testZhihengLimitAndAllHandExtraDraw()
+function Testqiao_wu_support:testZhihengLimitAndAllHandExtraDraw()
   local p1 = p(1)
   grant(p1, ZHI)
   local hand = setHand(p1, {
-    { "hanjin__jink", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__jink", Card.Club, 3 },
-    { "hanjin__jink", Card.Diamond, 4 },
-    { "hanjin__slash", Card.Spade, 5 },
+    { "qiao__jink", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__jink", Card.Club, 3 },
+    { "qiao__jink", Card.Diamond, 4 },
+    { "qiao__slash", Card.Spade, 5 },
   })
   setPlayPhase(p1)
   activate(p1, ZHI, {}, { hand[1], hand[2], hand[3], hand[4] })
@@ -134,13 +134,13 @@ function Testhanjin_wu_support:testZhihengLimitAndAllHandExtraDraw()
   lu.assertEquals(#p1:getCardIds("h"), 5)
 end
 
-function Testhanjin_wu_support:testZhihengDiscardingAllHandDrawsOneExtra()
+function Testqiao_wu_support:testZhihengDiscardingAllHandDrawsOneExtra()
   local p1 = p(1)
   grant(p1, ZHI)
   local hand = setHand(p1, {
-    { "hanjin__jink", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__slash", Card.Club, 3 },
+    { "qiao__jink", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Club, 3 },
   })
   setPlayPhase(p1)
   activate(p1, ZHI, {}, hand)
@@ -148,7 +148,7 @@ function Testhanjin_wu_support:testZhihengDiscardingAllHandDrawsOneExtra()
   lu.assertEquals(#p1:getCardIds("h"), 4)
 end
 
-function Testhanjin_wu_support:testYingziDrawAndHandLimit()
+function Testqiao_wu_support:testYingziDrawAndHandLimit()
   local p1 = p(1)
   grant(p1, YINGZI)
   inRoom(function() p1.hp = 2 end)
@@ -162,7 +162,7 @@ function Testhanjin_wu_support:testYingziDrawAndHandLimit()
   lu.assertEquals(n, 3)
 end
 
-function Testhanjin_wu_support:testYinghunDrawThenDiscard()
+function Testqiao_wu_support:testYinghunDrawThenDiscard()
   local p1, p2 = p(1), p(2)
   grant(p1, YINGHUN)
   clearCards(p2)
@@ -174,7 +174,7 @@ function Testhanjin_wu_support:testYinghunDrawThenDiscard()
   local oldChoose, oldChoice, oldDiscard = room().askToChoosePlayers, room().askToChoice, room().askToDiscard
   skill_test.withSkillRequests(room(), YINGHUN, {
     askToChoosePlayers = function(self, player, params) return { p2 } end,
-    askToChoice = function(self, player, params) return "#hanjin__skill_wu009_1-draw" end,
+    askToChoice = function(self, player, params) return "#qiao__skill_wu009_1-draw" end,
     askToDiscard = function(self, player, params)
       local id = player:getCardIds("h")[1]
       self:throwCard({ id }, params.skill_name, player, player)
@@ -194,16 +194,16 @@ function Testhanjin_wu_support:testYinghunDrawThenDiscard()
   lu.assertEquals(#p2:getCardIds("h"), 1)
 end
 
-function Testhanjin_wu_support:testFanjianAcceptDiscardsHandAndEquip()
+function Testqiao_wu_support:testFanjianAcceptDiscardsHandAndEquip()
   local p1, p2 = p(1), p(2)
   grant(p1, FANJIAN)
   clearCards(p1)
   clearCards(p2)
-  local shown = give(p1, "hanjin__jink", Card.Spade, 7)
-  give(p2, "hanjin__jink", Card.Spade, 3)
-  give(p2, "hanjin__jink", Card.Spade, 4)
-  give(p2, "hanjin__slash", Card.Club, 5)
-  local spadeEquip = give(p2, "hanjin__qinggang_sword", Card.Spade, 6)
+  local shown = give(p1, "qiao__jink", Card.Spade, 7)
+  give(p2, "qiao__jink", Card.Spade, 3)
+  give(p2, "qiao__jink", Card.Spade, 4)
+  give(p2, "qiao__slash", Card.Club, 5)
+  local spadeEquip = give(p2, "qiao__qinggang_sword", Card.Spade, 6)
   equip(p2, spadeEquip)
   setPlayPhase(p1)
 
@@ -221,7 +221,7 @@ function Testhanjin_wu_support:testFanjianAcceptDiscardsHandAndEquip()
     if params.skill_name ~= FANJIAN then return oldChoice(self, player, params) end
     lu.assertIs(player, p2)
     lu.assertEquals(#params.choices, 2)
-    return "#hanjin__skill_wu005_2-accept"
+    return "#qiao__skill_wu005_2-accept"
   end
   local ok, err = pcall(function() activate(p1, FANJIAN, { p2 }, { shown }) end)
   room().showCards, room().askToChoice = oldShow, oldChoice
@@ -234,21 +234,21 @@ function Testhanjin_wu_support:testFanjianAcceptDiscardsHandAndEquip()
   lu.assertEquals(p2.hp, p2.maxHp)
 end
 
-function Testhanjin_wu_support:testFanjianCanRefuseAndLoseHp()
+function Testqiao_wu_support:testFanjianCanRefuseAndLoseHp()
   local p1, p2 = p(1), p(2)
   grant(p1, FANJIAN)
   clearCards(p1)
   clearCards(p2)
-  local shown = give(p1, "hanjin__jink", Card.Heart, 7)
-  give(p2, "hanjin__jink", Card.Heart, 3)
-  give(p2, "hanjin__jink", Card.Heart, 4)
+  local shown = give(p1, "qiao__jink", Card.Heart, 7)
+  give(p2, "qiao__jink", Card.Heart, 3)
+  give(p2, "qiao__jink", Card.Heart, 4)
   setPlayPhase(p1)
   inRoom(function() p2.hp = p2.maxHp end)
 
   local oldChoice = room().askToChoice
   room().askToChoice = function(self, player, params)
     if params.skill_name ~= FANJIAN then return oldChoice(self, player, params) end
-    return "#hanjin__skill_wu005_2-lose"
+    return "#qiao__skill_wu005_2-lose"
   end
   local ok, err = pcall(function() activate(p1, FANJIAN, { p2 }, { shown }) end)
   room().askToChoice = oldChoice
@@ -257,26 +257,26 @@ function Testhanjin_wu_support:testFanjianCanRefuseAndLoseHp()
   lu.assertEquals(#p2:getCardIds("h"), 3) -- 展示牌已交给其，未弃置
 end
 
-function Testhanjin_wu_support:testFanjianMainPlaceData()
+function Testqiao_wu_support:testFanjianMainPlaceData()
   lu.assertTrue(Fk.skills[FANJIAN]:hasTag(Skill.MainPlace))
-  local general = Fk.generals["hanjin__wu005"]
+  local general = Fk.generals["qiao_heg__wu005"]
   lu.assertEquals(general.mainMaxHpAdjustedValue, -1)
   lu.assertEquals(general.deputyMaxHpAdjustedValue, 0)
 end
 
-function Testhanjin_wu_support:testJieyinPlacesEquipFromHandAndDrawer()
+function Testqiao_wu_support:testJieyinPlacesEquipFromHandAndDrawer()
   local p1, p2 = p(1), p(2)
   grant(p1, JIEYIN)
   clearCards(p1)
   clearCards(p2)
   inRoom(function() p1.hp = 3; p2.hp = 2 end)
-  local sword = give(p1, "hanjin__qinggang_sword", Card.Spade, 5)
+  local sword = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
   setPlayPhase(p1)
 
   local oldChoice, oldAsk = room().askToChoice, room().askToChooseCards
   room().askToChoice = function(self, player, params)
     if params.skill_name ~= JIEYIN then return oldChoice(self, player, params) end
-    return "#hanjin__skill_wu008_1-place"
+    return "#qiao__skill_wu008_1-place"
   end
   room().askToChooseCards = function(self, player, params)
     if params.skill_name ~= JIEYIN then return oldAsk(self, player, params) end
@@ -293,7 +293,7 @@ function Testhanjin_wu_support:testJieyinPlacesEquipFromHandAndDrawer()
   lu.assertEquals(p2.hp, 3)
 end
 
-function Testhanjin_wu_support:testXiaojiDrawsMoreOutsideOwnTurn()
+function Testqiao_wu_support:testXiaojiDrawsMoreOutsideOwnTurn()
   local p1, p2 = p(1), p(2)
   grant(p2, XIAOJI)
   clearCards(p2)
@@ -301,14 +301,14 @@ function Testhanjin_wu_support:testXiaojiDrawsMoreOutsideOwnTurn()
   local oldInvoke = room().askToSkillInvoke
   room().askToSkillInvoke = function() return true end
 
-  local out = give(p2, "hanjin__qinggang_sword", Card.Spade, 5)
+  local out = give(p2, "qiao__qinggang_sword", Card.Spade, 5)
   equip(p2, out)
   inRoom(function() room().current = p1 end)
   local before = #p2:getCardIds("h")
   inRoom(function() room():throwCard({ out }, "test", p2, p2) end)
   lu.assertEquals(#p2:getCardIds("h"), before + 2)
 
-  local inside = give(p2, "hanjin__eight_diagram", Card.Heart, 2)
+  local inside = give(p2, "qiao__eight_diagram", Card.Heart, 2)
   equip(p2, inside)
   inRoom(function() room().current = p2 end)
   before = #p2:getCardIds("h")
@@ -317,19 +317,19 @@ function Testhanjin_wu_support:testXiaojiDrawsMoreOutsideOwnTurn()
   room().askToSkillInvoke = oldInvoke
 end
 
-function Testhanjin_wu_support:testZhijianHandAndEquipSources()
+function Testqiao_wu_support:testZhijianHandAndEquipSources()
   local p1, p2 = p(1), p(2)
   grant(p1, ZHIJIAN)
   clearCards(p1)
   clearCards(p2)
-  local fromHand = give(p1, "hanjin__qinggang_sword", Card.Spade, 5)
+  local fromHand = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
   setPlayPhase(p1)
   activate(p1, ZHIJIAN, { p2 }, { fromHand })
   lu.assertEquals(room():getCardOwner(fromHand).id, p2.id)
   lu.assertEquals(room():getCardArea(fromHand), Card.PlayerEquip)
   lu.assertEquals(#p1:getCardIds("h"), 1) -- 手牌来源：你摸
 
-  local fromEquip = give(p1, "hanjin__eight_diagram", Card.Heart, 2)
+  local fromEquip = give(p1, "qiao__eight_diagram", Card.Heart, 2)
   equip(p1, fromEquip)
   local beforeP2 = #p2:getCardIds("h")
   activate(p1, ZHIJIAN, { p2 }, { fromEquip })
@@ -337,16 +337,16 @@ function Testhanjin_wu_support:testZhijianHandAndEquipSources()
   lu.assertEquals(#p2:getCardIds("h"), beforeP2 + 1) -- 装备来源：其摸
 end
 
-function Testhanjin_wu_support:testGuzhengGivesOneAndTakesUpToThree()
+function Testqiao_wu_support:testGuzhengGivesOneAndTakesUpToThree()
   local p1, p2 = p(1), p(2)
   grant(p1, GUZHENG)
   clearCards(p1)
   clearCards(p2)
   local ids = setHand(p2, {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__jink", Card.Club, 3 },
-    { "hanjin__slash", Card.Diamond, 4 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__jink", Card.Club, 3 },
+    { "qiao__slash", Card.Diamond, 4 },
   })
   inRoom(function() p1.hp = p1.maxHp end)
 
@@ -372,17 +372,17 @@ function Testhanjin_wu_support:testGuzhengGivesOneAndTakesUpToThree()
   lu.assertEquals(#p1:getCardIds("h"), 3)
 end
 
-function Testhanjin_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
+function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
   local p1, p2, p3 = p(1), p(2), p(3)
   grant(p1, GUZHENG)
   clearCards(p1)
   local ids2 = setHand(p2, {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__jink", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__jink", Card.Heart, 2 },
   })
   local ids3 = setHand(p3, {
-    { "hanjin__slash", Card.Club, 3 },
-    { "hanjin__jink", Card.Diamond, 4 },
+    { "qiao__slash", Card.Club, 3 },
+    { "qiao__jink", Card.Diamond, 4 },
   })
   inRoom(function() p1.hp = p1.maxHp end)
 
@@ -426,12 +426,12 @@ function Testhanjin_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
   lu.assertEquals(room():getCardArea(ids2[2]), Card.DiscardPile)
 end
 
-function Testhanjin_wu_support:testJieyinClientCanUseWithoutRoom()
+function Testqiao_wu_support:testJieyinClientCanUseWithoutRoom()
   local p1 = p(1)
   grant(p1, JIEYIN)
   clearCards(p1)
   clearCards(p(2))
-  local sword = give(p1, "hanjin__qinggang_sword", Card.Spade, 5)
+  local sword = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
 
   asClient(room(), function(clients)
     local me = clients[1]
@@ -442,12 +442,12 @@ function Testhanjin_wu_support:testJieyinClientCanUseWithoutRoom()
   end)
 end
 
-function Testhanjin_wu_support:testZhijianClientCandidatesWithoutRoom()
+function Testqiao_wu_support:testZhijianClientCandidatesWithoutRoom()
   local p1 = p(1)
   grant(p1, ZHIJIAN)
   clearCards(p1)
   clearCards(p(2))
-  local sword = give(p1, "hanjin__qinggang_sword", Card.Spade, 5)
+  local sword = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
 
   asClient(room(), function(clients)
     local me = clients[1]
@@ -459,14 +459,14 @@ function Testhanjin_wu_support:testZhijianClientCandidatesWithoutRoom()
   end)
 end
 
-function Testhanjin_wu_support:testQixiViewAsDismantlement()
+function Testqiao_wu_support:testQixiViewAsDismantlement()
   local p1 = p(1)
   grant(p1, QI)
-  local black = give(p1, "hanjin__slash", Card.Spade, 9)
+  local black = give(p1, "qiao__slash", Card.Spade, 9)
   local card = Fk.skills[QI]:viewAs(p1, { black })
   lu.assertNotNil(card)
-  lu.assertEquals(card.name, "hanjin__dismantlement")
+  lu.assertEquals(card.name, "qiao__dismantlement")
   lu.assertEquals(card.skillName, QI)
 end
 
-return { name = "hanjin_wu_support" }
+return { name = "qiao_wu_support" }

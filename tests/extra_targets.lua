@@ -1,10 +1,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local A = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-local E = require "packages.hanjin.pkg.hanjin_mode.rules.extra_targets"
-local C = require "packages.hanjin.pkg.hanjin_mode.rules.card_use_targets"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local E = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
+local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local H = require "packages.hegemony.util"
 
-Testhanjin_extra_targets = { setup = support.initHanjinRoom, tearDown = support.clearRoom }
+Testqiao_extra_targets = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 local function room() return FkTest.room end
 
@@ -73,38 +73,38 @@ local groupKingdoms = { "wei", "wei", "shu", "shu", "wu", "wu", "qun", "han" }
 
 -- Basic scope ----------------------------------------------------------------
 
-function Testhanjin_extra_targets:testEquipmentAndDelayedTrickHaveNoRoleCandidates()
+function Testqiao_extra_targets:testEquipmentAndDelayedTrickHaveNoRoleCandidates()
   local p = room().players[1]
-  local equipment = useData(p, {}, "hanjin__axe")
-  local delayed = useData(p, {}, "hanjin__lightning")
+  local equipment = useData(p, {}, "qiao__axe")
+  local delayed = useData(p, {}, "qiao__lightning")
   FkTest.runInRoom(function()
     lu.assertEquals(#E.candidates(room(), equipment, {}), 0)
     lu.assertEquals(#E.candidates(room(), delayed, {}), 0)
   end)
 end
 
-function Testhanjin_extra_targets:testJinkAndNullificationHaveNoRoleCandidates()
+function Testqiao_extra_targets:testJinkAndNullificationHaveNoRoleCandidates()
   local p = room().players[1]
-  local jink = useData(p, {}, "hanjin__jink")
-  local nullification = useData(p, {}, "hanjin__guozhan__nullification")
+  local jink = useData(p, {}, "qiao__jink")
+  local nullification = useData(p, {}, "qiao__guozhan__nullification")
   FkTest.runInRoom(function()
     lu.assertEquals(#E.candidates(room(), jink, {}), 0)
     lu.assertEquals(#E.candidates(room(), nullification, {}), 0)
   end)
 end
 
-function Testhanjin_extra_targets:testCardTargetUseIsExcludedEvenWhenTheSkillWouldAllowRoles()
+function Testqiao_extra_targets:testCardTargetUseIsExcludedEvenWhenTheSkillWouldAllowRoles()
   local p = room().players
-  local use = useData(p[1], {}, "hanjin__slash")
-  use.toCard = Fk:cloneCard("hanjin__jink")
+  local use = useData(p[1], {}, "qiao__slash")
+  use.toCard = Fk:cloneCard("qiao__jink")
   FkTest.runInRoom(function()
     lu.assertEquals(#E.candidates(room(), use, {}), 0)
   end)
 end
 
-function Testhanjin_extra_targets:testSlashCandidatesRespectAttackRangeAndCurrentTargets()
+function Testqiao_extra_targets:testSlashCandidatesRespectAttackRangeAndCurrentTargets()
   local p = room().players
-  local use = useData(p[1], { p[2] }, "hanjin__slash")
+  local use = useData(p[1], { p[2] }, "qiao__slash")
   local result = candidates(use)
   lu.assertTrue(contains(result, p[8]))
   lu.assertFalse(contains(result, p[3]))
@@ -113,9 +113,9 @@ function Testhanjin_extra_targets:testSlashCandidatesRespectAttackRangeAndCurren
   lu.assertFalse(contains(result, p[2]))
 end
 
-function Testhanjin_extra_targets:testSlashReaddsALegalTargetWhenNoneRemain()
+function Testqiao_extra_targets:testSlashReaddsALegalTargetWhenNoneRemain()
   local p = room().players
-  local use = useData(p[1], { p[2] }, "hanjin__slash")
+  local use = useData(p[1], { p[2] }, "qiao__slash")
   use:removeAllTargets()
   local result = candidates(use)
   lu.assertTrue(contains(result, p[2]))
@@ -123,52 +123,52 @@ function Testhanjin_extra_targets:testSlashReaddsALegalTargetWhenNoneRemain()
   lu.assertFalse(contains(result, p[3]))
 end
 
-function Testhanjin_extra_targets:testSnatchCandidatesRespectDistanceAndCardArea()
+function Testqiao_extra_targets:testSnatchCandidatesRespectDistanceAndCardArea()
   local p = room().players
-  give(p[2], "hanjin__slash")
-  give(p[3], "hanjin__slash")
-  give(p[8], "hanjin__slash")
-  local use = useData(p[1], { p[2] }, "hanjin__snatch")
+  give(p[2], "qiao__slash")
+  give(p[3], "qiao__slash")
+  give(p[8], "qiao__slash")
+  local use = useData(p[1], { p[2] }, "qiao__snatch")
   local result = candidates(use)
   lu.assertTrue(contains(result, p[8]))
   lu.assertFalse(contains(result, p[3]))
   lu.assertFalse(contains(result, p[1]))
 end
 
-function Testhanjin_extra_targets:testCandidatesUseCurrentStateInsteadOfAnInitialNameList()
+function Testqiao_extra_targets:testCandidatesUseCurrentStateInsteadOfAnInitialNameList()
   local p = room().players
-  local use = useData(p[1], { p[2] }, "hanjin__slash")
+  local use = useData(p[1], { p[2] }, "qiao__slash")
   lu.assertFalse(contains(candidates(use), p[3]))
-  equip(p[1], "hanjin__qinggang_sword") -- attack range 2
+  equip(p[1], "qiao__qinggang_sword") -- attack range 2
   lu.assertTrue(contains(candidates(use), p[3]))
 end
 
-function Testhanjin_extra_targets:testCommonProhibitionIsRespected()
+function Testqiao_extra_targets:testCommonProhibitionIsRespected()
   local p = room().players
-  local skel = fk.CreateSkill { name = "#hanjin_test_extra_prohibit" }
+  local skel = fk.CreateSkill { name = "#qiao_test_extra_prohibit" }
   skel:addEffect("prohibit", {
     is_prohibited = function(self, from, to, card)
-      return to:getMark("hanjin_test_extra_prohibited") > 0
+      return to:getMark("qiao_test_extra_prohibited") > 0
     end,
   })
-  local use = useData(p[1], { p[2] }, "hanjin__slash")
+  local use = useData(p[1], { p[2] }, "qiao__slash")
   FkTest.runInRoom(function()
     local skill = skel:createSkill()
     Fk.skills[skill.name] = skill
     room():addSkill(skill)
   end)
-  FkTest.runInRoom(function() room():setPlayerMark(p[8], "hanjin_test_extra_prohibited", 1) end)
+  FkTest.runInRoom(function() room():setPlayerMark(p[8], "qiao_test_extra_prohibited", 1) end)
   lu.assertFalse(contains(candidates(use), p[8]))
-  FkTest.runInRoom(function() room():setPlayerMark(p[8], "hanjin_test_extra_prohibited", 0) end)
+  FkTest.runInRoom(function() room():setPlayerMark(p[8], "qiao_test_extra_prohibited", 0) end)
   lu.assertTrue(contains(candidates(use), p[8]))
 end
 
 -- Card-specific conditions ----------------------------------------------------
 
-function Testhanjin_extra_targets:testBefriendAttackingRejectsSameKingdom()
+function Testqiao_extra_targets:testBefriendAttackingRejectsSameKingdom()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[3] }, "hanjin__befriend_attacking")
+  local use = useData(p[1], { p[3] }, "qiao__befriend_attacking")
   local result = candidates(use)
   lu.assertTrue(contains(result, p[5]))
   lu.assertTrue(contains(result, p[7]))
@@ -176,37 +176,37 @@ function Testhanjin_extra_targets:testBefriendAttackingRejectsSameKingdom()
   lu.assertFalse(contains(result, p[3]))
 end
 
-function Testhanjin_extra_targets:testDrowningRequiresEquipmentArea()
+function Testqiao_extra_targets:testDrowningRequiresEquipmentArea()
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword")
-  equip(p[5], "hanjin__qinggang_sword")
-  local use = useData(p[1], { p[2] }, "hanjin__drowning")
+  equip(p[2], "qiao__qinggang_sword")
+  equip(p[5], "qiao__qinggang_sword")
+  local use = useData(p[1], { p[2] }, "qiao__drowning")
   local result = candidates(use)
   lu.assertTrue(contains(result, p[5]))
   lu.assertFalse(contains(result, p[3]))
-  equip(p[3], "hanjin__qinggang_sword")
+  equip(p[3], "qiao__qinggang_sword")
   lu.assertTrue(contains(candidates(use), p[3]))
 end
 
-function Testhanjin_extra_targets:testPeachAnalepticForesightAndExNihiloAllowOtherRoles()
+function Testqiao_extra_targets:testPeachAnalepticForesightAndExNihiloAllowOtherRoles()
   local p = room().players
   FkTest.runInRoom(function() room():loseHp(p[2], 1) end)
-  local peach = candidates(useData(p[1], { p[1] }, "hanjin__peach"))
+  local peach = candidates(useData(p[1], { p[1] }, "qiao__peach"))
   lu.assertTrue(contains(peach, p[2]))
   lu.assertFalse(contains(peach, p[3]))
-  for _, name in ipairs({ "hanjin__analeptic", "hanjin__foresight", "ex_nihilo" }) do
+  for _, name in ipairs({ "qiao__analeptic", "qiao__foresight", "ex_nihilo" }) do
     local result = candidates(useData(p[1], { p[1] }, name))
     lu.assertTrue(contains(result, p[2]), name .. " should allow another role")
     lu.assertTrue(contains(result, p[3]), name .. " should allow another role")
   end
 end
 
-function Testhanjin_extra_targets:testPeachExtraTargetIsResolvedByTheCardEffect()
+function Testqiao_extra_targets:testPeachExtraTargetIsResolvedByTheCardEffect()
   local p = room().players
   p[1].hp = p[1].maxHp - 1
   p[2].hp = p[2].maxHp - 1
   emptyHand(p[1])
-  local use = useData(p[1], { p[1] }, "hanjin__peach", addTargetEntry())
+  local use = useData(p[1], { p[1] }, "qiao__peach", addTargetEntry())
   FkTest.runInRoom(function()
     FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[2] }) })
     room():useCard(use)
@@ -218,10 +218,10 @@ end
 
 -- Group/context cards --------------------------------------------------------
 
-function Testhanjin_extra_targets:testAwaitExhaustedHasNoCandidateWhenTheGroupIsComplete()
+function Testqiao_extra_targets:testAwaitExhaustedHasNoCandidateWhenTheGroupIsComplete()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[1], p[2] }, "hanjin__await_exhausted")
+  local use = useData(p[1], { p[1], p[2] }, "qiao__await_exhausted")
   lu.assertEquals(#candidates(use), 0)
   use:removeTarget(p[2])
   local readded = candidates(use)
@@ -234,7 +234,7 @@ function Testhanjin_extra_targets:testAwaitExhaustedHasNoCandidateWhenTheGroupIs
   lu.assertFalse(contains(all, p[3]))
 end
 
-function Testhanjin_extra_targets:testBurningCampsHasNoCandidateWhenTheQueueIsComplete()
+function Testqiao_extra_targets:testBurningCampsHasNoCandidateWhenTheQueueIsComplete()
   setKingdoms(groupKingdoms)
   local p = room().players
   local queue
@@ -243,7 +243,7 @@ function Testhanjin_extra_targets:testBurningCampsHasNoCandidateWhenTheQueueIsCo
     queue = { nextp }
     table.insertTable(queue, H.getFormationRelation(nextp))
   end)
-  local use = useData(p[1], queue, "hanjin__burning_camps")
+  local use = useData(p[1], queue, "qiao__burning_camps")
   lu.assertEquals(#candidates(use), 0)
   use:removeAllTargets()
   local all = candidates(use)
@@ -252,10 +252,10 @@ function Testhanjin_extra_targets:testBurningCampsHasNoCandidateWhenTheQueueIsCo
   lu.assertFalse(contains(all, p[3]))
 end
 
-function Testhanjin_extra_targets:testFightTogetherKeepsTheChosenCategoryWhenTheFirstTargetIsRemoved()
+function Testqiao_extra_targets:testFightTogetherKeepsTheChosenCategoryWhenTheFirstTargetIsRemoved()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[2] }, "hanjin__fight_together")
+  local use = useData(p[1], { p[2] }, "qiao__fight_together")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end) -- expand the group
   lu.assertEquals(#use.tos, 6)
   lu.assertEquals(#candidates(use), 0)
@@ -265,10 +265,10 @@ function Testhanjin_extra_targets:testFightTogetherKeepsTheChosenCategoryWhenThe
   lu.assertFalse(contains(readded, p[7]))
 end
 
-function Testhanjin_extra_targets:testFightTogetherCannotSwitchToTheSmallGroupAndCanReaddAll()
+function Testqiao_extra_targets:testFightTogetherCannotSwitchToTheSmallGroupAndCanReaddAll()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[7] }, "hanjin__fight_together")
+  local use = useData(p[1], { p[7] }, "qiao__fight_together")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end) -- small group p7,p8
   lu.assertEquals(#use.tos, 2)
   use:removeAllTargets()
@@ -279,11 +279,11 @@ function Testhanjin_extra_targets:testFightTogetherCannotSwitchToTheSmallGroupAn
   lu.assertFalse(contains(all, p[2]))
 end
 
-function Testhanjin_extra_targets:testFightTogetherContextSurvivesTheRealUsePipeline()
+function Testqiao_extra_targets:testFightTogetherContextSurvivesTheRealUsePipeline()
   setKingdoms(groupKingdoms)
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[2] }, "hanjin__fight_together", {
+  local use = useData(p[1], { p[2] }, "qiao__fight_together", {
     { condition = "kongchao", effect = "remove_target" },
     { condition = "kongchao", effect = "add_target" },
   })
@@ -306,11 +306,11 @@ function Testhanjin_extra_targets:testFightTogetherContextSurvivesTheRealUsePipe
   lu.assertEquals(A.getResult(use).triggered_count, 2)
 end
 
-function Testhanjin_extra_targets:testAllianceFeastContextSurvivesTheRealUsePipeline()
+function Testqiao_extra_targets:testAllianceFeastContextSurvivesTheRealUsePipeline()
   setKingdoms(groupKingdoms)
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[3] }, "hanjin__alliance_feast", {
+  local use = useData(p[1], { p[3] }, "qiao__alliance_feast", {
     { condition = "kongchao", effect = "remove_target" },
     { condition = "kongchao", effect = "add_target" },
   })
@@ -343,10 +343,10 @@ function Testhanjin_extra_targets:testAllianceFeastContextSurvivesTheRealUsePipe
   lu.assertEquals(A.getResult(use).triggered_count, 2)
 end
 
-function Testhanjin_extra_targets:testAllianceFeastKeepsTheChosenKingdomWhenTheFirstTargetIsRemoved()
+function Testqiao_extra_targets:testAllianceFeastKeepsTheChosenKingdomWhenTheFirstTargetIsRemoved()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[3] }, "hanjin__alliance_feast")
+  local use = useData(p[1], { p[3] }, "qiao__alliance_feast")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end) -- p1 + shu p3,p4
   lu.assertEquals(#use.tos, 3)
   lu.assertEquals(#candidates(use), 0)
@@ -357,10 +357,10 @@ function Testhanjin_extra_targets:testAllianceFeastKeepsTheChosenKingdomWhenTheF
   lu.assertFalse(contains(readded, p[7]))
 end
 
-function Testhanjin_extra_targets:testAllianceFeastReaddsOnlyTheChosenKingdomAndSelf()
+function Testqiao_extra_targets:testAllianceFeastReaddsOnlyTheChosenKingdomAndSelf()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[3] }, "hanjin__alliance_feast")
+  local use = useData(p[1], { p[3] }, "qiao__alliance_feast")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end)
   use:removeAllTargets()
   local all = candidates(use)
@@ -371,10 +371,10 @@ function Testhanjin_extra_targets:testAllianceFeastReaddsOnlyTheChosenKingdomAnd
   lu.assertFalse(contains(all, p[5]))
 end
 
-function Testhanjin_extra_targets:testThreatenEmperorOnlyReaddsTheUser()
+function Testqiao_extra_targets:testThreatenEmperorOnlyReaddsTheUser()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[1] }, "hanjin__threaten_emperor")
+  local use = useData(p[1], { p[1] }, "qiao__threaten_emperor")
   lu.assertEquals(#candidates(use), 0)
   use:removeAllTargets()
   local all = candidates(use)
@@ -384,12 +384,12 @@ end
 
 -- Collateral: independent attached targets ------------------------------------
 
-function Testhanjin_extra_targets:testCollateralMainCandidateNeedsItsOwnLegalSubTarget()
+function Testqiao_extra_targets:testCollateralMainCandidateNeedsItsOwnLegalSubTarget()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword") -- range 2
-  equip(p[6], "hanjin__qinggang_sword") -- p6 cannot reach p3 (distance 3)
-  local use = useData(p[1], { p[2], p[3] }, "hanjin__collateral")
+  equip(p[2], "qiao__qinggang_sword") -- range 2
+  equip(p[6], "qiao__qinggang_sword") -- p6 cannot reach p3 (distance 3)
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral")
   FkTest.runInRoom(function()
     use.card.skill:onUse(room(), use)
     lu.assertFalse(p[6]:inMyAttackRange(p[3]))
@@ -403,19 +403,48 @@ function Testhanjin_extra_targets:testCollateralMainCandidateNeedsItsOwnLegalSub
   end)
 end
 
-function Testhanjin_extra_targets:testCollateralAddsAnIndependentSubTarget()
+function Testqiao_extra_targets:testCollateralAllowsExtraMainWithoutAttackRangeTarget()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword")
-  equip(p[6], "hanjin__qinggang_sword")
+  equip(p[2], "qiao__qinggang_sword")
+  -- 只给 p6 一把攻击范围 1 的武器，并让相邻角色都 +1 距离：
+  -- 此时 p6 的攻击范围内没有其他角色，仍可作为额外主目标。
+  equip(p[6], "qiao__crossbow")
+  equip(p[5], "qiao__jueying")
+  equip(p[7], "qiao__jueying")
   emptyHand(p[1])
-  local use = useData(p[1], { p[2], p[3] }, "hanjin__collateral", addTargetEntry())
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", addTargetEntry())
+  FkTest.runInRoom(function()
+    use.card.skill:onUse(room(), use)
+    lu.assertFalse(p[6]:inMyAttackRange(p[5]))
+    lu.assertFalse(p[6]:inMyAttackRange(p[7]))
+    local main = E.candidates(room(), use, {})
+    lu.assertTrue(table.contains(main, p[6]))
+  end)
+  FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[6] }) })
+  local added, subs
+  FkTest.runInRoom(function()
+    added = E.addTarget(room(), use, {})
+    subs = use:getSubTos(p[6])
+  end)
+  lu.assertTrue(added)
+  lu.assertTrue(table.contains(use.tos, p[6]))
+  lu.assertEquals(#(subs or {}), 0)
+end
+
+function Testqiao_extra_targets:testCollateralAddsAnIndependentSubTarget()
+  setKingdoms(groupKingdoms)
+  local p = room().players
+  equip(p[2], "qiao__qinggang_sword")
+  equip(p[6], "qiao__qinggang_sword")
+  emptyHand(p[1])
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", addTargetEntry())
   local effects = {}
-  local skel = fk.CreateSkill { name = "#hanjin_test_collateral_effect_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_test_collateral_effect_probe" }
   skel:addEffect(fk.CardEffecting, {
     global = true,
     can_refresh = function(self, event, target, player, data)
-      return data.card ~= nil and data.card.name == "hanjin__collateral"
+      return data.card ~= nil and data.card.name == "qiao__collateral"
     end,
     on_refresh = function(self, event, target, player, data)
       table.insert(effects, { to = data.to, subs = data.subTargets })
@@ -438,13 +467,13 @@ function Testhanjin_extra_targets:testCollateralAddsAnIndependentSubTarget()
   lu.assertEquals(table.map(addedEffect.subs, Util.IdMapper), { p[5].id })
 end
 
-function Testhanjin_extra_targets:testCollateralDecliningTheSubTargetChangesNothing()
+function Testqiao_extra_targets:testCollateralDecliningTheSubTargetChangesNothing()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword")
-  equip(p[6], "hanjin__qinggang_sword")
+  equip(p[2], "qiao__qinggang_sword")
+  equip(p[6], "qiao__qinggang_sword")
   emptyHand(p[1])
-  local use = useData(p[1], { p[2], p[3] }, "hanjin__collateral", addTargetEntry())
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", addTargetEntry())
   FkTest.runInRoom(function()
     FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[6] }), "" })
     FkTest.setNextReplies(p[2], { "" })
@@ -455,13 +484,13 @@ function Testhanjin_extra_targets:testCollateralDecliningTheSubTargetChangesNoth
   lu.assertFalse(A.getResult(use).triggered)
 end
 
-function Testhanjin_extra_targets:testCollateralSubTargetIsRecheckedAfterSelection()
+function Testqiao_extra_targets:testCollateralSubTargetIsRecheckedAfterSelection()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword")
-  local weapon = equip(p[6], "hanjin__qinggang_sword")
+  equip(p[2], "qiao__qinggang_sword")
+  local weapon = equip(p[6], "qiao__qinggang_sword")
   emptyHand(p[1])
-  local use = useData(p[1], { p[2], p[3] }, "hanjin__collateral", addTargetEntry())
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", addTargetEntry())
   local original = room().askToChoosePlayers
   local calls = 0
   FkTest.runInRoom(function()
@@ -480,15 +509,15 @@ function Testhanjin_extra_targets:testCollateralSubTargetIsRecheckedAfterSelecti
   lu.assertFalse(A.getResult(use).triggered)
 end
 
-function Testhanjin_extra_targets:testCollateralExplicitConditionStillRequiresItsOwnSubTarget()
+function Testqiao_extra_targets:testCollateralExplicitConditionStillRequiresItsOwnSubTarget()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword")
+  equip(p[2], "qiao__qinggang_sword")
   local entry = {
     condition = "kongchao", effect = "add_target",
     target_condition = { filter = function(room, use, target) return target == p[4] end },
   }
-  local use = useData(p[1], { p[2], p[3] }, "hanjin__collateral", { entry })
+  local use = useData(p[1], { p[2], p[3] }, "qiao__collateral", { entry })
   local result
   FkTest.runInRoom(function()
     use.card.skill:onUse(room(), use)
@@ -500,12 +529,12 @@ end
 
 -- Add-target pipeline --------------------------------------------------------
 
-function Testhanjin_extra_targets:testAddTargetSuccessTriggersOnce()
+function Testqiao_extra_targets:testAddTargetSuccessTriggersOnce()
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[2] }, "hanjin__slash", addTargetEntry())
+  local use = useData(p[1], { p[2] }, "qiao__slash", addTargetEntry())
   local triggers = 0
-  local skel = fk.CreateSkill { name = "#hanjin_test_extra_trigger_probe" }
+  local skel = fk.CreateSkill { name = "#qiao_test_extra_trigger_probe" }
   skel:addEffect(A.Triggered, {
     global = true,
     can_refresh = function(self, event, target, player) return target == player end,
@@ -524,10 +553,10 @@ function Testhanjin_extra_targets:testAddTargetSuccessTriggersOnce()
   lu.assertEquals(triggers, 1)
 end
 
-function Testhanjin_extra_targets:testCancellingTheExtraTargetDoesNotTrigger()
+function Testqiao_extra_targets:testCancellingTheExtraTargetDoesNotTrigger()
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[2] }, "hanjin__slash", addTargetEntry())
+  local use = useData(p[1], { p[2] }, "qiao__slash", addTargetEntry())
   FkTest.runInRoom(function()
     FkTest.setNextReplies(p[1], { "" })
     FkTest.setNextReplies(p[2], { "" })
@@ -537,10 +566,10 @@ function Testhanjin_extra_targets:testCancellingTheExtraTargetDoesNotTrigger()
   lu.assertFalse(A.getResult(use).triggered)
 end
 
-function Testhanjin_extra_targets:testSequentialRemoveThenAddUsesTheCurrentTargetList()
+function Testqiao_extra_targets:testSequentialRemoveThenAddUsesTheCurrentTargetList()
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[2] }, "hanjin__slash", {
+  local use = useData(p[1], { p[2] }, "qiao__slash", {
     { condition = "kongchao", effect = "remove_target" },
     { condition = "kongchao", effect = "add_target" },
   })
@@ -557,11 +586,11 @@ function Testhanjin_extra_targets:testSequentialRemoveThenAddUsesTheCurrentTarge
   lu.assertEquals(A.getResult(use).triggered_count, 2)
 end
 
-function Testhanjin_extra_targets:testServerRechecksAChangedCandidate()
+function Testqiao_extra_targets:testServerRechecksAChangedCandidate()
   setKingdoms(groupKingdoms)
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[3] }, "hanjin__befriend_attacking", addTargetEntry())
+  local use = useData(p[1], { p[3] }, "qiao__befriend_attacking", addTargetEntry())
   local original = room().askToChoosePlayers
   FkTest.runInRoom(function()
     room().askToChoosePlayers = function(self, player, params)
@@ -579,43 +608,43 @@ end
 
 -- Quantity vs explicit replacement ------------------------------------------
 
-function Testhanjin_extra_targets:testQuantityOnlyEntryDoesNotRelaxTheCardCondition()
+function Testqiao_extra_targets:testQuantityOnlyEntryDoesNotRelaxTheCardCondition()
   setKingdoms(groupKingdoms)
   local p = room().players
   local entry = addTargetEntry()[1]
-  local use = useData(p[1], { p[3] }, "hanjin__befriend_attacking", { entry })
+  local use = useData(p[1], { p[3] }, "qiao__befriend_attacking", { entry })
   local result = candidates(use, entry)
   lu.assertFalse(contains(result, p[2])) -- same kingdom as the user
   lu.assertTrue(contains(result, p[5]))
 end
 
-function Testhanjin_extra_targets:testExplicitConditionReplacesTheCardCondition()
+function Testqiao_extra_targets:testExplicitConditionReplacesTheCardCondition()
   setKingdoms(groupKingdoms)
   local p = room().players
   local entry = { condition = "kongchao", effect = "add_target", target_condition = { same_kingdom = true } }
-  local use = useData(p[1], { p[3] }, "hanjin__befriend_attacking", { entry })
+  local use = useData(p[1], { p[3] }, "qiao__befriend_attacking", { entry })
   local result = candidates(use, entry)
   lu.assertTrue(contains(result, p[2])) -- allowed by the explicit condition
   lu.assertFalse(contains(result, p[5])) -- different kingdom is no longer allowed
 end
 
-function Testhanjin_extra_targets:testExplicitDistanceReplacesTheCardAttackRange()
+function Testqiao_extra_targets:testExplicitDistanceReplacesTheCardAttackRange()
   setKingdoms(groupKingdoms)
   local p = room().players
   local entry = { condition = "kongchao", effect = "add_target", target_condition = { distance = 2 } }
-  local use = useData(p[1], { p[2] }, "hanjin__slash", { entry })
+  local use = useData(p[1], { p[2] }, "qiao__slash", { entry })
   local result = candidates(use, entry)
   lu.assertTrue(contains(result, p[3])) -- distance 2, outside the normal attack range
   lu.assertFalse(contains(result, p[8])) -- distance 1
   lu.assertFalse(contains(result, p[1])) -- distance 0
 end
 
-function Testhanjin_extra_targets:testExplicitConditionIsUsedByTheAddTargetPipeline()
+function Testqiao_extra_targets:testExplicitConditionIsUsedByTheAddTargetPipeline()
   setKingdoms(groupKingdoms)
   local p = room().players
   emptyHand(p[1])
   local entry = { condition = "kongchao", effect = "add_target", target_condition = { same_kingdom = true } }
-  local use = useData(p[1], { p[3] }, "hanjin__befriend_attacking", { entry })
+  local use = useData(p[1], { p[3] }, "qiao__befriend_attacking", { entry })
   FkTest.runInRoom(function()
     FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[2] }) })
     room():useCard(use)
@@ -626,10 +655,10 @@ function Testhanjin_extra_targets:testExplicitConditionIsUsedByTheAddTargetPipel
   lu.assertEquals(A.getResult(use).triggered_count, 1)
 end
 
-function Testhanjin_extra_targets:testDuelAddsAndResolvesEachTarget()
+function Testqiao_extra_targets:testDuelAddsAndResolvesEachTarget()
   local p = room().players
   emptyHand(p[1])
-  local use = useData(p[1], { p[2] }, "hanjin__duel", addTargetEntry())
+  local use = useData(p[1], { p[2] }, "qiao__duel", addTargetEntry())
   local hp2, hp3 = p[2].hp, p[3].hp
   FkTest.runInRoom(function()
     FkTest.setNextReplies(p[1], { FkTest.ReplyChoosePlayer({ p[3] }) })
@@ -643,10 +672,10 @@ function Testhanjin_extra_targets:testDuelAddsAndResolvesEachTarget()
   lu.assertEquals(A.getResult(use).triggered_count, 1)
 end
 
-function Testhanjin_extra_targets:testAllianceFeastKeepsCapturedKingdomAfterRepresentativeChanges()
+function Testqiao_extra_targets:testAllianceFeastKeepsCapturedKingdomAfterRepresentativeChanges()
   setKingdoms(groupKingdoms)
   local p = room().players
-  local use = useData(p[1], { p[3] }, "hanjin__alliance_feast")
+  local use = useData(p[1], { p[3] }, "qiao__alliance_feast")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end) -- p1 + shu p3,p4; chosen shu
   use:removeAllTargets()
   -- The original representative changes kingdom later.  The chosen scope stays
@@ -658,12 +687,12 @@ function Testhanjin_extra_targets:testAllianceFeastKeepsCapturedKingdomAfterRepr
   lu.assertFalse(contains(all, p[5])) -- wu, another kingdom
 end
 
-function Testhanjin_extra_targets:testCollateralMainsMayShareOneSubTarget()
+function Testqiao_extra_targets:testCollateralMainsMayShareOneSubTarget()
   setKingdoms(groupKingdoms)
   local p = room().players
-  equip(p[2], "hanjin__qinggang_sword") -- range 2, reaches p4
-  equip(p[6], "hanjin__qinggang_sword") -- range 2, also reaches p4
-  local use = useData(p[1], { p[2], p[4] }, "hanjin__collateral")
+  equip(p[2], "qiao__qinggang_sword") -- range 2, reaches p4
+  equip(p[6], "qiao__qinggang_sword") -- range 2, also reaches p4
+  local use = useData(p[1], { p[2], p[4] }, "qiao__collateral")
   FkTest.runInRoom(function() use.card.skill:onUse(room(), use) end)
   -- Each new main target chooses its own legal sub target; the same victim is
   -- legal for both independent 杀 instructions.
@@ -675,4 +704,4 @@ function Testhanjin_extra_targets:testCollateralMainsMayShareOneSubTarget()
   lu.assertTrue(ok, reason)
 end
 
-return { name = "hanjin_extra_targets" }
+return { name = "qiao_extra_targets" }

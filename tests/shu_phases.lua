@@ -2,10 +2,10 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
-local GUANXING = "hanjin__skill_shu004_1"
-local KONGCHENG = "hanjin__skill_shu004_2"
-local NIEPAN = "hanjin__skill_shu010_2"
-local FANGQUAN = "hanjin__skill_shu013_2"
+local GUANXING = "qiao__skill_shu004_1"
+local KONGCHENG = "qiao__skill_shu004_2"
+local NIEPAN = "qiao__skill_shu010_2"
+local FANGQUAN = "qiao__skill_shu013_2"
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
 
 local function room() return FkTest.room end
@@ -37,7 +37,7 @@ end
 
 local function prepare()
   Fk.currentResponsePattern = nil
-  local r = support.initHanjinRoom()
+  local r = support.initQiaoRoom()
   inRoom(function() skill_test.installBlankGenerals(r, DEFAULT_KINGDOMS) end)
   return r
 end
@@ -47,9 +47,9 @@ local function teardown()
   support.clearRoom()
 end
 
-Testhanjin_shu_phases = { setup = prepare, tearDown = teardown }
+Testqiao_shu_phases = { setup = prepare, tearDown = teardown }
 
-function Testhanjin_shu_phases:testGuanxingAllBottomSchedulesFinishAndSurvivesLoss()
+function Testqiao_shu_phases:testGuanxingAllBottomSchedulesFinishAndSurvivesLoss()
   local p1 = p(1)
   grant(p1, GUANXING)
   clearCards(p1)
@@ -65,7 +65,7 @@ function Testhanjin_shu_phases:testGuanxingAllBottomSchedulesFinishAndSurvivesLo
     room().logic:trigger(fk.EventPhaseStart, p1, PhaseData:new { who = p1, reason = "game_rule", phase = Player.Start })
   end)
   lu.assertEquals(calls, 1)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu004_1_finish-turn"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_shu004_1_finish-turn"), 1)
   revoke(p1, GUANXING)
   inRoom(function()
     p1.phase = Player.Finish
@@ -73,44 +73,44 @@ function Testhanjin_shu_phases:testGuanxingAllBottomSchedulesFinishAndSurvivesLo
   end)
   room().askToGuanxing = old
   lu.assertEquals(calls, 2)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu004_1_finish-turn"), 0)
+  lu.assertEquals(p1:getMark("qiao__skill_shu004_1_finish-turn"), 0)
 end
 
-function Testhanjin_shu_phases:testKongchengNullifiesSlashUntilDrawNotObtain()
+function Testqiao_shu_phases:testKongchengNullifiesSlashUntilDrawNotObtain()
   local p1, p2 = p(1), p(2)
   inRoom(function()
-    skill_test.installDualGenerals(room(), p1, { main = "hanjin__shu004", deputy = "hanjin__shu002", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu004", deputy = "qiao_heg__shu002", kingdom = "shu" })
   end)
   clearCards(p1)
   clearCards(p2)
-  local junk = give(p1, "hanjin__jink", Card.Heart, 3)
+  local junk = give(p1, "qiao__jink", Card.Heart, 3)
   setPlayPhase(p1)
   FkTest.setNextReplies(p1, { "1" })
   inRoom(function() room():throwCard({ junk }, "test", p1, p1) end)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu004_2_kong"), 1)
-  give(p1, "hanjin__peach", Card.Heart, 4)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu004_2_kong"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_shu004_2_kong"), 1)
+  give(p1, "qiao__peach", Card.Heart, 4)
+  lu.assertEquals(p1:getMark("qiao__skill_shu004_2_kong"), 1)
   inRoom(function() p1.hp = p1.maxHp end)
-  local slash = give(p2, "hanjin__slash", Card.Spade, 8)
+  local slash = give(p2, "qiao__slash", Card.Spade, 8)
   setPlayPhase(p2)
   inRoom(function()
     room():useCard(UseCardData:new { from = p2, tos = { p1 }, card = Fk:getCardById(slash), extra_data = {} })
   end)
   lu.assertEquals(p1.hp, p1.maxHp)
   inRoom(function() room():drawCards(p1, 1, "test") end)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu004_2_kong"), 0)
+  lu.assertEquals(p1:getMark("qiao__skill_shu004_2_kong"), 0)
 end
 
-function Testhanjin_shu_phases:testNiepanResetsDrawsAndRecovers()
+function Testqiao_shu_phases:testNiepanResetsDrawsAndRecovers()
   local p1 = p(1)
   grant(p1, NIEPAN)
   clearCards(p1)
-  give(p1, "hanjin__jink", Card.Heart, 3)
+  give(p1, "qiao__jink", Card.Heart, 3)
   inRoom(function()
     p1.hp = 1
     p1.faceup = false
     p1.chained = true
-    local equip = room():printCard("hanjin__eight_diagram", Card.Spade, 2)
+    local equip = room():printCard("qiao__eight_diagram", Card.Spade, 2)
     room():moveCardIntoEquip(p1, equip.id, "test", true, p1)
   end)
   -- 触发排序请求先要技能 ID，随后才是技能 invoke 的 "1"。
@@ -127,11 +127,11 @@ function Testhanjin_shu_phases:testNiepanResetsDrawsAndRecovers()
 end
 
 -- 跳过出牌阶段后，失去技能也保留回合末授予额外回合的机会。
-function Testhanjin_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
+function Testqiao_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
   local p1, p2 = p(1), p(2)
   grant(p1, FANGQUAN)
   clearCards(p1)
-  local hand = give(p1, "hanjin__jink", Card.Heart, 3)
+  local hand = give(p1, "qiao__jink", Card.Heart, 3)
   inRoom(function() room().current = p1; p1.phase = Player.Play end)
   local data = PhaseData:new { who = p1, reason = "game_rule", phase = Player.Play }
   skill_test.withSkillRequests(room(), FANGQUAN, {
@@ -140,7 +140,7 @@ function Testhanjin_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
     inRoom(function() room().logic:trigger(fk.EventPhaseChanging, p1, data) end)
   end)
   lu.assertTrue(data.skipped)
-  lu.assertEquals(p1:getMark("hanjin__skill_shu013_2_turn-turn"), 1)
+  lu.assertEquals(p1:getMark("qiao__skill_shu013_2_turn-turn"), 1)
   revoke(p1, FANGQUAN)
   skill_test.withSkillRequests(room(), FANGQUAN, {
     askToChoosePlayers = function() return { p2 } end,
@@ -157,4 +157,4 @@ function Testhanjin_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
   room().extra_turn_list = {} -- 清理已验收的待执行回合，避免夹具结束时启动正常回合。
 end
 
-return { name = "hanjin_shu_phases" }
+return { name = "qiao_shu_phases" }

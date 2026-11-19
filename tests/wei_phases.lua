@@ -1,26 +1,29 @@
 -- 魏 标准包：阶段与转换组 8 技能定向验收文件（洛神、神速、设变、巧变、
 -- 断粮、励战、倾国、轻辎）。
--- 规则依据：rules/standard-generals.md 魏区原文、
+-- 规则依据：docs/rules/standard-generals.md 魏区原文、
 -- rulebook/terms/game-flow-terms/phase.md；接口核对锁定 0.5.25 与 hegemony。
 -- 定向运行：
 --   python scripts/test.py --file tests/wei_phases.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
-local QG = "hanjin__skill_wei007_1"
-local LS = "hanjin__skill_wei007_2"
-local SS = "hanjin__skill_wei008_1"
-local SB = "hanjin__skill_wei008_2"
-local QB = "hanjin__skill_wei009_1"
-local DL = "hanjin__skill_wei010_1"
-local LZ = "hanjin__skill_wei011_2"
-local QZ = "hanjin__skill_wei006_1"
-local W = require "packages.hanjin.pkg.hanjin_generals.util.wei_phases"
-local GRANT_MARK = "hanjin__skill_wei006_1_granted"
+local QG = "qiao__skill_wei007_1"
+local LS = "qiao__skill_wei007_2"
+local SS = "qiao__skill_wei008_1"
+local SB = "qiao__skill_wei008_2"
+local QB = "qiao__skill_wei009_1"
+local DL = "qiao__skill_wei010_1"
+local LZ = "qiao__skill_wei011_2"
+local QZ = "qiao__skill_wei006_1"
+local W = require "packages.qiao.pkg.qiao_generals.util.wei_phases"
+local GRANT_MARK = "qiao__skill_wei006_1_granted"
 
 local DEFAULT_KINGDOMS = { "wei", "wei", "wei", "wei", "wei", "wei", "wei", "wei" }
 local probeSerial = 0
 
-Testhanjin_wei_phases = {}
+Testqiao_wei_phases = {}
 
 local function inRoom(fn)
   local result
@@ -91,8 +94,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i]
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -114,7 +117,7 @@ local function setHero(room, player, general, deputy)
     player:revealGeneral(false, true)
     player:revealGeneral(true, true)
     room:changeHero(player, general, true, false, false, false, false)
-    room:changeHero(player, deputy or "hanjin_test__wei_2", true, true, false, false, false)
+    room:changeHero(player, deputy or "qiao_test__wei_2", true, true, false, false, false)
     player.kingdom = "wei"
     room:setPlayerProperty(player, "kingdom", "wei")
     room:setPlayerMark(player, "__heg_general", general)
@@ -141,21 +144,21 @@ local function triggerPhase(room, player, phase, event)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wei_phases.setup = function() prepare() end
-Testhanjin_wei_phases.tearDown = support.clearRoom
+Testqiao_wei_phases.setup = function() prepare() end
+Testqiao_wei_phases.tearDown = support.clearRoom
 
 --- 统计指定技能产生的“获得”移动，用于确认一次性获得。
 ---@param room Room
 ---@param expected table
 local function installObtainProbe(room, expected)
   probeSerial = probeSerial + 1
-  local key = "__hanjin_wei_phase_obtain_" .. probeSerial
-  local skel = fk.CreateSkill { name = "#hanjin_wei_phase_obtain_" .. probeSerial }
+  local key = "__qiao_wei_phase_obtain_" .. probeSerial
+  local skel = fk.CreateSkill { name = "#qiao_wei_phase_obtain_" .. probeSerial }
   skel:addEffect(fk.AfterCardsMove, {
     global = true,
     can_refresh = function(self, event, target, player, data)
@@ -179,16 +182,16 @@ end
 
 -- 洛神 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testLuoshenObtainsAllBlackJudgedCardsInOneMove()
+function Testqiao_wei_phases:testLuoshenObtainsAllBlackJudgedCardsInOneMove()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei007")
+  setHero(room, p1(), "qiao_heg__wei007")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   -- 判定顺序：黑桃、梅花、红桃。前两次黑色后各询问一次是否重复。
   seedDrawPile(room, {
-    { "hanjin__jink", Card.Heart, 2 },
-    { "hanjin__jink", Card.Club, 4 },
-    { "hanjin__jink", Card.Spade, 3 },
+    { "qiao__jink", Card.Heart, 2 },
+    { "qiao__jink", Card.Club, 4 },
+    { "qiao__jink", Card.Spade, 3 },
   })
   local expected = { player = p1(), skill = LS, count = 0, cards = 0 }
   installObtainProbe(room, expected)
@@ -209,9 +212,9 @@ end
 
 -- 神速：三个对应阶段 -------------------------------------------------------
 
-function Testhanjin_wei_phases:testShensuJudgePhaseSkipsJudgeAndDraw()
+function Testqiao_wei_phases:testShensuJudgePhaseSkipsJudgeAndDraw()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   local hp = p2().hp
@@ -232,12 +235,12 @@ function Testhanjin_wei_phases:testShensuJudgePhaseSkipsJudgeAndDraw()
   lu.assertEquals(p2().hp, hp - 1)
 end
 
-function Testhanjin_wei_phases:testShensuPlayPhaseDiscardsEquipmentAndSkipsPlay()
+function Testqiao_wei_phases:testShensuPlayPhaseDiscardsEquipmentAndSkipsPlay()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  local equip = addEquip(room, p1(), "hanjin__chixiao_sword", Card.Club, 5)
+  local equip = addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 5)
   local hp = p2().hp
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Play }
@@ -253,9 +256,9 @@ function Testhanjin_wei_phases:testShensuPlayPhaseDiscardsEquipmentAndSkipsPlay(
   lu.assertEquals(p1():usedSkillTimes(SS, Player.HistoryGame), 1)
 end
 
-function Testhanjin_wei_phases:testShensuDiscardPhaseLosesHpAndSkipsDiscard()
+function Testqiao_wei_phases:testShensuDiscardPhaseLosesHpAndSkipsDiscard()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   local myHp = p1().hp
@@ -271,9 +274,9 @@ function Testhanjin_wei_phases:testShensuDiscardPhaseLosesHpAndSkipsDiscard()
   lu.assertEquals(p1():usedSkillTimes(SS, Player.HistoryGame), 1)
 end
 
-function Testhanjin_wei_phases:testShensuDoesNotConsumeAlreadySkippedPhase()
+function Testqiao_wei_phases:testShensuDoesNotConsumeAlreadySkippedPhase()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
 
@@ -285,18 +288,66 @@ function Testhanjin_wei_phases:testShensuDoesNotConsumeAlreadySkippedPhase()
   lu.assertEquals(p1():usedSkillTimes(SS, Player.HistoryGame), 0)
 end
 
+--- 神速首次确认复用对应阶段的提示键，直接写明三种不同代价。
+function Testqiao_wei_phases:testShensuInvokePromptUsesCurrentPhase()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei008")
+  local cases = {
+    { phase = Player.Judge, key = "#qiao__skill_wei008_1-judge",
+      name = "判定阶段", cost = "摸牌阶段" },
+    { phase = Player.Play, key = "#qiao__skill_wei008_1-play",
+      name = "出牌阶段", cost = "装备牌" },
+    { phase = Player.Discard, key = "#qiao__skill_wei008_1-discard",
+      name = "弃牌阶段", cost = "失去1点体力" },
+  }
+  for _, case in ipairs(cases) do
+    setHand(room, p1(), {})
+    setHand(room, p2(), {})
+    if case.phase == Player.Play then
+      addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 5)
+    end
+    local prompt
+    skill_test.withSkillRequests(room, SS, {
+      askToSkillInvoke = function(self, who, params, original)
+        if params.skill_name ~= SS then return original(self, who, params) end
+        prompt = params.prompt
+        return false
+      end,
+    }, function()
+      if case.phase == Player.Judge then
+        inRoom(function()
+          GameEvent.Turn:create(TurnData:new(p1(), "game_rule", {
+            Player.Judge, Player.Draw,
+          })):exec()
+        end)
+      else
+        inRoom(function()
+          local data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+          room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+        end)
+      end
+    end)
+    lu.assertEquals(prompt, case.key, "首次确认应复用对应阶段的提示键")
+    local text = Fk:translate(prompt)
+    lu.assertTrue(text:find(case.name, 1, true) ~= nil,
+      "确认提示应点名阶段：" .. text)
+    lu.assertTrue(text:find(case.cost, 1, true) ~= nil,
+      "确认提示应说明该阶段代价：" .. text)
+  end
+end
+
 -- 设变 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testShebianMovesBoardCardAfterHpLoss()
+function Testqiao_wei_phases:testShebianMovesBoardCardAfterHpLoss()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   -- 两步移牌的第一步要求选出的两名角色之间确有可移动牌；双方都给装备，
   -- 避免选牌组合被过滤。回复 schema 依锁定客户端 QML：
   -- { cardId = <cards 中的牌 id>, pos = cardsPosition[该牌下标] }。
-  local equip = addEquip(room, p2(), "hanjin__chixiao_sword")
-  addEquip(room, p1(), "hanjin__vine", Card.Heart, 4)
+  local equip = addEquip(room, p2(), "qiao__chixiao_sword")
+  addEquip(room, p1(), "qiao__vine", Card.Heart, 4)
 
   FkTest.setNextReplies(p1(), {
     "1",
@@ -310,12 +361,12 @@ function Testhanjin_wei_phases:testShebianMovesBoardCardAfterHpLoss()
   lu.assertEquals(p1():usedSkillTimes(SB, Player.HistoryGame), 1)
 end
 
-function Testhanjin_wei_phases:testShebianDoesNotTriggerOnDamage()
+function Testqiao_wei_phases:testShebianDoesNotTriggerOnDamage()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei008")
+  setHero(room, p1(), "qiao_heg__wei008")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  addEquip(room, p2(), "hanjin__chixiao_sword")
+  addEquip(room, p2(), "qiao__chixiao_sword")
 
   inRoom(function()
     room:damage {
@@ -330,16 +381,15 @@ end
 
 -- 巧变 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testQiaobianDrawPhaseSkipGainsOneHandCard()
+function Testqiao_wei_phases:testQiaobianDrawPhaseSkipGainsOneHandCard()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei009")
-  local mine = setHand(room, p1(), { { "hanjin__jink", Card.Heart, 2 } })
-  local theirs = setHand(room, p2(), { { "hanjin__peach", Card.Heart, 3 } })
+  setHero(room, p1(), "qiao_heg__wei009")
+  local mine = setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
+  local theirs = setHand(room, p2(), { { "qiao__peach", Card.Heart, 3 } })
   setHand(room, p3(), {})
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Draw }
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyDiscard({ mine[1] }),
     FkTest.ReplyChoosePlayer({ p2() }),
   })
@@ -352,17 +402,16 @@ function Testhanjin_wei_phases:testQiaobianDrawPhaseSkipGainsOneHandCard()
   lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 1)
 end
 
-function Testhanjin_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
+function Testqiao_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei009")
-  local mine = setHand(room, p1(), { { "hanjin__jink", Card.Heart, 2 } })
+  setHero(room, p1(), "qiao_heg__wei009")
+  local mine = setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
   setHand(room, p2(), {})
-  local equip = addEquip(room, p2(), "hanjin__chixiao_sword")
-  addEquip(room, p1(), "hanjin__vine", Card.Heart, 4)
+  local equip = addEquip(room, p2(), "qiao__chixiao_sword")
+  addEquip(room, p1(), "qiao__vine", Card.Heart, 4)
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Play }
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyDiscard({ mine[1] }),
     { card = { skill = "choose_players_to_move_card_in_board", subcards = {} },
       targets = { p1().id, p2().id } },
@@ -375,14 +424,64 @@ function Testhanjin_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
   lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 1)
 end
 
+--- 弃牌请求同时作为巧变的发动选择：每阶段只发起一次，提示点名阶段并保留
+--- 摸牌/出牌阶段的可选后效；取消弃牌则不跳过、不支付。
+function Testqiao_wei_phases:testQiaobianDiscardRequestNamesPhaseAndCancelDoesNotSkip()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei009")
+  local cases = {
+    { phase = Player.Judge, name = "判定阶段" },
+    { phase = Player.Draw, name = "摸牌阶段", follow = "各一张手牌", optional = true },
+    { phase = Player.Play, name = "出牌阶段", follow = "移动场上一张牌", optional = true },
+    { phase = Player.Discard, name = "弃牌阶段" },
+  }
+  for _, case in ipairs(cases) do
+    local mine = setHand(room, p1(), { { "qiao__jink", Card.Heart, 2 } })
+    local discardPrompt
+    local asked = 0
+    local data
+    FkTest.setNextReplies(p1(), { "" })
+    skill_test.withSkillRequests(room, QB, {
+      askToDiscard = function(self, who, params, original)
+        if params.skill_name ~= QB then return original(self, who, params) end
+        discardPrompt = params.prompt
+        asked = asked + 1
+        return original(self, who, params)
+      end,
+    }, function()
+      inRoom(function()
+        data = PhaseData:new { who = p1(), reason = "game_rule", phase = case.phase }
+        room.logic:trigger(fk.EventPhaseChanging, p1(), data)
+      end)
+    end)
+    lu.assertEquals(asked, 1, "每个阶段应只发起一次弃牌请求")
+    lu.assertNotNil(discardPrompt, "应有弃牌请求提示")
+    lu.assertFalse(not not data.skipped, "取消弃牌后不得跳过阶段")
+    lu.assertEquals(room:getCardArea(mine[1]), Card.PlayerHand, "取消弃牌后不应支付牌")
+    lu.assertEquals(p1():usedSkillTimes(QB, Player.HistoryGame), 0,
+      "取消弃牌不应计为发动巧变")
+    local discardText = Fk:translate(discardPrompt)
+    lu.assertTrue(discardText:find(case.name, 1, true) ~= nil,
+      "弃牌提示应点名当前阶段 " .. case.name .. "：" .. discardText)
+    if case.follow ~= nil then
+      lu.assertTrue(discardText:find(case.follow, 1, true) ~= nil,
+        "弃牌提示应说明可选后效：" .. discardText)
+    end
+    if case.optional then
+      lu.assertTrue(discardText:find("然后你可以", 1, true) ~= nil,
+        "后效应明确为可选项：" .. discardText)
+    end
+  end
+end
+
 -- 断粮 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testDuanliangTriggersOnAnyOthersDrawPhaseSkipped()
+function Testqiao_wei_phases:testDuanliangTriggersOnAnyOthersDrawPhaseSkipped()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei010")
+  setHero(room, p1(), "qiao_heg__wei010")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  seedDrawPile(room, { { "hanjin__peach", Card.Heart, 7 } })
+  seedDrawPile(room, { { "qiao__peach", Card.Heart, 7 } })
 
   FkTest.setNextReplies(p1(), { "1", FkTest.ReplyChoosePlayer({ p1() }) })
   triggerPhase(room, p2(), Player.Draw, fk.EventPhaseSkipped)
@@ -391,11 +490,95 @@ function Testhanjin_wei_phases:testDuanliangTriggersOnAnyOthersDrawPhaseSkipped(
   lu.assertEquals(p1():usedSkillTimes(DL, Player.HistoryGame), 1)
 end
 
+--- 断粮转化素材筛选的聚焦回归。真实房间临时授予技能后，以真实 ClientPlayer
+--- 走 ReqPlayCard→selectSkill→cardValidity/targetValidity/feasible；确认键产生的
+--- 回包交给服务端 handleUseCardReply 完成一次真实使用。
+--- 根因：filter_pattern 的第 4、5 字段留空时，exppattern.parseMatcher 会把它们
+--- 解析成空匹配表，位置和完整牌名永远不匹配；必须显式写通配符 "."。
+function Testqiao_wei_phases:testDuanliangClientMaterialFilterAndConfirmedUse()
+  local room = FkTest.room
+  -- 纯客户端选牌查询不继承任何残留的响应窗口 pattern。
+  Fk.currentResponsePattern = nil
+  inRoom(function()
+    room:handleAddLoseSkills(p1(), DL, nil, false, true)
+    room.current = p1()
+    p1().phase = Player.Play
+  end)
+  setHand(room, p2(), {})
+  setHand(room, p3(), {})
+
+  local ids = setHand(room, p1(), {
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__chixiao_sword", Card.Club, 5 },
+    { "qiao__duel", Card.Club, 7 },
+    { "qiao__peach", Card.Heart, 3 },
+  })
+  local blackBasic, blackEquip, blackTrick, redBasic =
+    ids[1], ids[2], ids[3], ids[4]
+  -- 装备区的黑色装备也应可选；ReqActiveSkill.expandPiles 在没有 include_equip
+  -- 时会依据 cardValidity 自动展开装备区。
+  local equipped = addEquip(room, p1(), "qiao__jueying", Card.Spade, 6)
+  lu.assertEquals(p1():distanceTo(p2()), 1)
+  lu.assertTrue(p1():distanceTo(p3()) > 1)
+
+  local confirmed
+  client_room.run(room, function(clients)
+    local me = clients[1]
+    local handler = ReqPlayCard:new(me)
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(DL), "断粮按钮应可用")
+    handler:selectSkill(DL, { selected = true })
+    lu.assertEquals(handler.skill_name, DL)
+
+    -- 正向：黑色基本牌、手牌中的黑色装备牌、装备区的黑色装备牌。
+    lu.assertTrue(handler:cardValidity(blackBasic), "黑色基本牌应可选")
+    lu.assertTrue(handler:cardValidity(blackEquip), "黑色装备牌应可选")
+    lu.assertTrue(handler:cardValidity(equipped), "装备区黑色装备牌应可选")
+    lu.assertTrue(
+      table.contains(handler.expanded_piles["_equip"] or {}, equipped),
+      "装备区应经展开后进入候选")
+    -- 反向：黑色锦囊不是非锦囊牌；红色基本牌不满足黑色。
+    lu.assertFalse(handler:cardValidity(blackTrick), "黑色锦囊牌不应可选")
+    lu.assertFalse(handler:cardValidity(redBasic), "红色基本牌不应可选")
+
+    handler:selectCard(blackBasic, { selected = true })
+    lu.assertTrue(handler:targetValidity(p2().id), "距离 1 的目标应合法")
+    lu.assertFalse(handler:targetValidity(p1().id), "不能指定自己")
+    lu.assertFalse(handler:targetValidity(p3().id), "距离大于 1 的目标不应合法")
+    handler:selectTarget(p2().id, { selected = true })
+    lu.assertTrue(handler:feasible(), "素材与合法目标齐全时确认应可用")
+
+    -- 捕获确认键实际产生的回包，其形状与线上 ReqActiveSkill.doOKButton 一致。
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, name, data)
+      if name == "ReplyToServer" then
+        confirmed = data
+        return
+      end
+      return notify(_, name, data)
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ClientInstance.notifyUI = notify
+    if not ok then error(err, 0) end
+    handler:_finish()
+  end)
+
+  lu.assertNotNil(confirmed, "确认键应产生服务端回包")
+  lu.assertEquals(confirmed.card.skill, DL)
+  lu.assertEquals(confirmed.card.subcards, { blackBasic })
+  lu.assertEquals(confirmed.targets, { p2().id })
+
+  inRoom(function() room:handleUseCardReply(p1(), confirmed, nil) end)
+  lu.assertEquals(room:getCardArea(blackBasic), Card.PlayerJudge)
+  lu.assertEquals(room:getCardOwner(blackBasic).id, p2().id)
+  lu.assertEquals(p1():usedSkillTimes(DL, Player.HistoryGame), 1)
+end
+
 -- 励战 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testLizhanWoundedCharactersEachDraw()
+function Testqiao_wei_phases:testLizhanWoundedCharactersEachDraw()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei011")
+  setHero(room, p1(), "qiao_heg__wei011")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   setHand(room, p3(), {})
@@ -411,18 +594,18 @@ end
 
 -- 倾国 ---------------------------------------------------------------------
 
-function Testhanjin_wei_phases:testQingguoConvertsBlackHandCardOnly()
+function Testqiao_wei_phases:testQingguoConvertsBlackHandCardOnly()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei007")
-  local black = setHand(room, p1(), { { "hanjin__slash", Card.Spade, 2 } })
-  addEquip(room, p1(), "hanjin__chixiao_sword", Card.Club, 3)
+  setHero(room, p1(), "qiao_heg__wei007")
+  local black = setHand(room, p1(), { { "qiao__slash", Card.Spade, 2 } })
+  addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 3)
   local skill = Fk.skills[QG]
   lu.assertNotNil(skill)
 
   local virtual
   inRoom(function() virtual = skill:viewAs(p1(), { black[1] }) end)
   lu.assertNotNil(virtual)
-  lu.assertEquals(virtual.name, "hanjin__jink")
+  lu.assertEquals(virtual.name, "qiao__jink")
   lu.assertEquals(virtual.trueName, "jink")
   lu.assertEquals(virtual.skillName, QG)
 
@@ -430,7 +613,7 @@ function Testhanjin_wei_phases:testQingguoConvertsBlackHandCardOnly()
   inRoom(function()
     local filter = Exppattern:Parse(".|.|black|^equip")
     lu.assertTrue(filter:match(Fk:getCardById(black[1])))
-    local red = room:printCard("hanjin__slash", Card.Heart, 2)
+    local red = room:printCard("qiao__slash", Card.Heart, 2)
     room:obtainCard(p1(), red, false, fk.ReasonJustMove)
     lu.assertFalse(filter:match(Fk:getCardById(red.id)))
     local equipId = p1():getCardIds("e")[1]
@@ -438,7 +621,7 @@ function Testhanjin_wei_phases:testQingguoConvertsBlackHandCardOnly()
 
     -- 使用与打出均可用。
     lu.assertTrue(skill:enabledAtPlay(p1()))
-    lu.assertTrue(skill:enabledAtResponse(p1(), Fk:cloneCard("hanjin__slash")))
+    lu.assertTrue(skill:enabledAtResponse(p1(), Fk:cloneCard("qiao__slash")))
   end)
 end
 
@@ -453,12 +636,12 @@ local function grantGodSpeed(room, target, equip)
   room.askToChooseCard = original
 end
 
-function Testhanjin_wei_phases:testQingziGrantCrossesCasterTurnEndAndExpiresAtTargetTurnEnd()
+function Testqiao_wei_phases:testQingziGrantCrossesCasterTurnEndAndExpiresAtTargetTurnEnd()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei006")
+  setHero(room, p1(), "qiao_heg__wei006")
   setHand(room, p1(), {})
   setHand(room, p2(), {})
-  local equip = addEquip(room, p2(), "hanjin__chixiao_sword", Card.Spade, 6)
+  local equip = addEquip(room, p2(), "qiao__chixiao_sword", Card.Spade, 6)
 
   grantGodSpeed(room, p2(), equip)
   lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
@@ -480,20 +663,20 @@ function Testhanjin_wei_phases:testQingziGrantCrossesCasterTurnEndAndExpiresAtTa
   lu.assertEquals(p2():getMark(GRANT_MARK), 0)
 end
 
-function Testhanjin_wei_phases:testQingziKeepsNativeAndOtherSourcesOfShensu()
+function Testqiao_wei_phases:testQingziKeepsNativeAndOtherSourcesOfShensu()
   local room = FkTest.room
-  setHero(room, p1(), "hanjin__wei006")
+  setHero(room, p1(), "qiao_heg__wei006")
   setHand(room, p1(), {})
-  setHero(room, p2(), "hanjin__wei008")
+  setHero(room, p2(), "qiao_heg__wei008")
   setHand(room, p2(), {})
-  local equip = addEquip(room, p2(), "hanjin__chixiao_sword", Card.Spade, 6)
+  local equip = addEquip(room, p2(), "qiao__chixiao_sword", Card.Spade, 6)
 
   grantGodSpeed(room, p2(), equip)
   lu.assertTrue(p2():hasSkill(SS))
 
   -- 另一个来源也授予同名技能；轻辎到期只能移除自己的来源。
   inRoom(function()
-    room:handleAddLoseSkills(p2(), SS, "hanjin_test_other_god_speed_source", false, true)
+    room:handleAddLoseSkills(p2(), SS, "qiao_test_other_god_speed_source", false, true)
   end)
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
@@ -501,4 +684,4 @@ function Testhanjin_wei_phases:testQingziKeepsNativeAndOtherSourcesOfShensu()
   lu.assertTrue(p2():hasSkill(SS))
 end
 
-return { name = "hanjin_wei_phases" }
+return { name = "qiao_wei_phases" }

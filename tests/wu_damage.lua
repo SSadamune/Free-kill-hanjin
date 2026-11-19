@@ -1,34 +1,34 @@
 -- WU 标准包：伤害、拼点与翼从定向验收文件。
--- 规则依据：rules/standard-generals.md 吴区与翼从表、rules/generals/wu013-zhoutai.md、
+-- 规则依据：docs/rules/standard-generals.md 吴区与翼从表、docs/rules/generals/wu013-zhoutai.md、
 -- rulebook 相关事件条文；本文件只覆盖本轮核心行为，未接入 tests/all.lua。
 --   python scripts/test.py --file tests/wu_damage.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 
-local KUROU = "hanjin__skill_wu004_1"
-local ZHAXIANG = "hanjin__skill_wu004_2"
-local TIANXIANG = "hanjin__skill_wu011_1"
-local HONGYAN = "hanjin__skill_wu011_2"
-local TIANYI = "hanjin__skill_wu012_1"
-local HANZHAN = "hanjin__skill_wu012_2"
-local BUQU = "hanjin__skill_wu013_1"
-local FENJI = "hanjin__skill_wu013_2"
-local HAOSHI = "hanjin__skill_wu014_1"
-local DIMENG = "hanjin__skill_wu014_2"
-local JINFANJUN = "hanjin__retinue_skill_jinfanjun"
-local QUAXIAO = "hanjin__retinue_skill_quaxiaojiang"
+local KUROU = "qiao__skill_wu004_1"
+local ZHAXIANG = "qiao__skill_wu004_2"
+local TIANXIANG = "qiao__skill_wu011_1"
+local HONGYAN = "qiao__skill_wu011_2"
+local TIANYI = "qiao__skill_wu012_1"
+local HANZHAN = "qiao__skill_wu012_2"
+local BUQU = "qiao__skill_wu013_1"
+local FENJI = "qiao__skill_wu013_2"
+local HAOSHI = "qiao__skill_wu014_1"
+local DIMENG = "qiao__skill_wu014_2"
+local JINFANJUN = "qiao__retinue_skill_jinfanjun"
+local QUAXIAO = "qiao__retinue_skill_quaxiaojiang"
 
-local TURN_EFFECTS = "hanjin__wu_turn_effects"
-local DIMENG_EXPIRY = "hanjin__wu_dimeng_expiry"
-local ZHAXIANG_TIMES = "hanjin_wu004_zhaxiang_times-turn"
-local TIANYI_WIN = "hanjin_wu012_tianyi_win-turn"
-local TIANYI_LOSE = "hanjin_wu012_tianyi_lose-turn"
-local DIMENG_GRANTED = "hanjin_wu_dimeng_granted"
-local TIANXIANG_OPT_DAMAGE = "#hanjin__skill_wu011_1-damage"
-local TIANXIANG_OPT_LOSEHP = "#hanjin__skill_wu011_1-losehp"
+local TURN_EFFECTS = "qiao__wu_turn_effects"
+local DIMENG_EXPIRY = "qiao__wu_dimeng_expiry"
+local ZHAXIANG_TIMES = "qiao_wu004_zhaxiang_times-turn"
+local TIANYI_WIN = "qiao_wu012_tianyi_win-turn"
+local TIANYI_LOSE = "qiao_wu012_tianyi_lose-turn"
+local DIMENG_GRANTED = "qiao_wu_dimeng_granted"
+local TIANXIANG_OPT_DAMAGE = "#qiao__skill_wu011_1-damage"
+local TIANXIANG_OPT_LOSEHP = "#qiao__skill_wu011_1-losehp"
 
 local DEFAULT_KINGDOMS = { "wu", "wu", "wu", "wu", "wu", "wu", "wu", "wu" }
 
-Testhanjin_wu_damage = {}
+Testqiao_wu_damage = {}
 
 local function inRoom(fn)
   local result
@@ -84,6 +84,24 @@ local function seedDrawPile(room, specs)
   return ids
 end
 
+--- 取当前房间中指定汉晋牌位的实体牌，保留该牌位自己的 extra_data。
+-- 洗牌或初始手牌可能已把它发到其他角色手里，所以不限定仍在牌堆。
+local function roomCardAtSlot(room, player, slot)
+  local id
+  inRoom(function()
+    local card = table.find(Fk.cards, function(candidate)
+      local area = room:getCardArea(candidate.id)
+      return candidate.extra_data ~= nil
+        and candidate.extra_data.qiao_slot == slot
+        and area ~= Card.Unknown and area ~= Card.Void
+    end)
+    assert(card ~= nil, "房间中缺少汉晋牌位 " .. slot)
+    id = card.id
+    room:obtainCard(player, card, false, fk.ReasonJustMove)
+  end)
+  return id
+end
+
 local function grant(player, skillName)
   inRoom(function()
     player.room:handleAddLoseSkills(player, skillName, nil, false, true)
@@ -128,7 +146,7 @@ end
 local function targetModResidue(room, player, card)
   local total = 0
   for _, sk in ipairs(room.status_skills[TargetModSkill] or {}) do
-    total = total + (sk:getResidueNum(player, Fk.skills["hanjin__inert"],
+    total = total + (sk:getResidueNum(player, Fk.skills["qiao__inert"],
       Player.HistoryPhase, card, nil) or 0)
   end
   return total
@@ -137,7 +155,7 @@ end
 local function targetModExtra(room, player, card)
   local total = 0
   for _, sk in ipairs(room.status_skills[TargetModSkill] or {}) do
-    total = total + (sk:getExtraTargetNum(player, Fk.skills["hanjin__inert"], card) or 0)
+    total = total + (sk:getExtraTargetNum(player, Fk.skills["qiao__inert"], card) or 0)
   end
   return total
 end
@@ -148,8 +166,8 @@ local function initializeGenerals(room)
       local kingdom = DEFAULT_KINGDOMS[i] or "wu"
       pl:revealGeneral(false, true)
       pl:revealGeneral(true, true)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_2", true, true, false, false, false)
-      room:changeHero(pl, "hanjin_test__" .. kingdom .. "_1", true, false, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_2", true, true, false, false, false)
+      room:changeHero(pl, "qiao_test__" .. kingdom .. "_1", true, false, false, false, false)
       pl.kingdom = kingdom
       room:setPlayerProperty(pl, "kingdom", kingdom)
       room:setPlayerMark(pl, "__heg_general", pl.general)
@@ -164,18 +182,18 @@ local function initializeGenerals(room)
 end
 
 local function prepare()
-  local room = support.initHanjinRoom()
+  local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
 end
 
-Testhanjin_wu_damage.setup = function() prepare() end
-Testhanjin_wu_damage.tearDown = support.clearRoom
+Testqiao_wu_damage.setup = function() prepare() end
+Testqiao_wu_damage.tearDown = support.clearRoom
 
 -- 苦肉/诈降：失去体力触发诈降，随后可交牌 -------------------------------
-function Testhanjin_wu_damage:testKurouLosesHpTriggersZhaxiangAndGivesCard()
+function Testqiao_wu_damage:testKurouLosesHpTriggersZhaxiangAndGivesCard()
   local room = FkTest.room
-  local mine = setHand(room, p(1), { { "hanjin__peach", Card.Heart, 2 } })[1]
+  local mine = setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })[1]
   setHand(room, p(2), {})
   grant(p(1), KUROU)
   grant(p(1), ZHAXIANG)
@@ -192,7 +210,7 @@ function Testhanjin_wu_damage:testKurouLosesHpTriggersZhaxiangAndGivesCard()
 end
 
 -- 诈降：多次失去体力累计次数；失去技能后本回合效果仍由静态技能提供
-function Testhanjin_wu_damage:testZhaxiangStackAndEffectSurviveSkillLoss()
+function Testqiao_wu_damage:testZhaxiangStackAndEffectSurviveSkillLoss()
   local room = FkTest.room
   grant(p(1), ZHAXIANG)
   lu.assertTrue(room:hasSkill(TURN_EFFECTS))
@@ -202,7 +220,7 @@ function Testhanjin_wu_damage:testZhaxiangStackAndEffectSurviveSkillLoss()
     room:loseHp(p(1), 1, "test")
   end)
   lu.assertEquals(p(1):getMark(ZHAXIANG_TIMES), 2)
-  local slash = Fk:cloneCard("hanjin__slash")
+  local slash = Fk:cloneCard("qiao__slash")
   lu.assertTrue(targetModResidue(room, p(1), slash) >= 2)
 
   inRoom(function()
@@ -215,12 +233,12 @@ function Testhanjin_wu_damage:testZhaxiangStackAndEffectSurviveSkillLoss()
 end
 
 -- 诈降：真实已用一张杀后，HistoryPhase 次数增益使下一张杀仍可用
-function Testhanjin_wu_damage:testZhaxiangAdditionalSlashAfterRealUse()
+function Testqiao_wu_damage:testZhaxiangAdditionalSlashAfterRealUse()
   local room = FkTest.room
   grant(p(1), ZHAXIANG)
   local ids = setHand(room, p(1), {
-    { "hanjin__slash", Card.Spade, 2 },
-    { "hanjin__slash", Card.Heart, 3 },
+    { "qiao__slash", Card.Spade, 2 },
+    { "qiao__slash", Card.Heart, 3 },
   })
   setHand(room, p(2), {})
   inRoom(function() room:loseHp(p(1), 1, "test") end)
@@ -238,9 +256,9 @@ function Testhanjin_wu_damage:testZhaxiangAdditionalSlashAfterRealUse()
 end
 
 -- 天香分支1：防止原伤害，来源对目标造成1点伤害，目标摸已损失体力值张牌
-function Testhanjin_wu_damage:testTianxiangPreventsAndSourceDamages()
+function Testqiao_wu_damage:testTianxiangPreventsAndSourceDamages()
   local room = FkTest.room
-  local heart = setHand(room, p(1), { { "hanjin__peach", Card.Heart, 2 } })[1]
+  local heart = setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })[1]
   clearCards(room, p(3), "he")
   inRoom(function() p(3).hp = 2 end)
   grant(p(1), TIANXIANG)
@@ -263,9 +281,9 @@ function Testhanjin_wu_damage:testTianxiangPreventsAndSourceDamages()
 end
 
 -- 天香分支2：防止原伤害，目标失去1点体力，然后获得被弃置的牌
-function Testhanjin_wu_damage:testTianxiangPreventsThenTargetLosesHpAndObtainsCard()
+function Testqiao_wu_damage:testTianxiangPreventsThenTargetLosesHpAndObtainsCard()
   local room = FkTest.room
-  local heart = setHand(room, p(1), { { "hanjin__jink", Card.Heart, 3 } })[1]
+  local heart = setHand(room, p(1), { { "qiao__jink", Card.Heart, 3 } })[1]
   clearCards(room, p(4), "he")
   inRoom(function() p(4).hp = p(4).maxHp end)
   grant(p(1), TIANXIANG)
@@ -288,29 +306,132 @@ function Testhanjin_wu_damage:testTianxiangPreventsThenTargetLosesHpAndObtainsCa
 end
 
 -- 红颜：黑桃手牌、装备和判定牌视为红桃 ------------------------------------
-function Testhanjin_wu_damage:testHongyanSpadeHandEquipAndJudge()
+function Testqiao_wu_damage:testHongyanSpadeHandEquipAndJudge()
   local room = FkTest.room
   grant(p(1), HONGYAN)
-  local hand = setHand(room, p(1), { { "hanjin__peach", Card.Spade, 4 } })[1]
-  local equip = addEquip(room, p(1), "hanjin__chixiao_sword", Card.Spade, 5)
+  local hand = setHand(room, p(1), { { "qiao__peach", Card.Spade, 4 } })[1]
+  local equip = addEquip(room, p(1), "qiao__chixiao_sword", Card.Spade, 5)
   lu.assertEquals(Fk:getCardById(hand).suit, Card.Heart)
   lu.assertEquals(Fk:getCardById(equip).suit, Card.Heart)
 
-  local judgeIds = seedDrawPile(room, { { "hanjin__jink", Card.Spade, 6 } })
+  local judgeIds = seedDrawPile(room, { { "qiao__jink", Card.Spade, 6 } })
   local judge = { who = p(1), reason = "test", pattern = "." }
   inRoom(function() room:judge(judge) end)
   lu.assertEquals(judge.card.suit, Card.Heart)
   lu.assertEquals(judge.card.id, judgeIds[1])
 end
 
+-- 红颜：真实黑桃9雷【杀】经正常回包使用，锁视牌保留原包与逐实体元数据，
+-- 原实体不变，并完成音效、移动、雷伤害和弃牌。
+function Testqiao_wu_damage:testHongyanRealThunderSlashKeepsEntityAndResolves()
+  local room = FkTest.room
+  grant(p(1), HONGYAN)
+  clearCards(room, p(1), "he")
+  setHand(room, p(2), {})
+  inRoom(function()
+    room.current = p(1)
+    p(1).phase = Player.Play
+  end)
+
+  local id = roomCardAtSlot(room, p(1), "shibei/S/9")
+  local raw = Fk:getCardById(id, true)
+  local rawExtra = raw.extra_data
+  lu.assertNotNil(rawExtra)
+  lu.assertEquals(raw.suit, Card.Spade)
+  lu.assertEquals(raw.color, Card.Black)
+  lu.assertEquals(rawExtra.qiao_slot, "shibei/S/9")
+  lu.assertEquals(#rawExtra.qiao_adaptation, 1)
+  local hp = p(2).hp
+
+  local damages, handled = {}, {}
+  inRoom(function()
+    local probe = fk.CreateSkill { name = "#qiao_test_wu_hongyan_damage" }
+    probe:addEffect(fk.Damage, {
+      global = true,
+      can_refresh = function(self, event, target, player, data)
+        return handled[event.id] ~= true and data.to == p(2)
+      end,
+      on_refresh = function(self, event, target, player, data)
+        handled[event.id] = true
+        table.insert(damages, {
+          from = data.from and data.from.id,
+          to = data.to and data.to.id,
+          damage = data.damage,
+          nature = data.damageType,
+          card = data.card and data.card.id,
+          suit = data.card and data.card.suit,
+          package = data.card and data.card.package and data.card.package.name,
+        })
+      end,
+    })
+    room:addSkill(probe:createSkill())
+  end)
+
+  FkTest.setNextReplies(p(1), { FkTest.ReplyCard(Fk:getCardById(id), { p(2) }) })
+  FkTest.setNextReplies(p(2), { "__cancel" })
+
+  local sounds, used = {}, nil
+  local originalSound = room.broadcastPlaySound
+  room.broadcastPlaySound = function(self, path)
+    table.insert(sounds, path)
+    return originalSound(self, path)
+  end
+  local ok, err = pcall(function()
+    inRoom(function()
+      used = room:askToUseCard(p(1), { pattern = ".", cancelable = true })
+      lu.assertNotNil(used)
+      lu.assertEquals(used.card.id, id)
+      room:useCard(used)
+    end)
+  end)
+  room.broadcastPlaySound = originalSound
+  if not ok then error(err) end
+
+  local filtered = used.card
+  lu.assertEquals(filtered.suit, Card.Heart)
+  lu.assertEquals(filtered.color, Card.Red)
+  lu.assertIs(filtered.package, Fk.packages.qiao_cards)
+  lu.assertEquals(filtered.skill.name, "qiao__thunder_slash_skill")
+  lu.assertNotIs(filtered.extra_data, rawExtra)
+  lu.assertEquals(filtered.extra_data.qiao_slot, "shibei/S/9")
+  lu.assertEquals(filtered.extra_data.qiao_package, "qiao_cards")
+  lu.assertEquals(filtered.extra_data.qiao_adaptation[1].condition, "gujun")
+  lu.assertEquals(filtered.extra_data.qiao_adaptation[1].effect, "ignore_times")
+
+  lu.assertNotNil(table.find(sounds, function(path)
+    return path ~= nil
+      and path:find("/packages/qiao/", 1, true) ~= nil
+      and path:find("qiao__thunder__slash", 1, true) ~= nil
+  end), "实际用牌音效应按原实体所属包播放")
+
+  lu.assertEquals(#damages, 1)
+  lu.assertEquals(damages[1].from, p(1).id)
+  lu.assertEquals(damages[1].to, p(2).id)
+  lu.assertEquals(damages[1].damage, 1)
+  lu.assertEquals(damages[1].nature, fk.ThunderDamage)
+  lu.assertEquals(damages[1].card, id)
+  lu.assertEquals(damages[1].suit, Card.Heart)
+  lu.assertEquals(damages[1].package, "qiao_cards")
+  lu.assertEquals(p(2).hp, hp - 1)
+
+  lu.assertEquals(room:getCardArea(id), Card.DiscardPile)
+  lu.assertTrue(table.contains(room.discard_pile, id))
+  lu.assertIs(Fk:getCardById(id, true), raw)
+  lu.assertIs(raw.extra_data, rawExtra)
+  lu.assertEquals(raw.suit, Card.Spade)
+  lu.assertEquals(raw.color, Card.Black)
+  lu.assertEquals(rawExtra.qiao_slot, "shibei/S/9")
+  lu.assertEquals(#rawExtra.qiao_adaptation, 1)
+end
+
 -- 天义赢：乐成拼点、酣战取回最大杀，并建立本回合胜利标记 ---------------
-function Testhanjin_wu_damage:testTianyiWinAndHanzhanTakesSlash()
+function Testqiao_wu_damage:testTianyiWinAndHanzhanTakesSlash()
   local room = FkTest.room
   local slash = setHand(room, p(1), {
-    { "hanjin__slash", Card.Spade, 13 },
-    { "hanjin__peach", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 13 },
+    { "qiao__peach", Card.Heart, 2 },
   })[1]
-  local other = setHand(room, p(2), { { "hanjin__jink", Card.Heart, 1 } })[1]
+  local other = setHand(room, p(2), { { "qiao__jink", Card.Heart, 1 } })[1]
   grant(p(1), TIANYI)
   grant(p(1), HANZHAN)
 
@@ -325,10 +446,10 @@ function Testhanjin_wu_damage:testTianyiWinAndHanzhanTakesSlash()
 end
 
 -- 天义：赢后失去技能，静态回合效果仍提供加目标/加次数/无距离
-function Testhanjin_wu_damage:testTianyiWinEffectSurvivesSkillLoss()
+function Testqiao_wu_damage:testTianyiWinEffectSurvivesSkillLoss()
   local room = FkTest.room
-  local slash = setHand(room, p(1), { { "hanjin__slash", Card.Spade, 13 } })[1]
-  local other = setHand(room, p(2), { { "hanjin__jink", Card.Heart, 1 } })[1]
+  local slash = setHand(room, p(1), { { "qiao__slash", Card.Spade, 13 } })[1]
+  local other = setHand(room, p(2), { { "qiao__jink", Card.Heart, 1 } })[1]
   grant(p(1), TIANYI)
 
   FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ slash }) })
@@ -341,16 +462,16 @@ function Testhanjin_wu_damage:testTianyiWinEffectSurvivesSkillLoss()
   end)
   lu.assertFalse(p(1):hasSkill(TIANYI))
   lu.assertEquals(p(1):getMark(TIANYI_WIN), 1)
-  local card = Fk:cloneCard("hanjin__slash")
+  local card = Fk:cloneCard("qiao__slash")
   lu.assertTrue(targetModExtra(room, p(1), card) >= 1)
   lu.assertTrue(targetModResidue(room, p(1), card) >= 1)
 end
 
 -- 酣战：点数最大的【杀】并列时全部取得，不自行限“一张”
-function Testhanjin_wu_damage:testHanzhanTakesAllTiedHighestSlash()
+function Testqiao_wu_damage:testHanzhanTakesAllTiedHighestSlash()
   local room = FkTest.room
-  local mine = setHand(room, p(1), { { "hanjin__slash", Card.Spade, 13 } })[1]
-  local theirs = setHand(room, p(2), { { "hanjin__slash", Card.Heart, 13 } })[1]
+  local mine = setHand(room, p(1), { { "qiao__slash", Card.Spade, 13 } })[1]
+  local theirs = setHand(room, p(2), { { "qiao__slash", Card.Heart, 13 } })[1]
   grant(p(1), TIANYI)
   grant(p(1), HANZHAN)
 
@@ -364,10 +485,10 @@ function Testhanjin_wu_damage:testHanzhanTakesAllTiedHighestSlash()
 end
 
 -- 天义：真实 ClientPlayer 没有 room 字段时 canUse 仍能安全取得当前房间
-function Testhanjin_wu_damage:testTianyiCanUseOnClientWithoutRoom()
+function Testqiao_wu_damage:testTianyiCanUseOnClientWithoutRoom()
   local room = FkTest.room
-  setHand(room, p(1), { { "hanjin__peach", Card.Heart, 4 } })
-  setHand(room, p(2), { { "hanjin__jink", Card.Heart, 5 } })
+  setHand(room, p(1), { { "qiao__peach", Card.Heart, 4 } })
+  setHand(room, p(2), { { "qiao__jink", Card.Heart, 5 } })
   grant(p(1), TIANYI)
 
   asClient(room, function(clients)
@@ -378,10 +499,10 @@ function Testhanjin_wu_damage:testTianyiCanUseOnClientWithoutRoom()
 end
 
 -- 天义没赢：平局也按没赢处理，本回合禁止使用杀 --------------------------
-function Testhanjin_wu_damage:testTianyiDrawCountsAsLoseAndProhibitsSlash()
+function Testqiao_wu_damage:testTianyiDrawCountsAsLoseAndProhibitsSlash()
   local room = FkTest.room
-  local mine = setHand(room, p(1), { { "hanjin__peach", Card.Heart, 7 } })[1]
-  local other = setHand(room, p(2), { { "hanjin__jink", Card.Heart, 7 } })[1]
+  local mine = setHand(room, p(1), { { "qiao__peach", Card.Heart, 7 } })[1]
+  local other = setHand(room, p(2), { { "qiao__jink", Card.Heart, 7 } })[1]
   grant(p(1), TIANYI)
 
   FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ mine }) })
@@ -391,16 +512,16 @@ function Testhanjin_wu_damage:testTianyiDrawCountsAsLoseAndProhibitsSlash()
   lu.assertEquals(p(1):getMark(TIANYI_WIN), 0)
   lu.assertEquals(p(1):getMark(TIANYI_LOSE), 1)
   inRoom(function()
-    lu.assertTrue(p(1):prohibitUse(Fk:cloneCard("hanjin__slash")))
+    lu.assertTrue(p(1):prohibitUse(Fk:cloneCard("qiao__slash")))
   end)
 end
 
 -- 不屈：真实濒死摸X、置创；无须移去则回复至1 ------------------------------
-function Testhanjin_wu_damage:testBuquDrawsPlacesAndRecoversWhenNoDuplicate()
+function Testqiao_wu_damage:testBuquDrawsPlacesAndRecoversWhenNoDuplicate()
   local room = FkTest.room
   grant(p(1), BUQU)
-  setHand(room, p(1), { { "hanjin__peach", Card.Heart, 8 } })
-  local drawn = seedDrawPile(room, { { "hanjin__jink", Card.Diamond, 9 } })[1]
+  setHand(room, p(1), { { "qiao__peach", Card.Heart, 8 } })
+  local drawn = seedDrawPile(room, { { "qiao__jink", Card.Diamond, 9 } })[1]
   inRoom(function() p(1).hp = 0 end)
 
   FkTest.setNextReplies(p(1), { drawn })
@@ -412,15 +533,15 @@ function Testhanjin_wu_damage:testBuquDrawsPlacesAndRecoversWhenNoDuplicate()
 end
 
 -- 不屈：同花色重复时移去一张，不回复体力 --------------------------------
-function Testhanjin_wu_damage:testBuquRemovesDuplicateSuitWithoutRecover()
+function Testqiao_wu_damage:testBuquRemovesDuplicateSuitWithoutRecover()
   local room = FkTest.room
   grant(p(1), BUQU)
   setHand(room, p(1), {})
-  local old = seedDrawPile(room, { { "hanjin__peach", Card.Heart, 10 } })[1]
+  local old = seedDrawPile(room, { { "qiao__peach", Card.Heart, 10 } })[1]
   inRoom(function()
     room:moveCardTo({ old }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
   end)
-  local drawn = seedDrawPile(room, { { "hanjin__jink", Card.Heart, 11 } })[1]
+  local drawn = seedDrawPile(room, { { "qiao__jink", Card.Heart, 11 } })[1]
   inRoom(function() p(1).hp = 1 end)
 
   FkTest.setNextReplies(p(1), { drawn, FkTest.ReplyChooseCards({ old }) })
@@ -433,12 +554,12 @@ function Testhanjin_wu_damage:testBuquRemovesDuplicateSuitWithoutRecover()
 end
 
 -- 不屈：可以选择装备区的牌作为“创”
-function Testhanjin_wu_damage:testBuquMayPlaceEquipmentCard()
+function Testqiao_wu_damage:testBuquMayPlaceEquipmentCard()
   local room = FkTest.room
   grant(p(1), BUQU)
   setHand(room, p(1), {})
-  local equip = addEquip(room, p(1), "hanjin__chixiao_sword", Card.Spade, 7)
-  seedDrawPile(room, { { "hanjin__jink", Card.Diamond, 12 } })
+  local equip = addEquip(room, p(1), "qiao__chixiao_sword", Card.Spade, 7)
+  seedDrawPile(room, { { "qiao__jink", Card.Diamond, 12 } })
   inRoom(function() p(1).hp = 1 end)
 
   FkTest.setNextReplies(p(1), { equip })
@@ -450,17 +571,17 @@ function Testhanjin_wu_damage:testBuquMayPlaceEquipmentCard()
 end
 
 -- 不屈：同花色多张由玩家选择保留哪一张，而不是固定保留最早
-function Testhanjin_wu_damage:testBuquChoosesWhichDuplicateToKeep()
+function Testqiao_wu_damage:testBuquChoosesWhichDuplicateToKeep()
   local room = FkTest.room
   grant(p(1), BUQU)
   setHand(room, p(1), {})
-  local old1 = seedDrawPile(room, { { "hanjin__peach", Card.Heart, 13 } })[1]
-  local old2 = seedDrawPile(room, { { "hanjin__jink", Card.Heart, 1 } })[1]
+  local old1 = seedDrawPile(room, { { "qiao__peach", Card.Heart, 13 } })[1]
+  local old2 = seedDrawPile(room, { { "qiao__jink", Card.Heart, 1 } })[1]
   inRoom(function()
     room:moveCardTo({ old1 }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
     room:moveCardTo({ old2 }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
   end)
-  local drawn = seedDrawPile(room, { { "hanjin__peach", Card.Heart, 2 } })[1]
+  local drawn = seedDrawPile(room, { { "qiao__peach", Card.Heart, 2 } })[1]
   inRoom(function() p(1).hp = 1 end)
 
   FkTest.setNextReplies(p(1), { drawn, FkTest.ReplyChooseCards({ old2 }) })
@@ -474,10 +595,10 @@ function Testhanjin_wu_damage:testBuquChoosesWhichDuplicateToKeep()
 end
 
 -- 奋激：本回合真实失去所有手牌的角色摸两张，周泰失去1点体力 ------------
-function Testhanjin_wu_damage:testFenjiUsesRealEmptyHandHistory()
+function Testqiao_wu_damage:testFenjiUsesRealEmptyHandHistory()
   local room = FkTest.room
   grant(p(1), FENJI)
-  local victim = setHand(room, p(3), { { "hanjin__peach", Card.Heart, 12 } })[1]
+  local victim = setHand(room, p(3), { { "qiao__peach", Card.Heart, 12 } })[1]
   local hp = p(1).hp
 
   inRoom(function() room:throwCard({ victim }, "test", p(3), p(3)) end)
@@ -489,20 +610,20 @@ function Testhanjin_wu_damage:testFenjiUsesRealEmptyHandHistory()
 end
 
 -- 好施：实际多摸两张后按半数交给手牌最少的角色 --------------------------
-function Testhanjin_wu_damage:testHaoshiDrawsTwoThenGivesHalf()
+function Testqiao_wu_damage:testHaoshiDrawsTwoThenGivesHalf()
   local room = FkTest.room
   grant(p(1), HAOSHI)
   local start = setHand(room, p(1), {
-    { "hanjin__peach", Card.Heart, 2 },
-    { "hanjin__jink", Card.Diamond, 3 },
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__jink", Card.Diamond, 3 },
   })
   setHand(room, p(2), {})
-  setHand(room, p(3), { { "hanjin__slash", Card.Spade, 4 } })
+  setHand(room, p(3), { { "qiao__slash", Card.Spade, 4 } })
   local drawn = seedDrawPile(room, {
-    { "hanjin__peach", Card.Heart, 5 },
-    { "hanjin__jink", Card.Diamond, 6 },
-    { "hanjin__slash", Card.Spade, 7 },
-    { "hanjin__peach", Card.Heart, 8 },
+    { "qiao__peach", Card.Heart, 5 },
+    { "qiao__jink", Card.Diamond, 6 },
+    { "qiao__slash", Card.Spade, 7 },
+    { "qiao__peach", Card.Heart, 8 },
   })
   local give = { start[1], start[2], drawn[4] }
 
@@ -526,20 +647,20 @@ function Testhanjin_wu_damage:testHaoshiDrawsTwoThenGivesHalf()
 end
 
 -- 好施：摸牌承诺后即使失去好施，既定给牌仍由静态延迟效果完成
-function Testhanjin_wu_damage:testHaoshiGiveSurvivesSkillLossBeforeAfterDraw()
+function Testqiao_wu_damage:testHaoshiGiveSurvivesSkillLossBeforeAfterDraw()
   local room = FkTest.room
   grant(p(1), HAOSHI)
   local start = setHand(room, p(1), {
-    { "hanjin__peach", Card.Heart, 2 },
-    { "hanjin__jink", Card.Diamond, 3 },
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__jink", Card.Diamond, 3 },
   })
   setHand(room, p(2), {})
-  setHand(room, p(3), { { "hanjin__slash", Card.Spade, 4 } })
+  setHand(room, p(3), { { "qiao__slash", Card.Spade, 4 } })
   local drawn = seedDrawPile(room, {
-    { "hanjin__peach", Card.Heart, 5 },
-    { "hanjin__jink", Card.Diamond, 6 },
-    { "hanjin__slash", Card.Spade, 7 },
-    { "hanjin__peach", Card.Heart, 8 },
+    { "qiao__peach", Card.Heart, 5 },
+    { "qiao__jink", Card.Diamond, 6 },
+    { "qiao__slash", Card.Spade, 7 },
+    { "qiao__peach", Card.Heart, 8 },
   })
   local give = { start[1], start[2], drawn[4] }
 
@@ -564,24 +685,24 @@ function Testhanjin_wu_damage:testHaoshiGiveSurvivesSkillLossBeforeAfterDraw()
 end
 
 -- 缔盟：真实弃牌、交换手牌，纵横好施到目标回合结束 ----------------------
-function Testhanjin_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurnEnd()
+function Testqiao_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurnEnd()
   local room = FkTest.room
   grant(p(1), DIMENG)
   local cost = setHand(room, p(1), {
-    { "hanjin__peach", Card.Heart, 2 },
-    { "hanjin__jink", Card.Diamond, 3 },
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__jink", Card.Diamond, 3 },
   })
   setHand(room, p(2), {
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__slash", Card.Spade, 5 },
-    { "hanjin__slash", Card.Spade, 6 },
-    { "hanjin__slash", Card.Spade, 7 },
-    { "hanjin__slash", Card.Spade, 8 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 5 },
+    { "qiao__slash", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 7 },
+    { "qiao__slash", Card.Spade, 8 },
   })
   setHand(room, p(3), {
-    { "hanjin__peach", Card.Heart, 9 },
-    { "hanjin__peach", Card.Heart, 10 },
-    { "hanjin__peach", Card.Heart, 11 },
+    { "qiao__peach", Card.Heart, 9 },
+    { "qiao__peach", Card.Heart, 10 },
+    { "qiao__peach", Card.Heart, 11 },
   })
 
   FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard(cost), "1" })
@@ -595,7 +716,7 @@ function Testhanjin_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurn
 
   -- 追加另一来源；addSkill 即使已拥有同名技能也会记录 derivative source。
   inRoom(function()
-    p(2):addSkill(Fk.skills[HAOSHI], "hanjin__skill_wu005_1")
+    p(2):addSkill(Fk.skills[HAOSHI], "qiao__skill_wu005_1")
   end)
 
   -- 授予时所在回合（可能是鲁肃的额外回合）结束不清理。
@@ -608,23 +729,23 @@ function Testhanjin_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurn
   lu.assertEquals(p(2):getMark(DIMENG_GRANTED), 0)
   lu.assertTrue(p(2):hasSkill(HAOSHI))
   inRoom(function()
-    room:handleAddLoseSkills(p(2), "-" .. HAOSHI, "hanjin__skill_wu005_1", false, true)
+    room:handleAddLoseSkills(p(2), "-" .. HAOSHI, "qiao__skill_wu005_1", false, true)
   end)
   lu.assertFalse(p(2):hasSkill(HAOSHI))
 end
 
 -- 缔盟：ClientPlayer 无 room 时可安全计算；手牌数相等不能支付零张弃置
-function Testhanjin_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
+function Testqiao_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
   local room = FkTest.room
   grant(p(1), DIMENG)
   setHand(room, p(1), {
-    { "hanjin__peach", Card.Heart, 2 },
-    { "hanjin__jink", Card.Diamond, 3 },
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__jink", Card.Diamond, 3 },
   })
   for i = 2, 8 do
     setHand(room, p(i), {
-      { "hanjin__slash", Card.Spade, 4 },
-      { "hanjin__jink", Card.Heart, 5 },
+      { "qiao__slash", Card.Spade, 4 },
+      { "qiao__jink", Card.Heart, 5 },
     })
   end
 
@@ -636,16 +757,16 @@ function Testhanjin_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
   end)
 
   setHand(room, p(2), {
-    { "hanjin__slash", Card.Spade, 4 },
-    { "hanjin__slash", Card.Spade, 5 },
-    { "hanjin__slash", Card.Spade, 6 },
-    { "hanjin__slash", Card.Spade, 7 },
-    { "hanjin__slash", Card.Spade, 8 },
+    { "qiao__slash", Card.Spade, 4 },
+    { "qiao__slash", Card.Spade, 5 },
+    { "qiao__slash", Card.Spade, 6 },
+    { "qiao__slash", Card.Spade, 7 },
+    { "qiao__slash", Card.Spade, 8 },
   })
   setHand(room, p(3), {
-    { "hanjin__peach", Card.Heart, 9 },
-    { "hanjin__peach", Card.Heart, 10 },
-    { "hanjin__peach", Card.Heart, 11 },
+    { "qiao__peach", Card.Heart, 9 },
+    { "qiao__peach", Card.Heart, 10 },
+    { "qiao__peach", Card.Heart, 11 },
   })
   asClient(room, function(clients)
     local me = clients[1]
@@ -655,11 +776,11 @@ function Testhanjin_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
 end
 
 -- 锦帆军：弃置他人牌后按颜色弃牌并摸两张，颜色次数记录 ------------------
-function Testhanjin_wu_damage:testJinfanjunDiscardsColorThenDraws()
+function Testqiao_wu_damage:testJinfanjunDiscardsColorThenDraws()
   local room = FkTest.room
   grant(p(1), JINFANJUN)
-  local cost = setHand(room, p(1), { { "hanjin__jink", Card.Heart, 2 } })[1]
-  local victim = setHand(room, p(2), { { "hanjin__slash", Card.Diamond, 3 } })[1]
+  local cost = setHand(room, p(1), { { "qiao__jink", Card.Heart, 2 } })[1]
+  local victim = setHand(room, p(2), { { "qiao__slash", Card.Diamond, 3 } })[1]
 
   FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ cost }) })
   inRoom(function() room:throwCard({ victim }, "test", p(2), p(1)) end)
@@ -667,17 +788,17 @@ function Testhanjin_wu_damage:testJinfanjunDiscardsColorThenDraws()
   lu.assertEquals(room:getCardArea(victim), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(cost), Card.DiscardPile)
   lu.assertEquals(#p(1):getCardIds(Player.Hand), 2)
-  lu.assertEquals(p(1):getMark("hanjin__retinue_skill_jinfanjun_red-turn"), 1)
-  lu.assertEquals(p(1):getMark("hanjin__retinue_skill_jinfanjun_black-turn"), 0)
+  lu.assertEquals(p(1):getMark("qiao__retinue_skill_jinfanjun_red-turn"), 1)
+  lu.assertEquals(p(1):getMark("qiao__retinue_skill_jinfanjun_black-turn"), 0)
 end
 
 -- 曲阿小将：相邻两次用牌目标不完全相同，重合目标各受1点伤害 ------------
-function Testhanjin_wu_damage:testQuaxiaoDamagesOverlappingTargets()
+function Testqiao_wu_damage:testQuaxiaoDamagesOverlappingTargets()
   local room = FkTest.room
   grant(p(1), QUAXIAO)
   local cards = setHand(room, p(1), {
-    { "hanjin__slash", Card.Spade, 1 },
-    { "hanjin__slash", Card.Heart, 2 },
+    { "qiao__slash", Card.Spade, 1 },
+    { "qiao__slash", Card.Heart, 2 },
   })
   local hp = p(3).hp
 
@@ -692,4 +813,4 @@ function Testhanjin_wu_damage:testQuaxiaoDamagesOverlappingTargets()
   lu.assertEquals(p(3).hp, hp - 3)
 end
 
-return { name = "hanjin_wu_damage" }
+return { name = "qiao_wu_damage" }

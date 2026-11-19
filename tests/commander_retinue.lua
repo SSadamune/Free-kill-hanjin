@@ -1,5 +1,5 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
-local C = require "packages.hanjin.pkg.hanjin_mode.rules.commander_retinue"
+local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local H = require "packages.hegemony.util"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
@@ -8,11 +8,7 @@ local function setup()
   -- their use/response window. Reset it so one test cannot make the next test's
   -- "play phase" look like a response window.
   Fk.currentResponsePattern = nil
-  local room = support.initHanjinRoom()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  -- The exchange suite clears global listeners in its tearDown; re-install ours
-  -- for each commander test.  The listener itself is idempotent.
-  Exchange.addCompletionListener(C.onExchangeCompleted)
+  local room = support.initQiaoRoom()
   FkTest.runInRoom(function()
     C.reset(room)
     for _, player in ipairs(room.players) do C.grantAbility(player) end
@@ -21,12 +17,10 @@ local function setup()
 end
 
 local function teardown()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
-  Exchange.removeCompletionListener(C.onExchangeCompleted)
   support.clearRoom()
 end
 
-Testhanjin_commander_retinue = { setup = setup, tearDown = teardown }
+Testqiao_commander_retinue = { setup = setup, tearDown = teardown }
 
 local function room() return FkTest.room end
 
@@ -81,32 +75,32 @@ local function sourceOf(general)
   return C.source(room(), general)
 end
 
-function Testhanjin_commander_retinue:testIndependentRetinueContentAndPublicRegistration()
-  lu.assertTrue(C.isRetinue("hanjin_test__retinue_alpha"))
-  lu.assertTrue(C.isSoldier("hanjin_test__retinue_alpha"))
+function Testqiao_commander_retinue:testIndependentRetinueContentAndPublicRegistration()
+  lu.assertTrue(C.isRetinue("qiao_test__retinue_alpha"))
+  lu.assertTrue(C.isSoldier("qiao_test__retinue_alpha"))
   lu.assertTrue(C.isSoldier("blank_shibing"))
   lu.assertTrue(C.isSoldier("blank_nvshibing"))
-  lu.assertFalse(C.isSoldier("hanjin_test__wei_1"))
-  lu.assertFalse(C.isCommander("hanjin_test__retinue_alpha"))
-  lu.assertTrue(C.isCommander("hanjin_test__commander_alpha"))
-  local general = Fk.generals["hanjin_test__retinue_alpha"]
+  lu.assertFalse(C.isSoldier("qiao_test__wei_1"))
+  lu.assertFalse(C.isCommander("qiao_test__retinue_alpha"))
+  lu.assertTrue(C.isCommander("qiao_test__commander_alpha"))
+  local general = Fk.generals["qiao_test__retinue_alpha"]
   lu.assertTrue(general.hidden)
-  lu.assertEquals(general.package.extensionName, "hanjin")
-  lu.assertTrue(table.contains(general:getSkillNameList(), "hanjin_test__retinue_skill_a"))
-  lu.assertNotEquals(Fk:translate("hanjin_test__retinue_alpha"), "hanjin_test__retinue_alpha")
+  lu.assertEquals(general.package.extensionName, "qiao")
+  lu.assertTrue(table.contains(general:getSkillNameList(), "qiao_test__retinue_skill_a"))
+  lu.assertNotEquals(Fk:translate("qiao_test__retinue_alpha"), "qiao_test__retinue_alpha")
   -- 偏将（限一翼从）与提供它的统领来源分别登记；普通翼从不限一。
-  lu.assertTrue(C.isLimitedRetinue("hanjin_test__retinue_zhoucang"))
-  lu.assertFalse(C.isLimitedRetinue("hanjin_test__retinue_alpha"))
-  lu.assertTrue(C.commanders["hanjin_test__commander_guanyu"].limited)
-  lu.assertFalse(C.commanders["hanjin_test__commander_alpha"].limited)
+  lu.assertTrue(C.isLimitedRetinue("qiao_test__retinue_zhoucang"))
+  lu.assertFalse(C.isLimitedRetinue("qiao_test__retinue_alpha"))
+  lu.assertTrue(C.commanders["qiao_test__commander_guanyu"].limited)
+  lu.assertFalse(C.commanders["qiao_test__commander_alpha"].limited)
   for _, name in ipairs(room().general_pile) do lu.assertFalse(C.isRetinue(name)) end
 end
 
-function Testhanjin_commander_retinue:testNoSoldierConditionIncludesRetinues()
+function Testqiao_commander_retinue:testNoSoldierConditionIncludesRetinues()
   local sourceHolder, user = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
   reveal(sourceHolder, false)
-  setHidden(user, "hanjin_test__wei_1", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", nil, "wei")
   reveal(user, false)
 
   setBlankDirect(user, true)
@@ -115,17 +109,17 @@ function Testhanjin_commander_retinue:testNoSoldierConditionIncludesRetinues()
   lu.assertEquals(#C.abilitySources(user), 0)
   lu.assertEquals(user:getMark(C.SOURCE_MARK), 0)
 
-  setRetinueDirect(user, true, "hanjin_test__retinue_alpha")
+  setRetinueDirect(user, true, "qiao_test__retinue_alpha")
   C.refreshAvailability(room())
   lu.assertTrue(C.hasSoldier(user))
   lu.assertEquals(#C.abilitySources(user), 0)
   lu.assertEquals(user:getMark(C.SOURCE_MARK), 0)
 end
 
-function Testhanjin_commander_retinue:testRevealConvertsExistingBlankSoldierWithChoice()
+function Testqiao_commander_retinue:testRevealConvertsExistingBlankSoldierWithChoice()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
   setBlankDirect(target, true)
   FkTest.runInRoom(function()
@@ -133,24 +127,24 @@ function Testhanjin_commander_retinue:testRevealConvertsExistingBlankSoldierWith
     room():setPlayerProperty(target, "hp", 5)
   end)
 
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_alpha" } })
   reveal(sourceHolder, false)
 
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertTrue(target:hasSkill("hanjin_test__retinue_skill_a"))
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertTrue(target:hasSkill("qiao_test__retinue_skill_a"))
   lu.assertTrue(C.isRetinue(target.deputyGeneral))
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "hanjin_test__retinue_beta"))
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "qiao_test__retinue_beta"))
   lu.assertEquals(target.kingdom, "wei")
   lu.assertEquals(target.hp, 5)
   lu.assertEquals(target.maxHp, 7)
 end
 
-function Testhanjin_commander_retinue:testBothPositionsConvertAndMayChooseTheSameType()
+function Testqiao_commander_retinue:testBothPositionsConvertAndMayChooseTheSameType()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
   -- Both positions must be deterministic test generals: a randomly dealt formal
   -- commander would be revealed and registered during H.removeGeneral.
-  setHidden(target, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(target, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(target, false)
   FkTest.runInRoom(function()
     H.removeGeneral(target, false)
@@ -160,116 +154,116 @@ function Testhanjin_commander_retinue:testBothPositionsConvertAndMayChooseTheSam
   lu.assertTrue(C.isBlankSoldier(target.deputyGeneral))
 
   FkTest.setNextReplies(target, {
-    { "hanjin_test__retinue_alpha" },
-    { "hanjin_test__retinue_alpha" },
+    { "qiao_test__retinue_alpha" },
+    { "qiao_test__retinue_alpha" },
   })
   reveal(sourceHolder, false)
 
-  lu.assertEquals(target.general, "hanjin_test__retinue_alpha")
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertTrue(target:hasSkill("hanjin_test__retinue_skill_a"))
+  lu.assertEquals(target.general, "qiao_test__retinue_alpha")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertTrue(target:hasSkill("qiao_test__retinue_skill_a"))
 end
 
-function Testhanjin_commander_retinue:testDeputyCommanderRevealAlsoProvidesSource()
+function Testqiao_commander_retinue:testDeputyCommanderRevealAlsoProvidesSource()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__wei_1", "hanjin_test__commander_alpha", "wei")
-  setHidden(target, "hanjin_test__wei_2", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__wei_1", "qiao_test__commander_alpha", "wei")
+  setHidden(target, "qiao_test__wei_2", nil, "wei")
   reveal(sourceHolder, false)
   reveal(sourceHolder, true)
   reveal(target, false)
 
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_alpha" } })
   FkTest.runInRoom(function()
     room():changeHero(target, "blank_shibing", false, true, false, false, false)
     room():setPlayerMark(target, "__heg_deputy", "blank_shibing")
   end)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertTrue(sourceOf("hanjin_test__commander_alpha").revealed)
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertTrue(sourceOf("qiao_test__commander_alpha").revealed)
 end
 
-function Testhanjin_commander_retinue:testSingleAvailableRetinueConvertsWithoutChoice()
+function Testqiao_commander_retinue:testSingleAvailableRetinueConvertsWithoutChoice()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_beta", nil, "shu")
-  setHidden(target, "hanjin_test__shu_1", nil, "shu")
+  setHidden(sourceHolder, "qiao_test__commander_beta", nil, "shu")
+  setHidden(target, "qiao_test__shu_1", nil, "shu")
   reveal(target, false)
   setBlankDirect(target, true)
 
   reveal(sourceHolder, false)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
-  lu.assertTrue(target:hasSkill("hanjin_test__retinue_skill_b"))
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
+  lu.assertTrue(target:hasSkill("qiao_test__retinue_skill_b"))
 end
 
-function Testhanjin_commander_retinue:testExistingRetinueIsNotReselected()
+function Testqiao_commander_retinue:testExistingRetinueIsNotReselected()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
-  setRetinueDirect(target, true, "hanjin_test__retinue_beta")
+  setRetinueDirect(target, true, "qiao_test__retinue_beta")
 
   reveal(sourceHolder, false)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
-  lu.assertTrue(target:hasSkill("hanjin_test__retinue_skill_b"))
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
+  lu.assertTrue(target:hasSkill("qiao_test__retinue_skill_b"))
 end
 
-function Testhanjin_commander_retinue:testHiddenSourceStillProvidesTypesButNotAbility()
+function Testqiao_commander_retinue:testHiddenSourceStillProvidesTypesButNotAbility()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
   reveal(sourceHolder, false)
 
   FkTest.runInRoom(function() sourceHolder:hideGeneral(false) end)
   lu.assertEquals(#C.abilitySources(target), 0)
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "hanjin_test__retinue_alpha"))
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "qiao_test__retinue_alpha"))
 
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_alpha" } })
   FkTest.runInRoom(function()
     room():changeHero(target, "blank_shibing", false, false, false, false, false)
     room():setPlayerMark(target, "__heg_general", "blank_shibing")
   end)
-  lu.assertEquals(target.general, "hanjin_test__retinue_alpha")
+  lu.assertEquals(target.general, "qiao_test__retinue_alpha")
 end
 
-function Testhanjin_commander_retinue:testRemovedSourceStillProvidesTypes()
+function Testqiao_commander_retinue:testRemovedSourceStillProvidesTypes()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
   reveal(sourceHolder, false)
   FkTest.runInRoom(function() H.removeGeneral(sourceHolder, false) end)
-  lu.assertFalse(sourceOf("hanjin_test__commander_alpha").revealed)
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "hanjin_test__retinue_beta"))
+  lu.assertFalse(sourceOf("qiao_test__commander_alpha").revealed)
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "qiao_test__retinue_beta"))
 
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_beta" } })
   FkTest.runInRoom(function()
     room():changeHero(target, "blank_shibing", false, true, false, false, false)
     room():setPlayerMark(target, "__heg_deputy", "blank_shibing")
   end)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
 end
 
-function Testhanjin_commander_retinue:testRevealedFactionChangeTransfersOnlyThatSource()
+function Testqiao_commander_retinue:testRevealedFactionChangeTransfersOnlyThatSource()
   local first, second, third, fourth = room().players[1], room().players[2], room().players[3], room().players[4]
-  setHidden(first, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(second, "hanjin_test__wei_1", nil, "wei")
-  setHidden(third, "hanjin_test__shu_1", nil, "shu")
-  setHidden(fourth, "hanjin_test__shu_2", nil, "shu")
+  setHidden(first, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(second, "qiao_test__wei_1", nil, "wei")
+  setHidden(third, "qiao_test__shu_1", nil, "shu")
+  setHidden(fourth, "qiao_test__shu_2", nil, "shu")
   reveal(second, false)
   reveal(third, false)
   reveal(fourth, false)
   setBlankDirect(second, true)
   setBlankDirect(third, true)
-  FkTest.setNextReplies(second, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(second, { { "qiao_test__retinue_alpha" } })
   reveal(first, false)
-  lu.assertEquals(second.deputyGeneral, "hanjin_test__retinue_alpha")
+  lu.assertEquals(second.deputyGeneral, "qiao_test__retinue_alpha")
 
-  FkTest.setNextReplies(third, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(third, { { "qiao_test__retinue_beta" } })
   FkTest.runInRoom(function() room():changeKingdom(first, "shu") end)
 
-  lu.assertTrue(sourceOf("hanjin_test__commander_alpha").factions["shu"])
-  lu.assertNil(sourceOf("hanjin_test__commander_alpha").factions["wei"])
-  lu.assertEquals(third.deputyGeneral, "hanjin_test__retinue_beta")
-  lu.assertEquals(second.deputyGeneral, "hanjin_test__retinue_alpha")
+  lu.assertTrue(sourceOf("qiao_test__commander_alpha").factions["shu"])
+  lu.assertNil(sourceOf("qiao_test__commander_alpha").factions["wei"])
+  lu.assertEquals(third.deputyGeneral, "qiao_test__retinue_beta")
+  lu.assertEquals(second.deputyGeneral, "qiao_test__retinue_alpha")
   lu.assertEquals(#C.abilitySources(second), 0)
   lu.assertTrue(#C.abilitySources(fourth) > 0)
 
@@ -280,14 +274,14 @@ function Testhanjin_commander_retinue:testRevealedFactionChangeTransfersOnlyThat
   lu.assertTrue(C.isBlankSoldier(second.general))
 end
 
-function Testhanjin_commander_retinue:testHiddenFactionChangeKeepsOldAndAddsNewOnReveal()
+function Testqiao_commander_retinue:testHiddenFactionChangeKeepsOldAndAddsNewOnReveal()
   local holder, oldTarget, newTarget = room().players[1], room().players[2], room().players[3]
   local oldObserver, newObserver = room().players[4], room().players[5]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(oldTarget, "hanjin_test__wei_1", nil, "wei")
-  setHidden(newTarget, "hanjin_test__shu_1", nil, "shu")
-  setHidden(oldObserver, "hanjin_test__wei_2", "hanjin_test__wei_3", "wei")
-  setHidden(newObserver, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(oldTarget, "qiao_test__wei_1", nil, "wei")
+  setHidden(newTarget, "qiao_test__shu_1", nil, "shu")
+  setHidden(oldObserver, "qiao_test__wei_2", "qiao_test__wei_3", "wei")
+  setHidden(newObserver, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
   reveal(oldTarget, false)
   reveal(newTarget, false)
   reveal(oldObserver, false)
@@ -296,7 +290,7 @@ function Testhanjin_commander_retinue:testHiddenFactionChangeKeepsOldAndAddsNewO
   reveal(newObserver, true)
   setBlankDirect(oldTarget, true)
   setBlankDirect(newTarget, true)
-  FkTest.setNextReplies(oldTarget, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(oldTarget, { { "qiao_test__retinue_alpha" } })
   reveal(holder, false)
 
   FkTest.runInRoom(function() holder:hideGeneral(false) end)
@@ -304,67 +298,67 @@ function Testhanjin_commander_retinue:testHiddenFactionChangeKeepsOldAndAddsNewO
     room():setPlayerMark(holder, "__heg_kingdom", "shu")
     room():setPlayerProperty(holder, "kingdom", "wei")
   end)
-  FkTest.setNextReplies(newTarget, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(newTarget, { { "qiao_test__retinue_beta" } })
   reveal(holder, false)
 
-  lu.assertTrue(sourceOf("hanjin_test__commander_alpha").factions["wei"])
-  lu.assertTrue(sourceOf("hanjin_test__commander_alpha").factions["shu"])
-  lu.assertEquals(newTarget.deputyGeneral, "hanjin_test__retinue_beta")
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "hanjin_test__retinue_alpha"))
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "hanjin_test__retinue_alpha"))
+  lu.assertTrue(sourceOf("qiao_test__commander_alpha").factions["wei"])
+  lu.assertTrue(sourceOf("qiao_test__commander_alpha").factions["shu"])
+  lu.assertEquals(newTarget.deputyGeneral, "qiao_test__retinue_beta")
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "qiao_test__retinue_alpha"))
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "qiao_test__retinue_alpha"))
   -- 旧势力仍可取得兵种，但统领能力只对来源当前持有者所在势力开放。
   lu.assertEquals(#C.abilitySources(oldObserver), 0)
   lu.assertTrue(#C.abilitySources(newObserver) > 0)
-  lu.assertNil(C.buildViewAsCard(oldObserver, "hanjin_test__commander_alpha"))
-  lu.assertFalse(C.payCost(oldObserver, sourceOf("hanjin_test__commander_alpha"), false))
-  local forged = C.viewAsCardForClient(oldObserver, "hanjin_test__commander_alpha")
+  lu.assertNil(C.buildViewAsCard(oldObserver, "qiao_test__commander_alpha"))
+  lu.assertFalse(C.payCost(oldObserver, sourceOf("qiao_test__commander_alpha"), false))
+  local forged = C.viewAsCardForClient(oldObserver, "qiao_test__commander_alpha")
   local ret = Fk.skills[C.ABILITY_SKILL]:beforeUse(oldObserver, { card = forged })
   lu.assertEquals(ret, C.ABILITY_SKILL)
 
   -- 旧势力仍保有该来源：明置后新增的白板士兵也可转换。
-  FkTest.setNextReplies(oldTarget, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(oldTarget, { { "qiao_test__retinue_alpha" } })
   FkTest.runInRoom(function()
     room():changeHero(oldTarget, "blank_shibing", false, false, false, false, false)
     room():setPlayerMark(oldTarget, "__heg_general", "blank_shibing")
   end)
-  lu.assertEquals(oldTarget.general, "hanjin_test__retinue_alpha")
+  lu.assertEquals(oldTarget.general, "qiao_test__retinue_alpha")
 end
 
-function Testhanjin_commander_retinue:testSharedTypeStaysWithAnotherSourceAfterTransfer()
+function Testqiao_commander_retinue:testSharedTypeStaysWithAnotherSourceAfterTransfer()
   local alphaHolder, betaHolder, target = room().players[1], room().players[2], room().players[3]
-  setHidden(alphaHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(betaHolder, "hanjin_test__commander_beta", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(alphaHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(betaHolder, "qiao_test__commander_beta", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
   setBlankDirect(target, true)
   reveal(betaHolder, false)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
   reveal(alphaHolder, false)
   lu.assertEquals(C.availableRetinues(room(), "wei"),
-    { "hanjin_test__retinue_alpha", "hanjin_test__retinue_beta" })
+    { "qiao_test__retinue_alpha", "qiao_test__retinue_beta" })
 
   FkTest.runInRoom(function() room():changeKingdom(alphaHolder, "shu") end)
-  lu.assertEquals(C.availableRetinues(room(), "wei"), { "hanjin_test__retinue_beta" })
+  lu.assertEquals(C.availableRetinues(room(), "wei"), { "qiao_test__retinue_beta" })
   lu.assertEquals(C.availableRetinues(room(), "shu"),
-    { "hanjin_test__retinue_alpha", "hanjin_test__retinue_beta" })
+    { "qiao_test__retinue_alpha", "qiao_test__retinue_beta" })
 
   FkTest.runInRoom(function() room():changeKingdom(betaHolder, "shu") end)
   lu.assertEquals(C.availableRetinues(room(), "wei"), {})
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
 end
 
-function Testhanjin_commander_retinue:testAbilitySourceCostAndManualViewAs()
+function Testqiao_commander_retinue:testAbilitySourceCostAndManualViewAs()
   local sourceHolder, user = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(sourceHolder, false)
   reveal(user, false)
   reveal(user, true)
 
   local sources = C.abilitySources(user)
   lu.assertEquals(#sources, 1)
-  lu.assertEquals(sources[1].general, "hanjin_test__commander_alpha")
-  lu.assertEquals(user:getMark(C.SOURCE_MARK), { "hanjin_test__commander_alpha" })
+  lu.assertEquals(sources[1].general, "qiao_test__commander_alpha")
+  lu.assertEquals(user:getMark(C.SOURCE_MARK), { "qiao_test__commander_alpha" })
 
   local skill = Fk.skills[C.ABILITY_SKILL]
   lu.assertTrue(skill:enabledAtPlay(user))
@@ -372,7 +366,7 @@ function Testhanjin_commander_retinue:testAbilitySourceCostAndManualViewAs()
   lu.assertFalse(skill:enabledAtResponse(user, true))
   lu.assertFalse(skill:enabledAtNullification(user))
 
-  local source = C.source(room(), "hanjin_test__commander_alpha")
+  local source = C.source(room(), "qiao_test__commander_alpha")
   lu.assertEquals(C.costCandidates(user, source), { false, true })
   local card = C.buildViewAsCard(user, source.general)
   lu.assertNotNil(card)
@@ -381,31 +375,55 @@ function Testhanjin_commander_retinue:testAbilitySourceCostAndManualViewAs()
   lu.assertEquals(card.skillName, C.ABILITY_SKILL)
 end
 
-function Testhanjin_commander_retinue:testCostExcludesTheProvidingCommander()
+function Testqiao_commander_retinue:testCostExcludesTheProvidingCommander()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  setHidden(user, "qiao_test__commander_alpha", "qiao_test__wei_1", "wei")
   reveal(user, false)
   reveal(user, true)
-  local source = C.source(room(), "hanjin_test__commander_alpha")
+  local source = C.source(room(), "qiao_test__commander_alpha")
   lu.assertEquals(C.costCandidates(user, source), { true })
   lu.assertFalse(C.payCost(user, source, false))
-  lu.assertEquals(user.general, "hanjin_test__commander_alpha")
+  lu.assertEquals(user.general, "qiao_test__commander_alpha")
 end
 
-function Testhanjin_commander_retinue:testPayCostRemovesGeneralAndUsesMarkedCard()
+function Testqiao_commander_retinue:testLordCardIsNotACostButOtherPositionStillIs()
+  local sourceHolder, user = room().players[1], room().players[2]
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  -- 暗置的真实君主牌在主将位，副将位是普通武将；势力已由副将确定。
+  setHidden(user, "qiao_heg__em_shu001", "qiao_test__wei_1", "wei")
+  reveal(sourceHolder, false)
+  reveal(user, true)
+  FkTest.runInRoom(function() room():setPlayerProperty(user, "kingdom", "wei") end)
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local source = sourceOf("qiao_test__commander_alpha")
+  lu.assertEquals(C.costCandidates(user, source), { true })
+  lu.assertFalse(C.payCost(user, source, false))
+  lu.assertEquals(user.general, "anjiang")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+
+  local paid
+  FkTest.runInRoom(function() paid = C.payCost(user, source, true) end)
+  lu.assertTrue(paid)
+  lu.assertNotEquals(user.deputyGeneral, "qiao_test__wei_1")
+  lu.assertEquals(user:getMark("__heg_general"), "qiao_heg__em_shu001")
+end
+
+function Testqiao_commander_retinue:testPayCostRemovesGeneralAndUsesMarkedCard()
   local sourceHolder, user, target = room().players[1], room().players[2], room().players[3]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
-  setHidden(target, "hanjin_test__wei_3", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
+  setHidden(target, "qiao_test__wei_3", nil, "wei")
   reveal(sourceHolder, false)
   reveal(user, false)
   reveal(user, true)
   reveal(target, false)
 
-  local source = C.source(room(), "hanjin_test__commander_alpha")
+  local source = C.source(room(), "qiao_test__commander_alpha")
   local card = C.buildViewAsCard(user, source.general)
   lu.assertNotNil(card)
-  FkTest.setNextReplies(user, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(user, { { "qiao_test__retinue_alpha" } })
   local paid
   FkTest.runInRoom(function() paid = C.payCost(user, source, false) end)
   lu.assertTrue(paid)
@@ -419,22 +437,22 @@ function Testhanjin_commander_retinue:testPayCostRemovesGeneralAndUsesMarkedCard
   lu.assertEquals(target.hp, hp - 1)
 end
 
-function Testhanjin_commander_retinue:testCharacterJoiningFactionConvertsCarriedWhiteSoldier()
+function Testqiao_commander_retinue:testCharacterJoiningFactionConvertsCarriedWhiteSoldier()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(sourceHolder, false)
   setBlankDirect(target, true)
   lu.assertTrue(C.isBlankSoldier(target.deputyGeneral))
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_alpha" } })
   reveal(target, false)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_alpha")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_alpha")
 end
 
-function Testhanjin_commander_retinue:testRetinueChoiceOffersIndependentGeneralCards()
+function Testqiao_commander_retinue:testRetinueChoiceOffersIndependentGeneralCards()
   local sourceHolder, target = room().players[1], room().players[2]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(target, false)
   setBlankDirect(target, true)
 
@@ -458,34 +476,34 @@ function Testhanjin_commander_retinue:testRetinueChoiceOffersIndependentGeneralC
   lu.assertEquals(target.deputyGeneral, captured.generals[2])
 end
 
-function Testhanjin_commander_retinue:testManualViewAsBeforeUsePaysTheChosenCost()
+function Testqiao_commander_retinue:testManualViewAsBeforeUsePaysTheChosenCost()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__commander_alpha", "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__commander_alpha", "wei")
   reveal(user, false)
   reveal(user, true)
   local skill = Fk.skills[C.ABILITY_SKILL]
-  skill.interaction.data = "hanjin_test__commander_alpha"
+  skill.interaction.data = "qiao_test__commander_alpha"
   local card = skill:viewAs(user, {})
   lu.assertNotNil(card)
-  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "hanjin_test__commander_alpha")
-  lu.assertEquals(C.costCandidates(user, sourceOf("hanjin_test__commander_alpha")), { false })
+  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "qiao_test__commander_alpha")
+  lu.assertEquals(C.costCandidates(user, sourceOf("qiao_test__commander_alpha")), { false })
 
-  FkTest.setNextReplies(user, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(user, { { "qiao_test__retinue_beta" } })
   local ret
   FkTest.runInRoom(function()
     ret = skill:beforeUse(user, { from = user, tos = {}, card = card })
   end)
   lu.assertNotEquals(ret, skill.name)
   lu.assertTrue(C.isSoldier(user.general))
-  lu.assertEquals(user.deputyGeneral, "hanjin_test__commander_alpha")
+  lu.assertEquals(user.deputyGeneral, "qiao_test__commander_alpha")
   skill.interaction.data = nil
 end
 
-function Testhanjin_commander_retinue:testAnotherSameFactionSoldierDoesNotBlockPayment()
+function Testqiao_commander_retinue:testAnotherSameFactionSoldierDoesNotBlockPayment()
   local sourceHolder, user, soldierPlayer = room().players[1], room().players[2], room().players[3]
-  setHidden(sourceHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
-  setHidden(soldierPlayer, "hanjin_test__wei_3", nil, "wei")
+  setHidden(sourceHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
+  setHidden(soldierPlayer, "qiao_test__wei_3", nil, "wei")
   reveal(sourceHolder, false)
   reveal(user, false)
   reveal(user, true)
@@ -493,18 +511,18 @@ function Testhanjin_commander_retinue:testAnotherSameFactionSoldierDoesNotBlockP
   setBlankDirect(soldierPlayer, true)
 
   lu.assertTrue(#C.abilitySources(user) > 0)
-  FkTest.setNextReplies(user, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(user, { { "qiao_test__retinue_alpha" } })
   local paid
   FkTest.runInRoom(function()
-    paid = C.payCost(user, sourceOf("hanjin_test__commander_alpha"), true)
+    paid = C.payCost(user, sourceOf("qiao_test__commander_alpha"), true)
   end)
   lu.assertTrue(paid)
 end
 
-function Testhanjin_commander_retinue:testDeathStopsAbilityButKeepsRetinueTypes()
+function Testqiao_commander_retinue:testDeathStopsAbilityButKeepsRetinueTypes()
   local holder, target = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(holder, false)
   reveal(target, false)
   lu.assertTrue(#C.abilitySources(target) > 0)
@@ -513,54 +531,54 @@ function Testhanjin_commander_retinue:testDeathStopsAbilityButKeepsRetinueTypes(
     room():damage { to = holder, damage = 100, damageType = fk.NormalDamage }
   end)
   lu.assertTrue(holder.dead)
-  lu.assertFalse(sourceOf("hanjin_test__commander_alpha").revealed)
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "hanjin_test__retinue_alpha"))
+  lu.assertFalse(sourceOf("qiao_test__commander_alpha").revealed)
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "wei"), "qiao_test__retinue_alpha"))
 
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_beta" } })
   FkTest.runInRoom(function()
     room():changeHero(target, "blank_shibing", false, true, false, false, false)
     room():setPlayerMark(target, "__heg_deputy", "blank_shibing")
   end)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_beta")
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_beta")
 end
 
-function Testhanjin_commander_retinue:testRetinueSkillActivatesAndCleanupRemovesItFromPile()
+function Testqiao_commander_retinue:testRetinueSkillActivatesAndCleanupRemovesItFromPile()
   local holder, target = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(target, "hanjin_test__wei_1", nil, "wei")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(target, "qiao_test__wei_1", nil, "wei")
   reveal(holder, false)
   reveal(target, false)
-  FkTest.setNextReplies(target, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(target, { { "qiao_test__retinue_alpha" } })
   FkTest.runInRoom(function()
     room():changeHero(target, "blank_shibing", false, true, false, false, false)
     room():setPlayerMark(target, "__heg_deputy", "blank_shibing")
   end)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertTrue(target:hasSkill("hanjin_test__retinue_skill_a"))
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertTrue(target:hasSkill("qiao_test__retinue_skill_a"))
 
   FkTest.runInRoom(function()
     room():damage { from = holder, to = target, damage = 1, damageType = fk.NormalDamage }
   end)
-  lu.assertEquals(target:getMark("hanjin_test_retinue_damaged"), 1)
+  lu.assertEquals(target:getMark("qiao_test_retinue_damaged"), 1)
 
-  sourceOf("hanjin_test__commander_alpha").factions = {}
+  sourceOf("qiao_test__commander_alpha").factions = {}
   FkTest.runInRoom(function() H.removeGeneral(target, true) end)
-  lu.assertFalse(target:hasSkill("hanjin_test__retinue_skill_a"))
-  lu.assertFalse(table.contains(room().general_pile, "hanjin_test__retinue_alpha"))
+  lu.assertFalse(target:hasSkill("qiao_test__retinue_skill_a"))
+  lu.assertFalse(table.contains(room().general_pile, "qiao_test__retinue_alpha"))
 end
 
-function Testhanjin_commander_retinue:testExchangeMigratesRevealedCommanderAndConvertsNewPosition()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+function Testqiao_commander_retinue:testExchangeMigratesRevealedCommanderAndConvertsNewPosition()
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   local holder, swapper, observer = room().players[1], room().players[2], room().players[4]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(swapper, "hanjin_test__shu_1", nil, "shu")
-  setHidden(observer, "hanjin_test__shu_2", nil, "shu")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(swapper, "qiao_test__shu_1", nil, "shu")
+  setHidden(observer, "qiao_test__shu_2", nil, "shu")
   reveal(holder, false)
   reveal(swapper, false)
   reveal(observer, false)
   setBlankDirect(swapper, true)
 
-  FkTest.setNextReplies(swapper, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(swapper, { { "qiao_test__retinue_alpha" } })
   local context
   FkTest.runInRoom(function()
     context = Exchange.exchange(room(),
@@ -569,31 +587,31 @@ function Testhanjin_commander_retinue:testExchangeMigratesRevealedCommanderAndCo
       { cross_kingdom = true })
   end)
   lu.assertNotNil(context)
-  lu.assertEquals(swapper.general, "hanjin_test__commander_alpha")
-  lu.assertNil(sourceOf("hanjin_test__commander_alpha").factions["wei"])
-  lu.assertTrue(sourceOf("hanjin_test__commander_alpha").factions["shu"])
-  lu.assertEquals(swapper.deputyGeneral, "hanjin_test__retinue_alpha")
+  lu.assertEquals(swapper.general, "qiao_test__commander_alpha")
+  lu.assertNil(sourceOf("qiao_test__commander_alpha").factions["wei"])
+  lu.assertTrue(sourceOf("qiao_test__commander_alpha").factions["shu"])
+  lu.assertEquals(swapper.deputyGeneral, "qiao_test__retinue_alpha")
   lu.assertTrue(#C.abilitySources(observer) > 0)
   lu.assertEquals(#C.abilitySources(holder), 0)
-  lu.assertNil(C.buildViewAsCard(holder, "hanjin_test__commander_alpha"))
+  lu.assertNil(C.buildViewAsCard(holder, "qiao_test__commander_alpha"))
 end
 
-function Testhanjin_commander_retinue:testExchangeWhiteSoldierCountsAsObtained()
-  local Exchange = require "packages.hanjin.pkg.hanjin_mode.rules.general_exchange"
+function Testqiao_commander_retinue:testExchangeWhiteSoldierCountsAsObtained()
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   local holder, blankOwner, receiver = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(blankOwner, "hanjin_test__shu_1", nil, "shu")
-  setHidden(receiver, "hanjin_test__wei_1", nil, "wei")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(blankOwner, "qiao_test__shu_1", nil, "shu")
+  setHidden(receiver, "qiao_test__wei_1", nil, "wei")
   reveal(holder, false)
   reveal(blankOwner, false)
   reveal(receiver, false)
   setBlankDirect(blankOwner, true)
   FkTest.runInRoom(function()
-    room():changeHero(receiver, "hanjin_test__wei_2", false, true, false, false, false)
-    room():setPlayerMark(receiver, "__heg_deputy", "hanjin_test__wei_2")
+    room():changeHero(receiver, "qiao_test__wei_2", false, true, false, false, false)
+    room():setPlayerMark(receiver, "__heg_deputy", "qiao_test__wei_2")
   end)
 
-  FkTest.setNextReplies(receiver, { { "hanjin_test__retinue_beta" } })
+  FkTest.setNextReplies(receiver, { { "qiao_test__retinue_beta" } })
   FkTest.runInRoom(function()
     local context = Exchange.exchange(room(),
       { player = blankOwner, isDeputy = true },
@@ -602,41 +620,41 @@ function Testhanjin_commander_retinue:testExchangeWhiteSoldierCountsAsObtained()
     lu.assertNotNil(context)
     lu.assertEquals(#context.obtained_soldiers, 1)
   end)
-  lu.assertEquals(receiver.deputyGeneral, "hanjin_test__retinue_beta")
+  lu.assertEquals(receiver.deputyGeneral, "qiao_test__retinue_beta")
 end
 
-function Testhanjin_commander_retinue:testClientViewAsBuildsCardWithoutServerSourceTag()
+function Testqiao_commander_retinue:testClientViewAsBuildsCardWithoutServerSourceTag()
   local skill = Fk.skills[C.ABILITY_SKILL]
   local card
   FkTest.runInClient(function()
-    skill.interaction.data = "hanjin_test__commander_alpha"
+    skill.interaction.data = "qiao_test__commander_alpha"
     card = skill:viewAs(Self, {})
     skill.interaction.data = nil
   end)
   lu.assertNotNil(card)
-  lu.assertEquals(card.name, "hanjin__thunder__slash")
-  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "hanjin_test__commander_alpha")
+  lu.assertEquals(card.name, "qiao__thunder__slash")
+  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "qiao_test__commander_alpha")
 end
 
-function Testhanjin_commander_retinue:testServerRejectsSourceCardMismatch()
+function Testqiao_commander_retinue:testServerRejectsSourceCardMismatch()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(user, false)
   reveal(user, true)
   local skill = Fk.skills[C.ABILITY_SKILL]
-  local card = C.viewAsCardForClient(user, "hanjin_test__commander_alpha")
+  local card = C.viewAsCardForClient(user, "qiao_test__commander_alpha")
   lu.assertNotNil(card)
   -- 伪造客户端标记：牌面是甲的雷杀，却声称来源是乙的测试杀。
-  card:setMark(C.CARD_SOURCE_MARK, "hanjin_test__commander_beta")
+  card:setMark(C.CARD_SOURCE_MARK, "qiao_test__commander_beta")
   local ret = skill:beforeUse(user, { from = user, tos = {}, card = card })
   lu.assertEquals(ret, skill.name)
-  lu.assertEquals(user.general, "hanjin_test__wei_1")
+  lu.assertEquals(user.general, "qiao_test__wei_1")
 end
 
-function Testhanjin_commander_retinue:testNullificationSourceIsUsableButPureResponseStillBlocked()
+function Testqiao_commander_retinue:testNullificationSourceIsUsableButPureResponseStillBlocked()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_gamma", nil, "wu")
-  setHidden(user, "hanjin_test__wu_1", "hanjin_test__wu_2", "wu")
+  setHidden(holder, "qiao_test__commander_gamma", nil, "wu")
+  setHidden(user, "qiao_test__wu_1", "qiao_test__wu_2", "wu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -650,14 +668,14 @@ function Testhanjin_commander_retinue:testNullificationSourceIsUsableButPureResp
   lu.assertTrue(skill:enabledAtResponse(user, false))
   Fk.currentResponsePattern = oldPattern
 
-  local card = C.buildViewAsCard(user, "hanjin_test__commander_gamma")
+  local card = C.buildViewAsCard(user, "qiao_test__commander_gamma")
   lu.assertNotNil(card)
   lu.assertEquals(card.trueName, "nullification")
   lu.assertTrue(card.is_passive)
 
   local clientCard
   FkTest.runInClient(function()
-    skill.interaction.data = "hanjin_test__commander_gamma"
+    skill.interaction.data = "qiao_test__commander_gamma"
     clientCard = skill:viewAs(Self, {})
     skill.interaction.data = nil
   end)
@@ -665,19 +683,19 @@ function Testhanjin_commander_retinue:testNullificationSourceIsUsableButPureResp
   lu.assertEquals(clientCard.trueName, "nullification")
   lu.assertTrue(clientCard.is_passive)
 
-  FkTest.setNextReplies(user, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(user, { { "qiao_test__retinue_alpha" } })
   local paid
   FkTest.runInRoom(function()
-    paid = C.payCost(user, sourceOf("hanjin_test__commander_gamma"), false)
+    paid = C.payCost(user, sourceOf("qiao_test__commander_gamma"), false)
   end)
   lu.assertTrue(paid)
 end
 
-function Testhanjin_commander_retinue:testMultipleSourcesMatchTheSelectedSource()
+function Testqiao_commander_retinue:testMultipleSourcesMatchTheSelectedSource()
   local alphaHolder, deltaHolder, user = room().players[1], room().players[2], room().players[3]
-  setHidden(alphaHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(deltaHolder, "hanjin_test__commander_delta", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(alphaHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(deltaHolder, "qiao_test__commander_delta", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(alphaHolder, false)
   reveal(deltaHolder, false)
   reveal(user, false)
@@ -687,25 +705,25 @@ function Testhanjin_commander_retinue:testMultipleSourcesMatchTheSelectedSource(
   lu.assertEquals(#sources, 2)
   local names = {}
   for _, source in ipairs(sources) do table.insert(names, source.general) end
-  lu.assertTrue(table.contains(names, "hanjin_test__commander_alpha"))
-  lu.assertTrue(table.contains(names, "hanjin_test__commander_delta"))
+  lu.assertTrue(table.contains(names, "qiao_test__commander_alpha"))
+  lu.assertTrue(table.contains(names, "qiao_test__commander_delta"))
 
   local skill = Fk.skills[C.ABILITY_SKILL]
-  skill.interaction.data = "hanjin_test__commander_delta"
+  skill.interaction.data = "qiao_test__commander_delta"
   local card = skill:viewAs({}, {})
   skill.interaction.data = nil
   lu.assertNotNil(card)
-  lu.assertEquals(card.name, "hanjin__thunder__slash")
-  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "hanjin_test__commander_delta")
+  lu.assertEquals(card.name, "qiao__thunder__slash")
+  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "qiao_test__commander_delta")
 
-  local serverCard = C.buildViewAsCard(user, "hanjin_test__commander_delta")
+  local serverCard = C.buildViewAsCard(user, "qiao_test__commander_delta")
   lu.assertNotNil(serverCard)
-  lu.assertEquals(serverCard:getMark(C.CARD_SOURCE_MARK), "hanjin_test__commander_delta")
+  lu.assertEquals(serverCard:getMark(C.CARD_SOURCE_MARK), "qiao_test__commander_delta")
 
-  FkTest.setNextReplies(user, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(user, { { "qiao_test__retinue_alpha" } })
   local paid
   FkTest.runInRoom(function()
-    paid = C.payCost(user, sourceOf("hanjin_test__commander_delta"), false)
+    paid = C.payCost(user, sourceOf("qiao_test__commander_delta"), false)
   end)
   lu.assertTrue(paid)
 end
@@ -752,8 +770,8 @@ local function useAbilityThroughEngine(player, sourceKey, tos)
   return result
 end
 
-local REENTRY_SKILL = "hanjin_test__reentry_probe"
-local ABORT_SKILL = "hanjin_test__abort_pre_card_use"
+local REENTRY_SKILL = "qiao_test__reentry_probe"
+local ABORT_SKILL = "qiao_test__abort_pre_card_use"
 
 local function addTestSkillOnce(name, build)
   if Fk.skills[name] ~= nil then return end
@@ -766,15 +784,15 @@ addTestSkillOnce(REENTRY_SKILL, function(skeleton)
   skeleton:addEffect(H.GeneralRemoving, {
     global = true,
     can_trigger = function(self, event, target, player, data)
-      return target == player and player.room:getTag("hanjin_test_reentry_active") == true
+      return target == player and player.room:getTag("qiao_test_reentry_active") == true
     end,
     on_trigger = function(self, event, target, player, data)
       local room = player.room
-      local other = room:getPlayerById(room:getTag("hanjin_test_reentry_player") or 0)
-      local source = C.source(room, room:getTag("hanjin_test_reentry_source") or "")
+      local other = room:getPlayerById(room:getTag("qiao_test_reentry_player") or 0)
+      local source = C.source(room, room:getTag("qiao_test_reentry_source") or "")
       if other == nil or source == nil then return end
       -- 支付/移将回调期间同一来源仍被临时占用，必须拒绝且不扣将。
-      room:setTag("hanjin_test_reentry_result", C.payCost(other, source, false))
+      room:setTag("qiao_test_reentry_result", C.payCost(other, source, false))
     end,
   })
 end)
@@ -784,7 +802,7 @@ addTestSkillOnce(ABORT_SKILL, function(skeleton)
     global = true,
     priority = 100,
     can_trigger = function(self, event, target, player, data)
-      return target == player and player.room:getTag("hanjin_test_abort_active") == true
+      return target == player and player.room:getTag("qiao_test_abort_active") == true
         and data.card ~= nil and data.card:getMark(C.CARD_SOURCE_MARK) ~= nil
     end,
     on_trigger = function(self, event, target, player, data)
@@ -800,12 +818,12 @@ local function grantProbe(player, name)
 end
 
 --- 每张偏将全场只能实际取得一次，且跨势力、离场与重新明置都不刷新。
-function Testhanjin_commander_retinue:testLimitedRetinueIsTakenOnceAndNeverRefreshes()
+function Testqiao_commander_retinue:testLimitedRetinueIsTakenOnceAndNeverRefreshes()
   local holder, first, second, migrant = room().players[1], room().players[2], room().players[3], room().players[5]
-  setHidden(holder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(first, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(second, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
-  setHidden(migrant, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(holder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(first, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(second, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
+  setHidden(migrant, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   settleKingdom(holder, "shu")
   settleKingdom(first, "shu")
   settleKingdom(second, "shu")
@@ -819,28 +837,28 @@ function Testhanjin_commander_retinue:testLimitedRetinueIsTakenOnceAndNeverRefre
 
   -- 只有一张偏将可得时，最先处理的角色自动取得。
   reveal(holder, false)
-  lu.assertEquals(first.deputyGeneral, "hanjin_test__retinue_zhoucang")
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
+  lu.assertEquals(first.deputyGeneral, "qiao_test__retinue_zhoucang")
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
   lu.assertTrue(C.isBlankSoldier(second.deputyGeneral))
   lu.assertEquals(C.availableRetinues(room(), "shu"), {})
 
   -- 偏将离场（被移除成白板）不刷新取得记录。
   FkTest.runInRoom(function() H.removeGeneral(first, true) end)
   lu.assertTrue(C.isBlankSoldier(first.deputyGeneral))
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
   lu.assertEquals(C.availableRetinues(room(), "shu"), {})
 
   -- 来源迁移到另一势力后，新势力也不能再取得同一张偏将。
   FkTest.runInRoom(function() room():changeKingdom(holder, "wei") end)
-  lu.assertTrue(sourceOf("hanjin_test__commander_guanyu").factions["wei"])
-  lu.assertNil(sourceOf("hanjin_test__commander_guanyu").factions["shu"])
+  lu.assertTrue(sourceOf("qiao_test__commander_guanyu").factions["wei"])
+  lu.assertNil(sourceOf("qiao_test__commander_guanyu").factions["shu"])
   lu.assertEquals(C.availableRetinues(room(), "wei"), {})
   lu.assertEquals(C.availableRetinues(room(), "shu"), {})
 
   -- 重新明置来源仍不重置。
   FkTest.runInRoom(function() holder:hideGeneral(false) end)
   reveal(holder, false)
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
   lu.assertEquals(C.availableRetinues(room(), "wei"), {})
 
   -- 迁移后的新势力角色取得白板士兵时保留白板。
@@ -849,14 +867,14 @@ function Testhanjin_commander_retinue:testLimitedRetinueIsTakenOnceAndNeverRefre
 end
 
 --- 多名角色及同一角色的两个位置从当前回合角色起按逆时针逐位结算。
-function Testhanjin_commander_retinue:testLimitedRetinuesFollowActionOrderAndBothPositions()
+function Testqiao_commander_retinue:testLimitedRetinuesFollowActionOrderAndBothPositions()
   local guanyuHolder, caorenHolder = room().players[1], room().players[2]
   local target5, target7, target3 = room().players[5], room().players[7], room().players[3]
-  setHidden(guanyuHolder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(caorenHolder, "hanjin_test__commander_caoren", "hanjin_test__shu_2", "shu")
-  setHidden(target5, "hanjin_test__shu_3", "hanjin_test__shu_4", "shu")
-  setHidden(target7, "hanjin_test__shu_5", "hanjin_test__shu_6", "shu")
-  setHidden(target3, "hanjin_test__shu_7", "hanjin_test__shu_8", "shu")
+  setHidden(guanyuHolder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(caorenHolder, "qiao_test__commander_caoren", "qiao_test__shu_2", "shu")
+  setHidden(target5, "qiao_test__shu_3", "qiao_test__shu_4", "shu")
+  setHidden(target7, "qiao_test__shu_5", "qiao_test__shu_6", "shu")
+  setHidden(target3, "qiao_test__shu_7", "qiao_test__shu_8", "shu")
   settleKingdom(guanyuHolder, "shu")
   settleKingdom(caorenHolder, "shu")
   settleKingdom(target5, "shu")
@@ -881,27 +899,27 @@ function Testhanjin_commander_retinue:testLimitedRetinuesFollowActionOrderAndBot
 
   -- 明置曹仁来源时，两个限一来源同时有效，一次性结算全部白板位置。
   FkTest.cleanNextReplies(target5)
-  FkTest.setNextReplies(target5, { { "hanjin_test__retinue_zhoucang" } })
+  FkTest.setNextReplies(target5, { { "qiao_test__retinue_zhoucang" } })
   reveal(caorenHolder, false)
 
-  lu.assertEquals(target5.general, "hanjin_test__retinue_zhoucang")
-  lu.assertEquals(target5.deputyGeneral, "hanjin_test__retinue_niujin")
+  lu.assertEquals(target5.general, "qiao_test__retinue_zhoucang")
+  lu.assertEquals(target5.deputyGeneral, "qiao_test__retinue_niujin")
   lu.assertTrue(C.isBlankSoldier(target7.deputyGeneral))
   lu.assertTrue(C.isBlankSoldier(target3.general))
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_niujin"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_niujin"))
   lu.assertEquals(C.availableRetinues(room(), "shu"), {})
 end
 
 --- 先取得周仓，另一名无士兵角色仍可借关羽使用【酒】。
-function Testhanjin_commander_retinue:testBorrowingCardAfterRetinueTaken()
+function Testqiao_commander_retinue:testBorrowingCardAfterRetinueTaken()
   local holder, target, borrower, other = room().players[1], room().players[2], room().players[3], room().players[4]
   local weiUser = room().players[5]
-  setHidden(holder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(target, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(borrower, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
-  setHidden(other, "hanjin_test__shu_6", "hanjin_test__shu_7", "shu")
-  setHidden(weiUser, "hanjin_test__wei_3", "hanjin_test__wei_4", "wei")
+  setHidden(holder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(target, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(borrower, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
+  setHidden(other, "qiao_test__shu_6", "qiao_test__shu_7", "shu")
+  setHidden(weiUser, "qiao_test__wei_3", "qiao_test__wei_4", "wei")
   settleKingdom(holder, "shu")
   settleKingdom(target, "shu")
   settleKingdom(borrower, "shu")
@@ -913,25 +931,25 @@ function Testhanjin_commander_retinue:testBorrowingCardAfterRetinueTaken()
   revealBoth(other)
   revealBoth(weiUser)
   gainBlankAt(target, true)
-  lu.assertEquals(target.deputyGeneral, "hanjin_test__retinue_zhoucang")
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
-  lu.assertFalse(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
+  lu.assertEquals(target.deputyGeneral, "qiao_test__retinue_zhoucang")
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
+  lu.assertFalse(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
 
   local skill = Fk.skills[C.ABILITY_SKILL]
   FkTest.setNextReplies(borrower, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(borrower, "hanjin_test__commander_guanyu")
+  local use = useAbilityThroughEngine(borrower, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(use), "string")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_guanyu"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_guanyu"))
   lu.assertTrue(C.isBlankSoldier(borrower.general))
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
 
   -- 已用尽的来源对所有人立即禁用，且再次尝试不会误扣武将。
-  lu.assertNil(C.buildViewAsCard(other, "hanjin_test__commander_guanyu"))
+  lu.assertNil(C.buildViewAsCard(other, "qiao_test__commander_guanyu"))
   local before = { other.general, other.deputyGeneral }
   local paid
   FkTest.runInRoom(function()
-    paid = C.payCost(other, sourceOf("hanjin_test__commander_guanyu"), false)
+    paid = C.payCost(other, sourceOf("qiao_test__commander_guanyu"), false)
   end)
   lu.assertFalse(paid)
   lu.assertEquals(other.general, before[1])
@@ -940,9 +958,9 @@ function Testhanjin_commander_retinue:testBorrowingCardAfterRetinueTaken()
   lu.assertEquals(other:getMark(C.SOURCE_MARK), 0)
 
   -- 伪造牌面或被取消的旧牌在 before_use 被拒，同样不消耗次数。
-  local forged = Fk:cloneCard("hanjin_test__slash")
+  local forged = Fk:cloneCard("qiao_test__slash")
   forged.skillName = C.ABILITY_SKILL
-  forged:setMark(C.CARD_SOURCE_MARK, "hanjin_test__commander_guanyu")
+  forged:setMark(C.CARD_SOURCE_MARK, "qiao_test__commander_guanyu")
   local forgedBefore = { other.general, other.deputyGeneral }
   local rejected, staleRejected
   FkTest.runInRoom(function()
@@ -956,12 +974,12 @@ function Testhanjin_commander_retinue:testBorrowingCardAfterRetinueTaken()
 
   -- 来源迁移势力、重新明置也不重置已用记录；新势力角色同样不能再借。
   FkTest.runInRoom(function() room():changeKingdom(holder, "wei") end)
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertNil(C.buildViewAsCard(weiUser, "hanjin_test__commander_guanyu"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertNil(C.buildViewAsCard(weiUser, "qiao_test__commander_guanyu"))
   local weiBefore = { weiUser.general, weiUser.deputyGeneral }
   local weiPaid
   FkTest.runInRoom(function()
-    weiPaid = C.payCost(weiUser, sourceOf("hanjin_test__commander_guanyu"), false)
+    weiPaid = C.payCost(weiUser, sourceOf("qiao_test__commander_guanyu"), false)
   end)
   lu.assertFalse(weiPaid)
   lu.assertEquals(weiUser.general, weiBefore[1])
@@ -969,16 +987,16 @@ function Testhanjin_commander_retinue:testBorrowingCardAfterRetinueTaken()
 
   FkTest.runInRoom(function() holder:hideGeneral(false) end)
   reveal(holder, false)
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
 end
 
 --- 首次借酒选择其他翼从时，周仓仍留待之后取得。
-function Testhanjin_commander_retinue:testBorrowingCardMayChooseOtherThenTakeRetinueLater()
+function Testqiao_commander_retinue:testBorrowingCardMayChooseOtherThenTakeRetinueLater()
   local holder, betaHolder, user, latecomer = room().players[1], room().players[2], room().players[3], room().players[4]
-  setHidden(holder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(betaHolder, "hanjin_test__commander_beta", "hanjin_test__shu_2", "shu")
-  setHidden(user, "hanjin_test__shu_3", "hanjin_test__shu_4", "shu")
-  setHidden(latecomer, "hanjin_test__shu_5", "hanjin_test__shu_6", "shu")
+  setHidden(holder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(betaHolder, "qiao_test__commander_beta", "qiao_test__shu_2", "shu")
+  setHidden(user, "qiao_test__shu_3", "qiao_test__shu_4", "shu")
+  setHidden(latecomer, "qiao_test__shu_5", "qiao_test__shu_6", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(betaHolder, "shu")
   settleKingdom(user, "shu")
@@ -988,36 +1006,36 @@ function Testhanjin_commander_retinue:testBorrowingCardMayChooseOtherThenTakeRet
   revealBoth(user)
   revealBoth(latecomer)
   lu.assertEquals(C.availableRetinues(room(), "shu"),
-    { "hanjin_test__retinue_beta", "hanjin_test__retinue_zhoucang" })
+    { "qiao_test__retinue_beta", "qiao_test__retinue_zhoucang" })
 
   FkTest.setNextReplies(user, {
     { "mainGeneral" },
-    { "hanjin_test__retinue_beta" },
+    { "qiao_test__retinue_beta" },
   })
-  local use = useAbilityThroughEngine(user, "hanjin_test__commander_guanyu")
+  local use = useAbilityThroughEngine(user, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(use), "string")
-  lu.assertEquals(user.general, "hanjin_test__retinue_beta")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "hanjin_test__retinue_zhoucang"))
+  lu.assertEquals(user.general, "qiao_test__retinue_beta")
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "qiao_test__retinue_zhoucang"))
 
   -- 之后取得白板士兵的角色仍可选择周仓。
-  FkTest.setNextReplies(latecomer, { { "hanjin_test__retinue_zhoucang" } })
+  FkTest.setNextReplies(latecomer, { { "qiao_test__retinue_zhoucang" } })
   gainBlankAt(latecomer, true)
-  lu.assertEquals(latecomer.deputyGeneral, "hanjin_test__retinue_zhoucang")
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_zhoucang"))
+  lu.assertEquals(latecomer.deputyGeneral, "qiao_test__retinue_zhoucang")
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_zhoucang"))
 end
 
 --- 同名牌不同来源独立；正常使用同名牌不消耗限一能力。
-function Testhanjin_commander_retinue:testSameCardNameSourcesAreIndependent()
+function Testqiao_commander_retinue:testSameCardNameSourcesAreIndependent()
   local guanyuHolder, caorenHolder = room().players[1], room().players[2]
   local normalUser, guanyuUser, caorenUser = room().players[3], room().players[4], room().players[5]
-  setHidden(guanyuHolder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(caorenHolder, "hanjin_test__commander_caoren", "hanjin_test__shu_2", "shu")
-  setHidden(normalUser, "hanjin_test__shu_3", "hanjin_test__shu_4", "shu")
-  setHidden(guanyuUser, "hanjin_test__shu_5", "hanjin_test__shu_6", "shu")
-  setHidden(caorenUser, "hanjin_test__shu_7", "hanjin_test__shu_8", "shu")
+  setHidden(guanyuHolder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(caorenHolder, "qiao_test__commander_caoren", "qiao_test__shu_2", "shu")
+  setHidden(normalUser, "qiao_test__shu_3", "qiao_test__shu_4", "shu")
+  setHidden(guanyuUser, "qiao_test__shu_5", "qiao_test__shu_6", "shu")
+  setHidden(caorenUser, "qiao_test__shu_7", "qiao_test__shu_8", "shu")
   settleKingdom(guanyuHolder, "shu")
   settleKingdom(caorenHolder, "shu")
   settleKingdom(normalUser, "shu")
@@ -1031,36 +1049,36 @@ function Testhanjin_commander_retinue:testSameCardNameSourcesAreIndependent()
 
   -- 正常使用一张真实的【酒】不影响任何统领来源。
   FkTest.runInRoom(function()
-    room():useCard { from = normalUser, card = Fk:cloneCard("hanjin__analeptic") }
+    room():useCard { from = normalUser, card = Fk:cloneCard("qiao__analeptic") }
   end)
-  lu.assertNil(C.usedLimitedAbilities(room())["hanjin_test__commander_guanyu"])
-  lu.assertNil(C.usedLimitedAbilities(room())["hanjin_test__commander_caoren"])
+  lu.assertNil(C.usedLimitedAbilities(room())["qiao_test__commander_guanyu"])
+  lu.assertNil(C.usedLimitedAbilities(room())["qiao_test__commander_caoren"])
   lu.assertTrue(#C.abilitySources(normalUser) >= 2)
 
   FkTest.setNextReplies(guanyuUser, {
     { "mainGeneral" },
-    { "hanjin_test__retinue_zhoucang" },
+    { "qiao_test__retinue_zhoucang" },
   })
-  local use = useAbilityThroughEngine(guanyuUser, "hanjin_test__commander_guanyu")
+  local use = useAbilityThroughEngine(guanyuUser, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(use), "string")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.limitedAbilityUsed(room(), "hanjin_test__commander_caoren"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.limitedAbilityUsed(room(), "qiao_test__commander_caoren"))
 
   -- 曹仁来源的同名牌【酒】仍可独立使用；此时只剩牛金可选，自动取得。
   FkTest.setNextReplies(caorenUser, { { "mainGeneral" } })
-  local second = useAbilityThroughEngine(caorenUser, "hanjin_test__commander_caoren")
+  local second = useAbilityThroughEngine(caorenUser, "qiao_test__commander_caoren")
   lu.assertNotEquals(type(second), "string")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_caoren"))
-  lu.assertEquals(caorenUser.general, "hanjin_test__retinue_niujin")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_caoren"))
+  lu.assertEquals(caorenUser.general, "qiao_test__retinue_niujin")
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
 end
 
 --- 限一来源的响应路径：无懈可击的“使用”窗口开放，用掉后全场立即失效。
-function Testhanjin_commander_retinue:testLimitedNullificationSourceConsumesChance()
+function Testqiao_commander_retinue:testLimitedNullificationSourceConsumesChance()
   local holder, user, other = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin_test__commander_taishici", "hanjin_test__shu_1", "shu")
-  setHidden(user, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(other, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
+  setHidden(holder, "qiao_test__commander_taishici", "qiao_test__shu_1", "shu")
+  setHidden(user, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(other, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(user, "shu")
   settleKingdom(other, "shu")
@@ -1076,27 +1094,27 @@ function Testhanjin_commander_retinue:testLimitedNullificationSourceConsumesChan
   lu.assertFalse(skill:enabledAtResponse(user, true))
   Fk.currentResponsePattern = oldPattern
 
-  local card = C.buildViewAsCard(user, "hanjin_test__commander_taishici")
+  local card = C.buildViewAsCard(user, "qiao_test__commander_taishici")
   lu.assertNotNil(card)
   lu.assertEquals(card.trueName, "nullification")
   lu.assertTrue(card.is_passive)
   FkTest.setNextReplies(user, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(user, "hanjin_test__commander_taishici")
+  local use = useAbilityThroughEngine(user, "qiao_test__commander_taishici")
   lu.assertNotEquals(type(use), "string")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_taishici"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_taishici"))
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin_test__retinue_quaxiaojiang"))
-  lu.assertEquals(user.general, "hanjin_test__retinue_quaxiaojiang")
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_taishici"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_taishici"))
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_test__retinue_quaxiaojiang"))
+  lu.assertEquals(user.general, "qiao_test__retinue_quaxiaojiang")
 
   Fk.currentResponsePattern = "nullification"
   lu.assertFalse(C.hasNullificationSource(other))
   lu.assertFalse(skill:enabledAtNullification(other))
   Fk.currentResponsePattern = oldPattern
-  lu.assertNil(C.buildViewAsCard(other, "hanjin_test__commander_taishici"))
+  lu.assertNil(C.buildViewAsCard(other, "qiao_test__commander_taishici"))
   local before = { other.general, other.deputyGeneral }
   local paid
   FkTest.runInRoom(function()
-    paid = C.payCost(other, sourceOf("hanjin_test__commander_taishici"), false)
+    paid = C.payCost(other, sourceOf("qiao_test__commander_taishici"), false)
   end)
   lu.assertFalse(paid)
   lu.assertEquals(other.general, before[1])
@@ -1104,12 +1122,12 @@ function Testhanjin_commander_retinue:testLimitedNullificationSourceConsumesChan
 end
 
 --- 使用已宣告后被无懈可击抵消：次数不返还。
-function Testhanjin_commander_retinue:testNullifiedAbilityUseStaysConsumed()
+function Testqiao_commander_retinue:testNullifiedAbilityUseStaysConsumed()
   local holder, user, victim, nullifier = room().players[1], room().players[2], room().players[3], room().players[4]
-  setHidden(holder, "hanjin_test__commander_duel", "hanjin_test__shu_1", "shu")
-  setHidden(user, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(victim, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
-  setHidden(nullifier, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(holder, "qiao_test__commander_duel", "qiao_test__shu_1", "shu")
+  setHidden(user, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(victim, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
+  setHidden(nullifier, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   settleKingdom(holder, "shu")
   settleKingdom(user, "shu")
   settleKingdom(victim, "shu")
@@ -1129,22 +1147,22 @@ function Testhanjin_commander_retinue:testNullifiedAbilityUseStaysConsumed()
   local hp = victim.hp
   FkTest.setNextReplies(nullifier, { { card = nullification.id } })
   FkTest.setNextReplies(user, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(user, "hanjin_test__commander_duel", { victim })
+  local use = useAbilityThroughEngine(user, "qiao_test__commander_duel", { victim })
   lu.assertNotEquals(type(use), "string")
 
   -- 效果已被抵消，但使用已宣告，限一机会保持已用。
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_duel"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_duel"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_duel"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_duel"))
   lu.assertEquals(victim.hp, hp)
   lu.assertFalse(table.contains(nullifier:getCardIds("h"), nullification.id))
 end
 
 --- before_use 支付、PreCardUse 中止：释放临时占用，不永久扣一次。
-function Testhanjin_commander_retinue:testPreCardUseAbortReleasesReservation()
+function Testqiao_commander_retinue:testPreCardUseAbortReleasesReservation()
   local holder, user, backup = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(user, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(backup, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
+  setHidden(holder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(user, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(backup, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(user, "shu")
   settleKingdom(backup, "shu")
@@ -1152,31 +1170,31 @@ function Testhanjin_commander_retinue:testPreCardUseAbortReleasesReservation()
   revealBoth(user)
   revealBoth(backup)
   grantProbe(user, ABORT_SKILL)
-  FkTest.runInRoom(function() room():setTag("hanjin_test_abort_active", true) end)
+  FkTest.runInRoom(function() room():setTag("qiao_test_abort_active", true) end)
 
   FkTest.setNextReplies(user, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(user, "hanjin_test__commander_guanyu")
+  local use = useAbilityThroughEngine(user, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(use), "string")
-  lu.assertFalse(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_guanyu"))
+  lu.assertFalse(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_guanyu"))
   -- 移将代价已支付（新白板按当时可得兵种转换），但本局机会未被永久消耗。
   lu.assertTrue(C.isSoldier(user.general))
-  lu.assertNotNil(C.buildViewAsCard(backup, "hanjin_test__commander_guanyu"))
-  FkTest.runInRoom(function() room():setTag("hanjin_test_abort_active", false) end)
+  lu.assertNotNil(C.buildViewAsCard(backup, "qiao_test__commander_guanyu"))
+  FkTest.runInRoom(function() room():setTag("qiao_test_abort_active", false) end)
 
   FkTest.setNextReplies(backup, { { "mainGeneral" } })
-  local second = useAbilityThroughEngine(backup, "hanjin_test__commander_guanyu")
+  local second = useAbilityThroughEngine(backup, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(second), "string")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_guanyu"))
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_guanyu"))
 end
 
 --- 支付/移将回调期间同一来源被临时占用，重入被拒绝且不误扣武将。
-function Testhanjin_commander_retinue:testPaymentCallbackReentryIsBlocked()
+function Testqiao_commander_retinue:testPaymentCallbackReentryIsBlocked()
   local holder, user, other = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin_test__commander_guanyu", "hanjin_test__shu_1", "shu")
-  setHidden(user, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(other, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
+  setHidden(holder, "qiao_test__commander_guanyu", "qiao_test__shu_1", "shu")
+  setHidden(user, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(other, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(user, "shu")
   settleKingdom(other, "shu")
@@ -1185,28 +1203,28 @@ function Testhanjin_commander_retinue:testPaymentCallbackReentryIsBlocked()
   revealBoth(other)
   grantProbe(user, REENTRY_SKILL)
   FkTest.runInRoom(function()
-    room():setTag("hanjin_test_reentry_active", true)
-    room():setTag("hanjin_test_reentry_player", other.id)
-    room():setTag("hanjin_test_reentry_source", "hanjin_test__commander_guanyu")
+    room():setTag("qiao_test_reentry_active", true)
+    room():setTag("qiao_test_reentry_player", other.id)
+    room():setTag("qiao_test_reentry_source", "qiao_test__commander_guanyu")
   end)
 
   FkTest.setNextReplies(user, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(user, "hanjin_test__commander_guanyu")
+  local use = useAbilityThroughEngine(user, "qiao_test__commander_guanyu")
   lu.assertNotEquals(type(use), "string")
-  lu.assertFalse(room():getTag("hanjin_test_reentry_result"))
-  lu.assertEquals(other.general, "hanjin_test__shu_4")
-  lu.assertEquals(other.deputyGeneral, "hanjin_test__shu_5")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin_test__commander_guanyu"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin_test__commander_guanyu"))
-  FkTest.runInRoom(function() room():setTag("hanjin_test_reentry_active", false) end)
+  lu.assertFalse(room():getTag("qiao_test_reentry_result"))
+  lu.assertEquals(other.general, "qiao_test__shu_4")
+  lu.assertEquals(other.deputyGeneral, "qiao_test__shu_5")
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_test__commander_guanyu"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_test__commander_guanyu"))
+  FkTest.runInRoom(function() room():setTag("qiao_test_reentry_active", false) end)
 end
 
 --- 用正式关羽/周仓数据走完整引擎入口用一次【酒】。
-function Testhanjin_commander_retinue:testFormalGuanyuZhoucangEndToEnd()
+function Testqiao_commander_retinue:testFormalGuanyuZhoucangEndToEnd()
   local holder, target, borrower = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin__shu002", "hanjin__shu001", "shu")
-  setHidden(target, "hanjin__shu007", "hanjin__shu008", "shu")
-  setHidden(borrower, "hanjin__shu003", "hanjin__shu004", "shu")
+  setHidden(holder, "qiao_heg__shu002", "qiao_heg__shu001", "shu")
+  setHidden(target, "qiao_heg__shu007", "qiao_heg__shu008", "shu")
+  setHidden(borrower, "qiao_heg__shu003", "qiao_heg__shu004", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(target, "shu")
   settleKingdom(borrower, "shu")
@@ -1214,26 +1232,26 @@ function Testhanjin_commander_retinue:testFormalGuanyuZhoucangEndToEnd()
   revealBoth(target)
   revealBoth(borrower)
 
-  lu.assertTrue(C.commanders["hanjin__shu002"].limited)
+  lu.assertTrue(C.commanders["qiao_heg__shu002"].limited)
   gainBlankAt(target, true)
-  lu.assertEquals(target.deputyGeneral, "hanjin__retinue_zhoucang")
-  lu.assertTrue(C.limitedRetinueTaken(room(), "hanjin__retinue_zhoucang"))
+  lu.assertEquals(target.deputyGeneral, "qiao_heg__retinue_zhoucang")
+  lu.assertTrue(C.limitedRetinueTaken(room(), "qiao_heg__retinue_zhoucang"))
 
   FkTest.setNextReplies(borrower, { { "mainGeneral" } })
-  local use = useAbilityThroughEngine(borrower, "hanjin__shu002")
+  local use = useAbilityThroughEngine(borrower, "qiao_heg__shu002")
   lu.assertNotEquals(type(use), "string")
-  lu.assertEquals(C.commanders["hanjin__shu002"].card, "hanjin__analeptic")
-  lu.assertTrue(C.limitedAbilityUsed(room(), "hanjin__shu002"))
-  lu.assertFalse(C.abilityReserved(room(), "hanjin__shu002"))
+  lu.assertEquals(C.commanders["qiao_heg__shu002"].card, "qiao__analeptic")
+  lu.assertTrue(C.limitedAbilityUsed(room(), "qiao_heg__shu002"))
+  lu.assertFalse(C.abilityReserved(room(), "qiao_heg__shu002"))
   lu.assertTrue(C.isBlankSoldier(borrower.general))
 end
 
 --- 普通翼从仍可被多次取得，不受偏将的全场唯一限制影响。
-function Testhanjin_commander_retinue:testOrdinaryRetinuesStayUnlimited()
+function Testqiao_commander_retinue:testOrdinaryRetinuesStayUnlimited()
   local holder, first, second = room().players[1], room().players[2], room().players[3]
-  setHidden(holder, "hanjin_test__commander_alpha", "hanjin_test__shu_1", "shu")
-  setHidden(first, "hanjin_test__shu_2", "hanjin_test__shu_3", "shu")
-  setHidden(second, "hanjin_test__shu_4", "hanjin_test__shu_5", "shu")
+  setHidden(holder, "qiao_test__commander_alpha", "qiao_test__shu_1", "shu")
+  setHidden(first, "qiao_test__shu_2", "qiao_test__shu_3", "shu")
+  setHidden(second, "qiao_test__shu_4", "qiao_test__shu_5", "shu")
   settleKingdom(holder, "shu")
   settleKingdom(first, "shu")
   settleKingdom(second, "shu")
@@ -1241,19 +1259,19 @@ function Testhanjin_commander_retinue:testOrdinaryRetinuesStayUnlimited()
   revealBoth(second)
   setBlankDirect(first, true)
   setBlankDirect(second, true)
-  FkTest.setNextReplies(first, { { "hanjin_test__retinue_alpha" } })
-  FkTest.setNextReplies(second, { { "hanjin_test__retinue_alpha" } })
+  FkTest.setNextReplies(first, { { "qiao_test__retinue_alpha" } })
+  FkTest.setNextReplies(second, { { "qiao_test__retinue_alpha" } })
   reveal(holder, false)
 
-  lu.assertEquals(first.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertEquals(second.deputyGeneral, "hanjin_test__retinue_alpha")
-  lu.assertFalse(C.limitedRetinueTaken(room(), "hanjin_test__retinue_alpha"))
-  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "hanjin_test__retinue_alpha"))
+  lu.assertEquals(first.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertEquals(second.deputyGeneral, "qiao_test__retinue_alpha")
+  lu.assertFalse(C.limitedRetinueTaken(room(), "qiao_test__retinue_alpha"))
+  lu.assertTrue(table.contains(C.availableRetinues(room(), "shu"), "qiao_test__retinue_alpha"))
 end
 
-function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndUsesSlash()
+function Testqiao_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndUsesSlash()
   local user, target = room().players[1], room().players[2]
-  setHidden(user, "hanjin__qun013", "hanjin__wei007", "qun")
+  setHidden(user, "qiao_heg__qun013", "qiao_heg__wei007", "qun")
   reveal(user, false)
   reveal(user, true)
 
@@ -1266,10 +1284,10 @@ function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndU
   lu.assertEquals(Fk:translate("deputyGeneral"), "副将")
   lu.assertTrue(user:hasSkill(C.ABILITY_SKILL))
   lu.assertTrue(skill:enabledAtPlay(user))
-  lu.assertEquals(C.markSources(user), { "hanjin__qun013" })
-  lu.assertEquals(Fk:translate("hanjin__qun013"), "马腾")
+  lu.assertEquals(C.markSources(user), { "qiao_heg__qun013" })
+  lu.assertEquals(Fk:translate("qiao_heg__qun013"), "马腾")
   lu.assertEquals(C.SOURCE_MARK:sub(1, 2), "@[")
-  local sourceSpec = Fk.qml_marks["hanjin_commander_sources"]
+  local sourceSpec = Fk.qml_marks["qiao_commander_sources"]
   lu.assertNotNil(sourceSpec)
   local beforeHide = C.markSources(user)
   lu.assertEquals(sourceSpec.how_to_show(C.SOURCE_MARK, beforeHide, user), "#hidden")
@@ -1280,22 +1298,22 @@ function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndU
     lu.assertEquals(clientPlayer:getMark(C.SOURCE_MARK), beforeHide)
   end
 
-  local source = C.source(room(), "hanjin__qun013")
+  local source = C.source(room(), "qiao_heg__qun013")
   lu.assertEquals(C.costCandidates(user, source), { true })
   -- 提供来源的马腾本人不能作为代价；主将位置必须保持不变。
   lu.assertFalse(C.payCost(user, source, false))
-  lu.assertEquals(user.general, "hanjin__qun013")
+  lu.assertEquals(user.general, "qiao_heg__qun013")
 
   local card
-  skill.interaction.data = "hanjin__qun013"
+  skill.interaction.data = "qiao_heg__qun013"
   FkTest.runInRoom(function() card = skill:viewAs(user, {}) end)
   lu.assertNotNil(card)
   lu.assertEquals(card.trueName, "slash")
   lu.assertEquals(card.skillName, C.ABILITY_SKILL)
-  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "hanjin__qun013")
+  lu.assertEquals(card:getMark(C.CARD_SOURCE_MARK), "qiao_heg__qun013")
 
   local hp = target.hp
-  FkTest.setNextReplies(user, { { "hanjin__retinue_xiliang_jingqi" } })
+  FkTest.setNextReplies(user, { { "qiao_heg__retinue_xiliang_jingqi" } })
   FkTest.setNextReplies(target, { "" })
   local accepted
   FkTest.runInRoom(function()
@@ -1304,18 +1322,18 @@ function Testhanjin_commander_retinue:testVisibleFormalMaTengEntryPaysZhenJiAndU
     room():useCard { from = user, tos = { target }, card = card }
   end)
   skill.interaction.data = nil
-  lu.assertEquals(user.general, "hanjin__qun013")
+  lu.assertEquals(user.general, "qiao_heg__qun013")
   lu.assertTrue(C.isSoldier(user.deputyGeneral))
-  lu.assertEquals(user.deputyGeneral, "hanjin__retinue_xiliang_jingqi")
+  lu.assertEquals(user.deputyGeneral, "qiao_heg__retinue_xiliang_jingqi")
   lu.assertEquals(target.hp, hp - 1)
 end
 
-function Testhanjin_commander_retinue:testClientPlayRequestListsDefaultAndSwitchesSources()
+function Testqiao_commander_retinue:testClientPlayRequestListsDefaultAndSwitchesSources()
   local firstHolder, secondHolder = room().players[1], room().players[2]
   local user, target = room().players[3], room().players[4]
-  setHidden(firstHolder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(secondHolder, "hanjin_test__commander_delta", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(firstHolder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(secondHolder, "qiao_test__commander_delta", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(firstHolder, false)
   reveal(secondHolder, false)
   reveal(user, false)
@@ -1323,8 +1341,8 @@ function Testhanjin_commander_retinue:testClientPlayRequestListsDefaultAndSwitch
 
   local entries = C.availableSourceEntries(user, "play")
   lu.assertEquals(#entries, 2)
-  lu.assertEquals(entries[1].key, "hanjin_test__commander_alpha")
-  lu.assertEquals(entries[2].key, "hanjin_test__commander_delta")
+  lu.assertEquals(entries[1].key, "qiao_test__commander_alpha")
+  lu.assertEquals(entries[2].key, "qiao_test__commander_delta")
   lu.assertStrContains(entries[1].label, "测试统领")
   lu.assertNotEquals(entries[1].label, entries[1].key)
 
@@ -1343,7 +1361,7 @@ function Testhanjin_commander_retinue:testClientPlayRequestListsDefaultAndSwitch
   lu.assertEquals(handler:skillButtonValidity(C.ABILITY_SKILL), true)
   lu.assertEquals(skill.interaction.spec.type, "custom")
   lu.assertEquals(skill.interaction.spec.qml.url,
-    "packages/hanjin/pkg/hanjin_mode/qml/CommanderSourceButtons.qml")
+    "packages/qiao/pkg/qiao_mode/qml/CommanderSourceButtons.qml")
   lu.assertEquals(#skill.interaction.spec.qml.prop.sources, 2)
   lu.assertEquals(skill.interaction.spec.qml.prop.currentKey, entries[1].key)
   lu.assertEquals(skill.interaction.data, entries[1].key)
@@ -1358,10 +1376,10 @@ function Testhanjin_commander_retinue:testClientPlayRequestListsDefaultAndSwitch
   handler:_finish()
 end
 
-function Testhanjin_commander_retinue:testClientPlayRequestDisablesOnlyNullificationSource()
+function Testqiao_commander_retinue:testClientPlayRequestDisablesOnlyNullificationSource()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_gamma", nil, "wu")
-  setHidden(user, "hanjin_test__wu_1", "hanjin_test__wu_2", "wu")
+  setHidden(holder, "qiao_test__commander_gamma", nil, "wu")
+  setHidden(user, "qiao_test__wu_1", "qiao_test__wu_2", "wu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1374,17 +1392,17 @@ function Testhanjin_commander_retinue:testClientPlayRequestDisablesOnlyNullifica
   handler:_finish()
 end
 
-function Testhanjin_commander_retinue:testClientPlayRequestTargetlessLimitedSource()
+function Testqiao_commander_retinue:testClientPlayRequestTargetlessLimitedSource()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_guanyu", nil, "shu")
-  setHidden(user, "hanjin_test__shu_1", "hanjin_test__shu_2", "shu")
+  setHidden(holder, "qiao_test__commander_guanyu", nil, "shu")
+  setHidden(user, "qiao_test__shu_1", "qiao_test__shu_2", "shu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
 
   local entries = C.availableSourceEntries(user, "play")
   lu.assertEquals(#entries, 1)
-  lu.assertEquals(entries[1].key, "hanjin_test__commander_guanyu")
+  lu.assertEquals(entries[1].key, "qiao_test__commander_guanyu")
   lu.assertTrue(entries[1].limited)
   lu.assertStrContains(entries[1].label, "（限一）")
 
@@ -1397,10 +1415,10 @@ function Testhanjin_commander_retinue:testClientPlayRequestTargetlessLimitedSour
   handler:_finish()
 end
 
-function Testhanjin_commander_retinue:testResponseNullificationSourceOpensInClientInteraction()
+function Testqiao_commander_retinue:testResponseNullificationSourceOpensInClientInteraction()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_gamma", nil, "wu")
-  setHidden(user, "hanjin_test__wu_1", "hanjin_test__wu_2", "wu")
+  setHidden(holder, "qiao_test__commander_gamma", nil, "wu")
+  setHidden(user, "qiao_test__wu_1", "qiao_test__wu_2", "wu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1409,16 +1427,16 @@ function Testhanjin_commander_retinue:testResponseNullificationSourceOpensInClie
   Fk.currentResponsePattern = "nullification"
   local entries = C.availableSourceEntries(user)
   lu.assertEquals(#entries, 1)
-  lu.assertEquals(entries[1].key, "hanjin_test__commander_gamma")
+  lu.assertEquals(entries[1].key, "qiao_test__commander_gamma")
   lu.assertTrue(Fk.skills[C.ABILITY_SKILL]:enabledAtNullification(user))
   lu.assertFalse(Fk.skills[C.ABILITY_SKILL]:enabledAtResponse(user, true))
   Fk.currentResponsePattern = oldPattern
 end
 
-function Testhanjin_commander_retinue:testClientSourceEntriesRespectUseTimes()
+function Testqiao_commander_retinue:testClientSourceEntriesRespectUseTimes()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1432,10 +1450,10 @@ function Testhanjin_commander_retinue:testClientSourceEntriesRespectUseTimes()
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
 end
 
-function Testhanjin_commander_retinue:testClientSourceEntriesRemoveSoldierSource()
+function Testqiao_commander_retinue:testClientSourceEntriesRemoveSoldierSource()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "wei")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1446,10 +1464,10 @@ function Testhanjin_commander_retinue:testClientSourceEntriesRemoveSoldierSource
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
 end
 
-function Testhanjin_commander_retinue:testClientSourceEntriesRequireCostAndFaction()
+function Testqiao_commander_retinue:testClientSourceEntriesRequireCostAndFaction()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin_test__commander_alpha", nil, "wei")
-  setHidden(user, "hanjin_test__wei_1", "hanjin_test__wei_2", "shu")
+  setHidden(holder, "qiao_test__commander_alpha", nil, "wei")
+  setHidden(user, "qiao_test__wei_1", "qiao_test__wei_2", "shu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1459,15 +1477,15 @@ function Testhanjin_commander_retinue:testClientSourceEntriesRequireCostAndFacti
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 0)
 end
 
-function Testhanjin_commander_retinue:testAbilityLabelsUseCardNames()
-  lu.assertEquals(C.abilityLabel("hanjin__wei004"), "张辽·杀")
-  lu.assertEquals(C.abilityLabel("hanjin__shu005"), "赵云·无懈可击")
-  lu.assertEquals(C.abilityLabel("hanjin__shu002"), "关羽·酒（限一）")
+function Testqiao_commander_retinue:testAbilityLabelsUseCardNames()
+  lu.assertEquals(C.abilityLabel("qiao_heg__wei004"), "张辽·杀")
+  lu.assertEquals(C.abilityLabel("qiao_heg__shu005"), "赵云·无懈可击")
+  lu.assertEquals(C.abilityLabel("qiao_heg__shu002"), "关羽·酒（限一）")
 end
 
-function Testhanjin_commander_retinue:testClientSourceEntriesDoNotRequireTargetsBeforeActivation()
+function Testqiao_commander_retinue:testClientSourceEntriesDoNotRequireTargetsBeforeActivation()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  setHidden(user, "qiao_test__commander_alpha", "qiao_test__wei_1", "wei")
   reveal(user, false)
   reveal(user, true)
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
@@ -1479,14 +1497,14 @@ function Testhanjin_commander_retinue:testClientSourceEntriesDoNotRequireTargets
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
 end
 
-function Testhanjin_commander_retinue:testTargetProhibitionDoesNotDisableCommanderEntry()
+function Testqiao_commander_retinue:testTargetProhibitionDoesNotDisableCommanderEntry()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  setHidden(user, "qiao_test__commander_alpha", "qiao_test__wei_1", "wei")
   reveal(user, false)
   reveal(user, true)
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
 
-  local name = "#hanjin_test_prohibit_all_targets"
+  local name = "#qiao_test_prohibit_all_targets"
   if Fk.skills[name] == nil then
     local skeleton = fk.CreateSkill { name = name }
     skeleton:addEffect("prohibit", {
@@ -1506,19 +1524,19 @@ function Testhanjin_commander_retinue:testTargetProhibitionDoesNotDisableCommand
 
 end
 
-function Testhanjin_commander_retinue:testAbilityLimitIsIndependentFromRetinueLimit()
-  local limitedOnly = C.commanders["hanjin_test__commander_limited_only"]
-  local unlimited = C.commanders["hanjin_test__commander_unlimited_with_limited_retinue"]
+function Testqiao_commander_retinue:testAbilityLimitIsIndependentFromRetinueLimit()
+  local limitedOnly = C.commanders["qiao_test__commander_limited_only"]
+  local unlimited = C.commanders["qiao_test__commander_unlimited_with_limited_retinue"]
   lu.assertTrue(limitedOnly.limited)
   lu.assertFalse(unlimited.limited)
-  lu.assertStrContains(C.abilityLabel("hanjin_test__commander_limited_only"), "（限一）")
-  lu.assertNotStrContains(C.abilityLabel("hanjin_test__commander_unlimited_with_limited_retinue"), "（限一）")
+  lu.assertStrContains(C.abilityLabel("qiao_test__commander_limited_only"), "（限一）")
+  lu.assertNotStrContains(C.abilityLabel("qiao_test__commander_unlimited_with_limited_retinue"), "（限一）")
 end
 
-function Testhanjin_commander_retinue:testFormalZhaoYunPlayPhaseIsDisabled()
+function Testqiao_commander_retinue:testFormalZhaoYunPlayPhaseIsDisabled()
   local holder, user = room().players[1], room().players[2]
-  setHidden(holder, "hanjin__shu005", nil, "shu")
-  setHidden(user, "hanjin_test__shu_1", "hanjin_test__shu_2", "shu")
+  setHidden(holder, "qiao_heg__shu005", nil, "shu")
+  setHidden(user, "qiao_test__shu_1", "qiao_test__shu_2", "shu")
   reveal(holder, false)
   reveal(user, false)
   reveal(user, true)
@@ -1534,14 +1552,14 @@ function Testhanjin_commander_retinue:testFormalZhaoYunPlayPhaseIsDisabled()
   handler:_finish()
 end
 
-function Testhanjin_commander_retinue:testDistanceDoesNotDisableCommanderEntry()
+function Testqiao_commander_retinue:testDistanceDoesNotDisableCommanderEntry()
   local user = room().players[1]
-  setHidden(user, "hanjin_test__commander_alpha", "hanjin_test__wei_1", "wei")
+  setHidden(user, "qiao_test__commander_alpha", "qiao_test__wei_1", "wei")
   reveal(user, false)
   reveal(user, true)
   lu.assertEquals(#C.availableSourceEntries(user, "play"), 1)
 
-  local name = "#hanjin_test_far_distance"
+  local name = "#qiao_test_far_distance"
   if Fk.skills[name] == nil then
     local skeleton = fk.CreateSkill { name = name }
     skeleton:addEffect("distance", {
@@ -1561,18 +1579,20 @@ function Testhanjin_commander_retinue:testDistanceDoesNotDisableCommanderEntry()
 
 end
 
-function Testhanjin_commander_retinue:testFormalSourceDescriptionNamesCardAndRetinue()
+function Testqiao_commander_retinue:testFormalSourceDescriptionNamesCardAndRetinue()
   local user = room().players[1]
-  setHidden(user, "hanjin__shu005", "hanjin__shu001", "shu")
+  setHidden(user, "qiao_heg__shu005", "qiao_heg__shu001", "shu")
   reveal(user, false)
   local description = Fk:getDescription(C.ABILITY_SKILL, nil, user)
   lu.assertTrue(description:find("若你没有士兵，你可以移除一张不为赵云的武将牌，视为使用【无懈可击】。", 1, true) ~= nil)
   lu.assertTrue(description:find("「白马义从」", 1, true) ~= nil)
   lu.assertFalse(description:find("其标注的牌", 1, true) ~= nil)
-  lu.assertEquals(C.description(user, "hanjin__shu005"), description)
+  -- 头像详情经 skill_source_labels 包裹〔统领〕标签；规则/UI 原始描述不带标签。
+  local original = C.description(user, "qiao_heg__shu005")
+  lu.assertEquals(description, "<b>〔统领〕</b> " .. original)
   local skill = Fk.skills[C.ABILITY_SKILL]
   local previous = skill.interaction.data
-  skill.interaction.data = "hanjin__shu005"
+  skill.interaction.data = "qiao_heg__shu005"
   local prompt = skill:prompt(user)
   skill.interaction.data = previous
   lu.assertEquals(prompt, "移除一张不为赵云的武将牌，视为使用【无懈可击】。")
@@ -1581,22 +1601,22 @@ function Testhanjin_commander_retinue:testFormalSourceDescriptionNamesCardAndRet
   lu.assertFalse(prompt:find("翼从", 1, true) ~= nil)
 end
 
-function Testhanjin_commander_retinue:testMultipleDescriptionsRemainSourceSpecific()
+function Testqiao_commander_retinue:testMultipleDescriptionsRemainSourceSpecific()
   local user = room().players[1]
-  setHidden(user, "hanjin__shu005", "hanjin__shu003", "shu")
+  setHidden(user, "qiao_heg__shu005", "qiao_heg__shu003", "shu")
   reveal(user, false)
   reveal(user, true)
-  local zhao = C.description(user, "hanjin__shu005")
+  local zhao = C.description(user, "qiao_heg__shu005")
   lu.assertTrue(zhao:find("不为赵云", 1, true) ~= nil)
   lu.assertFalse(zhao:find("视为使用【酒】", 1, true) ~= nil)
   local all = C.description(user)
   lu.assertTrue(all:find(zhao, 1, true) ~= nil)
 end
 
-function Testhanjin_commander_retinue:testRealClientPlayerWithoutServerRoomCanUseCommanderSlash()
+function Testqiao_commander_retinue:testRealClientPlayerWithoutServerRoomCanUseCommanderSlash()
   local current = room()
   local user = current.players[1]
-  setHidden(user, "hanjin__shu006", "hanjin__shu007", "shu")
+  setHidden(user, "qiao_heg__shu006", "qiao_heg__shu007", "shu")
   reveal(user, false)
   reveal(user, true)
   user.phase = Player.Play
@@ -1617,49 +1637,49 @@ function Testhanjin_commander_retinue:testRealClientPlayerWithoutServerRoomCanUs
     local me = clients[1]
     lu.assertNil(me.room)
     lu.assertEquals(me.class.name, "ClientPlayer")
-    lu.assertTrue(me:canUseTo(Fk:cloneCard("hanjin__slash"), clients[2]))
+    lu.assertTrue(me:canUseTo(Fk:cloneCard("qiao__slash"), clients[2]))
     lu.assertTrue(Fk.skills[C.ABILITY_SKILL]:enabledAtPlay(me))
     local entries = C.availableSourceEntries(me, "play")
-    lu.assertEquals(entries[1].key, "hanjin__shu006")
+    lu.assertEquals(entries[1].key, "qiao_heg__shu006")
   end)
   Fk.currentRoom = originalRoom
   if not ok then error(err) end
 end
 
-function Testhanjin_commander_retinue:testSimaShiSourceCreatesHeartAdaptationCard()
-  local Adaptation = require "packages.hanjin.pkg.hanjin_mode.rules.adaptation"
-  local card = C.viewAsCardForClient(room().players[1], "hanjin__jin002")
-  lu.assertEquals(card.name, "hanjin__unexpectation")
+function Testqiao_commander_retinue:testSimaShiSourceCreatesHeartAdaptationCard()
+  local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+  local card = C.viewAsCardForClient(room().players[1], "qiao_heg__jin002")
+  lu.assertEquals(card.name, "qiao__unexpectation")
   lu.assertEquals(card.suit, Card.Heart)
   lu.assertTrue(Adaptation.isAdaptationCard(card))
   local entries = Adaptation.getEntries(card)
   lu.assertEquals(#entries, 1)
   lu.assertEquals(entries[1].condition, "zhuzhan")
   lu.assertEquals(entries[1].effect, "add_target")
-  lu.assertEquals(C.abilityLabel("hanjin__jin002"), "司马师·♥出其不意〈助战→目标+1〉")
-  local prompt = C.describeSource("hanjin__jin002", {}, true, nil, true)
+  lu.assertEquals(C.abilityLabel("qiao_heg__jin002"), "司马师·♥出其不意〈助战→目标+1〉")
+  local prompt = C.describeSource("qiao_heg__jin002", {}, true, nil, true)
   lu.assertTrue(prompt:find("♥出其不意〈助战→目标+1〉", 1, true) ~= nil)
-  lu.assertFalse(Adaptation.isAdaptationCard(Fk:cloneCard("hanjin__unexpectation")))
+  lu.assertFalse(Adaptation.isAdaptationCard(Fk:cloneCard("qiao__unexpectation")))
 end
 
-function Testhanjin_commander_retinue:testZhuRongCommanderSlashIgnoresDistanceOnly()
+function Testqiao_commander_retinue:testZhuRongCommanderSlashIgnoresDistanceOnly()
   local current = room()
   local user, target = current.players[1], current.players[2]
-  setHidden(user, "hanjin__shu015", "hanjin__shu001", "shu")
+  setHidden(user, "qiao_heg__shu015", "qiao_heg__shu001", "shu")
   reveal(user, false)
   reveal(user, true)
   user.phase = Player.Play
-  local name = "#hanjin_test_zhurong_far_distance"
+  local name = "#qiao_test_zhurong_far_distance"
   if Fk.skills[name] == nil then
     local skeleton = fk.CreateSkill { name = name }
     skeleton:addEffect("distance", { fixed_func = function() return 99 end })
     Fk:addSkill(skeleton:createSkill())
   end
   FkTest.runInRoom(function() current:addSkill(Fk.skills[name]) end)
-  local special = C.viewAsCardForClient(user, "hanjin__shu015")
+  local special = C.viewAsCardForClient(user, "qiao_heg__shu015")
   lu.assertTrue(user:canUseTo(special, target))
-  lu.assertFalse(not not user:canUseTo(Fk:cloneCard("hanjin__slash"), target))
-  lu.assertFalse(not not user:canUseTo(C.viewAsCardForClient(user, "hanjin__shu006"), target))
+  lu.assertFalse(not not user:canUseTo(Fk:cloneCard("qiao__slash"), target))
+  lu.assertFalse(not not user:canUseTo(C.viewAsCardForClient(user, "qiao_heg__shu006"), target))
   local handler = ReqPlayCard:new(user)
   handler.skill_name = C.ABILITY_SKILL
   handler:setup()
@@ -1667,4 +1687,4 @@ function Testhanjin_commander_retinue:testZhuRongCommanderSlashIgnoresDistanceOn
   handler:_finish()
 end
 
-return { name = "hanjin_commander_retinue" }
+return { name = "qiao_commander_retinue" }

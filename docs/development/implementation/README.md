@@ -4,6 +4,8 @@
 
 ## 武将与翼从
 
+- [六势力阵包、势包规则与实现路径审阅](generals/zhen-shi-review.md)（24普通武将、两君主及三新翼从，验证边界见记录）
+
 - [汉势力标准包](generals/han-standard.md)
 - [魏势力标准包](generals/wei-standard.md)
 - [蜀势力标准包](generals/shu-standard.md)
@@ -19,10 +21,11 @@
 - [统领与翼从](commander-retinue.md)
 - [指定额外目标](extra-targets.md)
 - [势力禁选规范](faction-ban.md)
-- [交换武将](general-exchange.md)
+- [交换武将](general-exchange.md)；离牌 fake/prelight 接口见同页 `GeneralCardState`
 - [客将](guest-factions.md)
 - [“X 只能当 Y 使用／打出”](only-as.md)
 - [第二君主](second-lord.md)
+- [技能选项、按钮与头像详情](skill-ui.md)
 - [野心家效忠](wild-allegiance.md)
 - [应变规范](adaptation.md)
 - [基础牌表](card-deck.md)
@@ -55,7 +58,7 @@
 - 技能索引表全站统一为三列：编号、武将、技能（技能列内链接）；分记录的技能在链接后括注“分记录”并交叉链接主记录。
 - 每条技能条目统一四小节，顺序固定：**标识与依据**（运行时 ID／源码／规则链接）、**实现与接口**、**验证依据**、**未完成与边界**。
 - 排序统一为汉→魏→蜀→吴→群→晋；同势力编号升序，同将技能保持原顺序。当前资料六势力均有条目；马术的 QUN008、QUN013、QUN027 复用 `#shu006-1`，不重复正文。
-- 锚点与骨架编号对应：`#han001-1`、`#wei002-3`、`#wu015a-1`；HAN016A 用 `#han016a-1`（运行时仍为 `hanjin__han016`）。翼从保留 `#mushun`、`#xiyuanjun` 等统一 ID。晋司马懿的同文应期不重复正文，只在 [WEI002 应期条目](generals/pair-hp.md#wei002-3)记录 `jin009-3` 来源。
+- 锚点与骨架编号对应：`#han001-1`、`#wei002-3`、`#wu015a-1`；HAN016A 用 `#han016a-1`（运行时仍为 `qiao_heg__han016`）。翼从保留 `#mushun`、`#xiyuanjun` 等统一 ID。晋司马懿的同文应期不重复正文，只在 [WEI002 应期条目](generals/pair-hp.md#wei002-3)记录 `jin009-3` 来源。
 
 新入口须区分只选择、返回待执行数据和已执行，核对当前事件数据的类型及客户端可见信息。上游接口以 `dependencies.lock.json` 锁定版本的本地源码核实，外部规则资料中的 API 引用仅供查找。
 
