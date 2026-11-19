@@ -344,8 +344,7 @@ function Testqiao_wei_phases:testShebianMovesBoardCardAfterHpLoss()
   setHand(room, p1(), {})
   setHand(room, p2(), {})
   -- 两步移牌的第一步要求选出的两名角色之间确有可移动牌；双方都给装备，
-  -- 避免选牌组合被过滤。回复 schema 依锁定客户端 QML：
-  -- { cardId = <cards 中的牌 id>, pos = cardsPosition[该牌下标] }。
+  -- 避免选牌组合被过滤。公开选牌弹窗回复所选牌 ID 的数组。
   local equip = addEquip(room, p2(), "qiao__chixiao_sword")
   addEquip(room, p1(), "qiao__vine", Card.Heart, 4)
 
@@ -353,7 +352,7 @@ function Testqiao_wei_phases:testShebianMovesBoardCardAfterHpLoss()
     "1",
     { card = { skill = "choose_players_to_move_card_in_board", subcards = {} },
       targets = { p1().id, p2().id } },
-    { cardId = equip, pos = 1 },
+    { equip },
   })
   inRoom(function() room:loseHp(p1(), 1, "test") end)
 
@@ -415,7 +414,7 @@ function Testqiao_wei_phases:testQiaobianPlayPhaseMovesBoardCard()
     FkTest.ReplyDiscard({ mine[1] }),
     { card = { skill = "choose_players_to_move_card_in_board", subcards = {} },
       targets = { p1().id, p2().id } },
-    { cardId = equip, pos = 1 },
+    { equip },
   })
   inRoom(function() room.logic:trigger(fk.EventPhaseChanging, p1(), data) end)
 
