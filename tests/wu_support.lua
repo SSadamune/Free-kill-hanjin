@@ -347,29 +347,25 @@ function Testqiao_wu_support:testGuzhengGivesOneAndTakesUpToThree()
     { "qiao__jink", Card.Heart, 2 },
     { "qiao__jink", Card.Club, 3 },
     { "qiao__slash", Card.Diamond, 4 },
+    { "qiao__slash", Card.Spade, 5 },
   })
   inRoom(function() p1.hp = p1.maxHp end)
 
-  local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToChooseCards
-  local askCount = 0
-  room().askToSkillInvoke = function(self, player, params)
-    if params.skill_name ~= GUZHENG then return oldInvoke(self, player, params) end
-    return true
-  end
-  room().askToChooseCards = function(self, player, params)
-    if params.skill_name ~= GUZHENG then return oldAsk(self, player, params) end
-    askCount = askCount + 1
-    if askCount == 1 then return { ids[1] } end
-    return { ids[2], ids[3], ids[4] }
-  end
-  local ok, err = pcall(function()
-    inRoom(function() room():throwCard(ids, "test", p2, p2) end)
+  local request
+  FkTest.setRoomBreakpoint(p1, "CustomDialog", function(data)
+    request = data
+    return false
   end)
-  room().askToSkillInvoke, room().askToChooseCards = oldInvoke, oldAsk
-  assert(ok, err)
+  FkTest.setNextReplies(p1, { "1", ids[1], { ids[2], ids[3], ids[4] } })
+  inRoom(function() room():throwCard(ids, "test", p2, p2) end)
 
-  lu.assertEquals(#p2:getCardIds("h"), 1)
-  lu.assertEquals(#p1:getCardIds("h"), 3)
+  lu.assertNotNil(request)
+  lu.assertEquals(request.component.url, "packages/qiao/pkg/qiao_mode/qml/GuzhengGainBox.qml")
+  lu.assertItemsEquals(request.component.prop.cards, { ids[2], ids[3], ids[4], ids[5] })
+  lu.assertEquals(request.component.prop.maxGain, 3)
+  lu.assertEquals(p2:getCardIds("h"), { ids[1] })
+  lu.assertItemsEquals(p1:getCardIds("h"), { ids[2], ids[3], ids[4] })
+  lu.assertEquals(room():getCardArea(ids[5]), Card.DiscardPile)
 end
 
 function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
@@ -386,25 +382,15 @@ function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
   })
   inRoom(function() p1.hp = p1.maxHp end)
 
-  local oldInvoke, oldChoose, oldAsk = room().askToSkillInvoke, room().askToChoosePlayers, room().askToChooseCards
-  local askCount, ownerAsked = 0, false
-  room().askToSkillInvoke = function(self, player, params)
-    if params.skill_name ~= GUZHENG then return oldInvoke(self, player, params) end
-    return true
-  end
-  room().askToChoosePlayers = function(self, player, params)
-    if params.skill_name ~= GUZHENG then return oldChoose(self, player, params) end
-    ownerAsked = true
-    lu.assertEquals(#params.targets, 2)
-    return { p3 }
-  end
-  room().askToChooseCards = function(self, player, params)
-    if params.skill_name ~= GUZHENG then return oldAsk(self, player, params) end
-    askCount = askCount + 1
-    if askCount == 1 then return { ids3[1] } end
-    return { ids3[2] }
-  end
-  local ok, err = pcall(function()
+  local ownerAsked = false
+  FkTest.setNextReplies(p1, { "1", ids3[1], { ids3[2] } })
+  skill_test.withSkillRequests(room(), GUZHENG, {
+    askToChoosePlayers = function(self, player, params)
+      ownerAsked = true
+      lu.assertItemsEquals(table.map(params.targets, Util.IdMapper), { p2.id, p3.id })
+      return { p3 }
+    end,
+  }, function()
     inRoom(function()
       room():moveCards({
         ids = ids2, from = p2, toArea = Card.DiscardPile,
@@ -415,8 +401,6 @@ function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
       })
     end)
   end)
-  room().askToSkillInvoke, room().askToChoosePlayers, room().askToChooseCards = oldInvoke, oldChoose, oldAsk
-  assert(ok, err)
 
   lu.assertTrue(ownerAsked)
   lu.assertEquals(#p2:getCardIds("h"), 0)
