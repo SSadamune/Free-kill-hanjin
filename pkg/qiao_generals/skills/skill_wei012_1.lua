@@ -32,6 +32,9 @@ end
 
 skill:addEffect("active", {
   prompt = "#qiao__skill_wei012_1-prompt",
+  -- 第一步只选目标，不选牌。主动技默认允许选牌（上限 999）；不声明零选牌时，
+  -- 客户端会把可选的装备牌展开到手牌区，看起来像装备被虚拟移入手中。
+  card_num = 0,
   target_num = 1,
   target_filter = function(self, player, to_select, selected)
     return #selected == 0 and to_select ~= player

@@ -45,6 +45,39 @@ end
 
 local QiaoPlayCard = recipientRequest(ReqPlayCard, "QiaoPlayCard")
 local QiaoActiveSkill = recipientRequest(ReqActiveSkill, "QiaoActiveSkill")
+
+--- virtual_viewas 的候选牌名可用性要按当前请求的 extra_data 复核。
+--- 上游刷新只调用 canUseOrResponseInCurrent(card)，正常出杀后再由仁德等
+--- 视为使用【杀】时 bypass_times 未进入次数判断，候选【杀】因此被置灰。
+--- 只在本模式的 virtual_viewas 请求上补 extra_data；服务端 choices 仍是
+--- 候选上限，canUse 仍保留客户端已知的禁止使用判断，其他请求沿用原行为。
+function QiaoActiveSkill:refreshInteraction()
+  if self.skill_name ~= "virtual_viewas" or not Modes.inRoom(self.room) then
+    return ReqActiveSkill.refreshInteraction(self)
+  end
+
+  local skill = Fk.skills.virtual_viewas
+  if not (skill and skill.interaction and skill.refresh_interaction) then return end
+  local extra_data = self.extra_data or {}
+  local refresh_data = skill:refresh_interaction(
+    self.player, self.pendings or {},
+    table.map(self.selected_targets, Util.Id2PlayerMapper),
+    extra_data)
+  if refresh_data == nil then return end
+
+  if refresh_data.expandItems and extra_data.choices then
+    for _, item in ipairs(refresh_data.expandItems) do
+      local prop = item.prop
+      if prop and prop.card and prop.additional_prop then
+        prop.additional_prop.selectable = table.contains(extra_data.choices, item.name)
+          and not not self.player:canUseOrResponseInCurrent(prop.card, extra_data)
+      end
+    end
+  end
+
+  self.scene:update("Interaction", "1", { refresh_data = refresh_data })
+end
+
 local QiaoClient = BaseClient:subclass("QiaoClient")
 
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。

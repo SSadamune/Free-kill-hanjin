@@ -160,8 +160,8 @@
 #### 励战（WEI011 曹仁）
 
 - **标识与依据**：运行时 ID `qiao__skill_wei011_2`；源码 [skill_wei011_2.lua](../../../../pkg/qiao_generals/skills/skill_wei011_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)魏区 WEI011。同将伪溃见[用牌目标与距离](active.md#wei011-1)。
-- **实现与接口**：结束阶段令任意名已受伤角色各摸一张牌。
-- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖励战令已受伤角色摸牌；历史 14/14。
+- **实现与接口**：结束阶段用同一个可取消的选人请求确认发动；选中的已受伤角色各摸一张牌。
+- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖选中已受伤角色与取消不增加发动次数。
 - **未完成与边界**：客户端目标选择未人工验收。
 
 <a id="wei014-2"></a>

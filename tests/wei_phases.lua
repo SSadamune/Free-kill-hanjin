@@ -8,6 +8,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local ReqUseCard = require "ltk.core.request_type.use_card"
 
 local QG = "qiao__skill_wei007_1"
 local LS = "qiao__skill_wei007_2"
@@ -144,6 +145,8 @@ local function triggerPhase(room, player, phase, event)
 end
 
 local function prepare()
+  -- 客户端响应 pattern 是全局状态；每个用例从干净窗口开始。
+  Fk.currentResponsePattern = nil
   local room = support.initQiaoRoom()
   initializeGenerals(room)
   return room
@@ -583,12 +586,28 @@ function Testqiao_wei_phases:testLizhanWoundedCharactersEachDraw()
   setHand(room, p3(), {})
   inRoom(function() p2().hp = p2().maxHp - 1 end)
 
-  FkTest.setNextReplies(p1(), { "1", FkTest.ReplyChoosePlayer({ p2() }) })
+  -- 选人窗口本身就是发动确认：只有一个可取消的合法选人请求。
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p2() }) })
   triggerPhase(room, p1(), Player.Finish)
 
   lu.assertEquals(#p2():getCardIds("h"), 1)
   lu.assertEquals(#p1():getCardIds("h"), 0)
   lu.assertEquals(p1():usedSkillTimes(LZ, Player.HistoryGame), 1)
+end
+
+function Testqiao_wei_phases:testLizhanCancelDoesNotCount()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei011")
+  setHand(room, p1(), {})
+  setHand(room, p2(), {})
+  inRoom(function() p2().hp = p2().maxHp - 1 end)
+
+  -- 取消同一个选人窗口即不发动，也不增加技能使用次数。
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({}) })
+  triggerPhase(room, p1(), Player.Finish)
+
+  lu.assertEquals(#p2():getCardIds("h"), 0)
+  lu.assertEquals(p1():usedSkillTimes(LZ, Player.HistoryGame), 0)
 end
 
 -- 倾国 ---------------------------------------------------------------------
@@ -622,6 +641,81 @@ function Testqiao_wei_phases:testQingguoConvertsBlackHandCardOnly()
     lu.assertTrue(skill:enabledAtPlay(p1()))
     lu.assertTrue(skill:enabledAtResponse(p1(), Fk:cloneCard("qiao__slash")))
   end)
+end
+
+--- 真实客户端响应入口：杀询问【闪】时走 ReqUseCard，而不是直接调用 viewAs。
+--- 根因是响应 pattern 必须用 trueName（"jink"），不能用程序牌名
+--- "qiao__jink"；否则客户端技能按钮根本不亮，直接 viewAs 测试无法发现。
+function Testqiao_wei_phases:testQingguoClientResponseSelectsBlackHandCard()
+  local room = FkTest.room
+  setHero(room, p1(), "qiao_heg__wei007")
+  local ids = setHand(room, p1(), { { "qiao__slash", Card.Spade, 2 } })
+  local black = ids[1]
+  addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 3)
+  local red
+  inRoom(function()
+    red = room:printCard("qiao__slash", Card.Heart, 2)
+    room:obtainCard(p1(), red, false, fk.ReasonJustMove)
+  end)
+  local equipId = inRoom(function() return p1():getCardIds("e")[1] end)
+
+  local confirmed
+  client_room.run(room, function(clients)
+    local me = clients[1]
+    Fk.currentResponsePattern = "jink"
+    local handler = ReqUseCard:new(me, { "jink", "jink", "", true, {} })
+    handler:setup()
+
+    lu.assertTrue(handler:skillButtonValidity(QG),
+      "要求【闪】的响应窗口应出现倾国按钮")
+    handler:selectSkill(QG, { selected = true })
+    lu.assertTrue(handler:cardValidity(black), "黑色手牌应可作为倾国材料")
+    lu.assertFalse(handler:cardValidity(red.id), "红色手牌不应可作为倾国材料")
+    lu.assertFalse(handler:cardValidity(equipId), "装备区黑色牌不应作为倾国材料")
+    handler:selectCard(black, { selected = true })
+    lu.assertTrue(handler:feasible(), "黑色手牌与【闪】目标条件齐备时应可确认")
+
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, name, data)
+      if name == "ReplyToServer" then
+        confirmed = data
+        return
+      end
+      return notify(_, name, data)
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ClientInstance.notifyUI = notify
+    handler:_finish()
+    if not ok then error(err, 0) end
+
+    -- 非【闪】请求不得亮起倾国，证明按钮按请求 pattern 而非正式牌 ID 判定。
+    Fk.currentResponsePattern = "slash"
+    local wrong = ReqUseCard:new(me, { "jink", "slash", "", true, {} })
+    wrong:setup()
+    lu.assertFalse(wrong:skillButtonValidity(QG),
+      "要求【杀】的窗口不得出现倾国按钮")
+    wrong:_finish()
+    Fk.currentResponsePattern = nil
+  end)
+
+  lu.assertNotNil(confirmed, "确认键应产生服务端回包")
+  lu.assertEquals(confirmed.card.skill, QG)
+  lu.assertEquals(confirmed.card.subcards, { black })
+  lu.assertEquals(confirmed.targets, {})
+
+  local use
+  inRoom(function()
+    use = room:handleUseCardReply(p1(), confirmed, {
+      pattern = "jink",
+      skill_name = "jink",
+      is_response = true,
+    })
+  end)
+  lu.assertNotNil(use, "服务端应接受倾国转化出的【闪】")
+  lu.assertEquals(use.card.name, "qiao__jink")
+  lu.assertEquals(use.card.trueName, "jink")
+  lu.assertEquals(use.card.skillName, QG)
+  lu.assertEquals(Card:getIdList(use.card), { black })
 end
 
 -- 轻辎 ---------------------------------------------------------------------
