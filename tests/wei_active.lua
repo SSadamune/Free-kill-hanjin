@@ -2,6 +2,8 @@
 -- 夹具使用明确白板双将并重算 hp，避免随机真实双将的技能在嵌套【杀】时额外询问。
 -- 输入通过官方 FkTest 回复队列；不替换 useVirtualCard/room:useCard/damage。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local WEIKUI = "qiao__skill_wei011_1"
 local QIANGXI = "qiao__skill_wei012_1"
@@ -38,6 +40,16 @@ local function give(player, name, suit, number)
   inRoom(function()
     local card = room():printCard(name, suit or Card.Spade, number or 7)
     room():obtainCard(player, card, false, fk.ReasonJustMove)
+    id = card.id
+  end)
+  return id
+end
+
+local function equip(player, name, suit, number)
+  local id
+  inRoom(function()
+    local card = room():printCard(name, suit or Card.Spade, number or 7)
+    room():moveCardTo(card, Card.PlayerEquip, player, fk.ReasonJustMove, "test", nil, false)
     id = card.id
   end)
   return id
@@ -171,6 +183,65 @@ function Testqiao_wei_active:testQiangxiDiscardHandWeaponPaysOnce()
   lu.assertEquals(moved, 1, "武器只应实际移动一次")
   lu.assertTrue(table.contains(p1:getCardIds("h"), second))
   lu.assertTrue(table.contains(p1:getTableMark("qiao__skill_wei012_1-targets-phase"), p2.id))
+end
+
+-- 强袭的第一步只选目标。主动技默认允许选牌（上限 999）；若第一步不声明零选牌，
+-- 真实客户端会把可选的装备展开到手牌区（看起来像装备被虚拟移入手中）。
+function Testqiao_wei_active:testQiangxiFirstStepSelectsNoCards()
+  local p1 = p(1)
+  grant(p1, QIANGXI)
+  clearCards(p1)
+  local handWeapon = give(p1, "qiao__axe", Card.Spade, 5)
+  local equipWeapon = equip(p1, "qiao__axe", Card.Diamond, 5)
+  setPlayPhase(p1)
+
+  client_room.run(room(), function(clients)
+    local me = clients[1]
+    local handler = ReqPlayCard:new(me)
+    handler.skill_name = QIANGXI
+    handler:setup()
+    handler:selectSkill(QIANGXI, { selected = true })
+
+    -- 进入真实出牌阶段主动技请求后，第一步不应展开装备区，也不应有牌可点。
+    lu.assertNil(handler.expanded_piles["_equip"], "强袭第一步不应把装备展开到手牌区")
+    lu.assertFalse(handler:cardValidity(handWeapon), "强袭第一步不应选择手牌")
+    lu.assertFalse(handler:cardValidity(equipWeapon), "强袭第一步不应选择装备")
+    -- 目标选择仍保留：攻击范围内的其他角色可选，只选目标即可确认。
+    lu.assertTrue(handler:targetValidity(clients[2].id), "攻击范围内的角色仍应可选")
+    handler:selectTarget(clients[2].id, { selected = true })
+    lu.assertTrue(handler:feasible(), "强袭只选目标即可确认")
+    handler:_finish()
+  end)
+end
+
+function Testqiao_wei_active:testQiangxiDiscardEquippedWeaponPaysOnce()
+  local p1, p2 = p(1), p(2)
+  grant(p1, QIANGXI)
+  clearCards(p1)
+  clearCards(p2)
+  -- 另一张手牌武器确保进入真实选牌请求，本次支付选择装备区的武器。
+  give(p1, "qiao__axe", Card.Spade, 5)
+  local equipped = equip(p1, "qiao__axe", Card.Diamond, 5)
+  setPlayPhase(p1)
+  inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp end)
+
+  local moved = 0
+  local originalMove = room().moveCards
+  room().moveCards = function(self, ...)
+    for _, move in ipairs({ ... }) do
+      if table.contains(move.ids or {}, equipped) then moved = moved + 1 end
+    end
+    return originalMove(self, ...)
+  end
+  FkTest.setNextReplies(p1, { { QIANGXI_OPT_DISCARD }, FkTest.ReplyDiscard({ equipped }) })
+  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }) end)
+  room().moveCards = originalMove
+  assert(ok, err)
+
+  lu.assertEquals(p1.hp, p1.maxHp, "弃装备区武器不消耗体力")
+  lu.assertEquals(p2.hp, p2.maxHp - 1, "弃武器后正常造成1点伤害")
+  lu.assertEquals(room():getCardArea(equipped), Card.DiscardPile)
+  lu.assertEquals(moved, 1, "装备区武器只应实际移动一次")
 end
 
 function Testqiao_wei_active:testWeikuiDiscardsWithoutJink()
