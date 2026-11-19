@@ -130,13 +130,8 @@ function QiaoClient:canConsumeEdict(holderId)
     and request:isInstanceOf(QiaoPlayCard) and request:canConsumeEdict(holderId)
 end
 
--- The allowed factions and replacement setting are public room data. Resolve
--- only the name already displayed by the photo, never its hidden counterpart.
-function QiaoClient:isGuestPortrait(name)
-  local allowed = self:getBanner("all_kingdoms")
-  if type(allowed) ~= "table" or not Guest.guests[name] then return false end
-  local entry = Guest.resolve(name, allowed, Guest.replacementEnabled(self))
-  return entry ~= nil and entry.source == "guest"
+function QiaoClient:guestIllustrationsEnabled()
+  return self.settings ~= nil and Guest.replacementEnabled(self)
 end
 
 -- ClientBase.serialize assumes the concrete class is a direct Client subclass and

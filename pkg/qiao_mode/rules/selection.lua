@@ -185,6 +185,7 @@ function M.askData(room, offers, guests)
   guests = guests or Guest.guestCandidates(room, offers)
   local names, pairing = M.pairing(room, offers)
   local freeAssign = M.freeAssign(room)
+  local guestIllustrations = Guest.replacementEnabled(room)
   local wild, guestFactions = {}, {}
   for _, name in ipairs(names) do
     local entry = Guest.factionsOf(room, name)
@@ -204,14 +205,13 @@ function M.askData(room, offers, guests)
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
           extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
-            freeAssign = freeAssign, offers = table.simpleClone(offers) },
+            freeAssign = freeAssign, guestIllustrations = guestIllustrations, offers = table.simpleClone(offers) },
         },
       },
     },
   }
-  -- The HanJin box owns the right-click free-assign entry. Use it whenever free
-  -- assignment is on, even if this particular deal has no guest candidates.
-  if freeAssign or next(guestFactions) then
+  -- The HanJin box provides guest illustrations, redraw and free assignment.
+  if guestIllustrations or freeAssign then
     data.component.name, data.component.uri = nil, nil
     data.component.url = M.redraw_url
   end
@@ -445,8 +445,6 @@ Fk:addMiniGame {
       return not state.failed[name]
     end)
     local data = M.askData(player.room, offers, guests)
-    -- Keep the live component for reconnect even after the last guest was replaced.
-    data.component.name, data.component.uri, data.component.url = nil, nil, M.redraw_url
     state.req:setData(player, data)
     local pair = assert(M.firstLegalPair(player.room, offers))
     state.req:setDefaultReply(player, { pair.main, pair.deputy })

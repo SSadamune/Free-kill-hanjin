@@ -80,17 +80,28 @@ function Testqiao_guest_allegiance:testGuestResolutionOrder()
   lu.assertNil(Guest.resolve("qiao_test__wei_1", { "wu", "qun" }))
 end
 
-function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomResolution()
+function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   local client = QiaoClient:new(ClientInstance.client)
+  lu.assertFalse(client:guestIllustrationsEnabled())
   client.settings = { gameMode = "qiao_heg_mode" }
-  local guest, original = "qiao_test__guest_dual_1", "qiao_test__guest_partial"
-  lu.assertFalse(client:isGuestPortrait(guest))
-  client:setBanner("all_kingdoms", { "wu", "qun", "han", "jin" })
-  lu.assertTrue(client:isGuestPortrait(guest))
-  lu.assertFalse(client:isGuestPortrait(original))
-  lu.assertFalse(client:isGuestPortrait("anjiang"))
+  lu.assertTrue(client:guestIllustrationsEnabled())
   client.settings.qiao_guest_replacement = false
-  lu.assertFalse(client:isGuestPortrait(guest))
+  lu.assertFalse(client:guestIllustrationsEnabled())
+end
+
+function Testqiao_guest_allegiance:testOpeningPortraitsFollowRoomSettingWithoutGuestCandidates()
+  local offers = { "qiao_test__han_1", "qiao_test__han_2" }
+  for _, enabled in ipairs({ true, false }) do
+    local room = create { settings = { qiao_guest_replacement = enabled } }
+    FkTest.runInRoom(function()
+      local component = Selection.askData(room, offers).component
+      local extra = component.model.prop.extraData
+      lu.assertEquals(extra.guestIllustrations, enabled)
+      lu.assertEquals(extra.guests, {})
+      lu.assertEquals(component.url, enabled and Selection.redraw_url or nil)
+    end)
+    support.clearRoom()
+  end
 end
 
 function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelectedPackage()

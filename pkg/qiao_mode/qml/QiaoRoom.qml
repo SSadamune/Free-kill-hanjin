@@ -22,7 +22,8 @@ Room {
       fillMode: Image.PreserveAspectCrop
       source: {
         const name = deputy ? photo.deputyGeneral : photo.general;
-        return GuestIllustration.picture(name, GuestIllustration.inRoom(name)) ?? "";
+        if (!name || name === "anjiang") return "";
+        return GuestIllustration.picture(name, GuestIllustration.enabledInRoom()) ?? "";
       }
       visible: status === Image.Ready
     }

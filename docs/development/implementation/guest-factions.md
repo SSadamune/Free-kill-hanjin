@@ -42,8 +42,8 @@
 
 ### 客将插画
 
-- `GuestRedrawBox.qml` 按请求数据中的 `extraData.guestFactions` 识别当前牌面，候选、确认区与重抽沿用同一张卡片。自由选将补选的武将可按已同步的房间设定判断。
-- `QiaoRoom.qml` 根据 `Photo` 当前显示的主将和副将程序 ID 分别查询 `QiaoClient:isGuestPortrait`。该接口将客户端已有的 `all_kingdoms` 和 `qiao_guest_replacement` 交给 `Guest.resolve`，和服务端发将使用同一解析。房间摘要会恢复公开的 `all_kingdoms`，头像显示随引擎的武将属性更新，无需增发暗将身份或读取服务端的武将标记。
+- `GuestRedrawBox.qml` 读取请求中的 `extraData.guestIllustrations`，候选、确认区与重抽沿用同一张卡片。只要房间开关开启，即使本次没有可重抽的客将也使用这个选将框。`extraData.guestFactions` 继续标注本局实际客将的势力。
+- `QiaoRoom.qml` 通过 `QiaoClient:guestIllustrationsEnabled` 读取客户端的房间开关，按 `Photo` 当前显示的主将和副将程序 ID 分别取图。重连时房间摘要恢复设置和武将属性，暗将沿用引擎占位。
 - `GuestIllustration.js` 在选将、局内和图鉴共用 `SkinBank.getGeneralExtraPic(name, "guest/")`。缺图时选将和图鉴沿用原卡面，局内沿用引擎原头像。局内客将图放在 `PhotoBase` 的头像遮罩内，保留分栏和叠加效果。
 - 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。「客将势力」开关读取 `Guest.registeredInPackage` 返回的程序 ID 与势力表，复用原卡片委托的两个势力位置。第三个及后续势力标在体力下方。点击牌面沿用原详情入口。
 

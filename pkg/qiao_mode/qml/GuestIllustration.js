@@ -6,7 +6,6 @@ function picture(name, guest) {
   return guest && name ? Fk.SkinBank.getGeneralExtraPic(name, "guest/") : undefined;
 }
 
-function inRoom(name) {
-  return name && name !== "anjiang"
-    && Fk.Lua.ev(`ClientInstance:isGuestPortrait(${JSON.stringify(name)})`);
+function enabledInRoom() {
+  return Fk.Lua.ev("ClientInstance:guestIllustrationsEnabled()");
 }
