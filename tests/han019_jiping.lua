@@ -33,7 +33,7 @@ local function prepare()
   Fk.currentResponsePattern = nil
   local room = support.createRoom {
     mode = "qiao_heg_mode", realSelection = true,
-    settings = { qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }, qiao_kingdom_limit = 6 },
+    settings = { qiao_faction_ban_enabled = false },
   }
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "han", "han", "han", "wei", "wei", "wei", "wei" })

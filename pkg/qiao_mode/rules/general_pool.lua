@@ -35,9 +35,10 @@ function M.resolve(room, plan, opts)
     keptWild = plan.wild_kept or {}, replaced = {}, versions = {},
   }
   local keptSet = {}
+  local replacementEnabled = Guest.replacementEnabled(room)
   for _, name in ipairs(plan.kept) do
     keptSet[name] = true
-    local entry = Guest.resolve(name, allowed)
+    local entry = Guest.resolve(name, allowed, replacementEnabled)
     if entry then
       table.insert(result.names, name)
       result.factions[name] = entry

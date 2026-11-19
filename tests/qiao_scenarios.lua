@@ -11,9 +11,24 @@ Testqiao_scenarios = {
 
 local function create(options)
   options = options or {}
-  options.mode = "qiao_heg_mode"
+  options.mode = options.mode or "qiao_free_mode"
   options.realSelection = true
   return support.createRoom(options)
+end
+
+function Testqiao_scenarios:testCollectionIgnoresRemovedSettingsAndKeepsAllEnabledCandidatesWhenBanIsOff()
+  local room = create { mode = "qiao_heg_mode", settings = {
+    qiao_faction_ban_enabled = false, qiao_candidate_han = false, qiao_candidate_wei = false,
+    qiao_candidate_kingdoms = { "jin" }, qiao_kingdom_limit = 1,
+    qiao_wolves = true, revealAllOnStart = true, watchNextDeputy = true,
+    enterBattleRoyalOnFirstShuffle = true,
+  } }
+  lu.assertEquals(room:getBanner("all_kingdoms"), { "wei", "shu", "wu", "qun", "jin" })
+  lu.assertEquals(room:getBanner("qiao_banned_kingdoms"), {})
+  lu.assertFalse(room:getSettings("revealAllOnStart"))
+  lu.assertFalse(room:getSettings("watchNextDeputy"))
+  lu.assertFalse(room:getSettings("enterBattleRoyalOnFirstShuffle"))
+  lu.assertTrue(room:getSettings("old_battle_royal"))
 end
 
 function Testqiao_scenarios:testConsecutiveGamesRespectWinnerAndPreviousBan()
@@ -166,7 +181,7 @@ function Testqiao_scenarios:testCustomCandidateSetUsesExplicitLimit()
 end
 
 function Testqiao_scenarios:testInvalidCandidateSettingsFailFeasibility()
-  local mode = assert(Fk.game_modes.qiao_heg_mode)
+  local mode = assert(Fk.game_modes.qiao_free_mode)
   local settings = { playerNum = 8, gameMode = mode.name }
   settings._mode = { qiao_candidate_kingdoms = {}, qiao_kingdom_limit = 1 }
   lu.assertFalse(mode:feasible(settings))

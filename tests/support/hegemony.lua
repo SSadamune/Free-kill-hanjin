@@ -1,6 +1,7 @@
 -- Real mode initialization. Upstream regressions use scripted input; HanJin uses
 -- real Request replies and independent test content. Both pause before automatic turns.
 local M = {}
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local pairsForSeats = {
   { "hs__caocao", "hs__xiahoudun" },
   { "hs__simayi", "hs__zhangliao" },
@@ -15,7 +16,7 @@ local pairsForSeats = {
 function M.createRoom(options)
   options = options or {}
   local modeName = options.mode or "new_heg_mode"
-  if modeName == "qiao_heg_mode" then __dofile("../../../tests/support/qiao_content.lua") end
+  if Modes.isHanjin(modeName) then __dofile("../../../tests/support/qiao_content.lua") end
   local mode = assert(Fk.game_modes[modeName], "Install hegemony first")
   local originalLogic = mode.logic
   local logic = originalLogic():subclass("QiaoHegTestLogic")

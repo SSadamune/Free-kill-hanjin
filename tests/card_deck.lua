@@ -7,7 +7,7 @@ Testqiao_card_deck = { tearDown = support.clearRoom }
 
 local function create(options)
   options = options or {}
-  options.mode = "qiao_heg_mode"
+  options.mode = "qiao_free_mode"
   options.realSelection = true
   return support.createRoom(options)
 end

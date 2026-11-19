@@ -5,6 +5,7 @@
 -- 汉晋 A.isAdaptationCard(card, use) 判断“使用级”应变事实，不把实体材料牌
 -- 的应变条目或 Triggered 成功事件当作条件。条件事实由全局监听记录，因此
 -- 暗置、尚未获得技能或后来才获得技能都不抹去本回合已经发生的用牌。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin001_2",
 }
@@ -27,7 +28,7 @@ local PEACH = "qiao__peach"
 
 local function inQiao(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 --- Facts are bound to the current turn's room tag; PreTurnStart clears it.
@@ -161,7 +162,7 @@ skill:addEffect(fk.TurnEnd, {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()
     room:handleAddLoseSkills(me, skill.name, nil, false, true)
   end)

@@ -1,9 +1,10 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 
 M.key = "qiao_wolves"
 
 function M.enabled(room)
-  return room:getSettings(M.key) == true
+  return room:getSettings("gameMode") == Modes.free and room:getSettings(M.key) == true
 end
 
 function M.apply(room)
@@ -12,6 +13,11 @@ function M.apply(room)
   -- the historical-event skill. 汉晋鏖战的桃用途统一由 only_as 来源提供，
   -- 因此该设置只影响事件/奇珍等附加机制，不再影响桃的转换目标。
   room.settings._mode = table.clone(room.settings._mode or {})
+  if room:getSettings("gameMode") == Modes.collection then
+    for _, key in ipairs({ "watchNextDeputy", "enterBattleRoyalOnFirstShuffle", "revealAllOnStart" }) do
+      room.settings._mode[key] = false
+    end
+  end
   room.settings._mode.old_battle_royal = not enabled
   room.settings.old_battle_royal = not enabled
   if not enabled then

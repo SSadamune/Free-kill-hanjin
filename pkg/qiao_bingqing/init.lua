@@ -1,8 +1,9 @@
 -- 平行时空·君临天下·兵情篇
 -- 独立包：登记 EM(JIN001) 君司马炎；其余内容仍为空。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local package = Package:new("qiao_bingqing", Package.GeneralPack)
 package.extensionName = "qiao"
-package.game_modes_whitelist = { "qiao_heg_mode" }
+package.game_modes_whitelist = Modes.names
 
 local Jin = require "packages.qiao.pkg.qiao_bingqing.data.bingqing_lord_jin"
 local Han = require "packages.qiao.pkg.qiao_bingqing.data.bingqing_lord_han"

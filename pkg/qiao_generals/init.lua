@@ -10,15 +10,16 @@
 -- 已实装条目通过骨架的 qiaoImplemented 或下方 implemented 白名单
 -- 登记，并在加载时断言确有 effect。偏将的「限一」只在这里登记牌面标记，每局
 -- 唯一取得与限一统领能力由公共规则实现。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local extension = Package:new("qiao_generals")
 extension.extensionName = "qiao"
-extension.game_modes_whitelist = { "qiao_heg_mode" }
+extension.game_modes_whitelist = Modes.names
 
 -- 阵/势包使用独立 Package，避免把新卡混入标准 90 将的包与计数；两种内容
 -- 共用本目录的技能骨架、卡面数据和国战模式。独立包在模式创建后补登记白名单。
 local zhenshi = Package:new("qiao_zhenshi")
 zhenshi.extensionName = "qiao"
-zhenshi.game_modes_whitelist = { "qiao_heg_mode" }
+zhenshi.game_modes_whitelist = Modes.names
 
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_generals/skills")
 
@@ -346,16 +347,13 @@ Fk:addPostLoadFunc(function()
   assert(commanders == Data.commanderCount, "Commander source count mismatch")
   assert(skills == Data.skillCount, "Formal skill count mismatch")
 
-  -- qiao_heg_mode 由 qiao_mode 的 postLoad 函数在本函数之后创建，早于本
-  -- 函数执行的白名单映射合并看不到它。这里追加一个后置函数，在模式创建后把
-  -- 独立包加入白名单并重算禁用包，避免正式包在国战中被整体禁用。
+  -- 模式创建后把独立武将包加入两套模式白名单。
   Fk:addPostLoadFunc(function()
-    local mode = assert(Fk.game_modes.qiao_heg_mode,
-      "Missing qiao_heg_mode after postLoad")
-    if type(mode.whitelist) == "table" then
+    for _, name in ipairs(Modes.names) do
+      local mode = assert(Fk.game_modes[name], "Missing HanJin mode: " .. name)
       table.insertIfNeed(mode.whitelist, zhenshi.name)
-      Fk:loadDisabled()
     end
+    Fk:loadDisabled()
   end)
 end)
 

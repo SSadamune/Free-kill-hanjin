@@ -9,7 +9,7 @@
 | 内容 | 文件/接口 |
 | --- | --- |
 | 房主候选/上限与允许集 | `pkg/qiao_mode/rules/faction_ban.lua`：`resolveSettings`、`plan`、`registerKingdom`；候选外不可选 |
-| 客将势力登记与逐房间解析 | `pkg/qiao_mode/rules/guest_factions.lua`：`registerGuest(name, kingdoms)`、`resolve(name, allowed)`、`factionsOf(room, name)`、`pairKingdoms(room, main, deputy)`、`store(room, factions)` |
+| 客将势力登记与逐房间解析 | `pkg/qiao_mode/rules/guest_factions.lua`：`registerGuest(name, kingdoms)`、`resolve(name, allowed, replacementEnabled)`、`factionsOf(room, name)`、`pairKingdoms(room, main, deputy)`、`store(room, factions)` |
 | 开局将池、版本替换与状态落盘 | `pkg/qiao_mode/rules/general_pool.lua`：`resolve(room, versionPlan, options)`、`apply(room, built)` |
 | 选将请求、重抽、服务端复核 | `pkg/qiao_mode/rules/selection.lua` |
 | 武将弃牌堆与引擎入口拦截 | `pkg/qiao_mode/rules/general_discard.lua` |
@@ -17,6 +17,8 @@
 | 正式/测试内容 | `tests/support/guest_allegiance_content.lua`（仅测试）；正式登记见 `pkg/qiao_generals/data/standard.lua` |
 
 ### 房间状态与配将
+
+两种模式共享 `qiao_guest_replacement` 复选框，缺省开启。开局版本计划、将池解析及后续查询共用该设置，选将数据只为实际启用客将势力的牌提供重抽资格。济世保留救援结算，并按该开关决定是否进入客将交换。
 
 - `qiao_general_factions_v1` 房间 tag 保存本局每张入池牌的结果：`source = "original" | "guest" | "wild"` 及过滤后的 `kingdoms`。`guest` 表示印刷主势力全被禁、由客将势力转入；`wild` 只用于仍以野心家主将入池的原版。
 - 先完成[势力禁选](../../rules/faction-ban.md)和[野心家效忠](../../rules/wild-allegiance.md)的开局版本规划，再对保留名单逐张解析。任一印刷主势力未禁就用印刷势力；全部被禁才启用登记的客将势力；两者都没有未禁项则移出本局并加入 `disabled_generals`。

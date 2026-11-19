@@ -3,6 +3,7 @@
 -- 规则基线：docs/rules/generals/han001-liuxie.md 第 3 节，以及
 -- docs/rules/card-use-targets.md。主动技的选择阶段只完成“自己的牌”和收牌者
 -- B 的选择；交牌移动完成后再选择第三人 C 并发起拼点。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han001_2",
   max_phase_use_time = 1,
@@ -150,7 +151,7 @@ skill:addEffect("active", {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   lu.assertTrue(Fk.skills[skill.name]:getMinCardNum(me) >= 1)
 end)
 

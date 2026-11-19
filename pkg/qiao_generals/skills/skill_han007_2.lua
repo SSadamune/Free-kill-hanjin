@@ -9,6 +9,7 @@
 --
 -- 额外敏思：复用敏思的共用选牌/效果与辅助主动技，不永久授予技能；
 -- 辅助主动技名与敏思本体不同，不占用其出牌阶段限一次的次数。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han007_2",
 }
@@ -137,7 +138,7 @@ skill:addEffect(fk.Death, {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()
     room:handleAddLoseSkills(me, skill.name, nil, false, true)
   end)

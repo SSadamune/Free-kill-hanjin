@@ -4,6 +4,7 @@
 -- 时机是“成为【杀】的目标后”、响应之前；弃牌是发动消耗，先弃后摸。
 -- 可弃手牌不足两张时弃尽，零张时不发生弃牌移动但仍可摸两张；装备牌
 -- 不能用于补足。所有【杀】类别由 trueName == "slash" 识别。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han001_1",
 }
@@ -95,7 +96,7 @@ skill:addEffect(fk.TargetConfirmed, {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()
     room:handleAddLoseSkills(me, skill.name, nil, false, true)
     for _, p in ipairs(room.players) do p.hp = p.maxHp end

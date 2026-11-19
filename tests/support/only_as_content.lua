@@ -2,10 +2,13 @@
 if Fk.packages.qiao_test_only_as then return end
 local pack = Package:new("qiao_test_only_as", Package.CardPack)
 pack.extensionName = "qiao"
-pack.game_modes_whitelist = { "qiao_heg_mode" }
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+pack.game_modes_whitelist = Modes.names
 Fk.packages[pack.name] = pack
 table.insert(Fk.package_names, pack.name)
-table.insert(Fk.game_modes.qiao_heg_mode.whitelist, pack.name)
+for _, mode in ipairs(Modes.names) do
+  table.insert(Fk.game_modes[mode].whitelist, pack.name)
+end
 
 local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 

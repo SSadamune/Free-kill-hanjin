@@ -4,6 +4,7 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_qun2"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local L = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_longfei"
+local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
 local function inRoom(fn)
   local result
@@ -12,11 +13,13 @@ local function inRoom(fn)
 end
 local function p(n) return FkTest.room.players[n] end
 
+local function setupWithSettings(settings)
+  local room = support.createRoom { mode = "qiao_heg_mode", realSelection = true, settings = settings }
+  inRoom(function() skill_test.installBlankGenerals(room, {"han","han","han","han","qun","qun","qun","qun"}) end)
+end
+
 Testqiao_qun024_zhangren = {
-  setup = function()
-    local room = support.initQiaoRoom()
-    inRoom(function() skill_test.installBlankGenerals(room, {"han","han","han","han","qun","qun","qun","qun"}) end)
-  end,
+  setup = function() setupWithSettings() end,
   tearDown = support.clearRoom,
 }
 
@@ -25,6 +28,36 @@ function Testqiao_qun024_zhangren:testDataFragment()
   lu.assertEquals(general.id, "qiao_heg__qun024")
   lu.assertEquals(DATA.skillCount, 2)
   lu.assertNotNil(Fk.generals["qiao_heg__qun024"], "正式将池尚未合入 QUN024")
+end
+
+function Testqiao_qun024_zhangren:testChuanxinOnlyOffersEnabledRetinues()
+  local allowed = "qiao_heg__retinue_xiyuanjun"
+  local disabled = {}
+  for name in pairs(C.retinues) do
+    if name ~= allowed then table.insert(disabled, name) end
+  end
+  support.clearRoom()
+  setupWithSettings { disabledGenerals = disabled }
+  local room, holder, victim = FkTest.room, p(1), p(2)
+  inRoom(function()
+    room:handleAddLoseSkills(holder, "qiao__skill_qun024_1", nil, false, true)
+    local transform = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_chuanxin"
+    lu.assertFalse(transform.replaceDeputy(room, victim, "qiao_heg__retinue_zhoucang", "test"))
+  end)
+  local offered
+  skill_test.withSkillRequests(room, "qiao__skill_qun024_1", {
+    askToSkillInvoke = function() return true end,
+    askToChoice = function(_, who, params)
+      if who == victim then return "refuse" end
+      offered = params.choices
+      return allowed
+    end,
+  }, function()
+    inRoom(function() room:damage { from = holder, to = victim, damage = 1, card = Fk:cloneCard("qiao__slash") } end)
+  end)
+  lu.assertEquals(offered, { allowed })
+  lu.assertEquals(R.count(holder), 1)
+  lu.assertTrue(holder:hasSkill("qiao__retinue_skill_xiyuanjun"))
 end
 
 function Testqiao_qun024_zhangren:testLongfeiSharesOwnInstancesWithoutRecursion()

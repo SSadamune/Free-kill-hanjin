@@ -10,6 +10,7 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
+local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local M = {}
 
 M.RULE_SKILL = "#qiao_ascension_rule"
@@ -101,7 +102,7 @@ function M.lord_candidate(room, player, deadKingdom)
   if main == nil then return nil end
   if player.general ~= "anjiang" and Versions.is_lord(main) then return nil end
   local lord = Versions.lord_version(main)
-  if lord == nil or not Versions.lord_is_for(lord, deadKingdom) then return nil end
+  if not RoomBans.allows(room, lord) or not Versions.lord_is_for(lord, deadKingdom) then return nil end
   if player.kingdom == "wild" then return nil end
   if not isUnknown(player.kingdom) and player.kingdom ~= deadKingdom then return nil end
   if player.general == "anjiang" and player:prohibitReveal() then return nil end
@@ -124,7 +125,7 @@ function M.wild_candidates(room, player)
   local result, seen = {}, {}
   for _, loyalty in ipairs(Versions.loyalty_versions(main)) do
     local loyaltyGeneral = Fk.generals[loyalty]
-    if loyaltyGeneral ~= nil then
+    if RoomBans.allows(room, loyalty) then
       local kingdoms = Guest.pairKingdoms(room, loyalty, deputy, allowed)
       if #kingdoms == 0 then
         -- Fallback for content placed directly by tests without a room pool
@@ -162,6 +163,8 @@ function M.ascend(room, player, newMain, kingdom, options)
   assert(options.kind ~= "lord" or Versions.is_lord(newMain), "Lord ascension needs a lord version")
   assert(options.kind ~= "loyalty" or Versions.is_loyalty(newMain),
     "Loyalty ascension needs a loyalty version")
+  -- 防御性复核：提供选项前各入口已过滤；询问期间到提交前若目标被禁则不执行。
+  if not RoomBans.allows(room, newMain) then return false end
 
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
@@ -289,8 +292,8 @@ function M.death_succession(room, victim)
         -- 询问期间状态可能改变；提交时再次复核，失败则继续询问下一人。
         local current = M.lord_candidate(room, candidate, deadKingdom)
         if current ~= nil then
-          M.ascend(room, candidate, current.general, current.kingdom, { kind = "succession" })
-          return true, deadKingdom
+          local ok = M.ascend(room, candidate, current.general, current.kingdom, { kind = "succession" })
+          if ok then return true, deadKingdom end
         end
       end
     end
@@ -350,7 +353,7 @@ function M.on_turn_start(room, player)
   local main = M.actual_main(player)
   if main == nil or Fk.generals[main] == nil or Fk.generals[main].kingdom == "wild" then return end
   local lord = Versions.lord_version(main)
-  if lord == nil or player:prohibitReveal() then return end
+  if player:prohibitReveal() or not RoomBans.allows(room, lord) then return end
   local allowed = room:getBanner("all_kingdoms") or {}
   local kingdoms = table.filter(Versions.lord_kingdoms(lord), function(kingdom)
     return table.contains(allowed, kingdom)

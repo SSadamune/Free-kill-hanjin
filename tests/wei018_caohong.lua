@@ -41,8 +41,7 @@ local function prepare(kingdoms)
     mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      qiao_kingdom_limit = 6,
+      qiao_faction_ban_enabled = false,
     },
   }
   inRoom(function()
@@ -212,8 +211,7 @@ function Testqiao_wei018_caohong:testHeyiNoQueueGrantsNothing()
     mode = "qiao_heg_mode",
     realSelection = true,
     settings = {
-      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      qiao_kingdom_limit = 6,
+      qiao_faction_ban_enabled = false,
     },
   }
   inRoom(function()

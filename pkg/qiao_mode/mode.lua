@@ -1,4 +1,5 @@
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
@@ -61,7 +62,9 @@ local function deal(room, players, count)
   return offers
 end
 
-function M.create(base)
+function M.create(base, name)
+  local collection = name == Modes.collection
+  local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
   local function getLogic()
     local parent = base.logic()
     local logic = parent:subclass("QiaoHegLogic")
@@ -77,7 +80,7 @@ function M.create(base)
       local cap = room:getSettings("qiao_wild_count")
       cap = math.min(cap or 4, 12)
       -- BAN-001 input is the host's candidate selection, never the pile.
-      local config = Ban.resolveSettings(function(key) return room:getSettings(key) end)
+      local config = resolveSettings(function(key) return room:getSettings(key) end)
       room:setBanner("qiao_candidate_kingdoms", config.candidates)
       room:setBanner("qiao_kingdom_limit", config.limit)
       room:setTag("qiao_candidate_kingdoms", config.candidates)
@@ -89,7 +92,7 @@ function M.create(base)
       -- rule and loyalty-version faction filtering. Guest factions resolve on
       -- top of its kept list.
       local plan = Versions.plan(room, room.general_pile, previous, cap, pick, getGeneral,
-        { candidates = config.candidates, limit = config.limit })
+        { candidates = config.candidates, limit = config.limit, guestReplacement = Guest.replacementEnabled(room) })
       room:setBanner("all_kingdoms", plan.allowed)
       room:setBanner("qiao_banned_kingdoms", plan.banned)
       local built = Pool.resolve(room, plan, { wildNames = wildNames, getGeneral = getGeneral })
@@ -224,9 +227,7 @@ function M.create(base)
     return logic
   end
 
-  -- Faction bans are mandatory. The single HanJin variant switch also replaces
-  -- the upstream old/new battle-royal selector.
-  local settings = table.clone(base.ui_settings)
+  local settings = collection and {} or table.clone(base.ui_settings)
   for _, group in ipairs(settings) do
     group._children = table.filter(group._children, function(item)
       return item._settingsKey ~= "notBanToFourKingdoms" and item._settingsKey ~= "old_battle_royal"
@@ -238,16 +239,32 @@ function M.create(base)
   end
   local function uiKingdomLimit(settings)
     local mode = modeOf(settings)
+    if collection then
+      return resolveSettings(function(key) return mode[key] end).limit
+    end
     return math.max(1, math.min(mode[Ban.limitKey] or 4, Ban.candidateCount(mode)))
   end
-  -- One switch per known regular kingdom. Future kingdoms registered through
-  -- Ban.registerKingdom before mode creation are appended here automatically.
+
+  local function checkbox(key, title)
+    local row = W.SwitchRow {
+      _settingsKey = key, title = title,
+      value = function(uiSettings) return modeOf(uiSettings)[key] ~= false end,
+    }
+    row._qml = { url = "packages/qiao/pkg/qiao_mode/qml/CheckRow.qml" }
+    return row
+  end
+
   local candidateSpec = { title = "qiao_candidate_kingdoms" }
-  for _, kingdom in ipairs(Ban.kingdoms) do
+  if collection then candidateSpec.subTitle = "qiao_collection_candidates_help" end
+  local candidateSwitches = collection and Ban.optionalCollectionKingdoms or Ban.kingdoms
+  for _, kingdom in ipairs(candidateSwitches) do
+    local title = (kingdom == "han" or kingdom == "jin") and "qiao_enable_" .. kingdom
+      or Ban.candidatePrefix .. kingdom
     table.insert(candidateSpec, W.SwitchRow {
       _settingsKey = Ban.candidatePrefix .. kingdom,
-      title = "qiao_candidate_" .. kingdom,
+      title = title,
       value = function(uiSettings)
+        if collection then return modeOf(uiSettings)[Ban.candidatePrefix .. kingdom] ~= false end
         return Ban.candidateValue(modeOf(uiSettings), kingdom)
       end,
     })
@@ -258,6 +275,11 @@ function M.create(base)
   candidateGroup._qml = { url = "packages/qiao/pkg/qiao_mode/qml/CandidateGroup.qml" }
   candidateGroup._settingsKey = "qiao_candidate_summary"
   candidateGroup.value = function(uiSettings)
+    if collection then
+      local conf = modeOf(uiSettings)
+      local candidates = resolveSettings(function(key) return conf[key] end).candidates
+      return table.concat(table.map(candidates, Ban.kingdomLabel), "、")
+    end
     local names = {}
     for _, kingdom in ipairs(Ban.kingdoms) do
       if Ban.candidateValue(modeOf(uiSettings), kingdom) then
@@ -267,21 +289,22 @@ function M.create(base)
     return table.concat(names, "、")
   end
   local candidateSettings = { candidateGroup }
-  table.insert(candidateSettings, W.SpinRow {
-    _settingsKey = Ban.limitKey, title = "qiao_kingdom_limit", from = 1,
-    to = function(uiSettings)
-      return math.max(Ban.candidateCount(modeOf(uiSettings)), 1)
-    end,
-    value = uiKingdomLimit,
-  })
+  if collection then
+    table.insert(candidateSettings, checkbox(Ban.enabledKey, Ban.enabledKey))
+  else
+    table.insert(candidateSettings, W.SpinRow {
+      _settingsKey = Ban.limitKey, title = "qiao_kingdom_limit", from = 1,
+      to = function(uiSettings)
+        return math.max(Ban.candidateCount(modeOf(uiSettings)), 1)
+      end,
+      value = uiKingdomLimit,
+    })
+  end
+  table.insert(candidateSettings, checkbox(Guest.settingKey, Guest.settingKey))
   table.insert(settings, W.PreferenceGroup(candidateSettings))
 
-  table.insert(settings, W.PreferenceGroup {
+  local ruleSettings = {
     title = "qiao_rule_settings",
-    W.SwitchRow {
-      _settingsKey = Variants.key, title = "qiao_wolves",
-      value = function(settings) return modeOf(settings)[Variants.key] == true end,
-    },
     W.SpinRow {
       _settingsKey = "qiao_offer_count", title = "qiao_offer_count",
       from = function(settings) return uiKingdomLimit(settings) + 1 end,
@@ -305,10 +328,17 @@ function M.create(base)
         return value == nil and 4 or value
       end,
     },
-  })
+  }
+  if not collection then
+    table.insert(ruleSettings, 1, W.SwitchRow {
+      _settingsKey = Variants.key, title = "qiao_wolves",
+      value = function(settings) return modeOf(settings)[Variants.key] == true end,
+    })
+  end
+  table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
-    name = Session.mode, minPlayer = base.minPlayer, maxPlayer = base.maxPlayer,
+    name = name, minPlayer = base.minPlayer, maxPlayer = base.maxPlayer,
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,
@@ -327,7 +357,7 @@ function M.create(base)
         if settings._game and settings._game[key] ~= nil then return settings._game[key] end
         return settings[key]
       end
-      if not pcall(Ban.resolveSettings, getSetting) then return false end
+      if not pcall(resolveSettings, getSetting) then return false end
       local generals, cards = 0, 0
       for _, name in ipairs(self.whitelist) do
         local pack = Fk.packages[name]
