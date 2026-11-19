@@ -1,4 +1,6 @@
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Mode = require "packages.qiao.pkg.qiao_mode.mode"
+local Client = require "packages.qiao.pkg.qiao_mode.client"
 local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
@@ -10,9 +12,9 @@ extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 -- shares the registered board's engine, classes, and settings.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Qiao requires the hegemony extension")
-  local factory = require "packages.qiao.pkg.qiao_mode.mode"
+  Mode.installRules()
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
-  board.client_klass = require "packages.qiao.pkg.qiao_mode.client"
+  board.client_klass = Client
   local qiaoBoard = setmetatable({
     page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
   }, { __index = board })
@@ -22,7 +24,7 @@ Fk:addPostLoadFunc(function()
     return getBoardGame(self, name)
   end
   for _, name in ipairs(Modes.names) do
-    local mode = factory.create(base, name)
+    local mode = Mode.create(base, name)
     mode.game_name = base.game_name
     extension:addGameMode(mode)
     Fk:addGameMode(mode)

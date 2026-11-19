@@ -110,5 +110,5 @@
 
 - 现象：使用 `packages/freekill-core` 布局时，qiao 的 `postLoad` 报 `module 'packages.qiao...' not found`，对应文件实际存在。
 - 根因：`ModManager:loadPackages` 在 `postLoad` 前把工作目录切回核心包；引擎沙箱将 `package` 置空，扩展不能调整 `package.path`。
-- 修复：qiao 首个 `postLoad` 回调切到扩展根目录，最后注册的回调恢复引擎目录。详见[扩展加载与新核心布局](implementation/extension-loading.md)。
-- 回归：macOS 客户端与 `freekill-asio` 服务端均加载 7 个扩展（含 qiao），440 将／1004 技能／179 牌无报错；现有套件运行在旧核心布局，不覆盖该问题。
+- 修复：扩展加载时解析回调需要的模块，`postLoad` 再注册武将、模式和卡牌数据。引擎工作目录由引擎维护，避免回调中途抛错后跳过恢复。详见[扩展加载与新核心布局](implementation/extension-loading.md)。
+- 回归：在新核心布局核对工作目录和汉晋模式注册，并通过真实测试房间触发模式规则。旧核心布局的默认套件单独执行。

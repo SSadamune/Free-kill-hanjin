@@ -271,6 +271,8 @@ end
 local installed = false
 function M.install()
   if installed then return end
+  local Room = require "ltk.server.room"
+  local ServerPlayer = require "ltk.server.serverplayer"
   installed = true
   M.installInvalidityBypass()
   local originalRemove = H.removeGeneral
@@ -282,7 +284,6 @@ function M.install()
     end
     return originalRemove(player, isDeputy)
   end
-  local Room = require "ltk.server.room"
   local originalChange = Room.changeHero
   Room.changeHero = function(self, player, newGeneral, full, isDeputy, ...)
     if isQiaoRoom(self) and M.record(self, player) ~= nil
@@ -293,7 +294,6 @@ function M.install()
   end
   -- 授技是角色获得技能，不附在任何武将牌上。发动时若某个暗将恰好印刷同名
   -- 技能，原入口会明置该牌；本次来源存在时跳过明置，暗将保持原状。
-  local ServerPlayer = require "ltk.server.serverplayer"
   local originalReveal = ServerPlayer.revealBySkillName
   ServerPlayer.revealBySkillName = function(player, skillName)
     local room = player and player.room
@@ -304,10 +304,7 @@ function M.install()
   end
 end
 
-M.install()
--- 标准包的 reveal_prohibited 可能晚于本文件加载；全部包就绪后再确保一次性接线。
-if type(Fk.addPostLoadFunc) == "function" then
-  Fk:addPostLoadFunc(function() M.installInvalidityBypass() end)
-end
+-- 新核心的 ServerPlayer 要从核心目录解析，标准包的技能也在此时就绪。
+Fk:addPostLoadFunc(M.install)
 
 return M

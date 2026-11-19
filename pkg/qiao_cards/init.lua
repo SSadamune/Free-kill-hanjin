@@ -848,9 +848,9 @@ end)
 -- Register the 合纵 positions with the upstream alliance marker. The runtime
 -- policy may additionally use `extra_data.qiao_heji`; both paths resolve the
 -- concrete card, never a same-name card at another position.
+local hasHegUtil, Heg = pcall(require, "packages.hegemony.util")
 Fk:addPostLoadFunc(function()
-  local ok, Heg = pcall(require, "packages.hegemony.util")
-  if not ok or type(Heg.addCardToAllianceCards) ~= "function" then return end
+  if not hasHegUtil or type(Heg.addCardToAllianceCards) ~= "function" then return end
   for _, position in ipairs(H.hejiPositions()) do
     local exists = table.find(Heg.allianceCards or {}, function(entry)
       return entry[1] == position.card and entry[2] == position.suit

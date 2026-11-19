@@ -216,6 +216,10 @@ extension.zhen_shi = ZhenShi
 -- 由本文件安装独立阵/势包，postLoad 时再补进 qiao 扩展的包列表。
 zhenshi:install(Fk)
 
+local Sources = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
+local SkillSourceLabels = require "packages.qiao.pkg.qiao_mode.rules.skill_source_labels"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+
 -- Registration needs the installed engine (Fk.generals / Fk.all_card_types), so
 -- it runs after all packages are installed but before the mode package creates
 -- the game mode (see init.lua require order).
@@ -233,7 +237,6 @@ Fk:addPostLoadFunc(function()
     end
     table.insert(group, index, zhenshi.name)
   end
-  local Sources = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
   for _, retinue in ipairs(Data.retinues) do
     Commander.registerRetinue(retinue.id, {
       name = retinue.name,
@@ -242,8 +245,7 @@ Fk:addPostLoadFunc(function()
     Sources.registerRetinue(retinue.id, retinue.skill.id)
   end
   -- 非武将来源标签：只包裹既有 skeleton.dynamic_desc，不改技能名或可见性。
-  require("packages.qiao.pkg.qiao_mode.rules.skill_source_labels").register(Data.retinues)
-  local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+  SkillSourceLabels.register(Data.retinues)
   for _, source in ipairs(sources) do
     for _, version in ipairs(source.data.versions or {}) do Versions.register(version) end
   end
