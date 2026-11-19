@@ -203,7 +203,7 @@ end
 
 function Testmode_rules:testWolvesCanBeEnabledExplicitly()
   support.clearRoom()
-  local current = support.createRoom { mode = "qiao_heg_mode", settings = { qiao_wolves = true } }
+  local current = support.createRoom { mode = "qiao_free_mode", settings = { qiao_wolves = true } }
   lu.assertTrue(Variants.enabled(current))
   lu.assertFalse(current:getSettings("old_battle_royal"))
   lu.assertNotNil(table.find(current.logic.skill_table[fk.Damaged] or {}, function(skill)

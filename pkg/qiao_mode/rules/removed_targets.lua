@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 
 local M = {}
@@ -8,7 +9,7 @@ end
 
 function M.inMode(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 --- Use for fixed or delayed effects that do not ask the player for targets.

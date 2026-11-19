@@ -129,7 +129,7 @@ end
 
 function Testqiao_rules:testCandidateUIHasKingdomSwitchesAndDynamicLimit()
   local W = require "ui_emu.preferences"
-  local mode = Fk.game_modes.qiao_heg_mode
+  local mode = Fk.game_modes.qiao_free_mode
   local function rows(settings)
     local result = {}
     for _, group in ipairs(W.toQmlData(mode.ui_settings, { _mode = settings })) do
@@ -185,6 +185,44 @@ function Testqiao_rules:testOnlyIndependentContentEntersGame()
     end
     local kingdom = Cards.tricks[card.name]
     if kingdom then lu.assertTrue(kingdom == "wild" or table.contains(allowed, kingdom)) end
+  end
+end
+
+function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
+  local W = require "ui_emu.preferences"
+  local modes = Fk.game_modes
+  local function preferences(mode)
+    local groups, rows = {}, {}
+    local config = { _mode = { qiao_faction_ban_enabled = false, qiao_guest_replacement = false } }
+    for _, group in ipairs(W.toQmlData(mode.ui_settings, config)) do
+      if group.title then groups[group.title] = true end
+      for _, item in ipairs(group._children) do rows[item._settingsKey] = item end
+    end
+    lu.assertFalse(rows.qiao_guest_replacement.value)
+    lu.assertStrContains(rows.qiao_guest_replacement._qml.url, "CheckRow.qml")
+    return groups, rows
+  end
+  local collectionGroups, collection = preferences(modes.qiao_heg_mode)
+  local freeGroups, free = preferences(modes.qiao_free_mode)
+  for _, group in ipairs({ "hegemony_additional_rule", "hegemony_special_rule" }) do
+    lu.assertNil(collectionGroups[group])
+    lu.assertTrue(freeGroups[group])
+  end
+  lu.assertEquals(table.map(collection.qiao_candidate_summary._children, function(item)
+    return item._settingsKey
+  end), { "qiao_candidate_han", "qiao_candidate_jin" })
+  lu.assertNil(collection.qiao_wolves)
+  lu.assertNil(collection.qiao_kingdom_limit)
+  lu.assertFalse(collection.qiao_faction_ban_enabled.value)
+  lu.assertStrContains(collection.qiao_faction_ban_enabled._qml.url, "CheckRow.qml")
+  lu.assertNotNil(free.qiao_wolves)
+  lu.assertNotNil(free.qiao_kingdom_limit)
+  for name, pack in pairs(Fk.packages) do
+    -- The ascension fixture is registered only for its collection-mode suites.
+    if not pack._ascension_content then
+      lu.assertEquals(table.contains(Fk.game_mode_disabled.qiao_heg_mode, name),
+        table.contains(Fk.game_mode_disabled.qiao_free_mode, name), name)
+    end
   end
 end
 

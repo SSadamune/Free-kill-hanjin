@@ -1,8 +1,8 @@
 -- The engine owns SessionData on the native Room, so it survives games but not rooms.
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local M = {}
 local key = "qiao_faction_ban_v1"
-M.mode = "qiao_heg_mode"
 
 function M.consume(room)
   assert(type(room.room.getSessionData) == "function" and type(room.room.setSessionData) == "function",
@@ -16,7 +16,7 @@ end
 
 function M.finish(room, winners)
   local data = room:getSessionData()
-  if room:getSettings("gameMode") ~= M.mode then
+  if not Modes.inRoom(room) then
     data[key] = nil
   else
     local kingdoms = {}
@@ -32,7 +32,7 @@ function M.finish(room, winners)
 end
 
 function M.clearForeignGame(room)
-  if room:getSettings("gameMode") == M.mode then return end
+  if Modes.inRoom(room) then return end
   if type(room.room.getSessionData) ~= "function" then return end
   local data = room:getSessionData()
   if data[key] then data[key] = nil; room:setSessionData(data) end

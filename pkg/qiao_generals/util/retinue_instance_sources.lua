@@ -8,6 +8,7 @@
 -- qiao_heg_mode 安装 #qiao_retinue_instance_sources 规则技能并做一次全量
 -- 同步。之后 GeneralShown/Hidden、AfterPropertyChange、GeneralRemoved、
 -- GeneralTransformed 与 Exchange 完成监听都会幂等同步。不要在其他模式安装。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
@@ -15,7 +16,6 @@ local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local M = {}
 
 M.RULE_SKILL = "#qiao_retinue_instance_sources"
-M.HANJIN_MODE = "qiao_heg_mode"
 M.EXCHANGE_TAG = "qiao_retinue_exchange_in_progress"
 
 local mapping = {}
@@ -26,7 +26,7 @@ local function isQiaoRoom(room)
   if mode == nil and type(room.settings) == "table" then
     mode = room.settings.gameMode
   end
-  return mode == M.HANJIN_MODE
+  return Modes.isHanjin(mode)
 end
 
 local function isExchanging(room)

@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 -- HanJin room rule for the public use-target strategy:
@@ -14,7 +15,7 @@ local skill = fk.CreateSkill {
 
 local function inQiao(player)
   return player ~= nil and player.room ~= nil
-    and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(player.room)
 end
 
 skill:addEffect("filter", {

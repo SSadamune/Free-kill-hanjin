@@ -1,5 +1,6 @@
 -- EM(QUN010) 张角君主版的黄巾天兵符公共入口。
 -- 天兵是张角私人牌堆中的公开旗；这里只负责计数、公开数值修正和变化通知。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local H = require "packages.hegemony.util"
 
 local M = {}
@@ -116,7 +117,7 @@ end
 
 local function isQiaoRoom(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 -- 将旗的天兵数接入公共人数 API；只在汉晋房间生效，其他模式调用原函数。

@@ -3,6 +3,7 @@
 -- 规则基线：docs/rules/generals/jin001-simayan.md 第 2 节，以及
 -- docs/rules/equipment-movement.md。时机是其他角色进入濒死（EnterDying），不是
 -- 每次求桃；只移动该角色装备区的合法牌到司马炎空置的对应装备栏，不替换。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin001_1",
 }
@@ -51,7 +52,7 @@ skill:addEffect(fk.EnterDying, {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()
     room:handleAddLoseSkills(me, skill.name, nil, false, true)
   end)

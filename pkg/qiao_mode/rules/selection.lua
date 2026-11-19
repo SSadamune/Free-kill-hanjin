@@ -302,10 +302,11 @@ end
 function M.askKingdom(room, player, legal)
   if #legal == 0 then return nil end
   if #legal == 1 then return legal[1] end
+  local mode = room:getSettings("gameMode")
   local req = Request:new(player, "AskForChoices")
-  req.focus_text = "qiao_heg_mode"
+  req.focus_text = mode
   req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
-  req:setData(player, { legal, legal, { 1, 1 }, false, "qiao_heg_mode",
+  req:setData(player, { legal, legal, { 1, 1 }, false, mode,
     "#QiaoChooseKingdom", false, true })
   req:setDefaultReply(player, { legal[1] })
   local result = req:getResult(player)

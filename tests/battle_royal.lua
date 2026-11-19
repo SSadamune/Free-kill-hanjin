@@ -7,7 +7,7 @@ local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 
 local function setup()
   Fk.currentResponsePattern = nil
-  return support.initQiaoRoom()
+  return support.createRoom { mode = "qiao_free_mode", realSelection = true }
 end
 
 local function teardown()

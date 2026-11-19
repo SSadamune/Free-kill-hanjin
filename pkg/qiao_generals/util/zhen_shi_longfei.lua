@@ -1,6 +1,7 @@
 -- QUN024 张任 · 龙飞共享实例公共工具。
 -- 只把张任自己实际拥有的非 shared 实例，复制为队列队友的 origin=shared 实例；
 -- 不传播队友借得的 shared 实例，避免递归。共享实例计入队友实际数量并独立计次。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local H = require "packages.hegemony.util"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
@@ -15,7 +16,7 @@ local listenerInstalled = false
 
 local function isQiao(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 --- 为当前房间安装重置规则；只汉晋。

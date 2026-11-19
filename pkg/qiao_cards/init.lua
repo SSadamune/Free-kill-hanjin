@@ -11,9 +11,10 @@
 -- name and through extra_data. The public interface is exposed as
 -- `Fk.packages.qiao_cards.qiao_cards` (also `.qiao`).
 
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local extension = Package:new("qiao_cards", Package.CardPack)
 extension.extensionName = "qiao"
-extension.game_modes_whitelist = { "qiao_heg_mode" }
+extension.game_modes_whitelist = Modes.names
 -- 与锁定应变参考包 variation_cards/init.lua 保持同一冰冻伤害登记；
 -- 缺失登记会令正式冰杀跳过 ChangeHp 的重置及连环处理。
 Fk:addDamageNature(fk.IceDamage, "ice_damage")

@@ -9,6 +9,7 @@
 -- 交换本身仍走通用 general_exchange 的 validate/exchange；这里只提供来源
 -- 定位、跨势力显式许可和首次成功即止的循环。房间 tag 仅服务端使用，不参与
 -- 客户端可用性判定；来源位置一律以公开的已明置状态校验。
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local M = {}
 
 M.RESCUE_TAG = "qiao_qun_jishi_rescue_v1"
@@ -181,6 +182,7 @@ end
 function M.finishDying(room, dying, data)
   local entry = M.takeRescue(room, dying)
   M.endDying(room, dying)
+  if not Guest.replacementEnabled(room) then return nil end
   if data ~= nil then data.qiao_jishi_exchange = entry end
   return entry
 end

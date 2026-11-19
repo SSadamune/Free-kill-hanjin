@@ -9,6 +9,7 @@
 -- 人数预演仍须把移出角色计入。这里只在这些查询的返回值上做局部过滤，因此
 -- 其它模式以及胜负例外保持原行为。仍以 #room.players 作分母的调用方
 -- （如阵法召唤阈值、battle_royal）不属于本次公共查询，另见交回说明。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local H = require "packages.hegemony.util"
 
 local M = {}
@@ -18,7 +19,7 @@ local JADE_SEAL = "qiao__jade_seal"
 
 local function isQiaoRoom(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 --- 只读公开的实际势力；与六龙骖驾一致，不把未建国的 wild 合并。

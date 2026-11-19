@@ -35,8 +35,7 @@ local function prepare()
   local room = support.createRoom {
     mode = "qiao_heg_mode", realSelection = true,
     settings = {
-      qiao_candidate_kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" },
-      qiao_kingdom_limit = 6,
+      qiao_faction_ban_enabled = false,
     },
   }
   inRoom(function()

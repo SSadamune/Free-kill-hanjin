@@ -252,7 +252,7 @@
 - **标识与依据**：运行时 ID `qiao__skill_qun001_1`；源码 [skill_qun001_1.lua](../../../../pkg/qiao_generals/skills/skill_qun001_1.lua)。规则见[华佗规范](../../../rules/generals/qun001-huatuo.md)。同将除疠见[辅助与牌资源](support.md#qun001-2)。
 - **实现与接口**：可用自己的红色手牌或装备牌当【桃】对濒死角色使用，没有回合外限制；客户端请求与服务端 `before_use` 都复核目标确实处于濒死及材料归属。救援记录在本次桃的 `CardUsing` 时建立，先于回复清除濒死状态，绑定模式级 [qun_dying_rule](../../../../pkg/qiao_mode/skills/qun_dying_rule.lua) 分配的本次濒死序号；濒死结算结束后，仅当提供技能的华佗将牌为客将，才按逆时针逐人询问是否用一张明置武将牌交换，首次成功即止，跨势力许可与交换本身复用公共交换模块。
 - **验证依据**：已执行 [qun_dying.lua](../../../../tests/qun_dying.lua) 的 `testJishiSavesWithRedEquipmentThenExchangesHuatuoOnce`、`testJishiStillExchangesWhenDyingPlayerDies`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
-- **未完成与边界**：客将设置未实装时默认开启这一过渡状态仍需按[华佗规范](../../../rules/generals/qun001-huatuo.md)处理；“客将替换”房间设置真实关闭、连续交换与中途死亡组合未人工验收。
+- **验收边界**：「客将替换规则」控制济世的交换段。关闭房间设置、连续交换和中途死亡组合仍待客户端人工验收。见[华佗规范](../../../rules/generals/qun001-huatuo.md)。
 
 <a id="qun007-1"></a>
 #### 完杀（QUN007 贾诩）

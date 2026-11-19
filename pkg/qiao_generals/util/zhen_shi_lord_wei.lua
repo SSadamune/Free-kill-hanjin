@@ -3,6 +3,7 @@
 -- 限制绑定“那张被暗置的武将牌”：记录角色、主/副位置和牌名；明置由
 -- RevealProhibited 基础标记拦截，移除、交换、变更分别接入公共入口。
 -- 记录只在受益者自己的下一个回合开始解除；君主失去旗不提前清理。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local H = require "packages.hegemony.util"
 
 local M = {}
@@ -19,7 +20,7 @@ M.TEMP = "qiao_em_wei001_temp_skills"
 
 local function isQiaoRoom(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 local function records(room)

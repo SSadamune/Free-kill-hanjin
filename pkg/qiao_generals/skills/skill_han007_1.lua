@@ -6,6 +6,7 @@
 --
 -- 追德给予的「发动一次敏思」使用同一份选牌与效果实现，通过辅助主动技
 -- 调用，不永久授予技能，也不占用敏思在出牌阶段空闲时间点的次数。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han007_1",
 }
@@ -58,7 +59,7 @@ skill:addEffect("maxcards", {
 })
 
 skill:addTest(function(room, me)
-  if room:getSettings("gameMode") ~= "qiao_heg_mode" then return end
+  if not Modes.inRoom(room) then return end
   FkTest.runInRoom(function()
     room:handleAddLoseSkills(me, skill.name, nil, false, true)
   end)

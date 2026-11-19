@@ -49,7 +49,7 @@ local function create(options)
   local settings = table.clone(options.settings or {})
   if options.formalOnly then settings.disabledPack = formalOnlyDisabledPacks() end
   return support.createRoom {
-    mode = "qiao_heg_mode",
+    mode = options.mode or "qiao_heg_mode",
     realSelection = true,
     settings = settings,
   }
@@ -294,7 +294,7 @@ function Teststandard_generals:testGuestFactionsAndRealGuestResolution()
   end
   lu.assertEquals(count, 51)
 
-  local room = create {
+  local room = create { mode = "qiao_free_mode",
     formalOnly = true,
     settings = {
       qiao_wild_count = 0,
@@ -393,8 +393,7 @@ function Teststandard_generals:testSameNameConversionAndCompanions()
     formalOnly = true,
     settings = {
       qiao_wild_count = 0,
-      qiao_candidate_kingdoms = SIX,
-      qiao_kingdom_limit = 6,
+      qiao_faction_ban_enabled = false,
     },
   }
   lu.assertTrue(table.contains(Fk:getSameGenerals("qiao_heg__wei002"), "qiao_heg__jin009"))

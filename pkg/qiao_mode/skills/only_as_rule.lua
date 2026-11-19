@@ -1,3 +1,4 @@
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local H = require "packages.hegemony.util"
 
@@ -26,7 +27,7 @@ end
 -- 确认本房间是汉晋国战，不能把汉晋的“只能当”规则带到普通国战房间。
 local function inQiao(player)
   return player ~= nil and player.room ~= nil
-    and player.room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(player.room)
 end
 
 -- GamePrepared 初始化测试房间与真实房间的内部来源记录；GameStart 再次

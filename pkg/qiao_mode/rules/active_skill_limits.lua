@@ -11,11 +11,12 @@
 -- 可以是函数（奋钺按席面势力数、破竹按三陈复原数）。UsableSkill:getMaxUseTime
 -- 的无牌路径会原样返回函数字段，因此这里直接解析函数，不拿函数与数字比较。
 -- 未声明的技能不在此拦截，继续由既有 can_use/on_use 业务逻辑处理。
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 
 local function inMode(room)
   return room ~= nil and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == "qiao_heg_mode"
+    and Modes.inRoom(room)
 end
 
 --- 声明的上限；nil 表示不限制。函数声明的调用签名与引擎骨架一致：
