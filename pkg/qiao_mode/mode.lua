@@ -258,9 +258,11 @@ function M.create(base, name)
   if collection then candidateSpec.subTitle = "qiao_collection_candidates_help" end
   local candidateSwitches = collection and Ban.optionalCollectionKingdoms or Ban.kingdoms
   for _, kingdom in ipairs(candidateSwitches) do
+    local title = (kingdom == "han" or kingdom == "jin") and "qiao_enable_" .. kingdom
+      or Ban.candidatePrefix .. kingdom
     table.insert(candidateSpec, W.SwitchRow {
       _settingsKey = Ban.candidatePrefix .. kingdom,
-      title = "qiao_candidate_" .. kingdom,
+      title = title,
       value = function(uiSettings)
         if collection then return modeOf(uiSettings)[Ban.candidatePrefix .. kingdom] ~= false end
         return Ban.candidateValue(modeOf(uiSettings), kingdom)
@@ -333,7 +335,7 @@ function M.create(base, name)
       value = function(settings) return modeOf(settings)[Variants.key] == true end,
     })
   end
-  table.insert(settings, W.PreferenceGroup(ruleSettings))
+  table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
     name = name, minPlayer = base.minPlayer, maxPlayer = base.maxPlayer,

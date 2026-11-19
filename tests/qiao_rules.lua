@@ -194,10 +194,19 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
   local function preferences(mode)
     local groups, rows = {}, {}
     local config = { _mode = { qiao_faction_ban_enabled = false, qiao_guest_replacement = false } }
-    for _, group in ipairs(W.toQmlData(mode.ui_settings, config)) do
+    local data = W.toQmlData(mode.ui_settings, config)
+    lu.assertEquals(data[1].title, "qiao_rule_settings")
+    for _, group in ipairs(data) do
       if group.title then groups[group.title] = true end
       for _, item in ipairs(group._children) do rows[item._settingsKey] = item end
     end
+    local candidates = rows.qiao_candidate_summary._children
+    lu.assertEquals(table.find(candidates, function(row)
+      return row._settingsKey == "qiao_candidate_han"
+    end).title, "qiao_enable_han")
+    lu.assertEquals(table.find(candidates, function(row)
+      return row._settingsKey == "qiao_candidate_jin"
+    end).title, "qiao_enable_jin")
     lu.assertFalse(rows.qiao_guest_replacement.value)
     lu.assertStrContains(rows.qiao_guest_replacement._qml.url, "CheckRow.qml")
     return groups, rows
