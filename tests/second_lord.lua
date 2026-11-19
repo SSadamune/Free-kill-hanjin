@@ -142,6 +142,19 @@ function Testsecond_lord:testFirstOrdinaryAscensionOccupiesFactionSlot()
   lu.assertEquals(first.general, G.wei_monarch.name)
 end
 
+function Testsecond_lord:testFormalHanLiuxieAscendsOnFirstTurn()
+  local candidate = player(1)
+  FkTest.runInRoom(function()
+    room():setBanner("all_kingdoms", { "han", "wei", "shu", "qun" })
+    hidden(candidate, "qiao_heg__han001", "qiao_test__han_2", "han")
+  end)
+  local prompts = captureAscensionPrompts()
+  triggerTurnStart(candidate, A.ASCEND_ACCEPT)
+  lu.assertEquals(prompts.convert, { candidate.seat })
+  lu.assertEquals(candidate.general, "qiao_heg__em_han001")
+  lu.assertEquals(candidate.kingdom, "han")
+end
+
 function Testsecond_lord:testOrdinaryAscensionNeedsHiddenMainAndFirstTurn()
   local p = player(1)
   FkTest.runInRoom(function()
