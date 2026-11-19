@@ -525,6 +525,37 @@ function Testsecond_lord:testOverflowWildRevealDoesNotEnterUpstreamFounding()
   lu.assertEquals(room():getBanner("all_kingdoms"), allowedBefore)
 end
 
+function Testsecond_lord:testExclusiveWildFoundingExcludesHanAndJin()
+  local room, candidate = room(), player(1)
+  local request
+  FkTest.runInRoom(function()
+    hidden(candidate, G.wild_simple.name, "qiao_test__shu_1", "shu")
+    candidate.role = "shu"
+    player(2).role = "heg_qin"
+    room:setBanner("all_kingdoms", { "wei", "shu", "wu", "qun", "han", "jin" })
+    local ask = room.askToChoice
+    function room:askToChoice(target, params)
+      if params.prompt == "#wild-choose" then
+        lu.assertIs(target, candidate)
+        request = params
+        return "heg_hanr"
+      end
+      return ask(self, target, params)
+    end
+    candidate:revealGeneral(false)
+  end)
+  lu.assertNotNil(request, "野心家专属武将仍应进入建国询问")
+  for _, options in ipairs({ request.choices, request.all_choices }) do
+    lu.assertFalse(table.contains(options, "heg_han"))
+    lu.assertFalse(table.contains(options, "heg_jin"))
+    lu.assertTrue(table.contains(options, "heg_hanr"), "韩和汉是不同国号")
+  end
+  lu.assertFalse(table.contains(request.choices, "heg_qin"), "已占用的国号仍不可选")
+  lu.assertEquals(candidate.role, "heg_hanr")
+  lu.assertTrue(table.contains(H.wildKingdoms, "heg_han"))
+  lu.assertTrue(table.contains(H.wildKingdoms, "heg_jin"))
+end
+
 function Testsecond_lord:testOverflowWildDeathDoesNotEnterUpstreamFounding()
   local lord, candidate = player(1), player(2)
   local allies = { player(3), player(4), player(5) }

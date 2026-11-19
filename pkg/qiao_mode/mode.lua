@@ -21,6 +21,7 @@ local M = {}
 
 -- 大小势力/玉玺公共查询：服务器与客户端都只在本模式安装。
 KingdomSize.install()
+Ascension.installFoundingCountries()
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
 
