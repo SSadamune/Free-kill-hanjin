@@ -761,14 +761,13 @@ end
 
 --- 把一张指定花色点数的牌放到牌堆顶，作为下一次判定牌。
 local function putJudgeOnTop(room, suit, number)
-  local id = table.find(room.draw_pile, function(candidate)
-    local card = Fk:getCardById(candidate, true)
-    return card ~= nil and card.suit == suit and card.number == number
-  end)
-  lu.assertNotNil(id, "牌堆中缺少所需判定牌")
-  table.removeOne(room.draw_pile, id)
-  table.insert(room.draw_pile, 1, id)
-  return id
+  -- 指定花色点数的正式牌可能已被发到起始手牌。
+  local card = room:printCard("qiao__slash", suit, number)
+  room:moveCards {
+    ids = { card.id }, toArea = Card.DrawPile, drawPilePosition = 1,
+    moveReason = fk.ReasonJustMove, skillName = "test",
+  }
+  return card.id
 end
 
 --- 记录真实伤害事件（来源、目标、点数与属性）。
