@@ -97,12 +97,14 @@ function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelec
   local name = "qiao_heg__han001"
   local pack = Fk.generals[name].package.name
   local guests = Guest.registeredInPackage(pack)
-  lu.assertTrue(table.contains(guests, name))
-  lu.assertFalse(table.contains(guests, "qiao_heg__han003"))
-  lu.assertFalse(table.contains(Guest.registeredInPackage("qiao_zhenshi"), name))
-  for _, general in ipairs(guests) do
+  lu.assertEquals(guests[name], { "qun", "wei" })
+  lu.assertEquals(guests.qiao_heg__wei013, { "han" })
+  lu.assertEquals(guests.qiao_heg__qun001, { "wei", "shu", "wu", "han" })
+  lu.assertNil(guests.qiao_heg__han003)
+  lu.assertNil(Guest.registeredInPackage("qiao_zhenshi")[name])
+  for general, factions in pairs(guests) do
     lu.assertEquals(Fk.generals[general].package.name, pack)
-    lu.assertTrue(#Guest.guestKingdoms(general) > 0)
+    lu.assertEquals(factions, Guest.guestKingdoms(general))
   end
 end
 

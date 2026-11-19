@@ -16,9 +16,8 @@ GeneralsOverview {
   readonly property string selectedPackage: packageList?.model[packageList.currentIndex] ?? ""
   readonly property bool showingGuests: guestToggle.checked && stat === 0
   readonly property var registeredGuests: {
-    if (!showingGuests || !selectedPackage) return [];
-    const names = Lua.ev(`require("packages.qiao.pkg.qiao_mode.rules.guest_factions").registeredInPackage(${JSON.stringify(selectedPackage)})`);
-    return Array.from(names ?? []);
+    if (!showingGuests || !selectedPackage) return ({});
+    return Lua.ev(`require("packages.qiao.pkg.qiao_mode.rules.guest_factions").registeredInPackage(${JSON.stringify(selectedPackage)})`) ?? ({});
   }
 
   Component.onCompleted: {
@@ -57,19 +56,44 @@ GeneralsOverview {
     clip: true
     model: {
       const names = Array.from(overview.standardGrid?.model ?? []);
-      return names.filter(name => overview.registeredGuests.includes(name));
+      return names.filter(name => overview.registeredGuests[name]?.length > 0);
     }
 
     delegate: Item {
+      id: tile
       required property string modelData
+      readonly property var factions: Array.from(overview.registeredGuests[modelData] ?? [])
       width: guestGrid.cellWidth
       height: guestGrid.cellHeight
 
       Component.onCompleted: {
         // Reuse the original card delegate, including its detail and ban-list UI.
+        if (factions.length === 0) return;
         const card = overview.standardGrid.delegate.createObject(this, { modelData });
+        if (!card) return;
+        card.dataModel.kingdom = factions[0];
+        card.dataModel.subkingdom = factions[1] ?? "";
         const picture = GuestIllustration.picture(modelData, true);
-        if (card && picture) card.cardFrontSource = picture;
+        if (picture) card.cardFrontSource = picture;
+      }
+
+      // The standard card has two faction slots. Put any remaining badges below its HP.
+      Row {
+        x: 32
+        y: 16
+        spacing: 2
+        z: 1
+
+        Repeater {
+          model: tile.factions.slice(2)
+          Image {
+            required property string modelData
+            width: 13
+            height: 15
+            fillMode: Image.PreserveAspectFit
+            source: SkinBank.getGeneralCardDir(modelData) + modelData
+          }
+        }
       }
     }
 

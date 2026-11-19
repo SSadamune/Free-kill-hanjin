@@ -47,17 +47,18 @@ function M.guestKingdoms(name)
   return table.simpleClone(M.guests[name] or {})
 end
 
----List registered guest generals in the selected catalog package.
+---Return the catalog's registered guest factions by general name.
+---@return table<string, string[]>
 function M.registeredInPackage(packageName)
   local package = Fk.packages[packageName]
   if not package then return {} end
-  local names = {}
+  local factions = {}
   for _, general in ipairs(package.generals) do
     if M.guests[general.name] and not general.total_hidden then
-      table.insert(names, general.name)
+      factions[general.name] = M.guestKingdoms(general.name)
     end
   end
-  return names
+  return factions
 end
 
 ---Resolve one general against this game's allowed kingdoms.
