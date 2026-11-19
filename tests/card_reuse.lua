@@ -715,6 +715,7 @@ function Testqiao_card_reuse:testAdaptedEquipmentSkillsAttachAndDetach()
     { "qiao__luminous_pearl", "qiao__luminous_pearl_skill" },
     { "qiao__dragon_phoenix", "qiao__dragon_phoenix_skill" },
     { "qiao__halberd", "qiao__halberd_skill" },
+    { "qiao__kylin_bow", "qiao__kylin_bow_skill" },
     { "qiao__blade", "qiao__blade_skill" },
     { "qiao__liulongcanjia", "qiao__liulongcanjia_skill" },
     { "qiao__taigong_tactics", "qiao__taigong_tactics_skill" },
@@ -1708,6 +1709,88 @@ function Testqiao_card_reuse:testChasingNearCanTargetAnEmptyOtherRole()
   lu.assertEquals(asked, 0, "目标区域无牌时不发起选牌")
   lu.assertTrue(p2:isAllNude())
   lu.assertEquals(room:getCardArea(c.id), Card.DiscardPile)
+end
+
+-- 麒麟弓：选牌请求以 card_data 表给出坐骑候选，引擎只对区域字符串自动生成
+-- "#AskForChooseCard:..."，表形式必须由技能自带 prompt。
+--
+-- 只走一次真实流程：AskForCardChosen 询问的是伤害来源 p（params.target 只是
+-- 被弃牌者 t），回复队列必须在 p 上依次给出“发动技能”和“所选坐骑”；请求完成后
+-- room.last_request 就是本次 AskForCardChosen。随后把同一份真实 payload 交给
+-- 崩溃所在的 SmartAI:handleAskForCardChosen，避免另起流程。
+--
+-- 断言玩家对象使用 assertIs（引用比较）。LuaUnit 的 assertEquals 对 table 会
+-- 深度遍历，ServerPlayer 经 room/engine 形成大对象图，曾使套件在该用例超时。
+function Testqiao_card_reuse:testKylinBowRealRequestCarriesFullPromptAndDiscardsMount()
+  local room = FkTest.room
+  local p, t = room.players[1], room.players[2]
+  local seen
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    local bow = give(room, p, card("qiao__kylin_bow"))
+    use(room, p, { p }, bow)
+    lu.assertTrue(p:hasSkill("qiao__kylin_bow_skill"))
+    local offensive = give(room, t, card("qiao__chitu"))
+    local defensive = give(room, t, card("qiao__jueying"))
+    local weapon = give(room, t, card("qiao__axe"))
+    room:moveCardTo({ offensive.id }, Card.PlayerEquip, t, fk.ReasonPut, "test", nil, true, t)
+    room:moveCardTo({ defensive.id }, Card.PlayerEquip, t, fk.ReasonPut, "test", nil, true, t)
+    room:moveCardTo({ weapon.id }, Card.PlayerEquip, t, fk.ReasonPut, "test", nil, true, t)
+    local slash = give(room, p, card("qiao__slash"))
+    skill_test.withSkillRequests(room, "qiao__kylin_bow_skill", {
+      askToChooseCard = function(self, player, params, original)
+        seen = {
+          player = player, target = params.target, prompt = params.prompt,
+          flag = params.flag, request = nil, requested = nil, chosen = nil,
+        }
+        local id = original(self, player, params)
+        local request = room.last_request
+        if request ~= nil and request.command == "AskForCardChosen" then
+          seen.request = request.data[player.id]
+          seen.requested = request.players[1]
+        end
+        seen.chosen = id
+        return id
+      end,
+    }, function()
+      FkTest.setNextReplies(p, { "1", offensive.id })
+      FkTest.setNextReplies(t, { "" })
+      use(room, p, { t }, slash)
+    end)
+
+    lu.assertNotNil(seen, "麒麟弓未发起选牌请求")
+    -- AskForCardChosen 询问伤害来源 p；target 只是被弃牌者 t。
+    lu.assertIs(seen.player, p, "AskForCardChosen 必须询问伤害来源")
+    lu.assertIs(seen.target, t)
+    lu.assertIs(seen.requested, p, "请求参与者应为被询问的伤害来源")
+    lu.assertIs(seen.chosen, offensive.id, "回复顺序：先发动技能，再选坐骑")
+    local prompt = "#AskForChooseCard:" .. t.id .. "::qiao__kylin_bow_skill"
+    lu.assertEquals(seen.prompt, prompt)
+    -- AI 的 handleAskForCardChosen 用 prompt:split(":")[4] 取技能名。
+    lu.assertEquals(seen.prompt:split(":")[4], "qiao__kylin_bow_skill")
+    lu.assertNotNil(seen.request, "缺少真实 AskForCardChosen 请求")
+    lu.assertEquals(#seen.request, 3, "请求数据应为 target/flag/prompt")
+    lu.assertIs(seen.request[1], t)
+    lu.assertIs(seen.request[2], seen.flag)
+    lu.assertEquals(seen.request[3], prompt)
+    local candidates = seen.flag.card_data[1][2]
+    lu.assertEquals(#candidates, 2, "候选应恰好是两张坐骑")
+    lu.assertTrue(table.contains(candidates, offensive.id))
+    lu.assertTrue(table.contains(candidates, defensive.id))
+    lu.assertFalse(table.contains(candidates, weapon.id), "非坐骑装备不能成为候选")
+    lu.assertEquals(room:getCardArea(offensive.id), Card.DiscardPile)
+    lu.assertFalse(table.contains(t:getCardIds("e"), offensive.id))
+    lu.assertTrue(table.contains(t:getCardIds("e"), defensive.id), "只弃置所选坐骑")
+    lu.assertTrue(table.contains(t:getCardIds("e"), weapon.id), "其他装备不受影响")
+
+    -- 同一真实 payload：prompt 为 nil 时这里会在 prompt:split 崩溃；修复后
+    -- AI 正常返回 nil（未注册 CardChosenStrategy），由服务端按候选兜底。
+    local ok, reply = pcall(function()
+      return p.ai:handleAskForCardChosen(seen.request)
+    end)
+    lu.assertTrue(ok, tostring(reply))
+    lu.assertNil(reply, "未注册 CardChosenStrategy 时 AI 不应自行选牌")
+  end)
 end
 
 return { name = "qiao_card_reuse" }

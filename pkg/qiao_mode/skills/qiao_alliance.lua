@@ -15,10 +15,19 @@ local function shenshouId(player)
   end
 end
 
+--- 合纵标记属于实体牌。牌堆构建时由模式写入公开的 @@alliance 卡牌标记并同步到
+--- 客户端；静态 extra_data 只在服务端打印牌时另行写入。两端都接受这两种来源，
+--- 避免客户端只能看到牌面标记时无法点亮或提交装备区的神授思召。
+local function isAllianceCard(card)
+  if card == nil then return false end
+  if card:hasMark("@@alliance", MarkEnum.CardTempMarkSuffix) ~= nil then return true end
+  return M.isHeji(card)
+end
+
 local function canSelect(player, id, selected)
   if #selected >= 3 then return false end
   local card = Fk:getCardById(id)
-  if card == nil or not M.isHeji(card) then return false end
+  if card == nil or not isAllianceCard(card) then return false end
   if table.contains(player:getCardIds(Player.Hand), id) then return true end
   return id == shenshouId(player) and player:getMark(ACTIVE) == 0
 end
@@ -27,7 +36,11 @@ skill:addEffect("active", {
   anim_type = "support",
   max_phase_use_time = 1,
   can_use = function(self, player)
-    return player:usedSkillTimes(skill.name, Player.HistoryPhase) == 0
+    if player:usedSkillTimes(skill.name, Player.HistoryPhase) > 0 then return false end
+    for _, id in ipairs(player:getCardIds("he")) do
+      if canSelect(player, id, {}) then return true end
+    end
+    return false
   end,
   min_card_num = 1,
   max_card_num = 3,
