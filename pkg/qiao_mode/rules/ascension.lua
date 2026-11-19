@@ -301,6 +301,21 @@ function M.death_succession(room, victim)
   return false, deadKingdom
 end
 
+--- 明置时归一溢出转野的私有身份。
+---
+--- 引擎在 `GeneralShown` 之前已把人数溢出的角色 `kingdom` 设为 `wild`，但其
+--- `role` 仍是初始常规势力。上游 `heg_rule` 会按 `role` 属于 `all_kingdoms`
+--- 弹出“野心家建国”。外部 FAQ 的“暴露野心/拉拢人心”只针对未明置的野心家
+--- 专属武将，人数溢出转野的普通武将没有建国依据；这里只把仍为常规势力的
+--- 私有身份归一为 `wild`，已建立的 `wild`/国号/特殊身份不覆盖。
+---@param player ServerPlayer
+function M.ensure_wild_role(player)
+  if player == nil or player.kingdom ~= "wild" then return end
+  local role = player.role
+  if type(role) ~= "string" or not Ban.isKnown(role) then return end
+  player.role = "wild"
+end
+
 --- 君主死亡无人继位时的转野结算。已有野心家保持原势力，不因继位回归。
 function M.convert_to_wild(room, victim, kingdom)
   if isUnknown(kingdom) then return end

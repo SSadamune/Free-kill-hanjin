@@ -86,6 +86,24 @@ local function captureAscensionPrompts()
   return prompts
 end
 
+--- Capture the upstream wild-founding request. Return a predicate; the wrapper
+--- answers it instead of blocking so the test can assert the request never ran.
+local function captureWildFounding()
+  local prompted = false
+  FkTest.runInRoom(function()
+    local r = room()
+    local original = r.askToChoice
+    function r:askToChoice(target, params)
+      if params and params.prompt == "#wild-choose" then
+        prompted = true
+        return nil
+      end
+      return original(self, target, params)
+    end
+  end)
+  return function() return prompted end
+end
+
 local function markDead(p, kingdom)
   -- Reveal directly instead of broadcasting: the victory helper only needs the
   -- final face-up state, and broadcasting property changes for already-dead
@@ -464,6 +482,71 @@ function Testsecond_lord:testLordPresenceDoesNotPreventOverpopulationWild()
   FkTest.runInRoom(function() candidate:revealGeneral(false) end)
   lu.assertEquals(candidate.kingdom, "wild")
   lu.assertEquals(candidate.general, G.wei_normal.name)
+end
+
+function Testsecond_lord:testOverflowWildRevealDoesNotEnterUpstreamFounding()
+  local lord, candidate = player(1), player(2)
+  local allies = { player(3), player(4), player(5) }
+  local allowedBefore
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    for _, ally in ipairs(allies) do
+      revealed(ally, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    -- broadcastGeneral leaves the private role at the initial kingdom; the
+    -- overflow itself only changes kingdom to wild.
+    candidate.role = "wei"
+    allowedBefore = room():getBanner("all_kingdoms")
+  end)
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() candidate:revealGeneral(false) end)
+  lu.assertFalse(prompted(), "溢出转野不得进入上游建国询问")
+  lu.assertEquals(candidate.kingdom, "wild")
+  lu.assertEquals(candidate.role, "wild")
+  lu.assertEquals(candidate:getMark("hasShownMainGeneral"), 1,
+    "上游其余明置流程仍须执行")
+  -- getBanner 对普通表返回副本，上游临时插入的 unknown/hidden 不得回写到
+  -- 房间或广播给客户端。
+  lu.assertEquals(room():getBanner("all_kingdoms"), allowedBefore)
+end
+
+function Testsecond_lord:testOverflowWildDeathDoesNotEnterUpstreamFounding()
+  local lord, candidate = player(1), player(2)
+  local allies = { player(3), player(4), player(5) }
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal.name, G.wei_deputy.name, "wei")
+    for _, ally in ipairs(allies) do
+      revealed(ally, G.wei_normal2.name, G.wei_deputy.name, "wei")
+    end
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    candidate.role = "wei"
+  end)
+  FkTest.runInRoom(function() candidate:revealGeneral(false) end)
+  lu.assertEquals(candidate.role, "wild")
+  -- No winner yet: the HanJin GameOverJudge guard falls through to the
+  -- upstream handler, which must not offer founding for an overflow wild.
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() room():killPlayer { who = candidate } end)
+  lu.assertFalse(prompted(), "溢出转野死亡时不得进入上游建国询问")
+  lu.assertEquals(candidate.role, "wild")
+end
+
+function Testsecond_lord:testRegularRevealKeepsItsIdentity()
+  local normal = player(6)
+  FkTest.runInRoom(function()
+    hidden(normal, "qiao_test__shu_1", "qiao_test__shu_2", "shu")
+    room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+    normal.role = "shu"
+  end)
+  local prompted = captureWildFounding()
+  FkTest.runInRoom(function() normal:revealGeneral(false) end)
+  lu.assertFalse(prompted())
+  lu.assertEquals(normal.kingdom, "shu")
+  lu.assertEquals(normal.role, "shu")
+  lu.assertEquals(normal:getMark("hasShownMainGeneral"), 1)
 end
 
 function Testsecond_lord:testSuccessorDoesNotRestoreExistingWild()
