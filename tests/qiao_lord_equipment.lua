@@ -259,11 +259,11 @@ function Testqiao_lord_equipment:testZhoujunPrepareChoiceAndTurnPersistence()
   local room = FkTest.room
   local owner = p(1)
   local seal = card("qiao__zhoujun_lingbingyin")
-  local handBefore
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    FkTest.setNextReplies(owner, { "1", "#qiao__zhoujun-draw2" })
+    -- 摸牌+2，出杀-1，手牌上限-1：合法组合由服务端数值校验后生效。
+    FkTest.setNextReplies(owner, { "1", { draw = 2, slash = -1, hand = -1 } })
     room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
     local drawData = { n = 2 }
     room.logic:trigger(fk.DrawNCards, owner, drawData)
@@ -294,24 +294,68 @@ function Testqiao_lord_equipment:testZhoujunTwoPointReduction()
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    FkTest.setNextReplies(owner, { "1" })
-    local originalChoice = room.askToChoice
-    room.askToChoice = function(self, who, params)
-      if params.skill_name == "qiao__zhoujun_lingbingyin_skill" then
-        for _, c in ipairs(params.choices or {}) do
-          if tostring(c):find("qiao__zhoujun-slash2-draw2", 1, true) then return c end
-        end
-      end
-      return originalChoice(self, who, params)
-    end
+    FkTest.setNextReplies(owner, { "1", { draw = -2, slash = 2, hand = 0 } })
     room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
-    room.askToChoice = originalChoice
     local drawData = { n = 2 }
     room.logic:trigger(fk.DrawNCards, owner, drawData)
     lu.assertEquals(drawData.n, 0, "摸牌-2按当前基数足额扣除")
     lu.assertEquals(Fk.skills["slash_skill"]:getMaxUseTime(
       owner, Player.HistoryPhase, Fk:cloneCard("slash")), 3, "出杀+2")
     room.logic:trigger(fk.TurnEnd, owner, {})
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInvalidReply()
+  local room = FkTest.room
+  local owner = p(6)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  local request
+  FkTest.runInRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    -- 三项都在取值范围内，但不是服务端提供的合法组合，不能生效。
+    FkTest.setNextReplies(owner, { "1", { draw = 0, slash = 0, hand = 0 } })
+    FkTest.setRoomBreakpoint(owner, "CustomDialog", function(data)
+      request = data
+      return false
+    end)
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+
+    lu.assertNotNil(request, "准备阶段应打开数值调整弹窗")
+    lu.assertEquals(request.component.url,
+      "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml")
+    local options = request.component.prop.options
+    lu.assertTrue(#options > 0, "服务端应提供合法组合")
+    for _, option in ipairs(options) do
+      lu.assertEquals(option.draw + option.slash + option.hand, 0,
+        "合法组合三项增减值合计为 0")
+      local increased = 0
+      for _, value in ipairs({ option.draw, option.slash, option.hand }) do
+        if value > 0 then increased = increased + 1 end
+      end
+      lu.assertEquals(increased, 1, "合法组合恰有一项增加")
+      lu.assertTrue(option.draw >= -2 and option.draw <= 2)
+      lu.assertTrue(option.slash >= -2 and option.slash <= 2)
+      lu.assertTrue(option.hand >= -2 and option.hand <= 2)
+    end
+    lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "非合法组合不产生摸牌修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0, "非合法组合不产生出杀修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0, "非合法组合不产生手牌上限修正")
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunCancelLeavesNoBonus()
+  local room = FkTest.room
+  local owner = p(7)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  FkTest.runInRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    FkTest.setNextReplies(owner, { "1", "" })
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "取消不随机选择修正")
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
+    lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
   end)
 end
 

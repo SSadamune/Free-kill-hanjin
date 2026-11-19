@@ -33,49 +33,59 @@ local function canMinus(player, key, amount)
   return player:getMaxCards() >= amount
 end
 
---- 生成准备阶段可选的增量组合。+2 时另外两项各 -1；+1 时选择一个其他项 -1。
+--- 生成准备阶段可选的增减组合，扣减不得超过对应基数。
 local function optionsFor(player)
   local result = {}
-  local function add(key, draw, slash, hand, minus1, amount1, minus2, amount2)
+  local function add(draw, slash, hand, minus1, amount1, minus2, amount2)
     if not canMinus(player, minus1, amount1) then return end
     if minus2 ~= nil and not canMinus(player, minus2, amount2) then return end
-    table.insert(result, { key = key, draw = draw, slash = slash, hand = hand })
+    table.insert(result, { draw = draw, slash = slash, hand = hand })
   end
   -- +2 的三种合法分配：另外两项各 -1，或任一项足额 -2。
-  add("#qiao__zhoujun-draw2", 2, -1, -1, "slash", 1, "hand", 1)
-  add("#qiao__zhoujun-draw2-slash2", 2, -2, 0, "slash", 2)
-  add("#qiao__zhoujun-draw2-hand2", 2, 0, -2, "hand", 2)
-  add("#qiao__zhoujun-draw1-slash", 1, -1, 0, "slash", 1)
-  add("#qiao__zhoujun-draw1-hand", 1, 0, -1, "hand", 1)
-  add("#qiao__zhoujun-slash2", -1, 2, -1, "draw", 1, "hand", 1)
-  add("#qiao__zhoujun-slash2-draw2", -2, 2, 0, "draw", 2)
-  add("#qiao__zhoujun-slash2-hand2", 0, 2, -2, "hand", 2)
-  add("#qiao__zhoujun-slash1-draw", -1, 1, 0, "draw", 1)
-  add("#qiao__zhoujun-slash1-hand", 0, 1, -1, "hand", 1)
-  add("#qiao__zhoujun-hand2", -1, -1, 2, "draw", 1, "slash", 1)
-  add("#qiao__zhoujun-hand2-draw2", -2, 0, 2, "draw", 2)
-  add("#qiao__zhoujun-hand2-slash2", 0, -2, 2, "slash", 2)
-  add("#qiao__zhoujun-hand1-draw", -1, 0, 1, "draw", 1)
-  add("#qiao__zhoujun-hand1-slash", 0, -1, 1, "slash", 1)
+  add(2, -1, -1, "slash", 1, "hand", 1)
+  add(2, -2, 0, "slash", 2)
+  add(2, 0, -2, "hand", 2)
+  add(1, -1, 0, "slash", 1)
+  add(1, 0, -1, "hand", 1)
+  add(-1, 2, -1, "draw", 1, "hand", 1)
+  add(-2, 2, 0, "draw", 2)
+  add(0, 2, -2, "hand", 2)
+  add(-1, 1, 0, "draw", 1)
+  add(0, 1, -1, "hand", 1)
+  add(-1, -1, 2, "draw", 1, "slash", 1)
+  add(-2, 0, 2, "draw", 2)
+  add(0, -2, 2, "slash", 2)
+  add(-1, 0, 1, "draw", 1)
+  add(0, -1, 1, "slash", 1)
   return result
+end
+
+--- 只接受与服务端合法组合完全一致的数值；取消、超时、非法回复均不产生修正。
+local function optionFromReply(options, reply)
+  if type(reply) ~= "table" then return nil end
+  local draw, slash, hand = tonumber(reply.draw), tonumber(reply.slash), tonumber(reply.hand)
+  if draw == nil or slash == nil or hand == nil then return nil end
+  return table.find(options, function(option)
+    return option.draw == draw and option.slash == slash and option.hand == hand
+  end)
 end
 
 local function askPrepare(player)
   local room = player.room
   local options = optionsFor(player)
   if #options == 0 then return end
-  local labels = {}
-  local byKey = {}
-  for _, option in ipairs(options) do
-    table.insert(labels, option.key)
-    byKey[option.key] = option
-  end
-  local chosen = room:askToChoice(player, {
-    choices = labels,
+  -- AI 或离线/无客户端时 CustomDialog 返回空串，不能回退到任意组合。
+  local reply = room:askToCustomDialog(player, {
     skill_name = skill.name,
-    prompt = "#qiao__zhoujun-prepare",
+    component = {
+      url = "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml",
+      prop = {
+        options = options,
+        prompt = "#qiao__zhoujun-prepare",
+      },
+    },
   })
-  local option = byKey[chosen]
+  local option = optionFromReply(optionsFor(player), reply)
   if option == nil then return end
   addMark(player, DRAW, option.draw)
   addMark(player, SLASH, option.slash)
@@ -102,24 +112,9 @@ skill:addEffect(fk.EventPhaseStart, {
 Fk:loadTranslationTable {
   [skill.name] = "州郡领兵印",
   ["#qiao__zhoujun-invoke"] = "州郡领兵印：是否调整本回合的摸牌、出杀与手牌上限",
-  ["#qiao__zhoujun-prepare"] = "州郡领兵印：选择一项增量及扣减分配",
+  ["#qiao__zhoujun-prepare"] = "州郡领兵印：调整三项增减值",
   ["#qiao__zhoujun-give"] = "州郡领兵印：是否交给 %dest 一张自己的手牌或装备",
   ["#qiao__zhoujun-choose"] = "州郡领兵印：选择一张自己的手牌或装备交出",
-  ["#qiao__zhoujun-draw2"] = "摸牌+2，出杀-1，手牌上限-1",
-  ["#qiao__zhoujun-draw2-slash2"] = "摸牌+2，出杀-2",
-  ["#qiao__zhoujun-draw2-hand2"] = "摸牌+2，手牌上限-2",
-  ["#qiao__zhoujun-draw1-slash"] = "摸牌+1，出杀-1",
-  ["#qiao__zhoujun-draw1-hand"] = "摸牌+1，手牌上限-1",
-  ["#qiao__zhoujun-slash2"] = "出杀+2，摸牌-1，手牌上限-1",
-  ["#qiao__zhoujun-slash2-draw2"] = "出杀+2，摸牌-2",
-  ["#qiao__zhoujun-slash2-hand2"] = "出杀+2，手牌上限-2",
-  ["#qiao__zhoujun-slash1-draw"] = "出杀+1，摸牌-1",
-  ["#qiao__zhoujun-slash1-hand"] = "出杀+1，手牌上限-1",
-  ["#qiao__zhoujun-hand2"] = "手牌上限+2，摸牌-1，出杀-1",
-  ["#qiao__zhoujun-hand2-draw2"] = "手牌上限+2，摸牌-2",
-  ["#qiao__zhoujun-hand2-slash2"] = "手牌上限+2，出杀-2",
-  ["#qiao__zhoujun-hand1-draw"] = "手牌上限+1，摸牌-1",
-  ["#qiao__zhoujun-hand1-slash"] = "手牌上限+1，出杀-1",
 }
 
 return skill
