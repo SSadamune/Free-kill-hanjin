@@ -776,6 +776,9 @@ function Testqiao_card_reuse:testFiveElementsFanIsClickableViewAsAfterEquip()
     lu.assertTrue(p:hasSkill("qiao__five_elements_fan_skill"))
     lu.assertTrue(Fk.skills["qiao__five_elements_fan_skill"].visible)
     lu.assertEquals(Fk:translate("qiao__five_elements_fan"), "五行鹤翎扇")
+    local description = Fk:translate(":qiao__five_elements_fan_skill")
+    lu.assertEquals(description, "你可以将一张属性【杀】当任意一种其他属性【杀】使用。")
+    lu.assertStrContains(Fk:translate(":qiao__five_elements_fan"), description)
   end)
 end
 
@@ -1401,7 +1404,15 @@ function Testqiao_card_reuse:testLuminousPearlIndependentDiscardDraw()
     lu.assertTrue(skill:cardFilter(p, c1.id, {}, {}))
     local data = { from = p, cards = { c1.id, c2.id }, tos = {} }
     handBefore = #p:getCardIds("h")
+    local invoked = 0
+    local sendLog = room.sendLog
+    room.sendLog = function(self, log)
+      if log.type == "#InvokeSkill" and log.arg == skill.name then invoked = invoked + 1 end
+      return sendLog(self, log)
+    end
     room:useSkill(p, skill, function() skill:onUse(room, data) end, data)
+    room.sendLog = sendLog
+    lu.assertEquals(invoked, 1)
   end)
   lu.assertEquals(room:getCardArea(c1.id), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(c2.id), Card.DiscardPile)

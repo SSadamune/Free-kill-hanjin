@@ -84,7 +84,7 @@ M.cards = {
   -- Weapons ---------------------------------------------------------------
   ["qiao__spear"] = { status = "reused", kind = "qiao_equip", upstream = "spear", skill = "qiao__spear_skill" },
   ["qiao__triblade"] = { status = "reused", kind = "qiao_equip", upstream = "triblade", skill = "qiao__triblade_skill", desc = false },
-  ["qiao__five_elements_fan"] = { status = "reused", kind = "qiao_equip", upstream = "five_elements_fan", skill = "qiao__five_elements_fan_skill" },
+  ["qiao__five_elements_fan"] = { status = "reused", kind = "qiao_equip", upstream = "five_elements_fan", skill = "qiao__five_elements_fan_skill", desc = false },
   ["qiao__black_chain"] = { status = "reused", kind = "qiao_equip", upstream = "black_chain", skill = "qiao__black_chain_skill", desc = false },
   ["qiao__crossbow"] = { status = "reused", kind = "qiao_equip", upstream = "crossbow", skill = "qiao__crossbow_skill" },
   ["qiao__qinggang_sword"] = { status = "reused", kind = "equip", upstream = "qinggang_sword", desc = false },

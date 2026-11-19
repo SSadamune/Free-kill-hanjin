@@ -25,7 +25,7 @@ local function zhoujunEnter(room, player)
     if not other.dead and not other:isRemoved() and #other:getCardIds("he") > 0 then
       if room:askToSkillInvoke(other, {
         skill_name = "qiao__zhoujun_lingbingyin_skill",
-        prompt = "#qiao__zhoujun-give:" .. player.id,
+        prompt = "#qiao__zhoujun-give::" .. player.id,
       }) then
         local card = room:askToChooseCard(other, {
           target = other,

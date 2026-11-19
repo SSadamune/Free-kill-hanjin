@@ -15,6 +15,7 @@ local skill = fk.CreateSkill {
 
 Fk:loadTranslationTable {
   ["qiao__five_elements_fan_skill"] = "五行鹤翎扇",
+  [":qiao__five_elements_fan_skill"] = "你可以将一张属性【杀】当任意一种其他属性【杀】使用。",
   ["#qiao__five_elements_fan-prompt"] = "五行鹤翎扇：将一张属性【杀】当另一种属性【杀】使用",
   ["#qiao__five_elements_fan-choose"] = "五行鹤翎扇：选择转化后的属性【杀】",
 }

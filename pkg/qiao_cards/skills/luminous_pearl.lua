@@ -51,7 +51,6 @@ skill:addEffect("active", {
     local from = effect.from
     local cards = effect.cards or {}
     if from == nil or from.dead or #cards == 0 then return end
-    room:notifySkillInvoked(from, skill.name, "drawcard")
     room:throwCard(cards, skill.name, from, from)
     local moved = actualDiscarded(room, from)
     if moved > 0 and not from.dead then from:drawCards(moved, skill.name) end

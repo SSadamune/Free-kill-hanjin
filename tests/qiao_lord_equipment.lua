@@ -228,12 +228,18 @@ function Testqiao_lord_equipment:testZhoujunEnteringSameCategoryAndNoBigKingdom(
   local owner, ally, noBig = p(1), p(3), p(4)
   local seal = card("qiao__zhoujun_lingbingyin")
   local gift = card("qiao__peach", Card.Heart, 7)
+  local giftPrompt
   FkTest.runInRoom(function()
     give(room, owner, seal)
     give(room, ally, gift)
+    FkTest.setRoomBreakpoint(ally, "AskForSkillInvoke", function(data)
+      if data[1] == "qiao__zhoujun_lingbingyin_skill" then giftPrompt = data[2] end
+      return false
+    end)
     FkTest.setNextReplies(ally, { "1", gift.id })
     use(room, owner, { owner }, seal)
   end)
+  lu.assertEquals(giftPrompt, "#qiao__zhoujun-give::" .. owner.id)
   lu.assertTrue(table.contains(owner:getCardIds("h"), gift.id),
     "同为一个大势力的角色可交牌给装备者")
 
