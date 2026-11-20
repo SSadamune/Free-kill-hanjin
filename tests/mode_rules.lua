@@ -6,6 +6,41 @@ local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 
 Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
+function Testmode_rules:testOneGlobalWindowAfterAllHandsAreDealt()
+  support.clearRoom()
+  local focusCalls, waits = 0, 0
+  support.createRoom {
+    mode = "qiao_heg_mode",
+    realSelection = true,
+    configure = function(current)
+      local focus, delay = current.notifyMoveFocus, current.delay
+      function current:notifyMoveFocus(players, command, timeout)
+        if command == "qiao_initial_prelight" then
+          focusCalls = focusCalls + 1
+          lu.assertTrue(players == self.players)
+          lu.assertEquals(timeout, 3000)
+          for _, player in ipairs(players) do
+            lu.assertTrue(player:getHandcardNum() >= 4)
+          end
+        end
+        return focus(self, players, command, timeout)
+      end
+      function current:delay(ms)
+        if ms == 3000 then
+          lu.assertEquals(focusCalls, 1)
+          waits = waits + 1
+        end
+        return delay(self, ms)
+      end
+    end,
+  }
+  lu.assertEquals(focusCalls, 1)
+  lu.assertEquals(waits, 1)
+  for _, trigger in ipairs(Fk.global_trigger) do
+    lu.assertNotEquals(trigger.name, "#qiao_initial_prelight")
+  end
+end
+
 local G = content.generals
 
 local function room() return FkTest.room end
