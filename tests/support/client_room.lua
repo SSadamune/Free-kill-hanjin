@@ -47,4 +47,39 @@ function M.run(current, fn)
   return clients, clientRoom
 end
 
+-- Run the registered client selector with the live server's request data and
+-- return the reply produced by its confirm button.
+function M.confirmCards(room, player, params, ids)
+  local reply
+  M.run(room, function(clients)
+    local board = assert(Fk:getBoardGame(room:getSettings("gameMode")))
+    local client = board.client_klass:new(ClientInstance.client)
+    local handler = client.request_handlers.AskForUseActiveSkill:new(clients[player.seat], {
+      params.skill_name, params.prompt, params.cancelable, params.extra_data,
+    })
+    local skill = Fk.skills[params.skill_name]
+    local previous, notify = skill._extra_data, ClientInstance.notifyUI
+    skill._extra_data = params.extra_data
+    ClientInstance.notifyUI = function(_, command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function()
+      assert(params.skill_name == "choose_cards_skill")
+      handler:setup()
+      lu.assertFalse(handler:feasible())
+      for _, id in ipairs(ids) do
+        lu.assertTrue(handler:cardValidity(id))
+        handler:selectCard(id, { selected = true })
+      end
+      lu.assertEquals(handler.selected_targets, {})
+      lu.assertTrue(handler:feasible())
+      handler:doOKButton()
+      handler:_finish()
+    end)
+    skill._extra_data, ClientInstance.notifyUI = previous, notify
+    if not ok then error(err, 0) end
+  end)
+  return assert(reply, "card selection did not generate a reply")
+end
+
 return M

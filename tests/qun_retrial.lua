@@ -2,6 +2,7 @@
 -- 输入类请求（是否发动、选哪张牌）使用测试桩，判定与打出流程均为真实实现。
 -- 本文件已加入 tests/all.lua，纳入默认国战套件。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local SKILL = "qiao__skill_qun010_2"
 local DEFAULT_KINGDOMS = { "qun", "qun", "wei", "wei", "shu", "shu", "wu", "wu" }
@@ -99,7 +100,7 @@ function Testqiao_qun_retrial:testGuidaoRedCardCannotReplace()
   local invoked = 0
   local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToCards
   room().askToSkillInvoke = function() invoked = invoked + 1; return true end
-  room().askToCards = function() return { chosen } end
+  room().askToCards = function() invoked = invoked + 1; return { chosen } end
   local ok, judge = pcall(function() return runJudge(p1) end)
   room().askToSkillInvoke, room().askToCards = oldInvoke, oldAsk
   assert(ok, judge)
@@ -107,6 +108,36 @@ function Testqiao_qun_retrial:testGuidaoRedCardCannotReplace()
   lu.assertEquals(invoked, 0)
   lu.assertEquals(judge.card.id, original)
   lu.assertTrue(table.contains(p2:getCardIds("h"), chosen))
+end
+
+function Testqiao_qun_retrial:testGuidaoEquipmentSelectionCanCancelOrConfirm()
+  local target, owner = p(1), p(2)
+  grant(owner, SKILL)
+  clearHand(owner)
+  local equip = give(owner, "qiao__jueying", Card.Spade, 5)
+  inRoom(function() room():moveCardIntoEquip(owner, equip, SKILL, false, owner) end)
+  local originalRequest = room().askToUseActiveSkill
+  local confirm = false
+  local seen = 0
+  room().askToUseActiveSkill = function(self, chooser, params)
+    if params.prompt == "#qiao__skill_qun010_2-ask" then
+      seen = seen + 1
+      lu.assertTrue(params.cancelable)
+      lu.assertTrue(params.extra_data.include_equip)
+      FkTest.setNextReplies(chooser, {
+        confirm and client_room.confirmCards(self, chooser, params, { equip }) or "",
+      })
+    end
+    return originalRequest(self, chooser, params)
+  end
+  local first = seedJudgeCard("qiao__jink", Card.Heart, 9)
+  lu.assertEquals(runJudge(target).card.id, first)
+  lu.assertEquals(room():getCardArea(equip), Card.PlayerEquip)
+  confirm = true
+  local second = seedJudgeCard("qiao__jink", Card.Heart, 10)
+  lu.assertEquals(runJudge(target).card.id, equip)
+  lu.assertTrue(table.contains(owner:getCardIds("h"), second))
+  lu.assertEquals(seen, 2)
 end
 
 return { name = "qiao_qun_retrial" }
