@@ -399,6 +399,26 @@ function Testqiao_em_han001_liuxie:testImperialOrderTurnEndGrantsZhaoshuWhenNobo
   lu.assertFalse(p(4):hasSkill(P.BANNER), "异势力不获得交牌入口")
 end
 
+function Testqiao_em_han001_liuxie:testImperialOrderTurnEndStartsAtCurrentSeat()
+  local room, current = FkTest.room, p(3)
+  local asked = {}
+  skill_test.withSkillRequests(room, "qiao__imperial_order_skill", {
+    askToChoice = function(_, player)
+      table.insert(asked, player.seat)
+      return "loseHp"
+    end,
+  }, function()
+    inRoom(function()
+      room:setPlayerProperty(p(1), "kingdom", "unknown")
+      room:setPlayerProperty(p(7), "kingdom", "unknown")
+      imperialToDiscard(room)
+      room:setCurrent(current)
+      room.logic:trigger(fk.TurnEnd, current, {})
+    end)
+  end)
+  lu.assertEquals(asked, { 7, 1 })
+end
+
 function Testqiao_em_han001_liuxie:testImperialOrderTurnEndSkipsEntityThatLeftDiscardPile()
   local room, user, third = FkTest.room, p(2), p(3)
   local card
