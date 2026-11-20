@@ -1,5 +1,6 @@
 -- JIN003 挟征 / JIN004 悖弑：真实用牌、显式目标、伤害归属与取消分支。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 local XIEZHENG = "qiao__skill_jin003_2"
@@ -77,13 +78,21 @@ function Testqiao_jin_reactive:testXiezhengRefusalEntersPenalty()
   FkTest.setNextReplies(user, { "" })
   inRoom(function()
     skill_test.withSkillRequests(room, XIEZHENG, {
-      askToChooseCardsAndPlayers = function(_, chooser, params)
+      askToCards = function(self, chooser, params, original)
         requested = true
         lu.assertEquals(chooser.id, p.id)
-        lu.assertEquals(params.min_card_num, 1)
-        lu.assertEquals(params.max_card_num, 1)
+        lu.assertEquals(params.min_num, 1)
+        lu.assertEquals(params.max_num, 1)
+        lu.assertTrue(params.include_equip)
         lu.assertTrue(table.contains(p:getCardIds("h"), theirs))
-        return { p }, { returned }
+        local request = self.askToUseActiveSkill
+        self.askToUseActiveSkill = function(r, owner, active)
+          FkTest.setNextReplies(owner, { client_room.confirmCards(r, owner, active, { returned }) })
+          return request(r, owner, active)
+        end
+        local cards = original(self, chooser, params)
+        self.askToUseActiveSkill = request
+        return cards
       end,
     }, function()
       room:handleUseCardReply(p, FkTest.ReplyUseSkill(XIEZHENG, { user, victim }, {}))

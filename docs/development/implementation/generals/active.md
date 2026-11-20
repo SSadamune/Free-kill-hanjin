@@ -280,6 +280,7 @@
 
 - **标识与依据**：运行时 ID `qiao__skill_jin003_2`；源码 [skill_jin003_2.lua](../../../../pkg/qiao_generals/skills/skill_jin003_2.lua)。规则见[司马昭规范](../../../rules/generals/jin003-simazhao.md)。同将昭然见[辅助与牌资源](support.md#jin003-1)。
 - **实现与接口**：限定技，`active` 选两名不同角色：第一名被要求将一张基本牌当【杀】对第二名实际使用，第二名由效果显式指定；走 `card_use_targets` 的 `C.useVirtualCard`＋`C.explicit({ other_roles = true })`，移除默认攻击距离并把实际目标固定为第二名角色。被要求者可用 `askToSkillInvoke` 拒绝；拒绝、无基本牌或无法合法用出时，司马昭一次获得其所有手牌，再交给其等于其当前体力值张自己的牌。用出后即使被闪也不进入惩罚。
+- 罚则交牌时收牌人已确定。`askToCards` 仅要求选足手牌或装备，不再要求选自己。回归从客户端选择牌、确认和服务端实际移交验证。
 - **验证依据**：[jin_reactive.lua](../../../../tests/jin_reactive.lua) 覆盖基本牌当杀与拒绝惩罚，并含远距离反制/原来源/非原来源分支；6/6（1.379s）通过，见[共享验证证据](verification-evidence.md#jin-reactive)。
 - **未完成与边界**：目标死亡、无牌可给、转化基本牌、客户端两次选人未人工验收。
 
