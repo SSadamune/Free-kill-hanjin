@@ -18,14 +18,16 @@ skill.qiaoImplemented = true
 
 local PAID = "qiao_jin004_paid"
 
-local function canPay(user)
-  return user ~= nil and not user.dead and #user:getCardIds("he") > 0
+local function canPay(user, owner)
+  return user ~= nil and not user.dead and table.find(user:getCardIds("he"), function(id)
+    return user ~= owner or not user:prohibitDiscard(id)
+  end) ~= nil
 end
 
 --- 由实际使用者支付一张自己的牌：自己是贾充时弃置，否则交给贾充。
 ---@return boolean paid
 local function pay(room, user, jiaChong)
-  if not canPay(user) then return false end
+  if not canPay(user, jiaChong) then return false end
 
   if user == jiaChong then
     local ids = room:askToDiscard(user, {
@@ -33,18 +35,17 @@ local function pay(room, user, jiaChong)
       max_num = 1,
       include_equip = true,
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin004_1-discard",
-      cancelable = false,
+      prompt = "#qiao__skill_jin004_1-discard-invoke",
+      cancelable = true,
     })
     return #ids == 1 and not table.contains(user:getCardIds("he"), ids[1]) or false
   end
 
-  local id = room:askToChooseCard(user, {
-    target = user,
-    flag = "he",
+  local id = room:askToCards(user, {
+    include_equip = true, min_num = 1, max_num = 1, cancelable = true,
     skill_name = skill.name,
-    prompt = "#qiao__skill_jin004_1-give",
-  })
+    prompt = "#qiao__skill_jin004_1-give-invoke",
+  })[1]
   if id == nil or not table.contains(user:getCardIds("he"), id) then return false end
   room:obtainCard(jiaChong, id, true, fk.ReasonGive, user, skill.name)
   -- 牌在移动事件中仍可能被其他效果移走；只要已离开支付者，交给即已完成。
@@ -59,17 +60,10 @@ skill:addEffect(fk.AfterCardUseDeclared, {
       and not target.dead and B.sameKingdom(target, player)
       and A.isAdaptationCard(data.card, data)
       and not (data.extra_data or {})[PAID]
-      and canPay(target)
+      and canPay(target, player)
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    local prompt = target == player
-      and "#qiao__skill_jin004_1-discard-invoke"
-      or "#qiao__skill_jin004_1-give-invoke"
-    -- 实际付费者决定是否支付；贾充的明置由随后的 room:useSkill 处理。
-    if not room:askToSkillInvoke(target, { skill_name = skill.name, prompt = prompt }) then
-      return false
-    end
     if not pay(room, target, player) then
       return false
     end
@@ -87,8 +81,6 @@ Fk:loadTranslationTable {
   ["qiao__skill_jin004_1"] = "通法",
   ["#qiao__skill_jin004_1-give-invoke"] = "通法：你可以交给贾充一张牌，令此牌无视一项应变条件",
   ["#qiao__skill_jin004_1-discard-invoke"] = "通法：你可以弃置一张牌，令此牌无视一项应变条件",
-  ["#qiao__skill_jin004_1-give"] = "通法：选择交给贾充的一张牌（手牌或装备区）",
-  ["#qiao__skill_jin004_1-discard"] = "通法：选择弃置的一张牌",
 }
 
 return skill

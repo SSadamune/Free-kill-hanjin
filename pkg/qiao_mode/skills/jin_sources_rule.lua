@@ -45,20 +45,20 @@ local function resolvePromises(room, target)
     local source = room:getPlayerById(promise.source)
     if source == nil or source.dead or source:isRemoved() then
       -- 来源已离场：仍按已展示的承诺处理限用，但没有可交给的对象。
-      local id = room:askToChooseCard(target, {
-        target = target, flag = "h", skill_name = FULI,
+      local id = room:askToCards(target, {
+        min_num = 1, max_num = 1, cancelable = false, skill_name = FULI,
         prompt = "#qiao__skill_jin016_1-card",
-      })
+      })[1]
       if id == nil or not table.contains(target:getCardIds("h"), id) then return end
       local card = Fk:getCardById(id)
       if card == nil then return end
       room:showCards({ id }, target)
       room:setPlayerMark(target, suitMark(card.suit), 1)
     else
-      local id = room:askToChooseCard(target, {
-        target = target, flag = "h", skill_name = FULI,
+      local id = room:askToCards(target, {
+        min_num = 1, max_num = 1, cancelable = false, skill_name = FULI,
         prompt = "#qiao__skill_jin016_1-card",
-      })
+      })[1]
       if id == nil or not table.contains(target:getCardIds("h"), id) then return end
       local card = Fk:getCardById(id)
       if card == nil then return end

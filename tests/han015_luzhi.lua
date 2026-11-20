@@ -107,25 +107,14 @@ function Testqiao_han015_luzhi:testYongliangUsesImperialOrderOnKnownKingdom()
   inRoom(function()
     room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1)
   end)
-  local skill = assert(Fk.skills[YONGLIANG])
-
   skill_test.withSkillRequests(room, YONGLIANG, {
-    askToDiscard = function(self, who, params, original)
-      if params.skill_name == YONGLIANG then
-        self:throwCard({ cost }, YONGLIANG, who, who)
-        return { cost }
-      end
-      return original(self, who, params)
-    end,
     askToChoice = function(self, who, params, original)
       if params.skill_name == "qiao__imperial_order_skill" then return "loseHp" end
       return original(self, who, params)
     end,
   }, function()
     inRoom(function()
-      room:useSkill(player, skill, function()
-        skill:onUse(room, { from = player, tos = { target } })
-      end, { from = player, tos = { target } })
+      room:handleUseCardReply(player, FkTest.ReplyUseSkill(YONGLIANG, { target }, { cost }))
     end)
   end)
 

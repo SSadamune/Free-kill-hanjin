@@ -158,9 +158,9 @@ function Testqiao_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
   local shown
   skill_test.withSkillRequests(room, FULI, {
     askToSkillInvoke = function() return true end,
-    askToChooseCard = function(self, player, params, original)
-      shown = params.target:getCardIds("h")[1]
-      return shown
+    askToCards = function(self, player, params, original)
+      shown = player:getCardIds("h")[1]
+      return { shown }
     end,
   }, function()
     inRoom(function()
@@ -342,9 +342,9 @@ function Testqiao_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()
   local shown
   skill_test.withSkillRequests(room, FULI, {
     askToSkillInvoke = function() return true end,
-    askToChooseCard = function(self, player, params, original)
-      shown = params.target:getCardIds("h")[1]
-      return shown
+    askToCards = function(self, player, params, original)
+      shown = player:getCardIds("h")[1]
+      return { shown }
     end,
   }, function()
     inRoom(function()

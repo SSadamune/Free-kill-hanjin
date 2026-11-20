@@ -30,12 +30,19 @@ end
 skill:addEffect("active", {
   anim_type = "control",
   prompt = "#qiao__skill_qun001_2",
-  card_num = 0,
+  card_num = 1,
+  include_equip = true,
   min_target_num = 1,
-  card_filter = Util.FalseFunc,
+  max_target_num = 3,
+  card_filter = function(self, player, id, selected)
+    return #selected == 0 and table.contains(player:getCardIds("he"), id)
+      and not player:prohibitDiscard(id)
+  end,
   can_use = function(self, player)
     if player:usedSkillTimes(skill.name, Player.HistoryPhase) > 0 then return false end
-    if player:isNude() then return false end
+    if not table.find(player:getCardIds("he"), function(id) return not player:prohibitDiscard(id) end) then
+      return false
+    end
     -- 双方共用：不读 player.room（ClientPlayer 没有该字段），经 Fk:currentRoom()
     -- 取得客户端/服务端同源的公开存活角色列表。
     return table.find(alivePlayers(), function(p)
@@ -55,7 +62,9 @@ skill:addEffect("active", {
     local player = effect.from
     -- 服务端复核发动条件与素材：出牌阶段、本人仍有牌、目标仍合法。
     if player.dead or player.phase ~= Player.Play then return end
-    if player:isNude() then return end
+    local cards = effect.cards or {}
+    if #cards ~= 1 or not table.contains(player:getCardIds("he"), cards[1])
+      or player:prohibitDiscard(cards[1]) then return end
     local targets = table.simpleClone(effect.tos or {})
     for i, tar in ipairs(targets) do
       if tar == player or tar.dead or tar:isRemoved() or tar:isNude() then return end
@@ -63,7 +72,7 @@ skill:addEffect("active", {
         if sameKingdom(tar, targets[j]) then return end
       end
     end
-    if #targets == 0 then return end
+    if #targets == 0 or #targets > 3 then return end
 
     table.insert(targets, 1, player)
     room:sortByAction(targets)
@@ -71,12 +80,15 @@ skill:addEffect("active", {
     local draw = {}
     for _, tar in ipairs(targets) do
       if not tar.dead and not tar:isNude() then
-        local chosen = room:askToChooseCard(player, {
-          target = tar,
-          flag = "he",
-          skill_name = skill.name,
-          prompt = "#qiao__skill_qun001_2-card::" .. tar.id,
-        })
+        local chosen = cards[1]
+        if tar ~= player then
+          chosen = room:askToChooseCard(player, {
+            target = tar,
+            flag = "he",
+            skill_name = skill.name,
+            prompt = "#qiao__skill_qun001_2-card::" .. tar.id,
+          })
+        end
         local ids = Card:getIdList(chosen)
         local id = ids[1]
         -- 合法素材复核：牌仍在该角色的手牌/装备区，且未被禁止弃置。

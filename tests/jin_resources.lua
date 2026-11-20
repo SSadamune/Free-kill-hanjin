@@ -409,7 +409,7 @@ function Testqiao_jin_resources:testFuxinUnusedLimitedGivesCard()
   end)
   lu.assertTrue(holder:hasSkill(FUXIN))
 
-  FkTest.setNextReplies(holder, { "1", own })
+  FkTest.setNextReplies(holder, { "1", FkTest.ReplyChooseCards({ own }) })
   triggerTurnEnd(room, turnPlayer)
 
   -- 摸一张后交给其一张：持有者仍剩一张，当前回合角色得到一张。

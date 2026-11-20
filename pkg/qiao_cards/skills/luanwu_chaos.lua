@@ -106,11 +106,9 @@ skill:addEffect("cardskill", {
         prompt = "#qiao__luanwu_chaos-choose::" .. target.id,
       })
       if choice == CHOICE_TARGET_DISCARD then
-        local picked = room:askToChooseCards(target, {
-          target = target,
-          flag = "h",
-          min = 2,
-          max = 2,
+        local picked = room:askToCards(target, {
+          min_num = 2,
+          max_num = 2,
           skill_name = skill.name,
           cancelable = false,
           prompt = "#qiao__luanwu_chaos-target-discard",

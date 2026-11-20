@@ -43,27 +43,18 @@ skill:addEffect("active", {
     if player == nil or player.dead or user == nil or victim == nil then return end
     if user.dead or victim.dead or user == victim then return end
 
-    -- “需”表示被要求者有响应选择权：先询问是否使用，再选一张基本牌；
-    -- 拒绝/无基本牌/最终无法合法用出均进入惩罚。
-    local ok = room:askToSkillInvoke(user, {
+    -- 被要求者在同一个手牌请求中选择素材或拒绝。
+    local id = room:askToCards(user, {
+      min_num = 1, max_num = 1, cancelable = true,
+      pattern = ".|.|.|hand|.|basic",
       skill_name = skill.name,
       prompt = "#qiao__skill_jin003_2-require:" .. player.id .. ":" .. victim.id,
-    })
-    local use = nil
-    if ok then
-      local id = room:askToChooseCard(user, {
-        target = user,
-        flag = "he",
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin003_2-pick",
-      })
-      if id ~= nil and id ~= -1
-        and Fk:getCardById(id).type == Card.TypeBasic
-        and table.contains(user:getCardIds("he"), id) then
-        -- victim 已由技能指定；显式目标条件替代牌面距离，独立禁止仍由策略复核。
-        use = C.useVirtualCard(room, user, SLASH, { id }, { victim },
-          skill.name, true, nil, C.explicit({ other_roles = true }, { names = { SLASH } }))
-      end
+    })[1]
+    local use
+    if id ~= nil and table.contains(user:getCardIds("h"), id)
+      and Fk:getCardById(id).type == Card.TypeBasic then
+      use = C.useVirtualCard(room, user, SLASH, { id }, { victim },
+        skill.name, true, nil, C.explicit({ other_roles = true }, { names = { SLASH } }))
     end
     if use ~= nil then return end
 
@@ -103,7 +94,6 @@ Fk:loadTranslationTable {
   ["#qiao__skill_jin003_2-prompt"] = "挟征：令一名角色将一张基本牌当【杀】对指定角色使用",
   ["#qiao__skill_jin003_2-use"] = "挟征：将一张基本牌当【杀】对指定角色使用",
   ["#qiao__skill_jin003_2-require"] = "挟征：请选择是否将一张基本牌当【杀】对 %dest 使用",
-  ["#qiao__skill_jin003_2-pick"] = "挟征：选择一张基本牌当【杀】使用",
   ["#qiao__skill_jin003_2-give"] = "挟征：交给其 %arg 张自己的牌",
 }
 

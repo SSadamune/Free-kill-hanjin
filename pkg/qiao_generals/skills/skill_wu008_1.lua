@@ -17,7 +17,7 @@ local PLACE = "#qiao__skill_wu008_1-place"
 --- 客户端没有 player.room；与服务端共用 Fk:currentRoom() 的只读房间。
 ---@param player ServerPlayer | ClientPlayer
 ---@return Room | Client
-local function currentRoom(player)
+local function currentRoom()
   return Fk:currentRoom()
 end
 
@@ -52,29 +52,16 @@ end
 ---@param player ServerPlayer | ClientPlayer
 ---@return ServerPlayer[] | ClientPlayer[]
 local function maleTargets(player)
-  local room = currentRoom(player)
+  local room = currentRoom()
   return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved() and p:isMale()
   end)
 end
 
---- 只列出可置入目标空栏的装备牌，拆成手牌区与装备区两个候选堆。
----@param player ServerPlayer
----@param target ServerPlayer
----@return table
-local function placeableCardData(player, target)
-  local hand, equip = {}, {}
-  for _, id in ipairs(placeableEquipments(player, target)) do
-    if table.contains(player:getCardIds(Player.Hand), id) then
-      table.insert(hand, id)
-    else
-      table.insert(equip, id)
-    end
-  end
-  local data = {}
-  if #hand > 0 then table.insert(data, { "$Hand", hand }) end
-  if #equip > 0 then table.insert(data, { "$Equip", equip }) end
-  return data
+local function canPayWith(player, target, id, mode)
+  if mode == DISCARD then return table.contains(discardableHand(player), id) end
+  if mode == PLACE then return table.contains(placeableEquipments(player, target), id) end
+  return false
 end
 
 skill:addEffect("active", {
@@ -82,69 +69,49 @@ skill:addEffect("active", {
   prompt = "#qiao__skill_wu008_1-prompt",
   max_phase_use_time = 1,
   target_num = 1,
-  min_card_num = 0,
-  max_card_num = 0,
+  card_num = 1,
+  include_equip = true,
+  interaction = function(self, player)
+    local choices = {}
+    if #discardableHand(player) > 0 then table.insert(choices, DISCARD) end
+    if table.find(maleTargets(player), function(target)
+      return #placeableEquipments(player, target) > 0
+    end) then
+      table.insert(choices, PLACE)
+    end
+    return UI.ComboBox { choices = choices, all_choices = { DISCARD, PLACE } }
+  end,
   can_use = function(self, player)
     return self:withinTimesLimit(player, Player.HistoryPhase)
       and table.find(maleTargets(player), function(p) return canPay(player, p) end) ~= nil
   end,
-  target_filter = function(self, player, to_select, selected)
-    return #selected == 0 and to_select ~= player
-      and to_select:isAlive() and not to_select:isRemoved()
-      and to_select:isMale() and canPay(player, to_select)
+  card_filter = function(self, player, id, selected, selected_targets)
+    if #selected > 0 then return false end
+    local mode = self.interaction.data
+    local target = selected_targets and selected_targets[1]
+    if target then return canPayWith(player, target, id, mode) end
+    return table.find(maleTargets(player), function(p)
+      return canPayWith(player, p, id, mode)
+    end) ~= nil
+  end,
+  target_filter = function(self, player, target, selected, cards)
+    if #selected > 0 or not table.contains(maleTargets(player), target) then return false end
+    local mode = self.interaction.data
+    if cards[1] then return canPayWith(player, target, cards[1], mode) end
+    if mode == DISCARD then return #discardableHand(player) > 0 end
+    if mode == PLACE then return #placeableEquipments(player, target) > 0 end
+    return false
   end,
   on_use = function(self, room, effect)
-    local player = effect.from
-    local target = effect.tos and effect.tos[1]
-    if player == nil or target == nil or player.dead or target.dead then return end
-    if not canPay(player, target) then return end
-
-    local hand = discardableHand(player)
-    local equipments = placeableEquipments(player, target)
-    local mode
-    if #hand > 0 and #equipments > 0 then
-      mode = room:askToChoice(player, {
-        choices = { DISCARD, PLACE },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu008_1-mode",
-      })
-    elseif #hand > 0 then
-      mode = DISCARD
-    else
-      mode = PLACE
-    end
+    local player, target = effect.from, effect.tos and effect.tos[1]
+    local cards = effect.cards or {}
+    local id, mode = cards[1], effect.interaction_data
+    if player.dead or #cards ~= 1 or not table.contains(maleTargets(player), target)
+      or not canPayWith(player, target, id, mode) then return end
 
     if mode == DISCARD then
-      local candidates = discardableHand(player)
-      if #candidates == 0 then return end
-      local chosen = room:askToChooseCards(player, {
-        target = player,
-        flag = { card_data = { { "$Hand", candidates } } },
-        min = 1,
-        max = 1,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu008_1-choose-hand",
-        cancelable = false,
-      })
-      local id = chosen and chosen[1]
-      if id == nil or not table.contains(candidates, id) then return end
       room:throwCard({ id }, skill.name, player, player)
     else
-      local candidates = placeableEquipments(player, target)
-      local data = placeableCardData(player, target)
-      if #candidates == 0 or #data == 0 then return end
-      local chosen = room:askToChooseCards(player, {
-        target = player,
-        flag = { card_data = data },
-        min = 1,
-        max = 1,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu008_1-choose-equip",
-        cancelable = false,
-      })
-      local id = chosen and chosen[1]
-      if id == nil or not table.contains(candidates, id) then return end
-      -- 不替换原装备：只置入空置的对应栏。
       local moved = room:moveCardIntoEquip(target, id, skill.name, false, player)
       if moved == nil or #moved == 0 then return end
     end
@@ -172,11 +139,8 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   ["#qiao__skill_wu008_1-prompt"] = "结姻：选择一名其他男性角色，弃置一张手牌或置入一张装备牌",
-  ["#qiao__skill_wu008_1-mode"] = "结姻：选择发动方式",
   [DISCARD] = "弃置一张手牌",
   [PLACE] = "将一张装备牌置入其空置装备栏",
-  ["#qiao__skill_wu008_1-choose-hand"] = "结姻：选择弃置一张手牌",
-  ["#qiao__skill_wu008_1-choose-equip"] = "结姻：选择一张可置入其空置装备栏的装备牌",
 }
 
 return skill

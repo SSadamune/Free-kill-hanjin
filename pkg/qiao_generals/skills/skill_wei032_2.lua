@@ -23,12 +23,11 @@ local function giveToAllies(room, target)
   room:sortByAction(allies)
   for _, receiver in ipairs(allies) do
     if #target:getCardIds("h") == 0 then break end
-    local id = room:askToChooseCard(target, {
-      target = target,
-      flag = "h",
+    local id = room:askToCards(target, {
+      min_num = 1, max_num = 1, cancelable = false,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei032_2-give:" .. receiver.id,
-    })
+    })[1]
     if id == nil or id == -1 or not table.contains(target:getCardIds("h"), id) then break end
     room:obtainCard(receiver, id, true, fk.ReasonGive, target, skill.name)
   end

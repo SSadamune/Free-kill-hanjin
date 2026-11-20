@@ -164,13 +164,12 @@ function Testqiao_qun_basic:testChuliTwoCandidatesSpadeDraws()
   setPlayPhase(p1)
 
   local picks = {}
-  picks[p1.id] = { mine }
   picks[p3.id] = { spade }
   picks[p5.id] = { heart }
   withStubs(CHULI, {
     askToChooseCard = function(_, params) return picks[params.target.id] end,
   }, function()
-    runActiveSkill(p1, CHULI, { p3.id, p5.id })
+    runActiveSkill(p1, CHULI, { p3.id, p5.id }, { mine })
   end)
 
   lu.assertEquals(p1:getHandcardNum(), 0) -- 自己弃置后不摸

@@ -91,11 +91,10 @@ skill:addEffect("viewas", {
     local targets = burningTargetsFor(target)
     local x = #targets
     if x <= 0 or #redCards(target) < x then return end
-    local picked = room:askToChooseCards(target, {
-      target = target,
-      flag = "he",
-      min = x,
-      max = x,
+    local picked = room:askToCards(target, {
+      include_equip = true,
+      min_num = x,
+      max_num = x,
       pattern = ".|.|red",
       skill_name = skill.name,
       prompt = "#qiao__skill_wu007_2-burn:::" .. x,

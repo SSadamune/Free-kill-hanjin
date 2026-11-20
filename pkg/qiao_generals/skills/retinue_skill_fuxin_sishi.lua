@@ -65,12 +65,11 @@ skill:addEffect(fk.TurnEnd, {
     if player.dead or target.dead then return end
     -- 目标就是持有者时不能把牌交给自己；只执行可执行的摸一张。
     if target == player then return end
-    local id = room:askToChooseCard(player, {
-      target = player,
-      flag = "he",
+    local id = room:askToCards(player, {
+      include_equip = true, min_num = 1, max_num = 1, cancelable = false,
       skill_name = skill.name,
       prompt = "#qiao__retinue_skill_fuxin_sishi-give",
-    })
+    })[1]
     if id == nil or id == -1 or not table.contains(player:getCardIds("he"), id) then return end
     room:moveCardTo({ id }, Card.PlayerHand, target, fk.ReasonGive,
       skill.name, nil, false, player)

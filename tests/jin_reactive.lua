@@ -48,7 +48,7 @@ function Testqiao_jin_reactive:testXiezhengBasicAsSlashActuallyUsed()
   local basic = give(room, user, { { "slash", Card.Spade, 3 } })[1]
   inRoom(function() victim.hp = 4 end)
 
-  FkTest.setNextReplies(user, { "1", basic })
+  FkTest.setNextReplies(user, { FkTest.ReplyChooseCards({ basic }) })
   inRoom(function()
     room:handleUseCardReply(p, FkTest.ReplyUseSkill(XIEZHENG, { user, victim }, {}))
   end)
@@ -79,6 +79,7 @@ function Testqiao_jin_reactive:testXiezhengRefusalEntersPenalty()
   inRoom(function()
     skill_test.withSkillRequests(room, XIEZHENG, {
       askToCards = function(self, chooser, params, original)
+        if chooser.id == user.id then return original(self, chooser, params) end
         requested = true
         lu.assertEquals(chooser.id, p.id)
         lu.assertEquals(params.min_num, 1)
@@ -111,7 +112,7 @@ function Testqiao_jin_reactive:testXiezhengExplicitVictimBeyondAttackRange()
   local basic = give(room, user, { { "jink", Card.Heart, 3 } })[1]
   inRoom(function() victim.hp = 4 end)
   lu.assertFalse(user:inMyAttackRange(victim))
-  FkTest.setNextReplies(user, { "1", basic })
+  FkTest.setNextReplies(user, { FkTest.ReplyChooseCards({ basic }) })
   inRoom(function()
     room:handleUseCardReply(p, FkTest.ReplyUseSkill(XIEZHENG, { user, victim }, {}))
   end)

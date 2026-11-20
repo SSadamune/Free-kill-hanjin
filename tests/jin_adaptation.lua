@@ -142,8 +142,7 @@ function Testqiao_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
   })
 
   skill_test.withSkillRequests(room, TONGFA, {
-    askToSkillInvoke = function() return true end,
-    askToChooseCard = function() return gift end,
+    askToCards = function() return { gift } end,
   }, function()
     runTurnStart(room, user, function()
       room:useCard { from = user, tos = { target }, card = usedCard }

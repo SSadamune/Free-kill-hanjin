@@ -41,6 +41,11 @@ skill:addEffect("active", {
   anim_type = "offensive",
   prompt = "#qiao__skill_han015_1-prompt",
   target_num = 1,
+  card_num = 1,
+  include_equip = true,
+  card_filter = function(self, player, id, selected)
+    return #selected == 0 and table.contains(discardableCards(player), id)
+  end,
   max_phase_use_time = 1,
   target_filter = function(self, player, to_select, selected)
     return #selected == 0 and table.contains(legalTargets(player), to_select)
@@ -54,15 +59,9 @@ skill:addEffect("active", {
     local target = effect.tos and effect.tos[1]
     if player == nil or target == nil or player.dead or target.dead or target:isRemoved() then return end
     if not table.contains(legalTargets(player), target) then return end
-    local cards = room:askToDiscard(player, {
-      min_num = 1,
-      max_num = 1,
-      include_equip = true,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han015_1-discard",
-      cancelable = false,
-    })
-    if cards == nil or #cards == 0 then return end
+    local cards = effect.cards or {}
+    if #cards ~= 1 or not table.contains(discardableCards(player), cards[1]) then return end
+    room:throwCard(cards, skill.name, player, player)
     if target.dead or target:isRemoved() or player.dead then return end
     if not table.contains(legalTargets(player), target) then return end
     C.useVirtualCard(room, player, IMPERIAL, nil, { target }, skill.name, false, nil,
@@ -76,7 +75,6 @@ Fk:loadTranslationTable {
   ["qiao__skill_han015_1"] = "用良",
   [":qiao__skill_han015_1"] = "出牌阶段限一次，你可以弃置一张牌并视为仅对一名其他角色使用【敕令】（无视目标条件限制）。",
   ["#qiao__skill_han015_1-prompt"] = "用良：弃置一张牌，视为对一名其他角色使用【敕令】",
-  ["#qiao__skill_han015_1-discard"] = "用良：弃置一张牌",
 }
 
 return skill

@@ -343,8 +343,37 @@ function Testqiao_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemains(
   lu.assertEquals(#p1:getCardIds(Player.Judge), 1)
 end
 
--- 条件“有未指定的合法目标”的否定分支（群体锦囊已指定所有目标）本轮不单独
--- 构造：需要消费多名角色的响应请求，风险高于本轮核心验收；留待后续补测。
+function Testqiao_wu_phases:testQianxunSilentlyConsumesFirstTrickWithoutAnotherTarget()
+  local p1, p2 = p(1), p(2)
+  local r = room()
+  local name = "qiao__skill_wu007_1"
+  setGeneral(p1, "qiao_heg__wu007")
+  clearCards(p1)
+  clearCards(p2)
+  local notified, logged = 0, 0
+  local notify, sendLog = r.notifySkillInvoked, r.sendLog
+  r.notifySkillInvoked = function(self, player, skillName, ...)
+    if skillName == name then notified = notified + 1 end
+    return notify(self, player, skillName, ...)
+  end
+  r.sendLog = function(self, log, ...)
+    if log.arg == name then logged = logged + 1 end
+    return sendLog(self, log, ...)
+  end
+  local indulgence = give(p2, "qiao__indulgence", Card.Heart)
+  local ok, err = pcall(inRoom, function()
+    r.current, p1.phase = p1, Player.Play
+    r:useCard { from = p1, tos = { p1 }, card = Fk:cloneCard("ex_nihilo") }
+    lu.assertEquals(p1:getMark("qiao__skill_wu007_1_used-turn"), 1)
+    lu.assertEquals(p1:usedSkillTimes(name, Player.HistoryTurn), 0)
+    r:useCard { from = p2, tos = { p1 }, card = Fk:getCardById(indulgence) }
+  end)
+  r.notifySkillInvoked, r.sendLog = notify, sendLog
+  assert(ok, err)
+  lu.assertEquals(notified, 0)
+  lu.assertEquals(logged, 0)
+  lu.assertEquals(#p1:getCardIds(Player.Judge), 1)
+end
 
 function Testqiao_wu_phases:testGuoseBothBranchesIndependentLimits()
   local p1, p2 = p(1), p(2)
@@ -545,7 +574,7 @@ function Testqiao_wu_phases:testDushiBurningCampsRealUse()
   lu.assertNotNil(active)
   FkTest.setNextReplies(p1, {
     FkTest.ReplyChoosePlayer({ p1 }),
-    red,
+    FkTest.ReplyChooseCards(red),
   })
   local before = targets[1].hp
   inRoom(function()

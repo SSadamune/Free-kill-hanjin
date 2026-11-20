@@ -75,12 +75,11 @@ skill:addEffect(fk.EnterDying, {
     -- “一张牌”默认自己的牌：手牌区或装备区，不限于手牌。
     local owned = player:getCardIds("he")
     if #owned > 0 then
-      local card = room:askToChooseCard(player, {
-        target = player,
-        flag = "he",
+      local card = room:askToCards(player, {
+        include_equip = true, min_num = 1, max_num = 1, cancelable = false,
         skill_name = skill.name,
         prompt = "#qiao__skill_wu013_1-place",
-      })
+      })[1]
       if card ~= nil and card ~= -1 and table.contains(player:getCardIds("he"), card) then
         room:moveCardTo({ card }, Card.PlayerSpecial, player, fk.ReasonPut,
           skill.name, CHUANG, true, player)

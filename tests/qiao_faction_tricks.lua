@@ -443,7 +443,7 @@ function Testqiao_faction_tricks:testDangguHanTargetGivesCardAndIsOnlyNullifiedF
     room:obtainCard(hanTarget, gift, false, fk.ReasonJustMove)
     hanGeneral, otherGeneral = hanTarget.general, other.general
   end)
-  FkTest.setNextReplies(hanTarget, { "1", gift.id })
+  FkTest.setNextReplies(hanTarget, { FkTest.ReplyChooseCards({ gift.id }) })
   FkTest.setNextReplies(user, { { cards = { otherGeneral }, choice = "OK" } })
   inRoom(function()
     room:useCard { from = user, card = Fk:getCardById(card, true), tos = { hanTarget, other } }
@@ -541,12 +541,12 @@ function Testqiao_faction_tricks:testLuanwuShowsCardsAndGroupDrawsEmptyHandToHp(
     return false
   end)
   FkTest.setNextReplies(user, { { "luanwu_target_discard" }, { "luanwu_user_discard" }, shown.id })
-  -- askToChooseCards 走 AskForPoxi，测试用技能限定覆盖返回本次要弃的两张手牌。
+  -- 从自己的手牌区选择要弃的两张牌。
   skill_test.withSkillRequests(room, "qiao__luanwu_chaos_skill", {
-    askToChooseCards = function(self, who, params, original)
+    askToCards = function(self, who, params, original)
       lu.assertEquals(who.id, groupTarget.id, "第一项应由该目标自己选牌")
-      lu.assertEquals(params.min, 2)
-      lu.assertEquals(params.max, 2)
+      lu.assertEquals(params.min_num, 2)
+      lu.assertEquals(params.max_num, 2)
       return table.slice(firstDiscard, 1, 3)
     end,
   }, function()

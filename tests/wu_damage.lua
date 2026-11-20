@@ -3,6 +3,8 @@
 -- rulebook 相关事件条文；本文件只覆盖本轮核心行为，未接入 tests/all.lua。
 --   python scripts/test.py --file tests/wu_damage.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local KUROU = "qiao__skill_wu004_1"
 local ZHAXIANG = "qiao__skill_wu004_2"
@@ -190,23 +192,53 @@ end
 Testqiao_wu_damage.setup = function() prepare() end
 Testqiao_wu_damage.tearDown = support.clearRoom
 
--- 苦肉/诈降：失去体力触发诈降，随后可交牌 -------------------------------
-function Testqiao_wu_damage:testKurouLosesHpTriggersZhaxiangAndGivesCard()
-  local room = FkTest.room
-  local mine = setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })[1]
-  setHand(room, p(2), {})
-  grant(p(1), KUROU)
-  grant(p(1), ZHAXIANG)
-  local hp = p(1).hp
+-- 黄盖先失去体力并由诈降摸牌，随后可以把新摸到的牌交给目标。
+function Testqiao_wu_damage:testKurouGivesCardAlreadyDrawnByZhaxiang()
+  local room, huangGai, recipient = FkTest.room, p(1), p(2)
+  local old = setHand(room, huangGai, { { "qiao__peach", Card.Heart, 2 } })[1]
+  setHand(room, recipient, {})
+  local drawn = seedDrawPile(room, {
+    { "qiao__jink", Card.Spade, 3 },
+    { "qiao__jink", Card.Club, 4 },
+    { "qiao__jink", Card.Diamond, 5 },
+  })
+  inRoom(function()
+    skill_test.installDualGenerals(room, huangGai, {
+      main = "qiao_heg__wu004", deputy = "qiao_test__wu_2", kingdom = "wu",
+    })
+    room.current, huangGai.phase = huangGai, Player.Play
+  end)
+  lu.assertTrue(huangGai:hasSkill(KUROU))
+  lu.assertTrue(huangGai:hasSkill(ZHAXIANG))
+  client_room.run(room, function(clients)
+    local handler = require("ltk.core.request_type.play_card"):new(clients[1])
+    handler:setup()
+    handler:selectSkill(KUROU, { selected = true })
+    lu.assertTrue(handler:feasible())
+    lu.assertFalse(handler:cardValidity(old))
+    lu.assertFalse(handler:targetValidity(recipient.id))
+    handler:_finish()
+  end)
 
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCardAndPlayers({ p(2) }, { mine }) })
-  activate(room, p(1), KUROU, {}, {})
-
-  lu.assertEquals(p(1).hp, hp - 1)
-  lu.assertTrue(table.contains(p(2):getCardIds(Player.Hand), mine))
-  -- 原手牌交给目标；诈降摸三张仍留在自己手里。
-  lu.assertEquals(#p(1):getCardIds(Player.Hand), 3)
-  lu.assertEquals(p(1):usedSkillTimes(ZHAXIANG, Player.HistoryGame), 1)
+  local hp, requests = huangGai.hp, 0
+  local ask = room.askToUseActiveSkill
+  room.askToUseActiveSkill = function(self, who, params)
+    if params.skill_name == "ex__choose_skill" and params.extra_data.skillName == KUROU then
+      requests = requests + 1
+      lu.assertEquals(huangGai.hp, hp - 1)
+      lu.assertEquals(huangGai:usedSkillTimes(ZHAXIANG, Player.HistoryGame), 1)
+      lu.assertItemsEquals(huangGai:getCardIds("h"), { old, drawn[1], drawn[2], drawn[3] })
+      local reply = client_room.confirmSelection(room, who, params, { drawn[1] }, { recipient })
+      FkTest.setNextReplies(who, { reply })
+    end
+    return ask(self, who, params)
+  end
+  local ok, err = pcall(activate, room, huangGai, KUROU, {}, {})
+  room.askToUseActiveSkill = ask
+  assert(ok, err)
+  lu.assertEquals(requests, 1)
+  lu.assertItemsEquals(huangGai:getCardIds("h"), { old, drawn[2], drawn[3] })
+  lu.assertEquals(recipient:getCardIds("h"), { drawn[1] })
 end
 
 -- 诈降：多次失去体力累计次数；失去技能后本回合效果仍由静态技能提供
@@ -536,7 +568,7 @@ function Testqiao_wu_damage:testBuquDrawsPlacesAndRecoversWhenNoDuplicate()
   local drawn = seedDrawPile(room, { { "qiao__jink", Card.Diamond, 9 } })[1]
   inRoom(function() p(1).hp = 0 end)
 
-  FkTest.setNextReplies(p(1), { drawn })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ drawn }) })
   inRoom(function() room:enterDying { who = p(1) } end)
 
   lu.assertEquals(p(1).hp, 1)
@@ -574,7 +606,7 @@ function Testqiao_wu_damage:testBuquMayPlaceEquipmentCard()
   seedDrawPile(room, { { "qiao__jink", Card.Diamond, 12 } })
   inRoom(function() p(1).hp = 1 end)
 
-  FkTest.setNextReplies(p(1), { equip })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ equip }) })
   inRoom(function() room:enterDying { who = p(1) } end)
 
   lu.assertTrue(table.contains(p(1):getPile("创"), equip))

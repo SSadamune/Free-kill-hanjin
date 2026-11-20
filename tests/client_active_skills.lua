@@ -193,7 +193,11 @@ function Testqiao_client_active_skills:testQiaoPlayCardBlocksExhaustedDeclaratio
     local clientTarget = clients[2]
     lu.assertTrue(handler:targetValidity(clientTarget.id), "合法目标应可点击")
     handler:selectTarget(clientTarget.id, { selected = true })
-    lu.assertTrue(handler:feasible(), "未发动时应可确认")
+    lu.assertFalse(handler:feasible(), "只选择目标时还不能确认")
+    local card = me:getCardIds("h")[1]
+    lu.assertTrue(handler:cardValidity(card))
+    handler:selectCard(card, { selected = true })
+    lu.assertTrue(handler:feasible(), "选定费用和目标后可确认")
 
     me:setSkillUseHistory(YONGLIANG, 1, Player.HistoryPhase)
     lu.assertFalse(handler:skillButtonValidity(YONGLIANG), "声明次数用尽后按钮应禁用")
