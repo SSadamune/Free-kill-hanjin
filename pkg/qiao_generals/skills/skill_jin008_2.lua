@@ -57,13 +57,9 @@ skill:addEffect("active", {
     local giveCount = math.floor(total / 2)
     if giveCount < 1 or not to:isAlive() or to:isRemoved() then return end
     -- “交给”不是弃置；只从手牌选择，避免禁弃牌被错误过滤。
-    local _, chosen = room:askToChooseCardsAndPlayers(player, {
-      targets = { player },
-      min_num = 1,
-      max_num = 1,
-      min_card_num = giveCount,
-      max_card_num = giveCount,
-      pattern = ".|.|.|hand",
+    local chosen = room:askToCards(player, {
+      min_num = giveCount,
+      max_num = giveCount,
       skill_name = skill.name,
       prompt = "#qiao__skill_jin008_2-give:::" .. giveCount,
       cancelable = false,

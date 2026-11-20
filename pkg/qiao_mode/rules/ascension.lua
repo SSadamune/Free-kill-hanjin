@@ -45,8 +45,8 @@ end
 --- 国战双将体力上限：主将贡献 + 副将贡献（均含主将/副将调整），向下取整。
 --- 与开局接线共用 PairHp，因此应期的“☯️+2”在升变重算中也参与组合，而不是
 --- 在既有体力上限上另加一次。
-function M.pair_max_hp(main, deputy)
-  return PairHp.max_hp(main, deputy) or 0
+function M.pair_max_hp(main, deputy, room)
+  return PairHp.max_hp(main, deputy, room) or 0
 end
 
 --- 势力人数预演。包含其他存活角色与已死亡的同势力角色；君主在场不豁免。
@@ -169,7 +169,7 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
-  local oldPairMax = M.pair_max_hp(oldMain, deputy)
+  local oldPairMax = M.pair_max_hp(oldMain, deputy, room)
 
   -- 暗置主将换将不会自动清掉旧普通将的 fake/prelight；公共状态接口只清
   -- 离牌位置的来源，换将/体力/回将池仍由本升变入口负责。
@@ -210,7 +210,7 @@ function M.ascend(room, player, newMain, kingdom, options)
   -- 避免一次升变和普通明置事件重复发放消耗型标记。
   room.logic:trigger(fk.GeneralShown, player, { m = newMain })
 
-  local newPairMax = M.pair_max_hp(newMain, deputy)
+  local newPairMax = M.pair_max_hp(newMain, deputy, room)
   if newPairMax > oldPairMax then
     room:setPlayerProperty(player, "maxHp", player.maxHp + 1)
     room:recover {
@@ -221,29 +221,29 @@ function M.ascend(room, player, newMain, kingdom, options)
     }
   end
 
-  local bothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
-    and player.deputyGeneral ~= ""
-  local newPairHalf = PairHp.half_hp(newMain, deputy)
-  -- 上游待领标记 >0 表示本次双亮从未发过；已归零表示已领取或已花掉。
-  local yinyangEligible = player:getMark(M.YINYANG_MARK) == 0
-  local companionEligible = player:getMark(M.COMPANION_MARK) == 0
-  if bothRevealed and deputy ~= nil then
-    local mainGeneral = Fk.generals[newMain]
-    local deputyGeneral = Fk.generals[deputy]
-    if mainGeneral ~= nil and deputyGeneral ~= nil then
-      if mainGeneral:isCompanionWith(deputyGeneral)
-        and player:getMark(M.COMPANION_MARK) == 0 and companionEligible then
-        room:setPlayerMark(player, M.COMPANION_MARK, 1)
-        H.addHegMark(player, "companion")
-      end
-      if newPairHalf ~= nil and newPairHalf % 2 == 1
-        and player:getMark(M.YINYANG_MARK) == 0 and yinyangEligible then
-        room:setPlayerMark(player, M.YINYANG_MARK, 1)
-        H.addHegMark(player, "yinyangfish")
-      end
-      -- 已在本升变处理过奖励，清掉上游待领标记，避免下一次 reveal 再领一次。
-      room:setPlayerMark(player, "HalfMaxHpLeft", 0)
-      room:setPlayerMark(player, "CompanionEffect", 0)
+  local deputyGeneral = Fk.generals[deputy]
+  local isCompanion = deputyGeneral and (Versions.is_lord(newMain)
+    and (Versions.lord_companion(newGeneral, deputyGeneral, room, kingdom)
+      or table.contains(newGeneral.companions, deputy) or table.contains(deputyGeneral.companions, newMain))
+    or not Versions.is_lord(newMain) and newGeneral:isCompanionWith(deputyGeneral))
+  local companion = player:getMark(M.COMPANION_MARK) == 0 and isCompanion and 1 or 0
+  local fish = player:getMark(M.YINYANG_MARK) == 0 and PairHp.half_left(newMain, deputy, room) or 0
+  if player.deputyGeneral == "anjiang" then
+    -- 暗副将保留新组合待领资格，随后正常双亮时领，旧组合的标记不再有效。
+    player:setMark("CompanionEffect", companion)
+    player:setMark("HalfMaxHpLeft", fish)
+    player:doNotify("SetPlayerMark", { player.id, "CompanionEffect", companion })
+    player:doNotify("SetPlayerMark", { player.id, "HalfMaxHpLeft", fish })
+  else
+    room:setPlayerMark(player, "CompanionEffect", 0)
+    room:setPlayerMark(player, "HalfMaxHpLeft", 0)
+    if companion > 0 then
+      room:setPlayerMark(player, M.COMPANION_MARK, 1)
+      H.addHegMark(player, "companion")
+    end
+    if fish > 0 then
+      room:setPlayerMark(player, M.YINYANG_MARK, 1)
+      H.addHegMark(player, "yinyangfish", fish)
     end
   end
   return true, { old_main = oldMain, old_pair_max = oldPairMax, new_pair_max = newPairMax }

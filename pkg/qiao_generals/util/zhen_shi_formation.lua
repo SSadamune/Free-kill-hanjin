@@ -4,7 +4,7 @@
 -- inFormationRelation / inSiegeRelation；队列接口只返回其他成员，自身参与
 -- 队列必须确实存在同队列者。
 --
--- 每个鹤翼持有者使用固定的预注册来源技能（#qiao__heyi_source_1..8）作为
+-- 每个鹤翼持有者使用固定的预注册来源技能（#qiao__heyi_source_1..10）作为
 -- Player:addSkill/loseSkill 的 source_skill，授予真实的 qiao__feiying。
 -- 来源技能在服务端/客户端都由 zhen_shi_formation_state.lua 安装，不依赖
 -- 服务端动态 Fk:addSkill。来源 mark 只是公开账本，供增删差分与客户端层数
@@ -17,9 +17,10 @@ M.FEIYING_SKILL = "qiao__feiying"
 M.FEIYING_MARK = "@@qiao_feiying_sources"
 M.FEIYING_LAYERS_MARK = "@@qiao_feiying_layers"
 M.HEYI_SKILL = "qiao__skill_wei018_2"
-M.SOURCE_COUNT = 8
+M.SOURCE_COUNT = 10 -- 汉晋模式沿用国战的房间人数上限。
+local SOURCE_SLOTS = "qiao_heyi_source_slots"
 
---- 固定来源技能名；1..8 与预注册骨架一致。
+--- 固定来源技能名。
 --- @param sourceId string|integer
 --- @return string
 function M.sourceSkillName(sourceId)
@@ -103,12 +104,19 @@ end
 --- @param room Room
 function M.refreshFormationSources(room)
   if room == nil then return end
+  -- 角色 ID 可以是任意编号；预注册来源使用本局固定的槽位，换座也不改号。
+  local slots = room:getTag(SOURCE_SLOTS)
+  if not slots then
+    slots = {}
+    for i, player in ipairs(room.players) do slots[player] = tostring(i) end
+    room:setTag(SOURCE_SLOTS, slots)
+  end
   local desired = {}
   for _, holder in ipairs(room.players) do
     local active = holder ~= nil and not holder.dead and not holder:isRemoved()
       and holder:hasShownSkill(M.HEYI_SKILL) and M.inFormation(holder)
     if active then
-      local sourceId = tostring(holder.id)
+      local sourceId = slots[holder]
       local function cover(p)
         if p == nil or p.dead or p:isRemoved() then return end
         desired[p.id] = desired[p.id] or {}

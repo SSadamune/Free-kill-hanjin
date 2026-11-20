@@ -293,7 +293,7 @@ JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。最新实际执行�
 <a id="持重夹具根因"></a>
 ### 持重夹具根因（wei_support.lua:115）
 
-曾报 `expected:1 actual:6`。确定性原因：`initializeGenerals` 调用 `changeHero` 时，`__heg_general`／`__heg_deputy` 标记仍指向本局随机初始双将；引擎 `getGeneralMaxHp()` 优先读取这两个标记，测试角色 `maxHp/hp` 随初始双将变为 3 或 4（并可更高），而不是测试将面的 4。若体力值使 `max(1, hp+1)` 大于回复中的 5 张，持重会正确判定选牌不足并取消发动，`p1` 保留 6 张牌，表现为“expected 1 actual 6”。
+曾报 `expected:1 actual:6`。当时 `initializeGenerals` 调用 `changeHero` 时，`__heg_general`／`__heg_deputy` 标记仍指向本局随机初始双将。引擎 `getGeneralMaxHp()` 优先读取这两个标记，测试角色的 `maxHp/hp` 取决于初始双将。若体力使旧版选牌下限大于回复中的 5 张，选牌就被取消，角色保留 6 张牌。[现行规则](../../../rules/generals/wei003-xiahoudun.md#持重)已按 #25 改为恰好交出超额张数。
 
 诊断时保留的证据：初始双将始终被替换为 `qiao_test__wei_1/wei_2`，但 `hp/maxhp` 出现 3/4 两种；`player.phase = Player.NotActive`、`RoundCount = 1`、技能来源仅为 `qiao__skill_wei003_2`；请求消费为 `"1"→askToSkillInvoke`、`ReplyChooseCards→askToCards`、`ReplyChooseCardAndPlayers→askToYiji`，逐次 q 长度 3→2→1→0，均未错位。修复：写入测试双将标记后用 `pl:getGeneralMaxHp()` 重算 `maxHp/hp`，夹具固定为 4/4；未修改断言、未禁用测试、未固定随机种子。修复后连续 10 次运行均 3/3 通过。
 

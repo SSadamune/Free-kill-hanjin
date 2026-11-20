@@ -20,6 +20,7 @@ M.USED_ABILITY_TAG = "qiao_limited_abilities"
 -- 支付后、使用宣告前的临时占用。它只在回调期间阻挡同一来源的重入，
 -- 使用中止时释放，实际使用后转为永久记录。
 M.RESERVE_TAG = "qiao_limited_reserved"
+M.ADMITTED_RETINUE_TAG = "qiao_admitted_retinues"
 
 -- 全局登记表只在进程内描述牌面数据；对局状态一律保存在房间中。
 M.commanders = {}
@@ -190,6 +191,32 @@ end
 function M.isLimitedRetinue(name)
   local retinue = type(name) == "string" and M.retinues[name] or nil
   return retinue ~= nil and retinue.limited == true
+end
+
+--- 实际加入对局的兵种。通常的士兵转化仍可重复取得同种普通翼从。
+function M.noteRetinueAdmission(room, name)
+  if not M.isRetinue(name) then return end
+  local admitted = room:getTag(M.ADMITTED_RETINUE_TAG) or {}
+  if admitted[name] then return end
+  admitted[name] = true
+  room:setTag(M.ADMITTED_RETINUE_TAG, admitted)
+end
+
+--- 随机亮出/抽取未加入游戏的翼从共用候选，偏将不进入随机池。
+function M.randomRetinueCandidates(room)
+  local admitted = table.simpleClone(room:getTag(M.ADMITTED_RETINUE_TAG) or {})
+  for _, player in ipairs(room.players) do
+    admitted[Exchange.actualGeneral(player, false)] = true
+    admitted[Exchange.actualGeneral(player, true)] = true
+  end
+  local candidates = {}
+  for name in pairs(M.retinues) do
+    if not admitted[name] and not M.isLimitedRetinue(name) and M.retinueAllowed(room, name) then
+      table.insert(candidates, name)
+    end
+  end
+  table.sort(candidates)
+  return candidates
 end
 
 --- 来源是否提供偏将。提供偏将的统领来源，其视为用牌机会每局限一次。
@@ -565,6 +592,7 @@ function M.assignRetinue(player, isDeputy, retinue)
   room:changeHero(player, retinue, false, isDeputy, false, false, false)
   if positionName(player, isDeputy) ~= retinue then return false end
   room:setPlayerMark(player, isDeputy and "__heg_deputy" or "__heg_general", retinue)
+  M.noteRetinueAdmission(room, retinue)
   if M.isLimitedRetinue(retinue) then
     local used = M.usedLimitedRetinues(room)
     used[retinue] = { player = player.id, seat = player.seat }
@@ -842,6 +870,7 @@ function M.reset(room)
   room:setTag(M.USED_RETINUE_TAG, nil)
   room:setTag(M.USED_ABILITY_TAG, nil)
   room:setTag(M.RESERVE_TAG, nil)
+  room:setTag(M.ADMITTED_RETINUE_TAG, nil)
   for _, player in ipairs(room.players) do
     room:setPlayerMark(player, M.SOURCE_MARK, 0)
   end

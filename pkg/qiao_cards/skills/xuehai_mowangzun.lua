@@ -8,42 +8,15 @@ local skill = fk.CreateSkill {
   attached_equip = "qiao__xuehai_mowangzun",
 }
 
-local function isWineRequest(data)
-  if data == nil or data.pattern == nil then return false end
-  local exp = Exppattern:Parse(data.pattern)
-  return exp:match(Fk:cloneCard("analeptic"))
-    or exp:matchExp("analeptic|0|nosuit|none")
+local function makeWine()
+  return Fk:cloneCard("analeptic", nil, nil, skill.name)
 end
 
---- 按原请求的真实合法性判断酒候选；不把濒死自救酒当普通出牌酒拒绝。
-local function wineLegal(player, data)
-  local wine = Fk:cloneCard("analeptic")
-  wine:setVSPattern(nil, nil, ".")
-  if player:prohibitUse(wine) then return false end
-  local extra = data.extraData or {}
-  local skillCard = wine:getSkill(player)
-  if skillCard == nil or not skillCard:canUse(player, wine, extra) then return false end
-  local targets = wine:getAvailableTargets(player, extra)
-  if #targets == 0 then return false end
-  for _, to in ipairs(targets) do
-    if player:isProhibited(to, wine) then return false end
-  end
-  return true
+local function canDrink(player, wine, extra)
+  return table.contains(wine:getAvailableTargets(player, extra), player)
 end
 
-local function requestedTargets(player, extra)
-  local result = {}
-  local ids = extra.must_targets or extra.fix_targets
-  if type(ids) ~= "table" then return result end
-  for _, id in ipairs(ids) do
-    local to = player.room:getPlayerById(id)
-    if to ~= nil then table.insert(result, to) end
-  end
-  return result
-end
-
-local function candidates(player)
-  local room = player.room
+local function candidates(room, player)
   local list = {}
   for _, other in ipairs(room:getPresentPlayers()) do
     if not other:isRemoved()
@@ -55,47 +28,47 @@ local function candidates(player)
   return list
 end
 
-skill:addEffect(fk.AskForCardUse, {
-  can_trigger = function(self, event, target, player, data)
-    return target == player and player:hasSkill(skill.name)
-      and isWineRequest(data) and wineLegal(player, data)
+skill:addEffect("viewas", {
+  pattern = "analeptic|0|nosuit|none",
+  prompt = "#qiao__xuehai-invoke",
+  card_filter = Util.FalseFunc,
+  view_as = function(self, player, cards)
+    if #cards == 0 then return makeWine() end
   end,
-  on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__xuehai-invoke",
-    })
+  enabled_at_play = function(self, player)
+    return canDrink(player, makeWine())
   end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    for _, helper in ipairs(candidates(player)) do
-      if not helper.dead and not helper:isRemoved() then
+  enabled_at_response = function(self, player, responding)
+    if responding then return false end
+    local handler = ClientInstance and ClientInstance.current_request_handler
+    return canDrink(player, makeWine(), handler and handler.extra_data)
+  end,
+  on_use = function(self, room, effect, wine, params)
+    local player = effect.from
+    local extra = params and params.extra_data or nil
+    local rejected = params and self.name or ""
+    if not wine or not player:hasSkill(skill.name) then return rejected end
+    if params then
+      if not params.pattern or not Exppattern:Parse(params.pattern):match(wine) then return rejected end
+      if extra and extra.fix_user and extra.fix_user ~= player.id then return rejected end
+    elseif room.current ~= player or player.phase ~= Player.Play then
+      return rejected
+    end
+    if not canDrink(player, wine, extra) then return rejected end
+    for _, helper in ipairs(candidates(room, player)) do
+      if helper:isAlive() and not helper:isRemoved() then
         local respond = room:askToResponse(helper, {
           skill_name = skill.name,
           pattern = ".|.|spade",
           prompt = "#qiao__xuehai-ask::" .. player.id,
           cancelable = true,
         })
-        if respond then
-          local rr = room:responseCard(respond)
-          if rr == false then
-            -- 未实际完成打出：继续询问后续协助者。
-          else
-            local wine = Fk:cloneCard("analeptic")
-            wine.skillName = skill.name
-            local extra = data.extraData or {}
-            data.result = {
-              from = player,
-              card = wine,
-              tos = requestedTargets(player, extra),
-              extra_data = extra,
-            }
-            return
-          end
+        if respond and room:responseCard(respond) ~= false then
+          return { from = player, card = wine, tos = { player }, extra_data = extra }
         end
       end
     end
-    -- 无协助：不设置 data.result，保留原用酒请求的其他入口。
+    return rejected
   end,
 })
 
@@ -131,7 +104,7 @@ skill:addEffect(fk.AfterDying, {
 
 Fk:loadTranslationTable {
   [skill.name] = "血海魔王樽",
-  ["#qiao__xuehai-invoke"] = "血海魔王樽：是否请求同势力角色打出黑桃牌协助",
+  ["#qiao__xuehai-invoke"] = "血海魔王樽：请求同势力角色打出黑桃牌，令你视为使用【酒】",
   ["#qiao__xuehai-ask"] = "血海魔王樽：是否打出黑桃牌协助 %dest 使用【酒】",
   [":" .. skill.name] = "当你需要合法使用【酒】时，同势力角色可打出黑桃牌协助；"
     .. "首次成功后你视为使用【酒】。你脱离濒死时，将此牌交给伤害来源。",

@@ -57,7 +57,7 @@
 
 - **标识与依据**：运行时 ID `qiao__skill_qun010_2`；源码 [skill_qun010_2.lua](../../../../pkg/qiao_generals/skills/skill_qun010_2.lua)。规则见[张角规范](../../../rules/generals/qun010-zhangjiao.md)。同将雷击见[伤害、体力与死亡](damage.md#qun010-1)。
 - **实现与接口**：`fk.AskForRetrial` 时从手牌或装备区选一张黑色、未被禁止打出的牌，先走真实 `responseCard` 完成打出（跳过默认弃置），再 `changeJudge{exchange=true}` 替换判定牌并把原判定牌交给张角；`response=true` 只指定移动原因，不产生完整打出事件，不能省去 `responseCard`。
-- **验证依据**：已执行 [qun_retrial.lua](../../../../tests/qun_retrial.lua) 的 `testGuidaoBlackCardReplacesAndObtainsOldJudge`、`testGuidaoRedCardCannotReplace`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **选牌与回归**：用一个可取消的 `askToCards` 请求列出黑色手牌和装备。`include_equip` 允许客户端点选装备，确认后按当前牌区和打出限制复核。[qun_retrial.lua](../../../../tests/qun_retrial.lua) 覆盖取消时原判继续、点选黑色装备后改判并获得原判定牌，以及红牌不进入请求。
 - **未完成与边界**：其他改判者竞争、打出牌被中途移动、装备区最后一牌等边界未穷举；客户端改判提示未人工验收。
 
 <a id="qun012-1"></a>

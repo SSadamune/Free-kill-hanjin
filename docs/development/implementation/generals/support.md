@@ -114,13 +114,13 @@
 <a id="wei003-2"></a>
 #### 持重（WEI003 夏侯惇）
 
-- **标识与依据**：运行时 ID `qiao__skill_wei003_2`；源码 [skill_wei003_2.lua](../../../../pkg/qiao_generals/skills/skill_wei003_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)魏区 WEI003 与 `rulebook/terms/game-flow-terms/phase.md`。同将刚烈见[伤害、体力与死亡](damage.md#wei003-1)。
+- **标识与依据**：运行时 ID `qiao__skill_wei003_2`，源码 [skill_wei003_2.lua](../../../../pkg/qiao_generals/skills/skill_wei003_2.lua)。规则见[夏侯惇](../../../rules/generals/wei003-xiahoudun.md#持重)与[阶段](../../../../rulebook/terms/game-flow-terms/phase.md)。同将刚烈见[伤害、体力与死亡](damage.md#wei003-1)。
 - **实现与接口**：
   - `fk.AfterCardsMove` 检查是否有牌移入该角色手牌区；装备区不计为“得到”。
   - “摸牌阶段外”依 `rulebook/terms/game-flow-terms/phase.md` 的“某角色于阶段内”默认指其自身阶段，直接检查 `player.phase == Player.Draw`；其他角色的摸牌阶段内自己得到牌仍可发动。
-  - 已确认解释不是“只分出超额部分”：最小张数为 `math.max(1, 体力值 + 1)`，`max_num = 手牌数`；选牌使用 `Room:askToCards`（不施加弃置禁止，选牌不是弃置），选中牌全部通过公共 `Room:askToYiji` 分配，未使用自建分配循环。
+  - `Room:askToCards` 可取消，最小及最大张数均为当前手牌数减体力值。确认后使用 `Room:askToYiji` 分配全部选中牌。
   - 每回合一次以 `usedEffectTimes(..., Player.HistoryTurn)` 判定；分配目标为其他存活角色，不含自己。
-- **验证依据**：[wei_support.lua](../../../../tests/wei_support.lua) 的 `testChizhongDistributesMoreThanHp`：4 体力、6 手牌时用 `askToCards` 选择 5 张全部分配、保留 1 张，验证“不是只分超额”；该文件历史 3/3 通过。旧记录执行入口为 `python scripts/test.py --file tests/wei_support.lua --timeout 120` 与 `python scripts/test.py --file tests/wei_damage.lua --timeout 120`，对应结果 3/3、8/8。历史间歇失败根因与夹具修复见[共享验证证据](verification-evidence.md#持重夹具根因)。
+- **验证依据**：[wei_support.lua](../../../../tests/wei_support.lua) 的 `testChizhongCanCancelAndDistributesExactExcess` 检查取消保留本回合次数，以及 4 体力、6 手牌时交出 2 张并保留 4 张。
 - **未完成与边界**：客户端分配界面未人工验收；引擎显示值与有效上限差异不在本技能范围。
 
 <a id="wei004-1"></a>

@@ -148,7 +148,7 @@ M.types = {
     equip_skill = "qiao__shenshou_sizhao_skill", inert = false,
     on_install = function(self, room, player)
       Weapon.onInstall(self, room, player)
-      room:setPlayerMark(player, "qiao_shenshou_active", 1)
+      room:setPlayerMark(player, "qiao_shenshou_active-turn", 1)
     end },
   { id = "qiao__dragon_phoenix", display = "飞龙夺凤", type = "equip",
     subtype = Card.SubtypeWeapon, range = 2, skill = "default_equip_skill",

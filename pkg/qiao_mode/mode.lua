@@ -171,7 +171,7 @@ function M.create(base, name)
     end
     -- 开局体力上限：引擎（上游 HegLogic:broadcastGeneral）按双将组合写入
     -- maxHp / hp / HalfMaxHpLeft。这里在同一开局时点补上配将体力贡献修正
-    -- （应期 ☯️+2 = 2 个半格），不等待明置；普通交换/移除/替换不重算，
+    -- （应期的半格及双 2.5 上限），不等待明置；普通交换/移除/替换不重算，
     -- 升变另走 ascension.lua 的公共流程。
     local baseBroadcastGeneral = parent.broadcastGeneral
     function logic:broadcastGeneral()

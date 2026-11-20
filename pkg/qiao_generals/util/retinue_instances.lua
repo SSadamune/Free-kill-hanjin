@@ -24,6 +24,7 @@
 -- 额外授予、龙飞共享及各兵种效果通过该实例接口分别实现。
 
 local M = {}
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
 M.TAG = "qiao_retinue_instances"
 M.PUBLIC_MARK = "@@qiao_retinue_public"
@@ -221,6 +222,7 @@ function M.grant(player, spec)
   reg.next_id = reg.next_id + 1
   table.insert(entry.instances, instance)
   player.room:setTag(M.TAG, reg)
+  Commander.noteRetinueAdmission(player.room, general)
 
   local source = sourceSkill()
   local ownedBefore = player:hasSkill(skillName, true, true)

@@ -537,9 +537,9 @@ end
 -- convenience function when the skill kept the base implementation.
 local function targetFilterAllows(card_skill, player, target, selected, subcards, card, extra_data)
   if card_skill.targetFilter ~= nil and card_skill.targetFilter ~= ButtonSkill.targetFilter then
-    return card_skill:targetFilter(player, target, selected, subcards, card, extra_data) == true
+    return not not card_skill:targetFilter(player, target, selected, subcards, card, extra_data)
   end
-  return Util.CardTargetFilter(card_skill, player, target, selected, subcards, card, extra_data) == true
+  return not not Util.CardTargetFilter(card_skill, player, target, selected, subcards, card, extra_data)
 end
 
 --- Selection-stage validation.  `tos` is exactly the list the player selected

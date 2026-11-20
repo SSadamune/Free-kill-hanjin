@@ -28,8 +28,14 @@ skill:addEffect(fk.GeneralRevealed, {
       and (player:getMark("HalfMaxHpLeft") > 0 or player:getMark("CompanionEffect") > 0)
   end,
   on_trigger = function(self, event, target, player)
-    if player:getMark("HalfMaxHpLeft") > 0 then
-      player.room:setPlayerMark(player, A.YINYANG_MARK, 1)
+    local room = player.room
+    local fish = player:getMark("HalfMaxHpLeft")
+    if fish > 0 then
+      room:setPlayerMark(player, A.YINYANG_MARK, 1)
+      if fish > 1 then
+        room:setPlayerMark(player, "HalfMaxHpLeft", 0)
+        H.addHegMark(player, "yinyangfish", fish)
+      end
     end
     if player:getMark("CompanionEffect") > 0 then
       player.room:setPlayerMark(player, A.COMPANION_MARK, 1)

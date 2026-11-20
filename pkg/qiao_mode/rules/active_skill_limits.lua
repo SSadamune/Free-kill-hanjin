@@ -12,6 +12,7 @@
 -- 的无牌路径会原样返回函数字段，因此这里直接解析函数，不拿函数与数字比较。
 -- 未声明的技能不在此拦截，继续由既有 can_use/on_use 业务逻辑处理。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local M = {}
 
 local function inMode(room)
@@ -78,6 +79,7 @@ function M.installServer(room)
     if params == nil and type(data) == "table" and type(data.card) == "table" then
       local skill = Fk.skills[data.card.skill]
       if M.exhausted(skill, player, self) then return nil end
+      if data.card.skill == Ci.SKILL and not Ci.canChoose(player, data.interaction_data) then return nil end
     end
     return handleReply(self, player, data, params)
   end

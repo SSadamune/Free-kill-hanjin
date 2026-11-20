@@ -381,9 +381,9 @@ end
 function Teststandard_generals:testPairHpYingqiContribution()
   -- 应期 ☯️+2 = 2 个半格（1 点上限），与引擎默认组合公式分开核对。
   lu.assertEquals(PairHp.base_half_hp("qiao_heg__wei002", "qiao_heg__wei001"), 7)
-  lu.assertEquals(PairHp.yinyang("qiao_heg__wei002", "qiao_heg__wei001"), 2)
-  lu.assertEquals(PairHp.half_hp("qiao_heg__wei002", "qiao_heg__wei001"), 9)
-  lu.assertEquals(PairHp.max_hp("qiao_heg__wei002", "qiao_heg__wei001"), 4)
+  lu.assertEquals(PairHp.yinyang("qiao_heg__wei002", "qiao_heg__wei001"), 0)
+  lu.assertEquals(PairHp.half_hp("qiao_heg__wei002", "qiao_heg__wei001"), 7)
+  lu.assertEquals(PairHp.max_hp("qiao_heg__wei002", "qiao_heg__wei001"), 3)
   lu.assertEquals(PairHp.half_left("qiao_heg__wei002", "qiao_heg__wei001"), 1)
   -- 非多势力、非客将的配将不修正。
   lu.assertEquals(PairHp.yinyang("qiao_heg__wei002", "qiao_heg__wei003"), 0)

@@ -442,6 +442,9 @@ end
 ---@param skillName string
 ---@return string?
 function M.skillOwner(player, skillName)
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local instanceOwner = sameName.owner(player, skillName)
+  if instanceOwner then return instanceOwner end
   local room = player.room
   local isLord = isLordPlayer(room, player)
   local candidates = {}
@@ -486,21 +489,25 @@ function M.recordSkillEffect(player, data)
   local owner = M.skillOwner(player, skeleton.name)
   if not owner then return end
 
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local root = sameName.canonicalHistoryKey(skeleton.name)
+  local effect = sameName.canonicalHistoryKey(skill.name)
   local entry = cardLedger(player.room, owner, true)
-  bumpCounts(historyCounts(entry.history, skill.name), 1)
+  bumpCounts(historyCounts(entry.history, effect), 1)
 
   if skill.is_delay_effect then return end
 
   local branch = data.skill_data and data.skill_data.history_branch
   if skill.name ~= skeleton.name then
-    bumpCounts(historyCounts(entry.history, skeleton.name), 1)
+    bumpCounts(historyCounts(entry.history, root), 1)
     if branch then
-      bumpCounts(branchCounts(entry.branches, skeleton.name, branch), 1)
+      bumpCounts(branchCounts(entry.branches, root, branch), 1)
     end
   else
-    bumpCounts(historyCounts(entry.history, "#" .. skill.name .. "_main_skill"), 1)
+    local mainEffect = sameName.canonicalHistoryKey("#" .. skill.name .. "_main_skill")
+    if mainEffect ~= root then bumpCounts(historyCounts(entry.history, mainEffect), 1) end
     if branch then
-      bumpCounts(branchCounts(entry.branches, skill.name, branch), 1)
+      bumpCounts(branchCounts(entry.branches, root, branch), 1)
     end
   end
 end
@@ -713,17 +720,23 @@ local function snapshotSkillHistory(from, skillName)
 end
 
 local function transferHistory(room, from, to, generalName, skills, sourceStillProvides)
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
   local entry = cardLedger(room, generalName, false)
   local ledger = entry or { history = {}, branches = {} }
   ensureHistoryTables(from)
   ensureHistoryTables(to)
+  to.sourceKeys, to.sourceBranches = {}, {}
 
   for key, counts in pairs(ledger.history or {}) do
-    moveCounts(historyCounts(from.skillUsedHistory, key), historyCounts(to.skillUsedHistory, key), counts)
+    local sourceKey = sameName.historyKey(from, generalName, key)
+    to.sourceKeys[sourceKey] = true
+    moveCounts(historyCounts(from.skillUsedHistory, sourceKey), historyCounts(to.skillUsedHistory, key), counts)
   end
   for skillName, branches in pairs(ledger.branches or {}) do
+    local sourceName = sameName.historyKey(from, generalName, skillName)
+    to.sourceBranches[sourceName] = true
     for branch, counts in pairs(branches) do
-      moveCounts(branchCounts(from.skillBranchUsedHistory, skillName, branch),
+      moveCounts(branchCounts(from.skillBranchUsedHistory, sourceName, branch),
         branchCounts(to.skillBranchUsedHistory, skillName, branch), counts)
     end
   end
@@ -739,10 +752,56 @@ local function transferHistory(room, from, to, generalName, skills, sourceStillP
       local created = cardLedger(room, generalName, true)
       for key, counts in pairs(snapshot.history) do
         created.history[key] = counts
+        to.sourceKeys[key] = true
       end
       for branch, counts in pairs(snapshot.branches) do
+        to.sourceBranches[skillName] = true
         created.branches[skillName] = created.branches[skillName] or {}
         created.branches[skillName][branch] = counts
+      end
+    end
+  end
+end
+
+local function receiveHistory(player, general, pending, outgoing)
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local keys, changedBranches = outgoing.sourceKeys, outgoing.sourceBranches
+  for key, counts in pairs(pending.skillUsedHistory) do
+    local targetKey = sameName.historyKey(player, general, key)
+    local target = historyCounts(player.skillUsedHistory, targetKey)
+    for scope, count in pairs(counts) do target[scope] = (target[scope] or 0) + count end
+    keys[targetKey] = true
+  end
+  for skillName, branches in pairs(pending.skillBranchUsedHistory) do
+    local targetName = sameName.historyKey(player, general, skillName)
+    changedBranches[targetName] = true
+    for branch, counts in pairs(branches) do
+      local target = branchCounts(player.skillBranchUsedHistory, targetName, branch)
+      for scope, count in pairs(counts) do target[scope] = (target[scope] or 0) + count end
+    end
+  end
+  -- SetSkillUseHistory on the client also writes the main effect for a
+  -- skeleton ID. Send those roots first, then any separately stored effects.
+  local room = player.room
+  local effects = {}
+  local function notify(key)
+    for scope, count in pairs(player.skillUsedHistory[key] or {}) do
+      room:doBroadcastNotify("SetSkillUseHistory", { player.id, key, count, scope })
+    end
+  end
+  for key in pairs(keys) do
+    if Fk.skill_skels[key] then
+      notify(key)
+      effects["#" .. key .. "_main_skill"] = true
+    else
+      effects[key] = true
+    end
+  end
+  for key in pairs(effects) do notify(key) end
+  for key in pairs(changedBranches) do
+    for branch, counts in pairs(player.skillBranchUsedHistory[key] or {}) do
+      for scope, count in pairs(counts) do
+        room:doBroadcastNotify("SetSkillBranchUseHistory", { player.id, key, branch, count, scope })
       end
     end
   end
@@ -1005,9 +1064,10 @@ function M.exchange(room, first, second, options)
   local bStillProvides = providedByOtherPosition(room, b.player, b.isDeputy, bSide.owned)
 
   -- 1. Histories follow their card, using the activation-time ledger.
+  local aHistory, bHistory = {}, {}
   if not samePlayer then
-    transferHistory(room, a.player, b.player, aSide.general, aSide.owned, aStillProvides)
-    transferHistory(room, b.player, a.player, bSide.general, bSide.owned, bStillProvides)
+    transferHistory(room, a.player, aHistory, aSide.general, aSide.owned, aStillProvides)
+    transferHistory(room, b.player, bHistory, bSide.general, bSide.owned, bStillProvides)
   end
 
   -- 2. Public positions and the national-war main/deputy records.
@@ -1025,6 +1085,10 @@ function M.exchange(room, first, second, options)
   syncSkills(room, a.player, aSide.attachable, aPostProvided, aPostAttachable)
   syncSkills(room, b.player, bSide.attachable, bPostProvided, bPostAttachable)
   GeneralCardSkills.sync(room)
+  if not samePlayer then
+    receiveHistory(b.player, aSide.general, aHistory, bHistory)
+    receiveHistory(a.player, bSide.general, bHistory, aHistory)
+  end
 
   -- 4. Named private piles move with the card after the new skills are in
   -- place (never for a same-player swap).

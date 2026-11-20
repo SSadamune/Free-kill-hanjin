@@ -23,6 +23,7 @@ function M.replaceDeputy(room,player,retinue,skillName)
   room:changeHero(player,retinue,false,true,false,false,false)
   if player.deputyGeneral~=retinue then return false end
   room:setPlayerMark(player,"__heg_deputy",retinue)
+  C.noteRetinueAdmission(room,retinue)
   if C.isLimitedRetinue(retinue) then
     local used=C.usedLimitedRetinues(room)
     used[retinue]={player=player.id,seat=player.seat}

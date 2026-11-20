@@ -35,27 +35,18 @@ skill:addEffect(fk.AskForRetrial, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun010_2-invoke",
-    }) then
-      return false
-    end
     local ids = playableIds(player)
     if #ids == 0 then return false end
-    local equip = table.filter(player:getCardIds("e"), function(id)
-      return table.contains(ids, id)
-    end)
     local cards = room:askToCards(player, {
       min_num = 1,
       max_num = 1,
+      include_equip = true,
       skill_name = skill.name,
       pattern = tostring(Exppattern { id = ids }),
       prompt = "#qiao__skill_qun010_2-ask",
-      expand_pile = equip,
-      cancelable = false,
+      cancelable = true,
     })
-    if cards == nil or #cards ~= 1 then return false end
+    if cards == nil or #cards ~= 1 or not table.contains(playableIds(player), cards[1]) then return false end
     event:setCostData(self, { cards = cards })
     return true
   end,
@@ -85,7 +76,6 @@ skill:addEffect(fk.AskForRetrial, {
 Fk:loadTranslationTable {
   ["qiao__skill_qun010_2"] = "鬼道",
   [":qiao__skill_qun010_2"] = "当一张判定牌生效前，你可以打出一张黑色牌替换之。",
-  ["#qiao__skill_qun010_2-invoke"] = "鬼道：是否打出一张黑色牌替换判定牌并获得原判定牌？",
   ["#qiao__skill_qun010_2-ask"] = "鬼道：打出一张黑色手牌或装备牌",
 }
 

@@ -3,6 +3,8 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local ReqUseCard = require "ltk.core.request_type.use_card"
+local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local Heg = require "packages.hegemony.util"
 local AllianceCards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 
@@ -11,7 +13,9 @@ local JINXIU = "qiao__jinxiu_zhengpao"
 local XUWANG = "qiao__xuwang_zhimian"
 local ZOUYU = "qiao__zouyu_fan"
 local XUEHAI = "qiao__xuehai_mowangzun"
+local XUEHAI_SKILL = "qiao__xuehai_mowangzun_skill"
 local SHENSHOU = "qiao__shenshou_sizhao"
+local SHENSHOU_ACTIVE = "qiao_shenshou_active-turn"
 
 local function inRoom(fn)
   local result
@@ -78,6 +82,76 @@ local function totalInvokeLogs(logs)
   end)
 end
 
+local function confirmRequest(handler)
+  local reply
+  local originalNotify = ClientInstance.notifyUI
+  ClientInstance.notifyUI = function(_, command, data)
+    if command == "ReplyToServer" then reply = data end
+  end
+  local ok, err = pcall(function() handler:doOKButton() end)
+  ClientInstance.notifyUI = originalNotify
+  if not ok then error(err, 0) end
+  return assert(reply, "client did not send a card-use reply")
+end
+
+function Testqiao_lord_equipment:testWoodenOxMovesWithCargoFromOneCancelableTargetRequest()
+  local room = FkTest.room
+  local first, second, third = p(1), p(2), p(3)
+  inRoom(function()
+    local ox = give(room, first, room:printCard("qiao__wooden_ox", Card.Diamond, 5))
+    use(room, first, { first }, ox)
+    local original = room.askToUseActiveSkill
+    local requests = 0
+    room.askToUseActiveSkill = function(self, player, params)
+      if params.prompt == "#wooden_ox-move" then
+        requests = requests + 1
+        local target = player == first and second or third
+        lu.assertEquals(params.skill_name, "choose_players_skill")
+        client_room.run(room, function(clients)
+          local selector = Fk.skills[params.skill_name]
+          local previous = selector._extra_data
+          selector._extra_data = params.extra_data
+          local handler = ReqActiveSkill:new(clients[player.seat], {
+            params.skill_name, params.prompt, params.cancelable, params.extra_data,
+          })
+          local ok, err = pcall(function()
+            handler:setup()
+            lu.assertTrue(handler.cancelable)
+            lu.assertFalse(handler:feasible(), "无目标时不能确认移动")
+            lu.assertTrue(handler:targetValidity(target.id))
+            handler:selectTarget(target.id, { selected = true })
+            lu.assertTrue(handler:feasible())
+            handler:_finish()
+          end)
+          selector._extra_data = previous
+          if not ok then error(err, 0) end
+        end)
+      end
+      return original(self, player, params)
+    end
+    local cargo = give(room, first, room:printCard("qiao__slash", Card.Spade, 3))
+    local extra = give(room, second, room:printCard("qiao__jink", Card.Heart, 2))
+    local oxSkill = "qiao__wooden_ox_skill"
+    local function load(player, material, reply)
+      room.current, player.phase = player, Player.Play
+      FkTest.setNextReplies(player, { reply })
+      room:handleUseCardReply(player, FkTest.ReplyUseSkill(oxSkill, {}, { material.id }), nil)
+    end
+    load(first, cargo, FkTest.ReplyChoosePlayer({ second }))
+    local owner = room:getCardOwner(ox.id)
+    lu.assertEquals(owner and owner.id, second.id)
+    lu.assertEquals(room:getCardArea(ox.id), Card.PlayerEquip)
+    lu.assertEquals(first:getPile("$sa_carriage"), {})
+    lu.assertEquals(second:getPile("$sa_carriage"), { cargo.id })
+    load(second, extra, "")
+    owner = room:getCardOwner(ox.id)
+    lu.assertEquals(owner and owner.id, second.id)
+    lu.assertEquals(second:getPile("$sa_carriage"), { cargo.id, extra.id })
+    lu.assertEquals(requests, 2)
+    room.askToUseActiveSkill = original
+  end)
+end
+
 function Testqiao_lord_equipment:testChixiaoBigSmallTargetGivesRedOrCannotOffset()
   local room = FkTest.room
   local user, small, big = p(1), p(2), p(4)
@@ -93,7 +167,7 @@ function Testqiao_lord_equipment:testChixiaoBigSmallTargetGivesRedOrCannotOffset
     lu.assertTrue(Heg.isBigKingdomPlayer(user))
     lu.assertTrue(Heg.isSmallKingdomPlayer(small))
     give(room, small, red)
-    FkTest.setNextReplies(small, { red.id })
+    FkTest.setNextReplies(small, { FkTest.ReplyChooseCards({ red.id }) })
     use(room, user, { small }, slash)
   end)
   lu.assertEquals(room:getCardArea(red.id), Card.PlayerHand)
@@ -319,18 +393,31 @@ function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInv
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    -- 三项都在取值范围内，但不是服务端提供的合法组合，不能生效。
-    FkTest.setNextReplies(owner, { "1", { draw = 0, slash = 0, hand = 0 } })
+    owner.hp = 1
+    -- 分别尝试把出杀、手牌上限减成负数，以及同时给两项加点。
+    local invalid = {
+      { draw = 2, slash = -2, hand = 0 },
+      { draw = 2, slash = 0, hand = -2 },
+      { draw = -2, slash = 1, hand = 1 },
+    }
     FkTest.setRoomBreakpoint(owner, "CustomDialog", function(data)
       request = data
       return false
     end)
-    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    for _, reply in ipairs(invalid) do
+      FkTest.setNextReplies(owner, { "1", reply })
+      room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+      lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0)
+      lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
+      lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
+    end
 
     lu.assertNotNil(request, "准备阶段应打开数值调整弹窗")
     lu.assertEquals(request.component.url,
       "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml")
     local options = request.component.prop.options
+    local values = request.component.prop.baseValues
+    lu.assertEquals(values, { draw = 2, slash = 1, hand = 1 })
     lu.assertTrue(#options > 0, "服务端应提供合法组合")
     for _, option in ipairs(options) do
       lu.assertEquals(option.draw + option.slash + option.hand, 0,
@@ -343,6 +430,9 @@ function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInv
       lu.assertTrue(option.draw >= -2 and option.draw <= 2)
       lu.assertTrue(option.slash >= -2 and option.slash <= 2)
       lu.assertTrue(option.hand >= -2 and option.hand <= 2)
+      lu.assertTrue(values.draw + option.draw >= 0)
+      lu.assertTrue(values.slash + option.slash >= 0)
+      lu.assertTrue(values.hand + option.hand >= 0)
     end
     lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "非合法组合不产生摸牌修正")
     lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0, "非合法组合不产生出杀修正")
@@ -362,6 +452,34 @@ function Testqiao_lord_equipment:testZhoujunCancelLeavesNoBonus()
     lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "取消不随机选择修正")
     lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
     lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunSlashReductionFloorsAtZeroAfterLosingBonus()
+  local room, owner = FkTest.room, p(1)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  local slash = Fk:cloneCard("qiao__slash")
+  inRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    local extra = fk.CreateSkill { name = "test_zhoujun_temporary_slash_limit" }
+    extra:addEffect("targetmod", {
+      residue_func = function(self, player, cardSkill, scope, card)
+        if player == owner and card and card.trueName == "slash" and scope == Player.HistoryPhase then
+          return player:getMark("test_zhoujun_temporary_slash_limit")
+        end
+      end,
+    })
+    local extraSkill = extra:createSkill()
+    Fk.skills[extraSkill.name] = extraSkill
+    room:addSkill(extraSkill)
+    room:setPlayerMark(owner, "test_zhoujun_temporary_slash_limit", 1)
+    FkTest.setNextReplies(owner, { "1", { draw = 2, slash = -2, hand = 0 } })
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), -2)
+    lu.assertEquals(slash:getSkill(owner):getMaxUseTime(owner, Player.HistoryPhase, slash), 0)
+    room:setPlayerMark(owner, "test_zhoujun_temporary_slash_limit", 0)
+    lu.assertEquals(slash:getSkill(owner):getMaxUseTime(owner, Player.HistoryPhase, slash), 0)
   end)
 end
 
@@ -415,13 +533,13 @@ function Testqiao_lord_equipment:testZouyuProvidesJinkThenDelayedLoseHp()
   end)
 end
 
-function Testqiao_lord_equipment:testXuehaiWineRequestUsesSpadeResponse()
+function Testqiao_lord_equipment:testXuehaiPlayCardUsesSpadeResponse()
   local room = FkTest.room
   local owner, helper, other = p(1), p(3), p(4)
   local pot = card(XUEHAI)
   local spade = card("qiao__slash", Card.Spade, 9)
   local spade2 = card("qiao__slash", Card.Spade, 10)
-  local result
+  local reply
   FkTest.runInRoom(function()
     give(room, owner, pot)
     use(room, owner, { owner }, pot)
@@ -429,24 +547,63 @@ function Testqiao_lord_equipment:testXuehaiWineRequestUsesSpadeResponse()
     room.current = owner
     give(room, helper, spade)
     give(room, other, spade2)
-    FkTest.setNextReplies(owner, { "1" })
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(c) return c.id == owner.id end)
+      local handler = ReqPlayCard:new(me)
+      handler:setup()
+      lu.assertNotNil(handler.scene:getAllItems("SkillButton")[XUEHAI_SKILL])
+      lu.assertTrue(handler:skillButtonValidity(XUEHAI_SKILL))
+      handler:selectSkill(XUEHAI_SKILL, { selected = true })
+      lu.assertTrue(handler:feasible(), "点开宝物后可以确认无需材料的【酒】")
+      reply = confirmRequest(handler)
+      handler:_finish()
+    end)
     FkTest.setNextReplies(helper, { FkTest.ReplyCard(spade) })
     FkTest.setNextReplies(other, { FkTest.ReplyCard(spade2) })
-    result = room:askToUseCard(owner, {
-      pattern = "analeptic|0|nosuit|none",
-      skill_name = "qiao__xuehai_mowangzun_skill",
-      prompt = "test",
-      cancelable = false,
-    })
+    room:handleUseCardReply(owner, reply)
+    lu.assertEquals(owner.drank, 1, "正常出牌回包只结算一次【酒】")
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(c) return c.id == owner.id end)
+      local handler = ReqPlayCard:new(me)
+      handler:setup()
+      lu.assertFalse(handler:skillButtonValidity(XUEHAI_SKILL), "普通用酒次数用尽后按钮置灰")
+      handler:_finish()
+    end)
   end)
-  lu.assertNotNil(result, "协助成功后应返回本次请求的使用结果")
-  lu.assertEquals(result.card.name, "analeptic")
   local discarded = 0
   for _, c in ipairs({ spade, spade2 }) do
     if room:getCardArea(c.id) == Card.DiscardPile then discarded = discarded + 1 end
   end
   lu.assertEquals(discarded, 1, "只实际打出一张黑桃牌")
   lu.assertEquals(#helper:getCardIds("h") + #other:getCardIds("h"), 1, "后续候选未被消耗")
+end
+
+function Testqiao_lord_equipment:testChixiaoMayDeclineOnlyRedCard()
+  local room, user, target = FkTest.room, p(1), p(2)
+  local sword = card(CHIXIAO)
+  local jink = card("qiao__jink", Card.Diamond, 2)
+  local slash = card("qiao__slash", Card.Spade, 5)
+  inRoom(function()
+    give(room, user, sword)
+    use(room, user, { user }, sword)
+    give(room, target, jink)
+    local hp = target.hp
+    local asked = false
+    skill_test.withSkillRequests(room, "qiao__chixiao_sword_skill", {
+      askToCards = function(self, who, params, original)
+        asked = true
+        lu.assertTrue(params.cancelable)
+        lu.assertTrue(jink:matchPattern(params.pattern), "唯一红色手牌可选择")
+        return original(self, who, params)
+      end,
+    }, function()
+      FkTest.setNextReplies(target, { "" })
+      use(room, user, { target }, slash)
+    end)
+    lu.assertTrue(asked, "唯一红色手牌也须发出请求")
+    lu.assertEquals(target.hp, hp - 1)
+    lu.assertIs(room:getCardOwner(jink.id), target, "取消后保留唯一红色手牌")
+  end)
 end
 
 function Testqiao_lord_equipment:testXuehaiLeavingDyingGivesPotToDamageSource()
@@ -564,7 +721,7 @@ function Testqiao_lord_equipment:testChixiaoGiveCancelMakesTargetUnableToOffset(
     local cancelSkill = cancel:createSkill()
     Fk.skills[cancelSkill.name] = cancelSkill
     room:addSkill(cancelSkill)
-    FkTest.setNextReplies(target, { red.id })
+    FkTest.setNextReplies(target, { FkTest.ReplyChooseCards({ red.id }) })
     local hp = target.hp
     use(room, user, { target }, slash)
     lu.assertEquals(target.hp, hp - 1, "实际未发生给牌，目标不能抵消")
@@ -589,6 +746,7 @@ function Testqiao_lord_equipment:testXuehaiProhibitedWineDoesNotAskHelper()
     local inst = ban:createSkill()
     Fk.skills[inst.name] = inst
     room:addSkill(inst)
+    FkTest.setNextReplies(owner, { FkTest.ReplyUseSkill(XUEHAI_SKILL), "" })
     local result = room:askToUseCard(owner, {
       pattern = "analeptic|0|nosuit|none",
       skill_name = "qiao__xuehai_mowangzun_skill",
@@ -610,7 +768,7 @@ function Testqiao_lord_equipment:testShenshouEntryTurnHiddenThenClearedSilently(
     give(room, owner, fan)
     room.current = owner
     use(room, owner, { owner }, fan)
-    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 1, "置入装备区的回合建立状态")
+    lu.assertEquals(owner:getMark(SHENSHOU_ACTIVE), 1, "置入装备区的回合建立状态")
     lu.assertTrue(shenshouBypassesDistance(owner), "当回合使用牌无距离限制")
     local phase = PhaseData:new { who = owner, reason = "game_rule", phase = Player.Discard }
     room.logic:trigger(fk.EventPhaseChanging, owner, phase)
@@ -630,10 +788,10 @@ function Testqiao_lord_equipment:testShenshouEntryTurnHiddenThenClearedSilently(
     local logs = {}
     local original = room.sendLog
     room.sendLog = function(self, log) table.insert(logs, log) end
-    room.logic:trigger(fk.TurnEnd, owner, {})
+    GameEvent.Turn:create(TurnData:new(owner, "game_rule", { Player.Finish })):exec()
     room.sendLog = original
     lu.assertEquals(totalInvokeLogs(logs), 0, "回合结束清理不应表现为一次可见技能发动")
-    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 0, "回合结束清除置入回合状态")
+    lu.assertEquals(owner:getMark(SHENSHOU_ACTIVE), 0, "回合结束清除置入回合状态")
     lu.assertFalse(shenshouBypassesDistance(owner), "后续回合不再获得无距离限制")
     local nextPhase = PhaseData:new { who = owner, reason = "game_rule", phase = Player.Discard }
     room.logic:trigger(fk.EventPhaseChanging, owner, nextPhase)
@@ -644,16 +802,19 @@ end
 function Testqiao_lord_equipment:testShenshouAllianceFromEquipmentAfterOtherTurnEnds()
   local room = FkTest.room
   local owner, target = p(1), p(2)
-  local fan, hand
+  local fan, hand, armor, reply
   FkTest.runInRoom(function()
-    fan = printedAllianceCard(room, SHENSHOU, Card.Spade, 5)
+    fan = room:printCard(SHENSHOU, Card.Spade, 5)
     hand = printedAllianceCard(room, "qiao__peach", Card.Diamond, 3)
+    armor = printedAllianceCard(room, JINXIU, Card.Spade, 2)
     lu.assertFalse(AllianceCards.isHeji(fan))
     lu.assertFalse(AllianceCards.isHeji(hand))
     give(room, owner, fan)
     -- 神授思召在他人回合进入装备区。
     room.current = target
     room:moveCardTo(fan.id, Card.PlayerEquip, owner, fk.ReasonJustMove,
+      "test", nil, true, owner)
+    room:moveCardTo(armor.id, Card.PlayerEquip, owner, fk.ReasonJustMove,
       "test", nil, true, owner)
     give(room, owner, hand)
 
@@ -679,43 +840,95 @@ function Testqiao_lord_equipment:testShenshouAllianceFromEquipmentAfterOtherTurn
     local logs = {}
     local original = room.sendLog
     room.sendLog = function(self, log) table.insert(logs, log) end
-    room.logic:trigger(fk.TurnEnd, target, {})
+    GameEvent.Turn:create(TurnData:new(target, "game_rule", { Player.Finish })):exec()
     room.sendLog = original
     lu.assertEquals(totalInvokeLogs(logs), 0, "他人回合结束清理也应静默")
-    lu.assertEquals(owner:getMark("qiao_shenshou_active"), 0, "他人回合结束清除状态")
+    lu.assertEquals(owner:getMark(SHENSHOU_ACTIVE), 0, "他人回合结束清除状态")
+    room.current = owner
+    owner.phase = Player.Play
   end)
 
   client_room.run(room, function(clients)
     local me = table.find(clients, function(c) return c.id == owner.id end)
     local to = table.find(clients, function(c) return c.id == target.id end)
-    lu.assertEquals(me:getMark("qiao_shenshou_active"), 0, "客户端同步到状态已清除")
+    lu.assertEquals(me:getMark(SHENSHOU_ACTIVE), 0, "客户端同步到状态已清除")
     local handler = ReqPlayCard:new(me)
-    handler.skill_name = "qiao__alliance"
     handler:setup()
     lu.assertTrue(handler:skillButtonValidity("qiao__alliance"), "后续回合按钮可用")
+    handler:selectSkill("qiao__alliance", { selected = true })
     lu.assertNotNil(handler.scene:getAllItems("CardItem")[fan.id],
       "后续回合装备区牌仍在选牌区")
     lu.assertTrue(handler:cardValidity(fan.id), "后续回合可从装备区选择神授思召")
-    handler:selectSkill("qiao__alliance", { selected = true })
+    lu.assertFalse(handler:cardValidity(armor.id), "其他有合纵标记的装备也不能从装备区选择")
     handler:selectCard(fan.id, { selected = true })
     lu.assertTrue(handler:cardValidity(hand.id), "装备与合纵手牌可继续混选")
     handler:selectCard(hand.id, { selected = true })
     lu.assertTrue(handler:targetValidity(to.id), "混选目标合法")
     handler:selectTarget(to.id, { selected = true })
     lu.assertTrue(handler:feasible(), "装备与手牌混选可确认")
+    reply = confirmRequest(handler)
     handler:_finish()
   end)
 
   FkTest.runInRoom(function()
     local targetHand = #target:getCardIds("h")
-    Fk.skills["qiao__alliance"]:onUse(room, {
-      from = owner, tos = { target }, cards = { fan.id, hand.id },
-    })
+    room:handleUseCardReply(owner, reply)
     lu.assertEquals(#target:getCardIds("h"), targetHand + 2, "装备与手牌一同交给目标")
     lu.assertEquals(room:getCardOwner(fan.id).id, target.id, "神授思召进入目标手牌区")
     lu.assertEquals(room:getCardOwner(hand.id).id, target.id, "合纵手牌进入目标手牌区")
   end)
 end
+function Testqiao_lord_equipment:testShenshouInstalledDuringTurnEndExpiresBeforeNextTurn()
+  local room, owner, current = FkTest.room, p(1), p(2)
+  local fan
+  inRoom(function()
+    fan = printedAllianceCard(room, SHENSHOU, Card.Spade, 5)
+    local install = fk.CreateSkill { name = "test_shenshou_turn_end_install" }
+    install:addEffect(fk.TurnEnd, {
+      global = true,
+      late_refresh = true,
+      can_refresh = function(self, event, target, player)
+        return target == current and target == player
+      end,
+      on_refresh = function()
+        room:moveCardTo(fan.id, Card.PlayerEquip, owner, fk.ReasonJustMove, "test")
+        lu.assertEquals(owner:getMark(SHENSHOU_ACTIVE), 1)
+      end,
+    })
+    room:addSkill(install:createSkill())
+    GameEvent.Turn:create(TurnData:new(current, "game_rule", { Player.Finish })):exec()
+    lu.assertEquals(room:getCardArea(fan.id), Card.PlayerEquip)
+    lu.assertEquals(owner:getMark(SHENSHOU_ACTIVE), 0)
+    lu.assertEquals(#owner:getCardIds("h"), 0, "只有装备区的神授思召可合纵")
+    room.current = owner
+    owner.phase = Player.Play
+    room:broadcastProperty(owner, "phase")
+    room:broadcastProperty(owner, "kingdom")
+    room:broadcastProperty(current, "kingdom")
+  end)
+  local reply
+  FkTest.runInClient(function()
+    local me = ClientInstance:getPlayerById(owner.id)
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local client = board.client_klass:new(ClientInstance.client)
+    local handler = client.request_handlers.PlayCard:new(me)
+    handler:setup()
+    local button = handler.scene:getAllItems("SkillButton")["qiao__alliance"]
+    lu.assertNotNil(button, "无合纵手牌时也应显示合纵按钮")
+    lu.assertTrue(handler:skillButtonValidity("qiao__alliance"), "仅有神授思召也可点亮按钮")
+    handler:selectSkill("qiao__alliance", { selected = true })
+    lu.assertTrue(handler:cardValidity(fan.id))
+    handler:selectCard(fan.id, { selected = true })
+    lu.assertTrue(handler:targetValidity(current.id))
+    handler:selectTarget(current.id, { selected = true })
+    lu.assertTrue(handler:feasible())
+    reply = confirmRequest(handler)
+    handler:_finish()
+  end)
+  inRoom(function() room:handleUseCardReply(owner, reply) end)
+  lu.assertIs(room:getCardOwner(fan.id), current)
+end
+
 function Testqiao_lord_equipment:testXuehaiWineCanUseRespectsLimitAndSelfTarget()
   local room = FkTest.room
   local owner, helper, other = p(1), p(3), p(4)
@@ -728,17 +941,23 @@ function Testqiao_lord_equipment:testXuehaiWineCanUseRespectsLimitAndSelfTarget(
     owner.phase = Player.Play
     room.current = owner
     give(room, helper, spade)
-    owner:setSkillUseHistory("analeptic_skill", 1, Player.HistoryTurn)
-    FkTest.setNextReplies(owner, { "1" })
+    owner:addCardUseHistory("analeptic", 1)
+    FkTest.setNextReplies(helper, { FkTest.ReplyCard(spade) })
+    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(XUEHAI_SKILL))
+    lu.assertEquals(owner.drank, 0, "普通出牌酒已用尽次数")
+    lu.assertTrue(table.contains(helper:getCardIds("h"), spade.id))
+    FkTest.setNextReplies(owner, { FkTest.ReplyUseSkill(XUEHAI_SKILL), "" })
     result = room:askToUseCard(owner, {
       pattern = "analeptic|0|nosuit|none",
       skill_name = "qiao__xuehai_mowangzun_skill",
       prompt = "test",
       cancelable = true,
+      extra_data = { bypass_times = false },
     })
     lu.assertNil(result, "普通出牌酒已用尽次数，不应询问")
     lu.assertTrue(table.contains(helper:getCardIds("h"), spade.id))
 
+    FkTest.setNextReplies(owner, { FkTest.ReplyUseSkill(XUEHAI_SKILL), "" })
     result = room:askToUseCard(owner, {
       pattern = "analeptic|0|nosuit|none",
       skill_name = "qiao__xuehai_mowangzun_skill",
@@ -763,19 +982,38 @@ function Testqiao_lord_equipment:testXuehaiRecoverBypassesWineTurnLimit()
     owner.phase = Player.Play
     room.current = owner
     give(room, helper, spade)
-    owner:setSkillUseHistory("analeptic_skill", 1, Player.HistoryTurn)
-    FkTest.setNextReplies(owner, { "1" })
+    owner:addCardUseHistory("analeptic", 1)
+    local extra = {
+      analepticRecover = true,
+      must_targets = { owner.id },
+      fix_targets = { owner.id },
+      bypass_times = true,
+    }
+    local reply
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(c) return c.id == owner.id end)
+      local handler = ReqUseCard:new(me, { "peach", "peach,analeptic", "", true, extra })
+      local previous = ClientInstance.current_request_handler
+      ClientInstance.current_request_handler = handler
+      local ok, err = pcall(function()
+        handler:setup()
+        lu.assertTrue(handler:skillButtonValidity(XUEHAI_SKILL), "有【酒】自救时可以发动")
+        handler:selectSkill(XUEHAI_SKILL, { selected = true })
+        lu.assertTrue(handler:feasible())
+        reply = confirmRequest(handler)
+        handler:_finish()
+      end)
+      ClientInstance.current_request_handler = previous
+      if not ok then error(err, 0) end
+    end)
+    FkTest.setNextReplies(owner, { reply, "" })
     FkTest.setNextReplies(helper, { FkTest.ReplyCard(spade) })
     result = room:askToUseCard(owner, {
       pattern = "peach,analeptic",
       skill_name = "qiao__xuehai_mowangzun_skill",
       prompt = "test",
       cancelable = true,
-      extra_data = {
-        analepticRecover = true,
-        must_targets = { owner.id },
-        fix_targets = { owner.id },
-      },
+      extra_data = extra,
     })
   end)
   lu.assertNotNil(result)

@@ -145,16 +145,14 @@ end
 Testqiao_wei_support.setup = function() prepare() end
 Testqiao_wei_support.tearDown = support.clearRoom
 
--- 持重：手牌数多于体力值时，选择体力值+1张以上并全部分配 -------------------
-function Testqiao_wei_support:testChizhongDistributesMoreThanHp()
+function Testqiao_wei_support:testChizhongCanCancelAndDistributesExactExcess()
   local room = FkTest.room
   grant(p(1), CHIZHONG)
-  local given = setHand(room, p(1), {
+  local hand = setHand(room, p(1), {
     { "qiao__slash", Card.Spade, 1 },
     { "qiao__jink", Card.Heart, 2 },
     { "qiao__peach", Card.Diamond, 3 },
     { "qiao__duel", Card.Club, 4 },
-    { "qiao__dismantlement", Card.Spade, 5 },
   })
   setHand(room, p(2), {})
   -- 其他角色处于摸牌阶段、自己不在摸牌阶段：持重仍可发动。
@@ -165,22 +163,27 @@ function Testqiao_wei_support:testChizhongDistributesMoreThanHp()
     room:setBanner("RoundCount", 1)
   end)
 
-  local extra
+  FkTest.setNextReplies(p(1), { "" })
+  inRoom(function()
+    local card = room:printCard("qiao__dismantlement", Card.Spade, 5)
+    room:obtainCard(p(1), card, false, fk.ReasonJustMove)
+  end)
+  lu.assertEquals(#p(1):getCardIds(Player.Hand), 5)
+  lu.assertEquals(#p(2):getCardIds(Player.Hand), 0)
+  lu.assertEquals(p(1):usedSkillTimes(CHIZHONG, Player.HistoryTurn), 0)
+
+  local given = { hand[1], hand[2] }
   FkTest.setNextReplies(p(1), {
-    "1",
-    FkTest.ReplyChooseCards({ given[1], given[2], given[3], given[4], given[5] }),
-    FkTest.ReplyChooseCardAndPlayers({ p(2) }, { given[1], given[2], given[3], given[4], given[5] }),
+    FkTest.ReplyChooseCards(given),
+    FkTest.ReplyChooseCardAndPlayers({ p(2) }, given),
   })
   inRoom(function()
     local card = room:printCard("qiao__peach", Card.Heart, 6)
     room:obtainCard(p(1), card, false, fk.ReasonJustMove)
-    extra = card.id
   end)
 
-  -- 体力值4：交出5张（>4），保留额外得到的1张；不是只交超额1张。
-  lu.assertEquals(#p(1):getCardIds(Player.Hand), 1)
-  lu.assertEquals(p(1):getCardIds(Player.Hand)[1], extra)
-  lu.assertEquals(#p(2):getCardIds(Player.Hand), 5)
+  lu.assertEquals(#p(1):getCardIds(Player.Hand), 4)
+  lu.assertItemsEquals(p(2):getCardIds(Player.Hand), given)
   lu.assertEquals(p(1):usedSkillTimes(CHIZHONG, Player.HistoryTurn), 1)
 end
 

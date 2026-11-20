@@ -181,8 +181,8 @@
 #### 国色（WU006 大乔）
 
 - **标识与依据**：运行时 ID `qiao__skill_wu006_1`；源码 [skill_wu006_1.lua](../../../../pkg/qiao_generals/skills/skill_wu006_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)吴区 WU006。同将流离见[用牌目标与距离](active.md#wu006-2)；弃置分支的费用与限次见[辅助与牌资源 WU006](support.md#wu006-1)。
-- **实现与接口**：使用分支按【乐不思蜀】原目标条件，不能被弃牌限制误挡；两分支的限次复核、弃置费用与批量移动见[辅助与牌资源 WU006](support.md#wu006-1)。
-- **验证依据**：[wu_phases.lua](../../../../tests/wu_phases.lua) 覆盖国色两分支及不可重用；历史 12/12。
+- **实现与接口**：主动技用 `UI.ComboBox` 提供当前可执行的分支，选择分支后仍可选牌、选人及确认。使用分支把所选方片装入虚拟【乐不思蜀】，用相同材料查询牌的使用及目标合法性；弃置分支沿用批量移动，见[辅助与牌资源 WU006](support.md#wu006-1)。共用的虚拟牌目标复核与客户端同样接受引擎判定的真值。
+- **验证依据**：[wu_phases.lua](../../../../tests/wu_phases.lua) 覆盖客户端进入国色、两分支选牌选人、确认回包以及独立限次。
 - **未完成与边界**：客户端两分支选择未人工验收。
 
 <a id="wu007-2"></a>
@@ -231,8 +231,8 @@
 #### 骁逆（QUN027 韩遂）
 
 - **标识与依据**：运行时 ID `qiao__skill_qun027_2`；源码 [skill_qun027_2.lua](../../../../pkg/qiao_generals/skills/skill_qun027_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)群区 QUN027。
-- **实现与接口**：限定技，出牌阶段按 `different_kingdom + other_roles` 显式策略视为对任意名其他势力角色使用一张【杀】，目标不套通常攻击距离；后续由 [qun_cards_rule](../../../../pkg/qiao_mode/skills/qun_cards_rule.lua) 在整次用牌结束后按实际 `damageDealt` 选一名未因此受伤的原目标弃置其两张牌，不把伤害总量为 0 当唯一判断。
-- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua)，覆盖一次多目标杀及未受伤目标弃牌；本轮定向通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **实现与接口**：限定技，出牌阶段按 `same_kingdom = false, other_roles = true` 显式策略视为对其他势力角色使用一张【杀】。未确定势力的角色也能被选，目标不套通常攻击距离。[qun_cards_rule](../../../../pkg/qiao_mode/skills/qun_cards_rule.lua) 在用牌结束后依据 `damageDealt` 处理未因此受伤的原目标。
+- **发动与回归**：在出牌请求中直接选择目标，至少需要一名合法目标。客户端和服务端共用势力、用牌禁止及存活判断。[qun_cards.lua](../../../../tests/qun_cards.lua) 从正式韩遂的出牌按钮、目标选择及确认回包进入真实服务端结算，检查同势力目标不可选、限定次数、多目标杀及未受伤目标弃牌。
 - **未完成与边界**：目标死亡／失技、全部受伤、无牌可弃等边界未直接覆盖；客户端多目标选择未人工验收。
 
 ### 晋

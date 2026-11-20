@@ -2,6 +2,7 @@
 -- 规则依据：docs/rules/generals/jin002-simashi.md、jin007-wangyuanji.md、
 -- jin008-xiahouhui.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local H = require "packages.hegemony.util"
 
@@ -263,6 +264,15 @@ function Testqiao_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
     lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
     lu.assertEquals(handler.selected_targets, {})
     lu.assertFalse(handler:targetValidity(me.id))
+    local reply, notify = nil, ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, name, data)
+      if name == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ClientInstance.notifyUI = notify
+    if not ok then error(err, 0) end
+    lu.assertEquals(reply.card.subcards, { hand, equip })
+    lu.assertEquals(reply.targets, {})
     me.player_cards[Player.Hand], me.player_cards[Player.Equip] = handCards, equips
   end)
   FkTest.resumeRoom()
@@ -342,7 +352,6 @@ function Testqiao_jin_resources:testShiduWinsThenGivesHalfCurrentHand()
   -- 拼点由 p1、p2 各选一张；赢后 p1 再选择交还的 1 张。
   FkTest.setNextReplies(p, {
     FkTest.ReplyChooseCards({ high[1] }),
-    FkTest.ReplyChooseCardAndPlayers({ p }, { high[2] }),
   })
   FkTest.setNextReplies(target, {
     FkTest.ReplyChooseCards({ low[1] }),
@@ -350,12 +359,22 @@ function Testqiao_jin_resources:testShiduWinsThenGivesHalfCurrentHand()
 
   inRoom(function()
     room.current = p
+    local original = room.askToUseActiveSkill
+    room.askToUseActiveSkill = function(self, chooser, params)
+      if params.prompt == "#qiao__skill_jin008_2-give:::1" then
+        lu.assertFalse(params.extra_data.include_equip == true)
+        FkTest.setNextReplies(chooser, { client_room.confirmCards(self, chooser, params, { high[2] }) })
+      end
+      return original(self, chooser, params)
+    end
     room:handleUseCardReply(p, FkTest.ReplyUseSkill(SHIDU, { target }, {}))
+    room.askToUseActiveSkill = original
   end)
 
   -- p1 拼点牌离手后剩 1 张，赢后获得 p2 剩余手牌共 2 张，交还 1 张。
   lu.assertEquals(#p:getCardIds("h"), 1)
   lu.assertEquals(#target:getCardIds("h"), 1)
+  lu.assertTrue(table.contains(target:getCardIds("h"), high[2]))
 end
 
 function Testqiao_jin_resources:testShiduTieDoesNotGainHand()

@@ -101,6 +101,11 @@ function Testqiao_wild_allegiance:testFirstTurnConditionAndHpRevealSync()
   lu.assertTrue(p:hasSkill(content.skills.loyalty))
   lu.assertEquals(p.maxHp, 4)
   lu.assertEquals(p.hp, 4)
+  lu.assertEquals(p.deputyGeneral, "anjiang")
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 0)
+  lu.assertEquals(p:getMark("HalfMaxHpLeft"), 1, "效忠也应重判新组合的阴阳鱼")
+  FkTest.runInRoom(function() p:revealGeneral(true) end)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 1)
 end
 
 function Testqiao_wild_allegiance:testOtherUnknownCondition()

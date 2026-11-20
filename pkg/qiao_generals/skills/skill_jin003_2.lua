@@ -76,13 +76,10 @@ skill:addEffect("active", {
     local own = player:getCardIds("he")
     local count = math.min(user.hp, #own)
     if count < 1 then return end
-    local _, cards = room:askToChooseCardsAndPlayers(player, {
-      targets = { player },
-      min_num = 1,
-      max_num = 1,
-      min_card_num = count,
-      max_card_num = count,
-      pattern = ".",
+    local cards = room:askToCards(player, {
+      min_num = count,
+      max_num = count,
+      include_equip = true,
       skill_name = skill.name,
       prompt = "#qiao__skill_jin003_2-give:::" .. count,
       cancelable = false,
@@ -93,7 +90,7 @@ skill:addEffect("active", {
         table.insert(give, id)
       end
     end
-    if #give > 0 then
+    if #give == count and user:isAlive() then
       room:moveCardTo(give, Card.PlayerHand, user, fk.ReasonGive,
         skill.name, nil, false, player)
     end

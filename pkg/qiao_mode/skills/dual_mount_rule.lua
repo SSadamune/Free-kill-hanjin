@@ -4,7 +4,7 @@
 -- 同时出现在两个坐骑栏的检索结果中）。本规则只处理牌移动中引擎按单一
 -- `sub_type` 无法覆盖的两处：
 --   * 正常使用双副类别坐骑时，另一个坐骑栏里原有的单坐骑也要被替换；
---   * 非“使用装备牌”的直接置入必须所有相关栏位均空且可用，不能顶替。
+--   * 主动置入允许替换；未获替换授权的移动仍需相关空栏。
 -- 只删除/追加本次移动中的目标牌，不丢弃同批的其他牌。
 local DUAL = {
   ["qiao__liulongcanjia"] = true,
@@ -18,6 +18,11 @@ local RIDE = {
 }
 
 local skill = fk.CreateSkill { name = "qiao__dual_mount_rule" }
+local Placement = require "packages.qiao.pkg.qiao_mode.rules.mount_placement"
+
+local function mayReplace(move)
+  return move.extra_data and move.extra_data[Placement.REPLACE] == true
+end
 
 local function cardOf(info)
   return info.beforeCard or Fk:getCardById(info.cardId)
@@ -104,6 +109,7 @@ end
 local function hasWork(data)
   for _, move in ipairs(data or {}) do
     if move.toArea == Card.PlayerEquip and move.to ~= nil then
+      if mayReplace(move) then return true end
       if move.moveReason == fk.ReasonUse then
         for _, info in ipairs(move.moveInfo or {}) do
           if isDual(cardOf(info)) then return true end
@@ -146,7 +152,27 @@ skill:addEffect(fk.BeforeCardsMove, {
     local additions = {}
     for _, move in ipairs(data or {}) do
       if move.toArea == Card.PlayerEquip and move.to ~= nil then
-        if move.moveReason == fk.ReasonUse then
+        if mayReplace(move) then
+          local usable = {}
+          for _, info in ipairs(move.moveInfo or {}) do
+            local card = cardOf(info)
+            if isRide(card) and Placement.canPut(move.to, info.cardId) then
+              table.insert(usable, info)
+              local replaced = {}
+              for _, subtype in ipairs({ Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }) do
+                if (isDual(card) or card.sub_type == subtype) and not move.to:hasEmptyEquipSlot(subtype) then
+                  local old = table.find(move.to:getEquipments(subtype), function(id) return not leaving[id] end)
+                  if old then
+                    leaving[old] = true
+                    table.insert(replaced, old)
+                  end
+                end
+              end
+              if #replaced > 0 then table.insert(additions, discardData(move.to, replaced)) end
+            end
+          end
+          move.moveInfo = usable
+        elseif move.moveReason == fk.ReasonUse then
           -- 结算端复核两个坐骑栏；被封印/不存在的栏位不能装备该牌。
           local usable = {}
           for _, info in ipairs(move.moveInfo or {}) do

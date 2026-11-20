@@ -35,10 +35,22 @@ local function clearZone(player, zone)
   end
 end
 
-local function prepare(kingdoms)
+local function prepare(kingdoms, withBots)
   Fk.currentResponsePattern = nil
+  local backend
+  if withBots then
+    backend = FkTest.createFakeRoom({ 1, -2, -3, -4, -5, -6, -7, -8 })
+    -- 与原生进房相同，先把机器人加入客户端，再让服务器通知座次。
+    local players = backend:getPlayers()
+    for i = 1, players:length() - 1 do
+      local bot = players:at(i)
+      ClientInstance:removePlayer({ i + 1 })
+      ClientInstance:addPlayer({ bot:getId(), bot:getScreenName(), bot:getAvatar(), true, 0 })
+    end
+  end
   local room = support.createRoom {
     mode = "qiao_heg_mode",
+    backend = backend,
     realSelection = true,
     settings = {
       qiao_faction_ban_enabled = false,
@@ -118,7 +130,9 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
 end
 
 function Testqiao_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()
-  local room, player, second, third, outsider = FkTest.room, p(1), p(2), p(3), p(4)
+  support.clearRoom()
+  local room = prepare({ "wei", "wei", "wei", "wu", "wu", "wu", "wu", "wu" }, true)
+  local player, second, third, outsider = p(1), p(2), p(3), p(4)
   inRoom(function()
     -- 先暂时移除鹤翼本身并刷新，取得“无飞影”基线；不能再逐张移除飞影，
     -- 因为失技会触发鹤翼刷新并立刻重新授予。
@@ -126,7 +140,7 @@ function Testqiao_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()
     F.refreshFormationSources(room)
     local without = third:distanceTo(player)
     room:handleAddLoseSkills(player, HEYI, nil, false, true)
-    F.refreshFormationSources(room)
+    room.logic:trigger(fk.TurnStart, player, TurnData:new(player, "game_rule"))
     lu.assertTrue(player:hasSkill(F.FEIYING_SKILL), "鹤翼应让队列中的自己真正拥有飞影")
     lu.assertTrue(second:hasSkill(F.FEIYING_SKILL))
     lu.assertTrue(third:hasSkill(F.FEIYING_SKILL))
@@ -136,6 +150,7 @@ function Testqiao_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()
     lu.assertEquals(F.feiyingLayers(third), 1)
 
     -- 第二名鹤翼持有者加入；移除第一名来源后，第二来源仍授予真实飞影。
+    lu.assertTrue(player.id < 0 or second.id < 0, "至少一名鹤翼来源为机器人")
     room:handleAddLoseSkills(second, HEYI, nil, false, true)
     F.refreshFormationSources(room)
     local two = third:getMark(F.FEIYING_MARK)
@@ -174,8 +189,8 @@ function Testqiao_wei018_caohong:testFeiyingSourceSkillsArePreRegisteredAndClien
   local room, player, third = FkTest.room, p(1), p(3)
   inRoom(function()
     F.refreshFormationSources(room)
-    lu.assertNotNil(Fk.skills[F.sourceSkillName(1)],
-      "固定来源技能必须在服务端/客户端技能表预注册")
+    local capacity = Fk.game_modes.qiao_heg_mode.maxPlayer
+    lu.assertNotNil(Fk.skills[F.sourceSkillName(capacity)], "最大房间的最后席位也有预注册来源")
     lu.assertTrue(player:hasSkill(F.FEIYING_SKILL))
     lu.assertEquals(F.feiyingLayers(third), 1)
   end)

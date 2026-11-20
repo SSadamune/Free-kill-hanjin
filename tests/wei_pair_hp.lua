@@ -37,6 +37,13 @@ local function inRoom(fn)
   return result
 end
 
+local function activateCaoCaoGuest()
+  local r, guest = room(), guestFactions()
+  local allowed = { "han", "qun", "jin", "shu" }
+  r:setBanner("all_kingdoms", allowed)
+  r:setTag(guest.key, { [GUEST] = assert(guest.resolve(GUEST, allowed)) })
+end
+
 --- 复刻 chooseGenerals 的正式接线：主/副将 → 选将标记 → 两牌暗置。
 local function installHiddenPair(player, main, deputy)
   inRoom(function()
@@ -67,6 +74,28 @@ Testqiao_wei_pair_hp.setup = function()
 end
 Testqiao_wei_pair_hp.tearDown = support.clearRoom
 
+function Testqiao_wei_pair_hp:testDoubleHeavyPairGetsTwoFishOnlyOnDoubleReveal()
+  local p = p1()
+  local r = room()
+  local main, deputy = "qiao_heg__han013", "qiao_heg__shu002"
+  installHiddenPair(p, main, deputy)
+  inRoom(function()
+    r:setPlayerMark(p, "__heg_kingdom", "han")
+    r:setPlayerMark(p, "__heg_init_kingdom", "han")
+    r:setPlayerProperty(p, "kingdom", "han")
+    r:setPlayerMark(p, "@!!yinyangfish", 0)
+    r.logic:broadcastGeneral()
+  end)
+  lu.assertEquals(p.maxHp, 4)
+  lu.assertEquals(p.hp, 4)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 0)
+  inRoom(function() p:revealGeneral(false) end)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 0)
+  inRoom(function() p:revealGeneral(true) end)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 2)
+  lu.assertEquals(p:getMark("HalfMaxHpLeft"), 0)
+end
+
 function Testqiao_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   local P = pairHp()
   -- 身份/来源接线：两版司马懿引用同一个应期技能 ID，晋不另设骨架或识别项。
@@ -90,11 +119,13 @@ function Testqiao_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
     "锁定技，若你配将为多势力或客将，☯️+2。")
 
   -- 无☯️修正为 3 + 4 = 7 半格；应期 +2 后为 9 半格 → 4 点上限，余 1 个半格。
+  inRoom(activateCaoCaoGuest)
+  local r = room()
   lu.assertEquals(P.base_half_hp(WEI002, GUEST), 7)
-  lu.assertEquals(P.half_hp(WEI002, GUEST), 9)
-  lu.assertEquals(P.max_hp(WEI002, GUEST), 4)
-  lu.assertEquals(P.half_left(WEI002, GUEST), 1)
-  lu.assertEquals(P.yinyang(WEI002, GUEST), 2)
+  lu.assertEquals(P.half_hp(WEI002, GUEST, r), 9)
+  lu.assertEquals(P.max_hp(WEI002, GUEST, r), 4)
+  lu.assertEquals(P.half_left(WEI002, GUEST, r), 1)
+  lu.assertEquals(P.yinyang(WEI002, GUEST, r), 2)
 
   -- 两版本各自主将/副将，与客将配将组成四组合，都走真实开局广播。
   for _, combo in ipairs({
@@ -134,15 +165,22 @@ function Testqiao_wei_pair_hp:testPlainPartnerKeepsEngineContribution()
   lu.assertEquals(p:getMark("HalfMaxHpLeft"), 1)
 end
 
-function Testqiao_wei_pair_hp:testIdentityUsesPrintedDataNotBanFilter()
+function Testqiao_wei_pair_hp:testIdentityDistinguishesPrintedFactionAndActiveGuest()
   local P, G, Ban = pairHp(), guestFactions(), factionBan()
   local r = room()
   -- 本局魏可用：曹操按原势力结算，不是本局解析出的客将。
   lu.assertTrue(table.contains(r:getBanner("all_kingdoms"), "wei"))
   lu.assertEquals(G.factionsOf(r, GUEST).source, "original")
-  -- 客将身份来自资料登记，应期不要求本局已启用客将势力。
-  lu.assertTrue(P.is_guest(GUEST))
-  lu.assertEquals(P.yinyang(WEI002, GUEST), 2)
+  lu.assertFalse(P.is_guest(GUEST, r))
+  lu.assertEquals(P.yinyang(WEI002, GUEST, r), 0)
+  local p = p1()
+  installHiddenPair(p, WEI002, GUEST)
+  inRoom(function() r.logic:broadcastGeneral() end)
+  lu.assertEquals(p.maxHp, 3, "魏未禁用时曹操仍是普通魏势力配将")
+  inRoom(activateCaoCaoGuest)
+  lu.assertTrue(P.is_guest(GUEST, r))
+  lu.assertTrue(P.is_multi_faction(GUEST, r))
+  lu.assertEquals(P.yinyang(WEI002, GUEST, r), 2)
 
   -- 牌面多势力按牌面认定，与禁选结果无关。
   local printed = { kingdom = "wei", subkingdom = "jin" }
@@ -159,6 +197,7 @@ end
 function Testqiao_wei_pair_hp:testAscensionReusesPairContribution()
   local P, A = pairHp(), ascension()
   local p = p1()
+  inRoom(activateCaoCaoGuest)
   installHiddenPair(p, WEI002, GUEST) -- 3 + 4 + 2 = 9 → 4
   inRoom(function() room().logic:broadcastGeneral() end)
   inRoom(function() room():setPlayerProperty(p, "kingdom", "wei") end)

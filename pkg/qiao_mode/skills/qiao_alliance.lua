@@ -5,12 +5,12 @@
 local M = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Heg = require "packages.hegemony.util"
 
-local ACTIVE = "qiao_shenshou_active"
+local ACTIVE = "qiao_shenshou_active-turn"
 local skill = fk.CreateSkill { name = "qiao__alliance" }
 
 local function shenshouId(player)
   for _, id in ipairs(player:getCardIds(Player.Equip)) do
-    local card = Fk:getCardById(id)
+    local card = Fk:getCardById(id, true)
     if card ~= nil and card.name == "qiao__shenshou_sizhao" then return id end
   end
 end
@@ -26,9 +26,10 @@ end
 
 local function canSelect(player, id, selected)
   if #selected >= 3 then return false end
-  local card = Fk:getCardById(id)
-  if card == nil or not isAllianceCard(card) then return false end
-  if table.contains(player:getCardIds(Player.Hand), id) then return true end
+  if table.contains(player:getCardIds(Player.Hand), id) then
+    return isAllianceCard(Fk:getCardById(id))
+  end
+  -- 装备区的授权来自这张武器本身，实体牌标记是手牌合纵的通用条件。
   return id == shenshouId(player) and player:getMark(ACTIVE) == 0
 end
 
@@ -65,8 +66,6 @@ skill:addEffect("active", {
       if seen[id] or not canSelect(player, id, {}) then return end
       seen[id] = true
     end
-    -- 若含神授思召，必须仍在装备区且仍属本人，防止选择与执行之间换主。
-    if seen[shenshouId(player) or -1] and player:getMark(ACTIVE) ~= 0 then return end
     room:showCards(cards, player)
     local draw = Heg.compareKingdomWith(target, player, true)
     room:moveCardTo(cards, Card.PlayerHand, target, fk.ReasonGive,

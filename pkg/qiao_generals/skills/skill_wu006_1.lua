@@ -15,7 +15,6 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
-local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 
 local USE_MARK = "qiao__skill_wu006_1_use-phase"
 local DISCARD_MARK = "qiao__skill_wu006_1_discard-phase"
@@ -46,19 +45,36 @@ local function discardTargets(room, player)
   end)
 end
 
-local function useTargets(room, player)
+local function useTargets(player, id)
   local card = Fk:cloneCard("qiao__indulgence")
+  card.skillName = skill.name
+  card:addSubcard(id)
+  if not player:canUse(card) then return {} end
   local cardSkill = card:getSkill(player)
-  return table.filter(room:getPresentPlayers(), function(p)
+  return table.filter(Fk:currentRoom():getPresentPlayers(), function(p)
     return p ~= player and not p:isRemoved()
       and not player:isProhibited(p, card)
-      and cardSkill:targetFilter(player, p, {}, {}, card, {}) == true
+      and cardSkill:targetFilter(player, p, {}, { id }, card, {})
   end)
 end
 
 local function branchAvailable(player, branch)
   local mark = branch == OPT_USE and USE_MARK or DISCARD_MARK
   return player:getMark(mark) == 0
+end
+
+local function choicesFor(player)
+  local choices = {}
+  if branchAvailable(player, OPT_USE) and table.find(diamonds(player), function(id)
+    return #useTargets(player, id) > 0
+  end) then
+    table.insert(choices, OPT_USE)
+  end
+  if branchAvailable(player, OPT_DISCARD) and #discardableDiamonds(player) > 0
+    and #discardTargets(Fk:currentRoom(), player) > 0 then
+    table.insert(choices, OPT_DISCARD)
+  end
+  return choices
 end
 
 local function discardMove(room, owner, id, player)
@@ -75,7 +91,9 @@ end
 skill:addEffect("active", {
   anim_type = "control",
   prompt = "#qiao__skill_wu006_1-prompt",
-  interaction = UI.OptionBox { options = { OPT_USE, OPT_DISCARD }, direct_send = true },
+  interaction = function(self, player)
+    return UI.ComboBox { choices = choicesFor(player), all_choices = { OPT_USE, OPT_DISCARD } }
+  end,
   min_card_num = 1,
   max_card_num = 1,
   target_num = 1,
@@ -83,56 +101,38 @@ skill:addEffect("active", {
   card_filter = function(self, player, to_select, selected)
     if #selected >= 1 then return false end
     local branch = self.interaction and self.interaction.data
-    if branch ~= nil and not branchAvailable(player, branch) then return false end
+    if branch == nil or not branchAvailable(player, branch) then return false end
     if branch == OPT_DISCARD then
       return table.contains(discardableDiamonds(player), to_select)
     end
-    return table.contains(diamonds(player), to_select)
+    return branch == OPT_USE and table.contains(diamonds(player), to_select)
+      and #useTargets(player, to_select) > 0
   end,
-  target_filter = function(self, player, to_select, selected)
-    if #selected > 0 then return false end
+  target_filter = function(self, player, to_select, selected, cards)
+    if #selected > 0 or #cards ~= 1 then return false end
     local branch = self.interaction and self.interaction.data
     if branch ~= nil and not branchAvailable(player, branch) then return false end
     if branch == OPT_USE then
-      return table.contains(useTargets(W.currentRoom(player), player), to_select)
+      return table.contains(useTargets(player, cards[1]), to_select)
     elseif branch == OPT_DISCARD then
       return #discardableDelayed(to_select, player) > 0
     end
     return false
   end,
-  refresh_interaction = function(self, player)
-    local choices = {}
-    local room = W.currentRoom(player)
-    if branchAvailable(player, OPT_USE) and #diamonds(player) > 0
-      and #useTargets(room, player) > 0 then
-      table.insert(choices, OPT_USE)
-    end
-    if branchAvailable(player, OPT_DISCARD) and #discardableDiamonds(player) > 0
-      and #discardTargets(room, player) > 0 then
-      table.insert(choices, OPT_DISCARD)
-    end
-    return choices
-  end,
   can_use = function(self, player)
-    if player.phase ~= Player.Play then return false end
-    local room = W.currentRoom(player)
-    local useOK = branchAvailable(player, OPT_USE)
-      and #diamonds(player) > 0 and #useTargets(room, player) > 0
-    local discardOK = branchAvailable(player, OPT_DISCARD)
-      and #discardableDiamonds(player) > 0 and #discardTargets(room, player) > 0
-    return useOK or discardOK
+    return player.phase == Player.Play and #choicesFor(player) > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from
-    local branch = self.interaction and self.interaction.data
+    local branch = effect.interaction_data
     local cardId = effect.cards and effect.cards[1]
     local target = effect.tos and effect.tos[1]
     if player == nil or player.dead or branch == nil or cardId == nil then return end
     if not branchAvailable(player, branch) then return end
 
     if branch == OPT_USE then
-      if not table.contains(useTargets(room, player), target) then return end
       if not table.contains(diamonds(player), cardId) then return end
+      if not table.contains(useTargets(player, cardId), target) then return end
       local use = C.useVirtualCard(room, player, "qiao__indulgence", { cardId }, { target }, skill.name)
       if use == nil then return end
       room:addPlayerMark(player, USE_MARK, 1)

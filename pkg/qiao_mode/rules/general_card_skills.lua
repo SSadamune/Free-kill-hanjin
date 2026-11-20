@@ -6,6 +6,11 @@ M.SOURCE="qiao__general_card_skill_source"
 local HIDDEN="qiao_general_card_skills_hidden"
 local SYNCING="qiao_general_card_skills_syncing"
 local listeners={}
+local primarySource = function() return true end
+
+function M.setPrimarySourceFilter(filter)
+  primarySource = filter
+end
 local function data(room,create)
   local value=room:getTag(M.TAG)
   if type(value)~="table" then
@@ -106,7 +111,8 @@ function M.sync(room)
             local skill=Fk.skills[skillName]
             local wrong=(deputy and skill:hasTag(Skill.MainPlace))
               or (not deputy and skill:hasTag(Skill.DeputyPlace))
-            if not wrong and E.cardProvidesSkill(room,name,skillName) then
+            if not wrong and E.cardProvidesSkill(room,name,skillName)
+              and primarySource(player, name, skillName) then
               if shown then desired[skillName]=true else hidden[skillName]=true end
             end
           end

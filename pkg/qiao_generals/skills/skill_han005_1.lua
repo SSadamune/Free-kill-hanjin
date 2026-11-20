@@ -76,7 +76,7 @@ skill:addEffect("active", {
     end
 
     -- 其视为使用【杀】或【决斗】；目标由其按正常牌面条件选择。
-    local use = C.askToUseVirtualCard(room, target, {
+    local use = C.selectVirtualCard(room, target, {
       name = { "qiao__slash", "qiao__duel" },
       skill_name = skill.name,
       prompt = "#qiao__skill_han005_1-use",
@@ -84,16 +84,23 @@ skill:addEffect("active", {
       extra_data = { skillName = skill.name },
     })
     if use == nil then return end
+    use.extra_data = use.extra_data or {}
+    use.extra_data.qiao_mouzhu_source = player.id
+    room:useCard(use)
+  end,
+})
 
-    local sameKingdomTarget = false
-    for _, to in ipairs(use.tos or {}) do
-      if to ~= nil and H.compareKingdomWith(player, to) then
-        sameKingdomTarget = true
-        break
-      end
-    end
-    if not sameKingdomTarget then return end
-    if target.dead or target:isRemoved() or #target:getCardIds("he") == 0 then return end
+skill:addEffect(fk.CardUsing, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and data.extra_data and data.extra_data.qiao_mouzhu_source ~= nil
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    local source = room:getPlayerById(data.extra_data.qiao_mouzhu_source)
+    data.extra_data.qiao_mouzhu_source = nil
+    if not source or player.dead or player:isRemoved() or player:isNude() then return end
+    if not table.find(data.tos, function(to) return H.compareKingdomWith(source, to) end) then return end
     room:askToDiscard(target, {
       min_num = 1,
       max_num = 1,

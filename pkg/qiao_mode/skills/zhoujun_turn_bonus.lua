@@ -6,6 +6,7 @@ local SLASH = "qiao_zhoujun_slash"
 local HAND = "qiao_zhoujun_hand"
 
 local skill = fk.CreateSkill { name = "qiao__zhoujun_turn_bonus" }
+local checkingSlashBase = {}
 
 skill:addEffect(fk.DrawNCards, {
   global = true,
@@ -18,7 +19,7 @@ skill:addEffect(fk.DrawNCards, {
     local room = Fk:currentRoom()
     if room:getTag("qiao_zhoujun_draw_event") == event.id then return end
     room:setTag("qiao_zhoujun_draw_event", event.id)
-    data.n = data.n + target:getMark(DRAW)
+    data.n = math.max(0, data.n + target:getMark(DRAW))
   end,
 })
 
@@ -30,11 +31,17 @@ skill:addEffect("maxcards", {
 })
 
 skill:addEffect("targetmod", {
-  residue_func = function(self, player, card_skill, scope, card)
-    if scope == Player.HistoryPhase and card ~= nil and card.trueName == "slash" then
-      local value = player:getMark(SLASH)
-      if value ~= 0 then return value end
-    end
+  residue_func = function(self, player, card_skill, scope, card, to)
+    if scope ~= Player.HistoryPhase or not card or card.trueName ~= "slash" then return end
+    if checkingSlashBase[player] then return end
+    local value = player:getMark(SLASH)
+    if value >= 0 then return value end
+    -- 再查询一次当前上限，跳过本修正。其他加次数效果中途失效时最多减到零。
+    checkingSlashBase[player] = true
+    local ok, base = pcall(card_skill.getMaxUseTime, card_skill, player, scope, card, to)
+    checkingSlashBase[player] = nil
+    if not ok then error(base, 0) end
+    return base and math.max(value, -math.max(0, base)) or value
   end,
 })
 
