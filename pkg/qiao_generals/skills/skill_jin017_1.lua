@@ -6,12 +6,16 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
+local function applies(effect, player, target)
+  return target ~= nil and target.chained and player:hasSkill(effect)
+end
+
 skill:addEffect("targetmod", {
   bypass_distances = function(self, player, card_skill, card, to)
-    return player ~= nil and to ~= nil and to.chained == true
+    return applies(self, player, to)
   end,
-  bypass_times = function(self, player, card_skill, card, to)
-    return player ~= nil and to ~= nil and to.chained == true
+  bypass_times = function(self, player, card_skill, scope, card, to)
+    return applies(self, player, to)
   end,
 })
 

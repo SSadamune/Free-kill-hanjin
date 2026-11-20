@@ -195,8 +195,8 @@
 #### 短兵（WU016 丁奉）
 
 - **标识与依据**：运行时 ID `qiao__skill_wu016_1`；源码 [skill_wu016_1.lua](../../../../pkg/qiao_generals/skills/skill_wu016_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)吴区 WU016。同将奋迅见[本页](#wu016-2)。
-- **实现与接口**：可选增加距离一目标；对距离一目标增加闪数的第二效果为必然效果，显式 `on_cost = Util.TrueFunc`，通过 `AimData:setResponseTimes` 接到真实响应流程。遗漏此项曾使引擎默认询问，导致未回复时双闪不生效；真实一闪不足抵消回归已修复。
-- **验证依据**：[wu_phases.lua](../../../../tests/wu_phases.lua) 覆盖短兵扩目标及一闪不足抵消；历史 12/12。
+- **实现与接口**：追加目标通过 `ExtraTargets.candidates` 按距离一及其他角色筛选，回复后用相同条件复核。对距离一目标增加闪数的第二效果为必然效果，通过 `AimData:setResponseTimes` 接到真实响应流程。
+- **验证依据**：[qun_cards.lua](../../../../tests/qun_cards.lua) 检查距离一但在攻击范围外时的额外目标；[wu_phases.lua](../../../../tests/wu_phases.lua) 覆盖短兵扩目标及一闪不足抵消。
 - **未完成与边界**：客户端双闪响应与目标扩展未人工验收。
 
 <a id="wu016-2"></a>
@@ -221,9 +221,9 @@
 #### 虓猛（QUN002 吕布）
 
 - **标识与依据**：运行时 ID `qiao__skill_qun002_2`；源码 [skill_qun002_2.lua](../../../../pkg/qiao_generals/skills/skill_qun002_2.lua)。规则见[吕布规范](../../../rules/generals/qun002-lvbu.md)与[指定额外目标](../extra-targets.md)。同将无双见[本页](#qun002-1)。
-- **实现与接口**：`fk.AfterCardTargetDeclared` 后由当前回合角色（不一定是吕布）为本次【决斗】追加至多两名“与吕布势力不同”的其他角色；候选走 `extra_targets` 的 `different_kingdom + other_roles` 显式条件，目标在声明后加入，不重新使用此牌。每回合限一次。
-- **验证依据**：已执行 [qun_cards.lua](../../../../tests/qun_cards.lua)，覆盖转化决斗由当前回合角色增目标；本轮定向通过，见[验证记录](verification-evidence.md#qun-standard)。
-- **未完成与边界**：当前回合角色非吕布、转化【决斗】及额外目标失效边界未直接覆盖；客户端选目标未人工验收。
+- **实现与接口**：`fk.AfterCardTargetDeclared` 后由当前回合角色为本次【决斗】追加至多两名“与吕布势力不同”的其他角色。候选与回复复核均走 `ExtraTargets.candidates`，以明确的势力条件替换该牌的默认目标条件。每回合限一次。
+- **验证依据**：[qun_cards.lua](../../../../tests/qun_cards.lua) 覆盖实体手牌【决斗】的选人请求，以及转化【决斗】由非吕布的当前回合角色增目标。
+- **未完成与边界**：原反馈对局的势力与发动记录未知，客户端原场景待复测。
 
 <a id="qun003-1"></a>
 #### 离间（QUN003 貂蝉）
