@@ -88,6 +88,37 @@ function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   lu.assertFalse(client:guestIllustrationsEnabled())
 end
 
+function Testqiao_guest_allegiance:testSkillGeneralPopupKeepsUtilityReplyModel()
+  local room = create {}
+  local client = QiaoClient:new(ClientInstance.client)
+  local component = {
+    url = "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml",
+    model = {
+      url = "packages/utility/qml/models/ChooseGeneralsAndChoiceModel.qml",
+      prop = { cards = { "qiao_heg__han001" }, min = 1, max = 1 },
+    },
+  }
+  local command, data
+  client.client = {
+    notifyUI = function(_, name, payload) command, data = name, payload end,
+  }
+  FkTest.runInRoom(function()
+    client:notifyUI("CustomDialog", { component = component })
+  end)
+  lu.assertEquals(command, "CustomDialog")
+  lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml")
+  lu.assertIs(data.component.model, component.model)
+  lu.assertEquals(component.url, "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml")
+  support.clearRoom()
+end
+
+function Testqiao_guest_allegiance:testVirtualCardPictureUsesFormalHanjinId()
+  local client = QiaoClient:new(ClientInstance.client)
+  lu.assertEquals(client:virtualCardPicture("slash"), "qiao__slash")
+  lu.assertEquals(client:virtualCardPicture("qiao__thunder__slash"), "qiao__thunder__slash")
+  lu.assertEquals(client:virtualCardPicture("unknown"), "unknown")
+end
+
 function Testqiao_guest_allegiance:testOpeningPortraitsFollowRoomSettingWithoutGuestCandidates()
   local offers = { "qiao_test__han_1", "qiao_test__han_2" }
   for _, enabled in ipairs({ true, false }) do

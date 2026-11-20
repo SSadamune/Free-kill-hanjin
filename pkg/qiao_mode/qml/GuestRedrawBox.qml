@@ -206,11 +206,13 @@ GraphicsBox {
     id: generalCardList
     model: root.dataModel.generals.length
 
-    GeneralCardItem {
+    QiaoGeneralCard {
       id: card
       readonly property string modelData: dataModel.name
       required property int index
       dataModel: root.dataModel.generalDict[index]
+      generalName: dataModel.name
+      preferredSkin: Config.enabledSkins?.[generalName] ?? ""
       selectable: {
         const result = root.dataModel.resultInt?.map(e => Number(e));
         if (result) {

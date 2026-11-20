@@ -38,10 +38,11 @@ ColumnLayout {
     clip: true
     model: root.cardNames
 
-    delegate: GeneralCardItem {
+    delegate: QiaoGeneralCard {
       required property string modelData
       autoBack: false
-      dataModel: Ltk.createGeneralCardModel(modelData)
+      generalName: modelData
+      scene: root.scene
       chosenInBox: root.selectedCi === modelData
       onClicked: {
         if (root.isHolder) root.selectedCi = root.selectedCi === modelData ? "" : modelData;
