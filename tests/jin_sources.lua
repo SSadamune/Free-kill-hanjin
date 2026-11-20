@@ -1,6 +1,8 @@
 -- JIN010 伤逝/扼绝、JIN016 复礼/风物的来源与最小主流程定向用例。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local Qianxi = require "packages.qiao.pkg.qiao_generals.util.shu019_qianxi"
+local JinDeck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
 
@@ -344,6 +346,21 @@ function Testqiao_jin_sources:testShangshiRequiresHandMaterialAndDoesNotCountCan
   local materials = give(room, owner, { { "qiao__jink" } })
   give(room, target, { { "qiao__peach" } })
   skill_test.withSkillRequests(room, SHANGSHI, {
+    askToChoice = function()
+      requests = requests + 1
+      return "Cancel"
+    end,
+  }, function()
+    inRoom(function()
+      Qianxi.ensureRule(room)
+      Qianxi.addRestriction(room, owner, target, Card.Black)
+      room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish })
+      Qianxi.clear(room)
+    end)
+  end)
+  lu.assertEquals(requests, 0, "唯一手牌受潜袭限制时冰杀项不可用")
+
+  skill_test.withSkillRequests(room, SHANGSHI, {
     askToChoice = function(self, player, params, original)
       lu.assertEquals(params.choices, { SHANGSHI_SLASH })
       lu.assertEquals(params.all_choices, { SHANGSHI_SLASH, SHANGSHI_DRAW })
@@ -366,6 +383,25 @@ function Testqiao_jin_sources:testShangshiRequiresHandMaterialAndDoesNotCountCan
     lu.assertEquals(target.hp, hp - 1)
     lu.assertEquals(room:getCardArea(materials[1]), Card.DiscardPile)
   end)
+end
+
+function Testqiao_jin_sources:testShangshiCanUseTwoCardsWhenSingleSuitIsProhibited()
+  local room = prepare("qiao_heg__jin010")
+  local owner, target = p1(), p2()
+  local materials = give(room, owner, { { "qiao__jink" }, { "qiao__jink" } })
+  give(room, target, { { "qiao__peach" }, { "qiao__peach" }, { "qiao__peach" } })
+  local hp = target.hp
+  FkTest.setNextReplies(owner, { { SHANGSHI_SLASH }, FkTest.ReplyChooseCards(materials), "" })
+  inRoom(function()
+    target.phase = Player.Finish
+    JinDeck.banSuit(room, owner, Card.Spade)
+    local single = Fk:cloneCard("qiao__ice__slash")
+    single:addSubcard(materials[1])
+    lu.assertTrue(owner:prohibitUse(single))
+    room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish })
+  end)
+  lu.assertEquals(target.hp, hp - 1)
+  lu.assertEquals(#owner:getCardIds("h"), 0)
 end
 
 function Testqiao_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()
