@@ -11,8 +11,8 @@ skill:addEffect(fk.AfterDrawInitialCards, {
   end,
   on_refresh = function(self, event, target, player)
     local room = player.room
-    -- The native focus bars don't open a request or disable the dashboard.
-    room:notifyMoveFocus(room.players, "qiao_initial_prelight", duration)
+    -- 独立房间通知只负责显示，预亮仍走引擎的原生 PushRequest。
+    room:doBroadcastNotify("QiaoInitialPrelight", { duration })
     room:delay(duration)
   end,
 })

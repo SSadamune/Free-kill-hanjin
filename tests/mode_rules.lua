@@ -8,33 +8,33 @@ Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 function Testmode_rules:testOneGlobalWindowAfterAllHandsAreDealt()
   support.clearRoom()
-  local focusCalls, waits = 0, 0
+  local countdownCalls, waits = 0, 0
   support.createRoom {
     mode = "qiao_heg_mode",
     realSelection = true,
     configure = function(current)
-      local focus, delay = current.notifyMoveFocus, current.delay
-      function current:notifyMoveFocus(players, command, timeout)
-        if command == "qiao_initial_prelight" then
-          focusCalls = focusCalls + 1
-          lu.assertTrue(players == self.players)
-          lu.assertEquals(timeout, 3000)
-          for _, player in ipairs(players) do
+      local notify, delay = current.doBroadcastNotify, current.delay
+      function current:doBroadcastNotify(command, data, players)
+        if command == "QiaoInitialPrelight" then
+          countdownCalls = countdownCalls + 1
+          lu.assertNil(players)
+          lu.assertEquals(data, { 3000 })
+          for _, player in ipairs(self.players) do
             lu.assertTrue(player:getHandcardNum() >= 4)
           end
         end
-        return focus(self, players, command, timeout)
+        return notify(self, command, data, players)
       end
       function current:delay(ms)
         if ms == 3000 then
-          lu.assertEquals(focusCalls, 1)
+          lu.assertEquals(countdownCalls, 1)
           waits = waits + 1
         end
         return delay(self, ms)
       end
     end,
   }
-  lu.assertEquals(focusCalls, 1)
+  lu.assertEquals(countdownCalls, 1)
   lu.assertEquals(waits, 1)
   for _, trigger in ipairs(Fk.global_trigger) do
     lu.assertNotEquals(trigger.name, "#qiao_initial_prelight")
