@@ -872,6 +872,12 @@ function Testqiao_card_reuse:testVineNullifiesNamedCardsAndAmplifiesFireDamage()
   local room = FkTest.room
   local p, t = room.players[1], room.players[2]
   local armor = card("qiao__vine")
+  local sendLog = room.sendLog
+  local blocked = {}
+  room.sendLog = function(self, log, ...)
+    if log.type == "#qiao_vine_nullifies" then table.insert(blocked, log.arg) end
+    return sendLog(self, log, ...)
+  end
   FkTest.runInRoom(function()
     clearAllAreas(room)
     give(room, p, armor)
@@ -912,6 +918,7 @@ function Testqiao_card_reuse:testVineNullifiesNamedCardsAndAmplifiesFireDamage()
     give(room, t, fire)
     use(room, t, { p }, fire)
     lu.assertEquals(p.hp, hp - 2, "藤甲应将实际受到的火焰伤害 +1")
+    lu.assertEquals(blocked, { slash.name, nanman.name, archery.name })
   end)
 end
 

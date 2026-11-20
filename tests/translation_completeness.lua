@@ -28,12 +28,25 @@ local PUBLIC_PROMPTS = {
   "#qiao_adaptation_discard_equip",
   "#qiao_adaptation_ignore",
   "#InvokeSkillQiaoAdaptation",
+  "#qiao_retinue_skill_mushun_delay",
+  "#qiao__skill_jin013_2_effect",
+  "qiao__zouyu_fan_delay",
+  "#qiao_vine_nullifies",
+  "#qiao__halberd_active",
+  "#qiao_temporary_effect_ended",
+  "#QiaoChuanxinReveal1",
+  "#QiaoChuanxinReveal2",
+  "#QiaoChuanxinReveal3",
 }
 
 local PUBLIC_PILES = {
   (require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han").PILE,
   "qiao_em_wu001_fenghuo",
   "qiao_em_qun010_tianbing",
+  "$sa_carriage",
+  "@[qiao_luanji_suits]",
+  "@[qiao_kannan_damage]-turn",
+  "@[qiao_keqing]",
 }
 
 function Testqiao_translation_completeness:testPublicSkillsHaveNameAndDescription()

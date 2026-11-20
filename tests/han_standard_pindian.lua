@@ -373,6 +373,15 @@ function Testqiao_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnore
   local uses, armor = {}, {}
   installUseProbe(room, uses)
   installArmorProbe(room, armor)
+  local sendLog = room.sendLog
+  local invocations = {}
+  room.sendLog = function(self, log, ...)
+    if log.type:startsWith("#InvokeSkill") and type(log.arg) == "string"
+      and Fk:translate(log.arg) == "承诏" then
+      table.insert(invocations, log.from)
+    end
+    return sendLog(self, log, ...)
+  end
 
   FkTest.setNextReplies(p1(), {
     FkTest.ReplyChoosePlayer({ p2() }),
@@ -397,6 +406,7 @@ function Testqiao_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnore
   -- addQinggangTag 在当前实现中可能在标记落点/目标 id 上与 probe 预期不同；
   -- 已有 uses 证明本次承诏杀真实使用，先以公共玩家标记为接线证据。
   lu.assertTrue(armor[1].mark > 0)
+  lu.assertEquals(invocations, { p1().id }, "无视防具不应再次记录承诏")
   lu.assertEquals(p1():usedSkillTimes(CZ, Player.HistoryGame), 1)
 
   -- 本回合只得一张：不提供发动。
@@ -409,6 +419,7 @@ function Testqiao_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnore
     room.logic:trigger(fk.TurnEnd, p1(), {})
   end)
   lu.assertEquals(#uses, before)
+  lu.assertEquals(invocations, { p1().id }, "得牌不足不应记录发动")
   lu.assertEquals(p1():usedSkillTimes(CZ, Player.HistoryGame), 1)
 end
 

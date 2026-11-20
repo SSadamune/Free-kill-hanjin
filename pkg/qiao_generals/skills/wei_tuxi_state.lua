@@ -69,11 +69,12 @@ end
 
 -- 权限只持续到建立它的那个回合结束；届时清掉提示并移除本骨架。
 skill:addEffect(fk.TurnEnd, {
-  can_trigger = function(self, event, target, player, data)
-    return target == player and player:hasSkill(skill.name)
+  late_refresh = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and player:hasSkill(skill.name, true)
   end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
+  on_refresh = function(self, event, target, player, data)
+    player.room:sendLog { type = "#qiao_temporary_effect_ended", from = player.id, arg = STATE }
     local room = player.room
     clearMarks(room, player)
     room:handleAddLoseSkills(player, "-" .. STATE, STATE, false, true)

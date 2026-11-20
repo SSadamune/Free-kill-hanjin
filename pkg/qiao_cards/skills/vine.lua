@@ -40,6 +40,9 @@ skill:addEffect(fk.PreCardEffect, {
       and data.card ~= nil and isNullifiedCard(data.card)
   end,
   on_use = function(self, event, target, player, data)
+    player.room:sendLog {
+      type = "#qiao_vine_nullifies", from = player.id, arg = data.card.name,
+    }
     data.nullified = true
   end,
 })
@@ -57,6 +60,7 @@ skill:addEffect(fk.DamageInflicted, {
 
 Fk:loadTranslationTable {
   ["qiao__vine_skill"] = "藤甲",
+  ["#qiao_vine_nullifies"] = "%from 的【藤甲】生效，【%arg】对其无效",
 }
 
 return skill

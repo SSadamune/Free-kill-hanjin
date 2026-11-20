@@ -77,20 +77,16 @@ skill:addEffect(fk.TurnEnd, {
   end,
 })
 
--- 承诏生成的【杀】在指定目标后套用“无视防具”。这里只处理本技能带标记的
--- 那次用牌，不改变其他【杀】。TargetSpecified 的 target 为使用者。
+-- 承诏生成的【杀】在确认目标后套用“无视防具”，沿用本次承诏的发动记录。
 skill:addEffect(fk.TargetConfirmed, {
   global = true,
-  priority = 0,
   is_delay_effect = true,
-  can_trigger = function(self, event, target, player, data)
-    return target == data.to and data.card ~= nil and data.card.trueName == "slash"
-      and (data.card.skillName == skill.name
-        or table.contains(data.card.skillNames or {}, skill.name))
+  can_refresh = function(self, event, target, player, data)
+    return target == player and target == data.to
+      and data.extra_data and data.extra_data[ARMOR_MARK]
       and target:isAlive()
   end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
+  on_refresh = function(self, event, target, player, data)
     target:addQinggangTag(data)
   end,
 })

@@ -10,7 +10,7 @@ local NJ = "qiao__skill_han017_2"
 
 local USED_TARGETS = "qiao__skill_han017_1-given_targets-phase"
 local LOCK = "qiao__skill_han017_1-locked-turn"
-local NEXT_SLASH = "qiao_skill_han017_1_next_slash_damage-turn"
+local NEXT_SLASH = "@[qiao_kannan_damage]-turn"
 local BONUS = "qiao__skill_han017_2-bonus-turn"
 local OPTION_TAKE = "#qiao__skill_han017_1-take"
 

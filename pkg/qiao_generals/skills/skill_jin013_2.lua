@@ -16,7 +16,7 @@ skill.qiaoImplemented = true
 
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_chain"
 
-local SOURCE_MARK = "qiao_jin013_2_sources"
+local SOURCE_MARK = "@[qiao_keqing]"
 local TARGET_MARK = "qiao_jin013_2_targets"
 local LISTENER = "#qiao__skill_jin013_2_effect"
 
@@ -105,7 +105,7 @@ local function ensureListener(room)
         is_delay_effect = true,
         can_trigger = function(self, event, target, player, data)
           return target == player and target ~= nil
-            and not target.dead and target.chained
+            and not target.dead and not target:isRemoved() and target.chained
             and hasDiscardable(target)
             and hasAliveSource(target)
         end,
@@ -179,10 +179,18 @@ skill:addEffect("active", {
 })
 
 Fk:loadTranslationTable {
+  [LISTENER] = "克清",
+  ["qiao_keqing"] = "克清",
+  [SOURCE_MARK] = "克清",
   ["qiao__skill_jin013_2"] = "克清",
   [":qiao__skill_jin013_2"] = "出牌阶段限一次，你可以选择一名已横置的其他角色，直到你再次发动该技能或死亡：当其使用或打出牌时，若其横置，其弃置一张牌。",
   ["#qiao__skill_jin013_2-prompt"] = "克清：选择一名已横置的其他角色",
   ["#qiao__skill_jin013_2-discard"] = "克清：你须弃置一张牌",
+}
+
+Fk:addQmlMark {
+  name = "qiao_keqing",
+  how_to_show = function(_, sources) return type(sources) == "table" and tostring(#sources) or "" end,
 }
 
 return skill

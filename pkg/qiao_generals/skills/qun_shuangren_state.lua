@@ -24,11 +24,12 @@ OnlyAs.addViewAsEffect(skill, "shuangren", "#qiao__qun_shuangren_state-prompt")
 -- 权限只持续到建立它的那个回合结束；届时移除本骨架。限制来源不在此处清理，
 -- 由 only-as 公共规则统一处理，避免两处状态互相覆盖。
 skill:addEffect(fk.TurnEnd, {
-  can_trigger = function(self, event, target, player, data)
-    return target == player and player:hasSkill(skill.name)
+  late_refresh = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and player:hasSkill(skill.name, true)
   end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
+  on_refresh = function(self, event, target, player, data)
+    player.room:sendLog { type = "#qiao_temporary_effect_ended", from = player.id, arg = STATE }
     player.room:handleAddLoseSkills(player, "-" .. STATE, STATE, false, true)
   end,
 })

@@ -8,6 +8,7 @@
 -- qun_cards_rule 的独立延后监听完成，不依赖袁绍仍持有本技能。
 local ARCHERY = "qiao__archery_attack"
 local SUIT_MARK = "@[qiao_luanji_suits]"
+local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_qun004_1",
@@ -67,8 +68,17 @@ skill:addEffect("viewas", {
 })
 
 Fk:loadTranslationTable {
+  [SUIT_MARK] = "乱击",
+  ["qiao_luanji_suits"] = "乱击",
   ["#qiao__skill_qun004_1-prompt"] = "乱击：将两张手牌当【万箭齐发】使用（不能选择本回合此前乱击已选择过的花色）",
   ["#qiao__qun_cards_rule_luanji_draw"] = "乱击：你可以摸一张牌",
+}
+
+Fk:addQmlMark {
+  name = "qiao_luanji_suits",
+  how_to_show = function(_, suits)
+    return type(suits) == "table" and Deck.suitSymbols(suits) or ""
+  end,
 }
 
 return skill

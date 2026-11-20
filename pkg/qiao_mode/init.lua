@@ -33,6 +33,7 @@ Fk:addPostLoadFunc(function()
 end)
 
 Fk:loadTranslationTable {
+  ["#qiao_temporary_effect_ended"] = "%from 的〖%arg〗效果结束",
   ["qiao_wolves"] = "群狼环鼎",
   ["help: qiao_wolves"] = "开启历史事件与奇珍规则。",
   ["qiao_mode"] = "国战平行时空",

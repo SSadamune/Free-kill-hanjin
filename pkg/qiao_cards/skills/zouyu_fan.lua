@@ -18,8 +18,9 @@ local function ensureDelaySkill(room)
     local skel = fk.CreateSkill { name = DELAY_SKILL }
     skel:addEffect(fk.Damaged, {
       global = true,
+      is_delay_effect = true,
       can_trigger = function(self, event, target, player, data)
-        return target ~= nil and target:getMark(PENDING) > 0
+        return target ~= nil and target == player and target:getMark(PENDING) > 0
       end,
       on_cost = Util.TrueFunc,
       on_use = function(self, event, target, player, data)
@@ -40,18 +41,17 @@ local function ensureDelaySkill(room)
     })
     skel:addEffect(fk.TurnEnd, {
       global = true,
-      can_trigger = function(self, event, target, player, data)
-        return target ~= nil
+      late_refresh = true,
+      can_refresh = function(self, event, target, player, data)
+        return player:getMark(PENDING) > 0 or player:getMark(ARMED) > 0
+          or player:getMark(USED) > 0
       end,
-      on_cost = Util.TrueFunc,
-      on_use = function(self, event, target, player, data)
-        local room = Fk:currentRoom()
-        for _, p in ipairs(room.players) do
-          room:setPlayerMark(p, PENDING, 0)
-          room:setPlayerMark(p, CARD, 0)
-          room:setPlayerMark(p, ARMED, 0)
-          room:setPlayerMark(p, USED, 0)
-        end
+      on_refresh = function(self, event, target, player, data)
+        local room = player.room
+        room:setPlayerMark(player, PENDING, 0)
+        room:setPlayerMark(player, CARD, 0)
+        room:setPlayerMark(player, ARMED, 0)
+        room:setPlayerMark(player, USED, 0)
       end,
     })
     delaySkill = skel:createSkill()
@@ -136,29 +136,18 @@ local function provide(self, event, target, player, data)
   player.room:setPlayerMark(player, ARMED, 1)
 end
 -- 只有真实使用/打出完成后才把“待受伤”记录转正；请求结果本身不建立延时。
-skill:addEffect(fk.CardUseFinished, {
+local promoteEffect = {
   global = true,
-  can_trigger = function(self, event, target, player, data)
-    return player ~= nil and data ~= nil and data.from == player
+  can_refresh = function(self, event, target, player, data)
+    return data ~= nil and data.from == player and player:getMark(ARMED) > 0
       and data.card ~= nil and data.card.skillName == skill.name
   end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
+  on_refresh = function(self, event, target, player, data)
     promote(player, data.card)
   end,
-})
-
-skill:addEffect(fk.CardRespondFinished, {
-  global = true,
-  can_trigger = function(self, event, target, player, data)
-    return player ~= nil and data ~= nil and data.from == player
-      and data.card ~= nil and data.card.skillName == skill.name
-  end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
-    promote(player, data.card)
-  end,
-})
+}
+skill:addEffect(fk.CardUseFinished, promoteEffect)
+skill:addEffect(fk.CardRespondFinished, promoteEffect)
 skill:addEffect(fk.AskForCardUse, {
   can_trigger = function(self, event, target, player, data)
     return target == player and canProvide(self, player, data, false)
@@ -175,6 +164,7 @@ skill:addEffect(fk.AskForCardResponse, {
 
 Fk:loadTranslationTable {
   [skill.name] = "驺虞幡",
+  [DELAY_SKILL] = "驺虞幡",
   ["#qiao__zouyu-target"] = "驺虞幡：选择此【杀】的目标",
   [":" .. skill.name] = "回合外每回合限一次，在需要使用或打出【杀】或【闪】时，"
     .. "你可以视为使用或打出之；随后本回合下一次受到伤害后失去1点体力并弃置此牌。",
