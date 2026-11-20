@@ -10,6 +10,14 @@ local skill = fk.CreateSkill {
   name = "qiao__skill_jin007_1",
 }
 
+Fk:addTargetTip {
+  name = skill.name,
+  target_tip = function(self, player, to_select, selected, selected_cards, card, selectable, extra_data)
+    local declared = extra_data.extra_data[tostring(to_select.id)]
+    return declared and Fk:translate(declared)
+  end,
+}
+
 --- 正式可声明的牌名：按 trueName 去重；冰杀/火杀/普通杀仍保留各自
 --- trueName，不在比较时合并。
 ---@return string[]
@@ -86,7 +94,7 @@ skill:addEffect(fk.EventPhaseStart, {
 
     if #picked == 0 then return end
 
-    -- 按结算顺序声明；只记录声明，不展示牌。
+    -- 按结算顺序公开声明的牌名，所选手牌仍保持隐藏。
     local owners = table.map(picked, function(e) return e.owner end)
     room:sortByAction(owners)
     for _, owner in ipairs(owners) do
@@ -98,6 +106,11 @@ skill:addEffect(fk.EventPhaseStart, {
           prompt = "#qiao__skill_jin007_1-declare",
           cancelable = false,
         })
+        room:sendLog {
+          type = "#qiao__skill_jin007_1-declared",
+          from = owner.id,
+          arg = entry.declared,
+        }
       end
     end
 
@@ -107,7 +120,11 @@ skill:addEffect(fk.EventPhaseStart, {
         and table.contains(e.owner:getCardIds(Player.Hand), e.id)
     end)
     if #valid == 0 then return end
-    local validOwners = table.map(valid, function(e) return e.owner end)
+    local validOwners, declarations = {}, {}
+    for _, entry in ipairs(valid) do
+      table.insert(validOwners, entry.owner)
+      declarations[tostring(entry.owner.id)] = entry.declared
+    end
     local chosenOwner = room:askToChoosePlayers(player, {
       min_num = 1,
       max_num = 1,
@@ -115,6 +132,8 @@ skill:addEffect(fk.EventPhaseStart, {
       skill_name = skill.name,
       prompt = "#qiao__skill_jin007_1-reveal",
       cancelable = false,
+      target_tip_name = skill.name,
+      extra_data = declarations,
     })
     local revealEntry = table.find(valid, function(e)
       return chosenOwner ~= nil and e.owner == chosenOwner[1]
@@ -148,6 +167,7 @@ Fk:loadTranslationTable {
   ["#qiao__skill_jin007_1-target"] = "识人：选择一名其他势力角色（至多三名，可取消停止）",
   ["#qiao__skill_jin007_1-card"] = "识人：选择其一张手牌（不展示）",
   ["#qiao__skill_jin007_1-declare"] = "识人：声明一个牌名",
+  ["#qiao__skill_jin007_1-declared"] = "“识人”：%from 声明了【%arg】",
   ["#qiao__skill_jin007_1-reveal"] = "识人：选择展示并获得其中一张被选择的牌",
 }
 
