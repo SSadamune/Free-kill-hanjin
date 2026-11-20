@@ -213,11 +213,11 @@ function Testqiao_han012:testBotongFourSuitsAndGiveAfterUse()
   local ask = room.askToUseActiveSkill
   local requests = 0
   room.askToUseActiveSkill = function(self, player, params)
-    if params.skill_name == "distribution_select_skill" and params.extra_data.skillName == BT then
+    if params.skill_name == "choose_players_skill" and params.extra_data.skillName == BT then
       requests = requests + 1
-      local reply = client_room.confirmSelection(room, player, params, cards, { p2() }, function(handler)
+      local reply = client_room.confirmSelection(room, player, params, {}, { p2() }, function(handler)
         lu.assertFalse(handler:cardValidity(unrelated))
-        lu.assertItemsEquals(handler.visible_pile, cards)
+        for _, id in ipairs(cards) do lu.assertFalse(handler:cardValidity(id)) end
       end)
       FkTest.setNextReplies(player, { reply, "" })
     end
