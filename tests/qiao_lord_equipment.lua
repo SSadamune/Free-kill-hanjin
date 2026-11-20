@@ -334,18 +334,31 @@ function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInv
   FkTest.runInRoom(function()
     give(room, owner, seal)
     use(room, owner, { owner }, seal)
-    -- 三项都在取值范围内，但不是服务端提供的合法组合，不能生效。
-    FkTest.setNextReplies(owner, { "1", { draw = 0, slash = 0, hand = 0 } })
+    owner.hp = 1
+    -- 分别尝试把出杀、手牌上限减成负数，以及同时给两项加点。
+    local invalid = {
+      { draw = 2, slash = -2, hand = 0 },
+      { draw = 2, slash = 0, hand = -2 },
+      { draw = -2, slash = 1, hand = 1 },
+    }
     FkTest.setRoomBreakpoint(owner, "CustomDialog", function(data)
       request = data
       return false
     end)
-    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    for _, reply in ipairs(invalid) do
+      FkTest.setNextReplies(owner, { "1", reply })
+      room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+      lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0)
+      lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
+      lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
+    end
 
     lu.assertNotNil(request, "准备阶段应打开数值调整弹窗")
     lu.assertEquals(request.component.url,
       "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml")
     local options = request.component.prop.options
+    local values = request.component.prop.baseValues
+    lu.assertEquals(values, { draw = 2, slash = 1, hand = 1 })
     lu.assertTrue(#options > 0, "服务端应提供合法组合")
     for _, option in ipairs(options) do
       lu.assertEquals(option.draw + option.slash + option.hand, 0,
@@ -358,6 +371,9 @@ function Testqiao_lord_equipment:testZhoujunDialogSendsLegalTriplesAndIgnoresInv
       lu.assertTrue(option.draw >= -2 and option.draw <= 2)
       lu.assertTrue(option.slash >= -2 and option.slash <= 2)
       lu.assertTrue(option.hand >= -2 and option.hand <= 2)
+      lu.assertTrue(values.draw + option.draw >= 0)
+      lu.assertTrue(values.slash + option.slash >= 0)
+      lu.assertTrue(values.hand + option.hand >= 0)
     end
     lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "非合法组合不产生摸牌修正")
     lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0, "非合法组合不产生出杀修正")
@@ -377,6 +393,34 @@ function Testqiao_lord_equipment:testZhoujunCancelLeavesNoBonus()
     lu.assertEquals(owner:getMark("qiao_zhoujun_draw"), 0, "取消不随机选择修正")
     lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), 0)
     lu.assertEquals(owner:getMark("qiao_zhoujun_hand"), 0)
+  end)
+end
+
+function Testqiao_lord_equipment:testZhoujunSlashReductionFloorsAtZeroAfterLosingBonus()
+  local room, owner = FkTest.room, p(1)
+  local seal = card("qiao__zhoujun_lingbingyin")
+  local slash = Fk:cloneCard("qiao__slash")
+  inRoom(function()
+    give(room, owner, seal)
+    use(room, owner, { owner }, seal)
+    local extra = fk.CreateSkill { name = "test_zhoujun_temporary_slash_limit" }
+    extra:addEffect("targetmod", {
+      residue_func = function(self, player, cardSkill, scope, card)
+        if player == owner and card and card.trueName == "slash" and scope == Player.HistoryPhase then
+          return player:getMark("test_zhoujun_temporary_slash_limit")
+        end
+      end,
+    })
+    local extraSkill = extra:createSkill()
+    Fk.skills[extraSkill.name] = extraSkill
+    room:addSkill(extraSkill)
+    room:setPlayerMark(owner, "test_zhoujun_temporary_slash_limit", 1)
+    FkTest.setNextReplies(owner, { "1", { draw = 2, slash = -2, hand = 0 } })
+    room.logic:trigger(fk.EventPhaseStart, owner, { phase = Player.Start })
+    lu.assertEquals(owner:getMark("qiao_zhoujun_slash"), -2)
+    lu.assertEquals(slash:getSkill(owner):getMaxUseTime(owner, Player.HistoryPhase, slash), 0)
+    room:setPlayerMark(owner, "test_zhoujun_temporary_slash_limit", 0)
+    lu.assertEquals(slash:getSkill(owner):getMaxUseTime(owner, Player.HistoryPhase, slash), 0)
   end)
 end
 

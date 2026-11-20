@@ -14,6 +14,7 @@ GraphicsBox {
   id: root
 
   property var options: []
+  property var baseValues: ({ draw: 0, slash: 0, hand: 0 })
   property string prompt: ""
   property int drawValue: 0
   property int slashValue: 0
@@ -30,14 +31,27 @@ GraphicsBox {
     return false;
   }
 
-  function clamp(value) {
-    return Math.max(-2, Math.min(2, value));
+  function canAdjust(key, delta) {
+    const next = {
+      draw: root.drawValue,
+      slash: root.slashValue,
+      hand: root.handValue
+    };
+    next[key] += delta;
+    // 只允许仍可补足为合法分配的步骤，同时允许撤销已分配点数。
+    return root.options.some(option => Object.keys(next).every(stat => {
+      const value = next[stat];
+      if (value > 0) return option[stat] >= value;
+      if (value < 0) return root.baseValues[stat] + value >= 0 && option[stat] <= value;
+      return true;
+    }));
   }
 
   function adjust(key, delta) {
-    if (key === "draw") root.drawValue = root.clamp(root.drawValue + delta);
-    else if (key === "slash") root.slashValue = root.clamp(root.slashValue + delta);
-    else if (key === "hand") root.handValue = root.clamp(root.handValue + delta);
+    if (!root.canAdjust(key, delta)) return;
+    if (key === "draw") root.drawValue += delta;
+    else if (key === "slash") root.slashValue += delta;
+    else if (key === "hand") root.handValue += delta;
   }
 
   function deltaText(value) {
@@ -65,8 +79,8 @@ GraphicsBox {
   component ValueColumn: Column {
     id: column
     property string label
+    property string stat
     property int value
-    signal step(int delta)
     width: 150
     spacing: 8
 
@@ -82,8 +96,8 @@ GraphicsBox {
       width: 60
       height: 32
       text: "▲"
-      enabled: column.value < 2
-      onClicked: column.step(1)
+      enabled: root.canAdjust(column.stat, 1)
+      onClicked: root.adjust(column.stat, 1)
     }
 
     Text {
@@ -91,7 +105,14 @@ GraphicsBox {
       color: column.value > 0 ? "#7BC47F" : (column.value < 0 ? "#D97A6C" : "#CFC3A8")
       font.bold: true
       font.pixelSize: 30
-      text: root.deltaText(column.value)
+      text: root.baseValues[column.stat] + column.value
+    }
+
+    Text {
+      anchors.horizontalCenter: parent.horizontalCenter
+      color: "#CFC3A8"
+      font.pixelSize: 14
+      text: "当前 " + root.baseValues[column.stat] + "（" + root.deltaText(column.value) + "）"
     }
 
     MetroButton {
@@ -99,8 +120,8 @@ GraphicsBox {
       width: 60
       height: 32
       text: "▼"
-      enabled: column.value > -2
-      onClicked: column.step(-1)
+      enabled: root.canAdjust(column.stat, -1)
+      onClicked: root.adjust(column.stat, -1)
     }
   }
 
@@ -120,20 +141,20 @@ GraphicsBox {
 
       ValueColumn {
         label: "摸牌"
+        stat: "draw"
         value: root.drawValue
-        onStep: (delta) => root.adjust("draw", delta)
       }
 
       ValueColumn {
         label: "出杀"
+        stat: "slash"
         value: root.slashValue
-        onStep: (delta) => root.adjust("slash", delta)
       }
 
       ValueColumn {
         label: "手牌上限"
+        stat: "hand"
         value: root.handValue
-        onStep: (delta) => root.adjust("hand", delta)
       }
     }
 

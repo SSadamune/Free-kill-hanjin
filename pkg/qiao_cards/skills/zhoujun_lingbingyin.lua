@@ -15,48 +15,40 @@ local function addMark(player, mark, value)
 end
 
 local function slashLimit(player)
-  local maxUse = Fk.skills["slash_skill"]:getMaxUseTime(
-    player, Player.HistoryPhase, Fk:cloneCard("slash"))
-  return maxUse or 1
+  local slash = Fk:cloneCard("qiao__slash")
+  local maxUse = slash:getSkill(player):getMaxUseTime(player, Player.HistoryPhase, slash)
+  return math.max(0, maxUse or 1)
 end
 
 --- 引擎只在 DrawNCards 事件内暴露本次额定摸牌数；准备阶段没有公共 getter。
 --- 当前基数取游戏流程默认 2，其他效果在摸牌事件内的特别修正无法提前得知。
-local function drawCount(player)
-  return 2
-end
-
-local function canMinus(player, key, amount)
-  amount = amount or 1
-  if key == "draw" then return drawCount(player) >= amount end
-  if key == "slash" then return slashLimit(player) >= amount end
-  return player:getMaxCards() >= amount
+local function currentValues(player)
+  return { draw = 2, slash = slashLimit(player), hand = player:getMaxCards() }
 end
 
 --- 生成准备阶段可选的增减组合，扣减不得超过对应基数。
-local function optionsFor(player)
+local function optionsFor(values)
   local result = {}
-  local function add(draw, slash, hand, minus1, amount1, minus2, amount2)
-    if not canMinus(player, minus1, amount1) then return end
-    if minus2 ~= nil and not canMinus(player, minus2, amount2) then return end
+  local function add(draw, slash, hand)
+    if values.draw + draw < 0 or values.slash + slash < 0 or values.hand + hand < 0 then return end
     table.insert(result, { draw = draw, slash = slash, hand = hand })
   end
   -- +2 的三种合法分配：另外两项各 -1，或任一项足额 -2。
-  add(2, -1, -1, "slash", 1, "hand", 1)
-  add(2, -2, 0, "slash", 2)
-  add(2, 0, -2, "hand", 2)
-  add(1, -1, 0, "slash", 1)
-  add(1, 0, -1, "hand", 1)
-  add(-1, 2, -1, "draw", 1, "hand", 1)
-  add(-2, 2, 0, "draw", 2)
-  add(0, 2, -2, "hand", 2)
-  add(-1, 1, 0, "draw", 1)
-  add(0, 1, -1, "hand", 1)
-  add(-1, -1, 2, "draw", 1, "slash", 1)
-  add(-2, 0, 2, "draw", 2)
-  add(0, -2, 2, "slash", 2)
-  add(-1, 0, 1, "draw", 1)
-  add(0, -1, 1, "slash", 1)
+  add(2, -1, -1)
+  add(2, -2, 0)
+  add(2, 0, -2)
+  add(1, -1, 0)
+  add(1, 0, -1)
+  add(-1, 2, -1)
+  add(-2, 2, 0)
+  add(0, 2, -2)
+  add(-1, 1, 0)
+  add(0, 1, -1)
+  add(-1, -1, 2)
+  add(-2, 0, 2)
+  add(0, -2, 2)
+  add(-1, 0, 1)
+  add(0, -1, 1)
   return result
 end
 
@@ -72,7 +64,8 @@ end
 
 local function askPrepare(player)
   local room = player.room
-  local options = optionsFor(player)
+  local values = currentValues(player)
+  local options = optionsFor(values)
   if #options == 0 then return end
   -- AI 或离线/无客户端时 CustomDialog 返回空串，不能回退到任意组合。
   local reply = room:askToCustomDialog(player, {
@@ -80,12 +73,14 @@ local function askPrepare(player)
     component = {
       url = "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml",
       prop = {
+        baseValues = values,
         options = options,
         prompt = "#qiao__zhoujun-prepare",
       },
     },
   })
-  local option = optionFromReply(optionsFor(player), reply)
+  local option = optionFromReply(options, reply)
+  if option then option = optionFromReply(optionsFor(currentValues(player)), option) end
   if option == nil then return end
   addMark(player, DRAW, option.draw)
   addMark(player, SLASH, option.slash)
@@ -96,7 +91,7 @@ end
 skill:addEffect(fk.EventPhaseStart, {
   can_trigger = function(self, event, target, player, data)
     return target == player and data.phase == Player.Start
-      and player:hasSkill(skill.name) and #optionsFor(player) > 0
+      and player:hasSkill(skill.name) and #optionsFor(currentValues(player)) > 0
   end,
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
