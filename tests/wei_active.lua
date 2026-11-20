@@ -250,15 +250,24 @@ function Testqiao_wei_active:testWeikuiDiscardsWithoutJink()
   clearCards(p1)
   clearCards(p2)
   local first = give(p2, "qiao__slash")
-  give(p2, "qiao__slash")
+  local kept = give(p2, "qiao__slash")
   setPlayPhase(p1)
   inRoom(function() p1.hp = p1.maxHp end)
 
-  -- viewCards 请求 -> 空回复；随后弃置目标手牌由发动者选择。
-  FkTest.setNextReplies(p1, { "", first })
+  local panelRequests = 0
+  FkTest.setRoomBreakpoint(p1, "AskForCardsAndChoice", function(payload)
+    panelRequests = panelRequests + 1
+    lu.assertItemsEquals(payload.cards, { first, kept })
+    lu.assertEquals(payload.min, 1)
+    lu.assertEquals(payload.max, 1)
+    return false
+  end)
+  FkTest.setNextReplies(p1, { { cards = { first }, choice = "#qiao__skill_wei011_1-discard" } })
   local beforeHp, beforeHand = p1.hp, #p2:getCardIds("h")
-  local ok, err = pcall(function() activate(p1, WEIKUI, { p2 }) end)
-  assert(ok, err)
+  activate(p1, WEIKUI, { p2 })
+  lu.assertEquals(panelRequests, 1)
+  lu.assertEquals(room():getCardArea(first), Card.DiscardPile)
+  lu.assertEquals(room():getCardArea(kept), Card.PlayerHand)
   lu.assertEquals(p1.hp, beforeHp - 1)
   lu.assertEquals(#p2:getCardIds("h"), beforeHand - 1)
 end

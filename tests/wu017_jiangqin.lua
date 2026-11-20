@@ -92,12 +92,16 @@ function Testqiao_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackSui
   skill_test.withSkillRequests(room, SHANGYI, {
     viewCards = function(self, who, params, original)
       if params.skill_name ~= SHANGYI then return original(self, who, params) end
+      lu.assertIs(who, target)
       views = views + 1
       return nil
     end,
-    askToChooseCards = function(self, who, params, original)
+    askToChooseCardsAndChoice = function(self, who, params, original)
       if params.skill_name ~= SHANGYI then return original(self, who, params) end
-      return { spade, club }
+      lu.assertIs(who, player)
+      lu.assertItemsEquals(params.all_cards, { spade, club, heart })
+      lu.assertItemsEquals(params.cards, { spade, club })
+      return { spade, club }, "#qiao__skill_wu017_1-confirm-discard"
     end,
   }, function()
     inRoom(function()
@@ -108,7 +112,7 @@ function Testqiao_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackSui
     end)
   end)
 
-  lu.assertEquals(views, 2, "先由目标看发动者手牌，再由发动者看目标手牌")
+  lu.assertEquals(views, 1, "只有目标观看发动者手牌使用纯观看请求")
   lu.assertEquals(room:getCardArea(spade), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(club), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(heart), Card.PlayerHand)
@@ -134,9 +138,9 @@ function Testqiao_wu017_jiangqin:testShangyiResponseEntryUsesCardSource()
       table.insert(viewed, who)
       return nil
     end,
-    askToChooseCards = function(self, who, params, original)
+    askToChooseCardsAndChoice = function(self, who, params, original)
       if params.skill_name ~= SHANGYI then return original(self, who, params) end
-      return {}
+      return {}, "#qiao__skill_wu017_1-end"
     end,
   }, function()
     FkTest.setNextReplies(player, { { card = jink } })
