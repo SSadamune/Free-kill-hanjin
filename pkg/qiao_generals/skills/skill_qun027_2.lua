@@ -16,7 +16,7 @@ skill.qiaoImplemented = true
 
 local SLASH = "qiao__slash"
 local MARK = "qiao_qun027"
-local CONDITION = { different_kingdom = true, other_roles = true }
+local CONDITION = { same_kingdom = false, other_roles = true }
 
 local function policy(maxTargets)
   return C.explicit(CONDITION, {
