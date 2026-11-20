@@ -9,6 +9,11 @@ Room {
   id: room
   property var mountDistanceLabels: ({})
   property bool guestIllustrations: false
+  property int pileActionRevision: 0
+
+  function refreshPileActions() {
+    ++pileActionRevision;
+  }
 
   Column {
     id: openingCountdown
@@ -143,6 +148,7 @@ Room {
   }
 
   Component.onCompleted: {
+    addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {
       const duration = Number(data[0]);
       if (duration > 0) {

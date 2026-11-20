@@ -22,7 +22,11 @@ ViewPile {
     Layout.alignment: Qt.AlignHCenter
     text: Lua.tr("qiao__edict_take_trick")
     visible: root.isHolder
-    enabled: visible && root.scene?.progress.visible && root.canTakeTrick()
+    enabled: {
+      // The Lua query itself has no QML change signal.
+      root.scene?.pileActionRevision;
+      return visible && root.scene?.progress.visible && root.canTakeTrick();
+    }
 
     onClicked: {
       if (!root.canTakeTrick()) return;

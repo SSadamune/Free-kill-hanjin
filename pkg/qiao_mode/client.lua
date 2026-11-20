@@ -108,6 +108,16 @@ local pileActions = {
   QiaoCi = Ci.SKILL,
 }
 
+local pileActionUpdates = {
+  AddSkill = true,
+  LoseSkill = true,
+  MoveCards = true,
+  PlayCard = true,
+  PropertyUpdate = true,
+  SetPlayerMark = true,
+  UpdateRequestUI = true,
+}
+
 function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
@@ -153,6 +163,14 @@ end
 function QiaoClient:canConsumeCi(holderId, general)
   return self:canUsePileAction(holderId, "QiaoCi")
     and Ci.canChoose(self.current_request_handler.player, general)
+end
+
+function QiaoClient:handleSetBanner(data)
+  BaseClient.handleSetBanner(self, data)
+  -- The base client forwards only visible (@) banners to QML.
+  if data[1] == Han.TRICK_BANNER then
+    self:notifyUI("QiaoPileActionChanged", {})
+  end
 end
 
 function QiaoClient:guestIllustrationsEnabled()
@@ -237,7 +255,10 @@ function QiaoClient:notifyUI(command, data)
     data.component = table.simpleClone(data.component)
     data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
   end
-  return BaseClient.notifyUI(self, command, data)
+  BaseClient.notifyUI(self, command, data)
+  if pileActionUpdates[command] and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoPileActionChanged", {})
+  end
 end
 
 return QiaoClient

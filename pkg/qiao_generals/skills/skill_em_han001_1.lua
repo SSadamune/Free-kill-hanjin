@@ -14,7 +14,6 @@ local revealSpec = {
   end,
   on_refresh = function(self, event, target, player, data)
     P.grant(player.room, target)
-    P.syncTricks(player.room)
   end,
 }
 skill:addEffect(fk.GeneralShown, revealSpec)
