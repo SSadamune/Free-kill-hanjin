@@ -261,6 +261,24 @@ function Testqiao_lord_equipment:testSihaiPoxiKeepsHiddenHandAndSwapsChosenTwo()
       "test", nil, true, target)
     give(room, target, hidden)
     give(room, target, kept)
+    give(room, user, card("qiao__jink"))
+    user.phase = Player.Play
+    room.current = user
+    client_room.run(room, function(clients)
+      local me = table.find(clients, function(client) return client.id == user.id end)
+      local handler = ReqPlayCard:new(me)
+      local skill = "qiao__sihai_liuqian_skill"
+      handler:setup()
+      lu.assertTrue(handler:skillButtonValidity(skill))
+      handler:selectSkill(skill, { selected = true })
+      for _, id in ipairs(me:getCardIds("h")) do
+        lu.assertFalse(handler:cardValidity(id), "四海流钱第一步只选择目标")
+      end
+      lu.assertTrue(handler:targetValidity(target.id))
+      handler:selectTarget(target.id, { selected = true })
+      lu.assertTrue(handler:feasible())
+      handler:_finish()
+    end)
     -- 真实 AskForPoxi 请求：记录引擎实际下发的可见性与固定候选分组。
     FkTest.setRoomBreakpoint(user, "AskForPoxi", function(data)
       request = data

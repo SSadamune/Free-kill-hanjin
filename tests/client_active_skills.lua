@@ -96,6 +96,8 @@ function Testqiao_client_active_skills:testAllFormalSkillButtonsUseClientRoom()
     lu.assertTrue(table.contains(sorted, name), "已知合法技能应进入客户端枚举：" .. name)
   end
 
+  local targetOnly = "qiao__retinue_skill_bingzhou_langqi"
+  lu.assertTrue(table.contains(sorted, targetOnly))
   local tested = 0
   local available, entered, filtered = 0, 0, 0
   for _, skill in ipairs(sorted) do
@@ -130,6 +132,10 @@ function Testqiao_client_active_skills:testAllFormalSkillButtonsUseClientRoom()
             local okCard = handler:cardValidity(cid)
             lu.assertTrue(type(okCard) == "boolean", "选牌结果应为布尔：" .. skill)
             anyCard = anyCard or okCard
+          end
+          if skill == targetOnly then
+            lu.assertFalse(anyCard, "并州狼骑只允许选择目标")
+            lu.assertTrue(handler:targetValidity(clients[2].id))
           end
           for _, target in ipairs(clients) do
             local okTarget = handler:targetValidity(target.id)
