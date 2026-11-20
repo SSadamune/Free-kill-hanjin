@@ -7,8 +7,8 @@
 -- 贡献修正，不是 2 枚可消耗的阴阳鱼标记。2 是偶数，所以余数标记的奇偶不变。
 --
 -- 本模块只读取正式武将牌面/资料登记，不修改 General 属性，也不写入其他模式：
---   * “多势力”按牌面 kingdom + subkingdom 认定，不看本局禁选结果；
---   * “客将”按 Guest 的资料登记认定，不要求本局已启用客将势力；
+--   * 牌面写有多个主势力时不受禁选过滤；
+--   * 客将只在本局实际按客籍配将时适用；
 --   * 普通交换、移除、替换不调用这里的开局计算。
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -68,44 +68,35 @@ end
 --- 正式流程传武将名；也接受 General 形态的对象以便纯规则核对。
 ---@param generalName string|table
 ---@return boolean
-function M.is_multi_faction(generalName)
+function M.is_multi_faction(generalName, room)
   local general = type(generalName) == "table" and generalName or Fk.generals[generalName]
-  return general ~= nil and #Ban.affiliations(general) > 1
+  return general ~= nil and (#Ban.affiliations(general) > 1
+    or (M.is_guest(generalName, room) and #Guest.guestKingdoms(generalName) > 1))
 end
 
---- 资料登记的客将：主势力之外另列副势力。本局是否启用客将势力是另一问题。
+--- 按本局选将解析判断客籍已经生效。
 ---@param generalName string
 ---@return boolean
-function M.is_guest(generalName)
-  if type(generalName) ~= "string" then return false end
-  return #Guest.guestKingdoms(generalName) > 0
+function M.is_guest(generalName, room)
+  return room ~= nil and type(generalName) == "string" and Guest.isGuest(room, generalName)
 end
 
 --- 配将是否满足应期条件（多势力或客将）。
 ---@param generalName string|table
 ---@return boolean
-function M.qualifies(generalName)
-  return M.is_multi_faction(generalName) or M.is_guest(generalName)
+function M.qualifies(generalName, room)
+  return M.is_multi_faction(generalName, room) or M.is_guest(generalName, room)
 end
 
---- 有应期的一方看另一方（配将）。两端都有应期时仍只修正一次。
----@param main string
----@param deputy string
----@return string?
-function M.yingqi_partner(main, deputy)
-  if M.has_yingqi(main) then return deputy end
-  if M.has_yingqi(deputy) then return main end
-  return nil
-end
-
---- 组合的☯️修正，单位半格：0 或 2。
+--- 有应期的一方查另一张将牌，组合的☯️修正为 0 或 2 半格。
 ---@param main string?
 ---@param deputy string?
 ---@return integer
-function M.yinyang(main, deputy)
-  local partner = M.yingqi_partner(main, deputy)
-  if partner == nil then return 0 end
-  if M.qualifies(partner) then return M.YINGQI_HALF end
+function M.yinyang(main, deputy, room)
+  if (M.has_yingqi(main) and M.qualifies(deputy, room))
+    or (M.has_yingqi(deputy) and M.qualifies(main, room)) then
+    return M.YINGQI_HALF
+  end
   return 0
 end
 
@@ -113,10 +104,10 @@ end
 ---@param main string
 ---@param deputy string
 ---@return integer?
-function M.half_hp(main, deputy)
+function M.half_hp(main, deputy, room)
   local base = M.base_half_hp(main, deputy)
   if base == nil then return nil end
-  return base + M.yinyang(main, deputy)
+  return base + M.yinyang(main, deputy, room)
 end
 
 local function doubleHeavyPair(main, deputy)
@@ -128,8 +119,8 @@ end
 ---@param main string
 ---@param deputy string
 ---@return integer?
-function M.max_hp(main, deputy)
-  local total = M.half_hp(main, deputy)
+function M.max_hp(main, deputy, room)
+  local total = M.half_hp(main, deputy, room)
   return total and total // 2 - (doubleHeavyPair(main, deputy) and 1 or 0) or nil
 end
 
@@ -137,9 +128,9 @@ end
 ---@param main string
 ---@param deputy string
 ---@return integer
-function M.half_left(main, deputy)
+function M.half_left(main, deputy, room)
   if doubleHeavyPair(main, deputy) then return 2 end
-  local total = M.half_hp(main, deputy)
+  local total = M.half_hp(main, deputy, room)
   return total and total % 2 or 0
 end
 
@@ -171,11 +162,11 @@ end
 function M.apply_start(room, player)
   local main, deputy = M.actual_main(player), M.actual_deputy(player)
   if main == nil or deputy == nil then return false end
-  if M.yinyang(main, deputy) == 0 and not doubleHeavyPair(main, deputy) then return false end
-  local desired = M.max_hp(main, deputy)
+  if M.yinyang(main, deputy, room) == 0 and not doubleHeavyPair(main, deputy) then return false end
+  local desired = M.max_hp(main, deputy, room)
   if desired == nil then return false end
   local delta = desired - player.maxHp
-  room:setPlayerMark(player, "HalfMaxHpLeft", M.half_left(main, deputy))
+  room:setPlayerMark(player, "HalfMaxHpLeft", M.half_left(main, deputy, room))
   if delta == 0 then return false end
   room:setPlayerProperty(player, "maxHp", desired)
   room:setPlayerProperty(player, "hp", math.min(player.hp + delta, desired))

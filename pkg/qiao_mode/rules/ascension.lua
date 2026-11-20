@@ -45,8 +45,8 @@ end
 --- 国战双将体力上限：主将贡献 + 副将贡献（均含主将/副将调整），向下取整。
 --- 与开局接线共用 PairHp，因此应期的“☯️+2”在升变重算中也参与组合，而不是
 --- 在既有体力上限上另加一次。
-function M.pair_max_hp(main, deputy)
-  return PairHp.max_hp(main, deputy) or 0
+function M.pair_max_hp(main, deputy, room)
+  return PairHp.max_hp(main, deputy, room) or 0
 end
 
 --- 势力人数预演。包含其他存活角色与已死亡的同势力角色；君主在场不豁免。
@@ -169,7 +169,7 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
-  local oldPairMax = M.pair_max_hp(oldMain, deputy)
+  local oldPairMax = M.pair_max_hp(oldMain, deputy, room)
 
   -- 暗置主将换将不会自动清掉旧普通将的 fake/prelight；公共状态接口只清
   -- 离牌位置的来源，换将/体力/回将池仍由本升变入口负责。
@@ -210,7 +210,7 @@ function M.ascend(room, player, newMain, kingdom, options)
   -- 避免一次升变和普通明置事件重复发放消耗型标记。
   room.logic:trigger(fk.GeneralShown, player, { m = newMain })
 
-  local newPairMax = M.pair_max_hp(newMain, deputy)
+  local newPairMax = M.pair_max_hp(newMain, deputy, room)
   if newPairMax > oldPairMax then
     room:setPlayerProperty(player, "maxHp", player.maxHp + 1)
     room:recover {
@@ -227,7 +227,7 @@ function M.ascend(room, player, newMain, kingdom, options)
       or table.contains(newGeneral.companions, deputy) or table.contains(deputyGeneral.companions, newMain))
     or not Versions.is_lord(newMain) and newGeneral:isCompanionWith(deputyGeneral))
   local companion = player:getMark(M.COMPANION_MARK) == 0 and isCompanion and 1 or 0
-  local fish = player:getMark(M.YINYANG_MARK) == 0 and PairHp.half_left(newMain, deputy) or 0
+  local fish = player:getMark(M.YINYANG_MARK) == 0 and PairHp.half_left(newMain, deputy, room) or 0
   if player.deputyGeneral == "anjiang" then
     -- 暗副将保留新组合待领资格，随后正常双亮时领，旧组合的标记不再有效。
     player:setMark("CompanionEffect", companion)

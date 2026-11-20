@@ -30,10 +30,6 @@ local function exchange()
   return require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 end
 
-local function pairHp()
-  return require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
-end
-
 local function heg()
   return require "packages.hegemony.util"
 end
@@ -133,7 +129,7 @@ end
 ---@param generalName string
 ---@return boolean
 function M.isGuestGeneral(generalName)
-  return pairHp().is_guest(generalName)
+  return #Guest.guestKingdoms(generalName) > 0
 end
 
 --- 候选人合法交换位置：明置、非君主/专属野心家，且不是同一位置。
