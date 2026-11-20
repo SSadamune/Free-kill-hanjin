@@ -11,25 +11,39 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local ICE = "qiao__ice__slash"
+local SLASH = "#qiao__skill_jin010_1-slash"
+local DRAW = "#qiao__skill_jin010_1-draw"
 
 local function lostHp(player)
   return math.max(0, player.maxHp - player.hp)
 end
 
-local function canSlashTarget(room, player, target)
-  if target == nil or target.dead or target:isRemoved() then return false end
+local function canUseIceSlash(player, target, cards)
+  if target.dead or target:isRemoved() then return false end
   local card = Fk:cloneCard(ICE)
-  if player:prohibitUse(card) then return false end
-  return not player:isProhibited(target, card)
+  card.skillName = skill.name
+  if cards then card:addSubcards(cards) end
+  return not player:prohibitUse(card) and not player:isProhibited(target, card)
 end
 
 local function canSlash(player, target)
-  return #target:getCardIds("h") > #player:getCardIds("h")
-    and canSlashTarget(player.room, player, target)
+  local count = #player:getCardIds("h")
+  return count > 0 and #target:getCardIds("h") > count and canUseIceSlash(player, target)
 end
 
 local function canDraw(player)
   return lostHp(player) > #player:getCardIds("h")
+end
+
+local function validMaterials(player, cards)
+  if cards == nil or #cards == 0 then return false end
+  local hand = player:getCardIds("h")
+  local seen = {}
+  for _, id in ipairs(cards) do
+    if seen[id] or not table.contains(hand, id) then return false end
+    seen[id] = true
+  end
+  return true
 end
 
 skill:addEffect(fk.EventPhaseStart, {
@@ -41,61 +55,52 @@ skill:addEffect(fk.EventPhaseStart, {
       and (canSlash(player, target) or canDraw(player))
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin010_1-invoke::" .. target.id,
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
-    if target == nil or target.dead or player.dead then return end
-    local slashOk = canSlash(player, target)
-    local drawOk = canDraw(player)
-    if not slashOk and not drawOk then return end
-
     local choices = {}
-    if slashOk then table.insert(choices, "#qiao__skill_jin010_1-slash") end
-    if drawOk then table.insert(choices, "#qiao__skill_jin010_1-draw") end
-    local choice
-    if #choices == 1 then
-      choice = choices[1]
-    else
-      choice = room:askToChoice(player, {
-        choices = choices,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin010_1-choice",
-      })
+    if canSlash(player, target) then table.insert(choices, SLASH) end
+    if canDraw(player) then table.insert(choices, DRAW) end
+    if #choices == 0 then return false end
+    local choice = room:askToChoice(player, {
+      choices = choices,
+      all_choices = { SLASH, DRAW },
+      cancelable = true,
+      skill_name = skill.name,
+      prompt = "#qiao__skill_jin010_1-choice::" .. target.id,
+    })
+    if choice == DRAW and canDraw(player) then
+      event:setCostData(self, { choice = DRAW })
+      return true
     end
-    if choice == "#qiao__skill_jin010_1-draw" then
-      local need = lostHp(player) - #player:getCardIds("h")
-      if need > 0 then player:drawCards(need, skill.name) end
-      return
-    end
-    if choice ~= "#qiao__skill_jin010_1-slash" or not canSlash(player, target) then
-      return
-    end
+    if choice ~= SLASH or not canSlash(player, target) then return false end
 
-    local hand = player:getCardIds("h")
     local cards = room:askToCards(player, {
-      min_num = 0,
-      max_num = #hand,
+      min_num = 1,
+      max_num = #player:getCardIds("h"),
       skill_name = skill.name,
       prompt = "#qiao__skill_jin010_1-cards:" .. target.id,
-      cancelable = false,
+      cancelable = true,
     })
-    if cards == nil then return end
-    for _, id in ipairs(cards) do
-      if not table.contains(player:getCardIds("h"), id) then return end
+    if not validMaterials(player, cards) or not canUseIceSlash(player, target, cards) then
+      return false
     end
-    C.useVirtualCard(room, player, ICE, cards, { target }, skill.name, true,
-      { bypass_times = true }, C.explicit({}, { names = { ICE }, min_targets = 1, max_targets = 1 }))
+    event:setCostData(self, { choice = SLASH, cards = cards })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local cost = event:getCostData(self)
+    if cost.choice == DRAW then
+      local need = lostHp(player) - #player:getCardIds("h")
+      if need > 0 then player:drawCards(need, skill.name) end
+    elseif canSlash(player, target) and validMaterials(player, cost.cards) then
+      C.useVirtualCard(player.room, player, ICE, cost.cards, { target }, skill.name, true,
+        { bypass_times = true }, C.explicit({}, { names = { ICE }, min_targets = 1, max_targets = 1 }))
+    end
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__skill_jin010_1"] = "伤逝",
-  ["#qiao__skill_jin010_1-invoke"] = "伤逝：你可以对 %dest 发动伤逝",
-  ["#qiao__skill_jin010_1-choice"] = "伤逝：选择一项",
+  ["#qiao__skill_jin010_1-choice"] = "伤逝：在 %dest 的结束阶段，你可以选择一项",
   ["#qiao__skill_jin010_1-slash"] = "将任意张手牌当冰【杀】对其使用",
   ["#qiao__skill_jin010_1-draw"] = "摸牌至已损失的体力值",
   ["#qiao__skill_jin010_1-cards"] = "伤逝：选择合成冰【杀】的手牌",
