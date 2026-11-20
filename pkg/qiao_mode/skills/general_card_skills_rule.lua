@@ -1,6 +1,9 @@
 -- 将牌后天技能来源：预注册独立来源技能 + 明暗/交换/死亡同步规则。
 local G = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local H = require "packages.hegemony.util"
+local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+
+Fk:addPostLoadFunc(SameName.register)
 
 local skill = fk.CreateSkill { name = "qiao__general_card_skills_rule" }
 
@@ -16,6 +19,9 @@ local spec = {
 }
 
 skill:addEffect(fk.GameStart, spec)
+skill:addEffect(fk.GeneralShown, {
+  global = true, late_refresh = true, can_refresh = spec.can_refresh, on_refresh = spec.on_refresh,
+})
 skill:addEffect(fk.GeneralRevealed, spec)
 skill:addEffect(fk.GeneralHidden, spec)
 skill:addEffect(fk.Death, spec)

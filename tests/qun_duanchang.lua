@@ -6,6 +6,9 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_support = __dofile("../../../tests/support/skill_test.lua")
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Q = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local CAIYAN = "qiao_heg__qun012"
 local SIMAYI = "qiao_heg__wei002"
@@ -50,6 +53,93 @@ local function install(room, player, main, deputy, kingdom)
   skill_support.installDualGenerals(room, player, {
     main = main, deputy = deputy, kingdom = kingdom,
   })
+end
+
+function Testqiao_qun_duanchang:testPangDeAndHanSuiEachReduceDistance()
+  local room, user, distant = FkTest.room, p(1), p(5)
+  inRoom(function()
+    local distance = user:distanceTo(distant)
+    install(room, user, PANGDE, "qiao_heg__qun027", "qun")
+    lu.assertEquals(user:distanceTo(distant), distance - 2)
+    user:hideGeneral(true)
+    lu.assertEquals(user:distanceTo(distant), distance - 1)
+    user:revealGeneral(true)
+    lu.assertEquals(user:distanceTo(distant), distance - 2)
+    user:hideGeneral(false)
+    lu.assertEquals(user:distanceTo(distant), distance - 1)
+    user:revealGeneral(false)
+    lu.assertEquals(user:distanceTo(distant), distance - 2)
+    lu.assertEquals(p(2):distanceTo(distant), 3, "已注册的额外马术不影响其他角色")
+  end)
+end
+
+function Testqiao_qun_duanchang:testRepeatedActiveAndTriggerUseIndependentHistory()
+  local room, user, victim = FkTest.room, p(1), p(2)
+  local zhiheng, jianxiong = "qiao__skill_wu001_1", "qiao__skill_wei001_1"
+  inRoom(function()
+    install(room, user, PANGDE, "qiao_heg__qun027", "qun")
+    install(room, victim, CAIYAN, "qiao_test__qun_2", "qun")
+    for _, general in ipairs({ user.general, user.deputyGeneral }) do
+      Cards.grant(room, general, zhiheng)
+      Cards.grant(room, general, jianxiong)
+    end
+    Cards.grant(room, victim.general, jianxiong)
+    room.current, user.phase = user, Player.Play
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local ClientPlay = board.client_klass:new(ClientInstance.client).request_handlers.PlayCard
+    local zhiheng2 = SameName.instanceName(zhiheng)
+    local function buttons(first, second)
+      client_room.run(room, function(clients)
+        local handler = ClientPlay:new(clients[1])
+        handler:setup()
+        lu.assertEquals(handler:skillButtonValidity(zhiheng), first)
+        lu.assertEquals(handler:skillButtonValidity(zhiheng2), second)
+        handler:_finish()
+      end)
+    end
+    local function useZhiheng(name)
+      local card = room:printCard("qiao__jink", Card.Heart, 2)
+      room:obtainCard(user, card, false, fk.ReasonJustMove)
+      local material = card.id
+      room:handleUseCardReply(user, FkTest.ReplyUseSkill(name, {}, { material }), nil)
+      lu.assertEquals(user:usedSkillTimes(name, Player.HistoryPhase), 1)
+    end
+    buttons(true, true)
+    useZhiheng(zhiheng)
+    buttons(false, true)
+    user:hideGeneral(false)
+    lu.assertTrue(user:hasSkill(zhiheng), "另一张明置武将牌保有自己的制衡")
+    lu.assertFalse(user:hasSkill(zhiheng2))
+    lu.assertEquals(user:usedSkillTimes(zhiheng, Player.HistoryPhase), 0)
+    user:revealGeneral(false)
+    buttons(true, false)
+    useZhiheng(zhiheng)
+    buttons(false, false)
+
+    local asked = {}
+    skill_support.withSkillRequests(room, jianxiong, {
+      askToSkillInvoke = function(_, player)
+        asked[player] = (asked[player] or 0) + 1
+        return true
+      end,
+    }, function()
+      local before = #user:getCardIds("h")
+      room:damage { from = victim, to = user, damage = 1 }
+      lu.assertEquals(#user:getCardIds("h"), before + 2)
+      room:damage { from = user, to = victim, damage = 1 }
+    end)
+    lu.assertEquals(asked[user], 2)
+    lu.assertEquals(asked[victim], 1)
+
+    local other = p(3)
+    lu.assertTrue(Exchange.exchange(room, { player = user, isDeputy = false },
+      { player = other, isDeputy = false }) ~= false)
+    lu.assertEquals(other.general, PANGDE)
+    lu.assertTrue(other:hasSkill(zhiheng))
+    lu.assertEquals(other:usedSkillTimes(zhiheng, Player.HistoryPhase), 1)
+    lu.assertEquals(user:usedSkillTimes(zhiheng, Player.HistoryPhase), 1)
+    lu.assertFalse(user:hasSkill(zhiheng2))
+  end)
 end
 
 --- 杀死蔡文姬，并由她选择来源的将牌；choice 是玩家可见的选项值。
