@@ -162,8 +162,8 @@
 #### 看破（SHU011 诸葛亮）
 
 - **标识与依据**：`qiao__skill_shu011_3`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_3.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。
-- **实现与接口**：黑色手牌当无懈仅开放使用；按成功抵消事件确认实际抵消者，包含闪抵消杀及非看破无懈，回合末可私看当前角色手牌。
-- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **实现与接口**：黑色手牌当无懈仅开放使用；按成功抵消事件确认实际抵消者，包含闪抵消杀及非看破无懈。回合末仅对其他当前回合角色发起私看询问，自己的手牌由原手牌区展示。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua) 覆盖抵消后可私看其他角色手牌及本人回合末免询问；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
@@ -271,6 +271,6 @@
 #### 伤逝（JIN010 张春华）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin010_1`；源码 [skill_jin010_1.lua](../../../../pkg/qiao_generals/skills/skill_jin010_1.lua)。规则见[张春华规范](../../../rules/generals/jin010-zhangchunhua.md)。同将扼绝见[伤害、体力与死亡](damage.md#jin010-2)。
-- **实现与接口**：任一角色结束阶段，张春华选择：1. 若其手牌数大于张春华，将任意张张春华自己的手牌当一张冰【杀】对其使用；2. 摸牌至张春华已损失的体力值。冰杀使用 `C.useVirtualCard`，以 `C.explicit({}, { names = { "qiao__ice__slash" }, min_targets = 1, max_targets = 1 })` 固定效果目标，不叠加默认攻击距离；`extraUse` 不占空闲出杀次数。两项均不可执行时不发动。
-- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖结束阶段摸至已损失体力值与零材料明确确认；9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
-- **未完成与边界**：目标手牌数动态变化、无合法冰杀材料、被闪、目标死亡与客户端选项未人工验收。
+- **实现与接口**：结束阶段在同一可取消询问中展示冰【杀】和补牌两个选项，仅允许选择当前合法项。冰【杀】至少选择一张实际手牌并在结算前复核，以 `C.useVirtualCard` 和显式目标策略固定当前结束阶段角色。`extraUse` 不占空闲出杀次数。两项均不可执行时不发请求。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖双合法项时选择补牌、零手牌、单合法项、取消选牌不计次和一张材料真实使用冰【杀】。见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：真人客户端选项及对局中动态状态变化待复测。
