@@ -13,12 +13,10 @@ Fk:loadTranslationTable {
   [":" .. skill.name] = "你到其他角色的距离-1，其他角色到你的距离+1。",
 }
 
+local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 skill:addEffect("distance", {
   correct_func = function(self, from, to)
-    local delta = 0
-    if from:hasSkill(skill.name) then delta = delta - 1 end
-    if to:hasSkill(skill.name) then delta = delta + 1 end
-    return delta
+    return MountDistance.correct(skill.name, from, to)
   end,
 })
 

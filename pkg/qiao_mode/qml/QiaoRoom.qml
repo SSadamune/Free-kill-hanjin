@@ -6,6 +6,20 @@ import "GuestIllustration.js" as GuestIllustration
 
 Room {
   id: room
+  property var mountDistanceLabels: ({})
+
+  function refreshMountDistances() {
+    const labels = Lua.ev("json.encode(ClientInstance:mountDistanceLabels())");
+    mountDistanceLabels = JSON.parse(labels ?? "{}");
+  }
+
+  // 横置、势力、移出游戏与技能有效性都可以在坐骑未移动时变化。
+  Timer {
+    interval: 200
+    repeat: true
+    running: room.visible && room.photoModel.count > 0
+    onTriggered: room.refreshMountDistances()
+  }
 
   Component {
     id: mountRow
@@ -54,10 +68,12 @@ Room {
         mountRow.createObject(area, {
           defensiveItem: defensive,
           offensiveItem: offensive,
+          distanceLabels: Qt.binding(() => room.mountDistanceLabels),
           isDualMount: name => Lua.evaluate(`Fk.packages.qiao_cards.qiao.isDualMount(${JSON.stringify(name)})`),
         });
       }
     }
+    refreshMountDistances();
   }
 
   Connections {

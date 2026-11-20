@@ -8,6 +8,7 @@ local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_target
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -132,6 +133,10 @@ end
 
 function QiaoClient:guestIllustrationsEnabled()
   return self.settings ~= nil and Guest.replacementEnabled(self)
+end
+
+function QiaoClient:mountDistanceLabels()
+  return MountDistance.labels(self.players)
 end
 
 -- ClientBase.serialize assumes the concrete class is a direct Client subclass and

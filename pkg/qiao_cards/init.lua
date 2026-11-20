@@ -14,6 +14,7 @@
 -- `Fk.packages.qiao_cards.qiao_cards` (also `.qiao`).
 
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local extension = Package:new("qiao_cards", Package.CardPack)
 extension.extensionName = "qiao"
 extension.game_modes_whitelist = Modes.names
@@ -655,14 +656,7 @@ function H.isDualMount(value)
   return name ~= nil and DUAL_MOUNTS[name] == true
 end
 
-function H.isRideCard(card)
-  if card == nil or card.type ~= Card.TypeEquip then return false end
-  if isRideSubtype(card.sub_type) then return true end
-  for _, subtype in ipairs(card.subtypes or {}) do
-    if isRideSubtype(subtype) then return true end
-  end
-  return false
-end
+H.isRideCard = MountDistance.isRideCard
 
 if not Player.__qiao_dual_mount_slots then
   Player.__qiao_dual_mount_slots = true

@@ -2,6 +2,7 @@
 -- 直接置入空栏要求、动态距离与进出装备区触发。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 
 local SIX = "qiao__liulongcanjia"
 local LIN = "qiao__linxiao_yuyu"
@@ -363,12 +364,16 @@ function Testqiao_dual_mounts:testFormalPackageLoadsAndTemplateEntitySync()
 end
 
 function Testqiao_dual_mounts:testClientDistanceUsesPublicRoomState()
-  local room, user, other = FkTest.room, p(1), p(2)
+  local room, user, other, ally = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
-    user.kingdom = "wei"
     room:setPlayerProperty(user, "kingdom", "wei")
+    room:setPlayerProperty(ally, "kingdom", "wei")
   end)
-  place(user, SIX, Card.Heart, 13)
+  local six = place(user, SIX, Card.Heart, 13)
+  local chitu = place(ally, CHITU)
+  local jueying = place(ally, JUEYING)
+  local jade = place(p(4), LIN)
+  local feiyun = place(p(5), FEIYUN)
   local function delta(from, to)
     return from:distanceTo(to) - from:distanceTo(to, nil, nil, nil, { SIX_SKILL })
   end
@@ -402,6 +407,22 @@ function Testqiao_dual_mounts:testClientDistanceUsesPublicRoomState()
     lu.assertEquals(delta(byId[user.id], byId[other.id]), serverForward,
       "客户端距离查询与公开状态一致")
     lu.assertEquals(delta(byId[other.id], byId[user.id]), serverBackward)
+    local function labels() return QiaoClient.mountDistanceLabels(clientRoom) end
+    lu.assertEquals(labels(), {
+      [tostring(six.id)] = "±3",
+      [tostring(chitu.id)] = "-1",
+      [tostring(jueying.id)] = "+1",
+      [tostring(jade.id)] = "±1",
+      [tostring(feiyun.id)] = "-2",
+    })
+    byId[p(5).id].chained = true
+    lu.assertEquals(labels()[tostring(feiyun.id)], "+2")
+    byId[ally.id].player_cards[Player.Equip] = { jueying.id }
+    lu.assertEquals(labels()[tostring(six.id)], "±2")
+    lu.assertNil(labels()[tostring(chitu.id)])
+    byId[ally.id].dead = true
+    lu.assertEquals(labels()[tostring(six.id)], "±1")
+    lu.assertEquals(labels()[tostring(jueying.id)], "0")
   end)
   Fk.currentRoom = originalRoom
   if not ok then error(err) end
