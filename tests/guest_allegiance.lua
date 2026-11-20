@@ -461,14 +461,22 @@ function Testqiao_guest_allegiance:testClientDialogContract()
   lu.assertFalse(blocked)
 end
 
-function Testqiao_guest_allegiance:testLiuBeiDraftReceivesAllThreeGuestFactions()
+function Testqiao_guest_allegiance:testLiuBeiDraftShowsBannedGuestFactionWithoutAllowingPairing()
   local name = "qiao_heg__shu001"
-  local room = create { backend = forcedBackend({ "shu", "wu" }) }
+  local room = create { backend = forcedBackend({ "shu", "qun" }) }
+  local han, qun = "qiao_test__han_1", "qiao_test__qun_1"
   FkTest.runInRoom(function()
-    lu.assertEquals(room:getBanner("qiao_banned_kingdoms"), { "shu", "wu" })
-    local extra = Selection.askData(room, { name, "qiao_test__han_1" }).component.model.prop.extraData
-    lu.assertEquals(extra.guestFactions[name], { "han", "qun", "wei" })
+    lu.assertEquals(room:getBanner("qiao_banned_kingdoms"), { "shu", "qun" })
+    local offers = { name, han, qun }
+    local extra = Selection.askData(room, offers).component.model.prop.extraData
+    lu.assertEquals(extra.guestFactions[name], { "han", "qun", "wei", "wu" })
     lu.assertEquals(extra.guests, { name })
+    lu.assertEquals(Guest.factionsOf(room, name).kingdoms, { "han", "wei", "wu" })
+    lu.assertEquals(Guest.pairKingdoms(room, name, han), { "han" })
+    lu.assertEquals(Guest.pairKingdoms(room, name, qun), {})
+    local rule = Fk.choose_general_rule.qiao_heg_pair
+    lu.assertTrue(rule.card_filter(han, { name }, offers, extra))
+    lu.assertFalse(rule.card_filter(qun, { name }, offers, extra))
   end)
 end
 
@@ -555,7 +563,7 @@ function Testqiao_guest_allegiance:testFreeAssignPrefersNormalGuestResolution()
 end
 
 function Testqiao_guest_allegiance:testFreeAssignOutsideOfferShowsHuatuoGuestFactions()
-  local room = create { backend = forcedBackend({ "qun", "jin" }), settings = { enableFreeAssign = true } }
+  local room = create { backend = forcedBackend({ "qun", "shu" }), settings = { enableFreeAssign = true } }
   local player = room.players[1]
   local huatuo, partner = "qiao_heg__qun001", "qiao_test__wei_1"
   local offers = { [player] = { partner, "qiao_test__wei_2" } }
@@ -569,6 +577,7 @@ function Testqiao_guest_allegiance:testFreeAssignOutsideOfferShowsHuatuoGuestFac
     pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
   end)
   lu.assertEquals(extra.guestFactions[huatuo], { "wei", "shu", "wu", "han" })
+  lu.assertFalse(table.contains(Guest.factionsOf(room, huatuo).kingdoms, "shu"))
   lu.assertFalse(table.contains(extra.guests, huatuo))
   lu.assertEquals(pairs[player], { huatuo, partner })
   lu.assertEquals(kingdoms[player], "wei")

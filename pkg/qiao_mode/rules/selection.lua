@@ -189,16 +189,16 @@ function M.askData(room, offers, guests)
   local wild, guestFactions = {}, {}
   for _, name in ipairs(names) do
     local entry = Guest.factionsOf(room, name)
-    if entry and entry.source == "guest" then guestFactions[name] = entry.kingdoms end
+    -- 牌面显示完整客籍；配将合法性由上面的 pairing 按本局可用势力计算。
+    if entry and entry.source == "guest" then guestFactions[name] = Guest.guestKingdoms(name) end
     if entry and entry.wild then wild[name] = true end
   end
   if freeAssign and guestIllustrations then
-    -- Free assignment can insert a general that was not offered. Send its
-    -- resolved factions for display, while redraw stays tied to the offer.
+    -- 自由选将换入的客将也显示完整客籍，重抽资格仍随原始候选。
     for name in pairs(Guest.guests) do
       if not guestFactions[name] and validFreeGeneral(name) then
         local entry = Guest.factionsOf(room, name)
-        if entry and entry.source == "guest" then guestFactions[name] = entry.kingdoms end
+        if entry and entry.source == "guest" then guestFactions[name] = Guest.guestKingdoms(name) end
       end
     end
   end
