@@ -303,6 +303,20 @@ function Testqiao_wu_damage:testTianxiangPreventsThenTargetLosesHpAndObtainsCard
   lu.assertTrue(table.contains(p(4):getCardIds(Player.Hand), heart))
 end
 
+function Testqiao_wu_damage:testTianxiangCanDeclineWhenOnlyOneHeartIsAvailable()
+  local room = FkTest.room
+  local heart = setHand(room, p(1), { { "qiao__peach", Card.Heart, 2 } })[1]
+  grant(p(1), TIANXIANG)
+  local hp = p(1).hp
+  FkTest.setNextReplies(p(1), { "" })
+  inRoom(function()
+    room:damage { from = p(2), to = p(1), damage = 1 }
+  end)
+  lu.assertEquals(p(1):usedSkillTimes(TIANXIANG, Player.HistoryGame), 0)
+  lu.assertEquals(p(1).hp, hp - 1)
+  lu.assertEquals(room:getCardArea(heart), Card.PlayerHand)
+end
+
 -- 红颜：黑桃手牌、装备和判定牌视为红桃 ------------------------------------
 function Testqiao_wu_damage:testHongyanSpadeHandEquipAndJudge()
   local room = FkTest.room
@@ -542,7 +556,7 @@ function Testqiao_wu_damage:testBuquRemovesDuplicateSuitWithoutRecover()
   local drawn = seedDrawPile(room, { { "qiao__jink", Card.Heart, 11 } })[1]
   inRoom(function() p(1).hp = 1 end)
 
-  FkTest.setNextReplies(p(1), { drawn, FkTest.ReplyChooseCards({ old }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ old }) })
   inRoom(function() room:enterDying { who = p(1) } end)
 
   lu.assertEquals(#p(1):getPile("创"), 1)
@@ -582,7 +596,7 @@ function Testqiao_wu_damage:testBuquChoosesWhichDuplicateToKeep()
   local drawn = seedDrawPile(room, { { "qiao__peach", Card.Heart, 2 } })[1]
   inRoom(function() p(1).hp = 1 end)
 
-  FkTest.setNextReplies(p(1), { drawn, FkTest.ReplyChooseCards({ old2 }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ old2 }) })
   inRoom(function() room:enterDying { who = p(1) } end)
 
   local pile = p(1):getPile("创")

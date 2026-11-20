@@ -213,7 +213,7 @@ function Testqiao_jin001:testCT01MovesIntoEmptyCorrespondingSlotNotHand()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p2(), "jueying")
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   enterDying(room, p2())
   lu.assertTrue(table.contains(p1():getCardIds("e"), equip))
   lu.assertFalse(table.contains(p2():getCardIds("e"), equip))
@@ -227,7 +227,7 @@ function Testqiao_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   clearAllHands(room)
   installJinDeputy(room)
   local equip = addEquip(room, p2(), "jueying")
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   enterDying(room, p2())
   lu.assertTrue(table.contains(p1():getCardIds("e"), equip))
 
@@ -238,7 +238,8 @@ function Testqiao_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   end)
   lu.assertTrue(p1():isFakeSkill(CT))
   local hiddenEquip = addEquip(room, p2(), "qinggang_sword")
-  FkTest.setNextReplies(p1(), { "1", hiddenEquip })
+  -- 引擎对快速确认的预亮技能还会要求一次明置确认。
+  FkTest.setNextReplies(p1(), { "1", "1" })
   enterDying(room, p2())
   lu.assertEquals(p1().deputyGeneral, "qiao_heg__jin001")
   lu.assertFalse(p1():isFakeSkill(CT))
@@ -293,7 +294,7 @@ function Testqiao_jin001:testCT04DyingEventOffersOnceNotPerPeachRequest()
   -- hp 0 会进入求桃流程；垂统只在 EnterDying 提供一次机会。
   for _, p in ipairs(room.players) do FkTest.setNextReplies(p, { "" }) end
   FkTest.cleanNextReplies(p1())
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   inRoom(function()
     p2().hp = 0
     room:enterDying { who = p2() }

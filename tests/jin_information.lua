@@ -84,8 +84,8 @@ function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
   -- 隐藏选两张，再依次声明；最后只展示并获得者一张。
   FkTest.setNextReplies(p, {
     "1",
-    FkTest.ReplyChoosePlayer({ p2 }), c2,
-    FkTest.ReplyChoosePlayer({ p3 }), c3,
+    FkTest.ReplyChoosePlayer({ p2 }),
+    FkTest.ReplyChoosePlayer({ p3 }),
     FkTest.ReplyChoosePlayer({ p2 }),
   })
   FkTest.setNextReplies(p2, { { "slash" } })

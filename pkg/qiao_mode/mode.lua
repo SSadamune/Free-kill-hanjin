@@ -16,6 +16,7 @@ local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 local KingdomSize = require "packages.qiao.pkg.qiao_mode.rules.kingdom_size"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
+local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_cards"
 local W = require "ui_emu.preferences"
 local M = {}
 
@@ -185,6 +186,7 @@ function M.create(base, name)
     local baseStart = parent.start or GameLogic.start
     function logic:start()
       RemovedTargets.installServer(self.room)
+      MandatoryCards.install(self.room)
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)
       self.room:addSkill(WeiHistory.HISTORY_SKILL)

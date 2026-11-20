@@ -39,7 +39,7 @@ skill:addEffect(fk.AskForRetrial, {
       pattern = tostring(Exppattern { id = ids }),
       prompt = "#qiao__skill_wei002_2-ask",
       expand_pile = equip,
-      cancelable = false,
+      cancelable = true,
     })
     if cards == nil or #cards ~= 1 then return false end
     event:setCostData(self, { cards = cards })
