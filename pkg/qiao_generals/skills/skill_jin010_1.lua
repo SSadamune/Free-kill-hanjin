@@ -22,13 +22,25 @@ local function canUseIceSlash(player, target, cards)
   if target.dead or target:isRemoved() then return false end
   local card = Fk:cloneCard(ICE)
   card.skillName = skill.name
-  if cards then card:addSubcards(cards) end
+  card:addSubcards(cards)
   return not player:prohibitUse(card) and not player:isProhibited(target, card)
 end
 
 local function canSlash(player, target)
-  local count = #player:getCardIds("h")
-  return count > 0 and #target:getCardIds("h") > count and canUseIceSlash(player, target)
+  if target.dead or target:isRemoved() then return false end
+  local hand = player:getCardIds("h")
+  if #target:getCardIds("h") <= #hand then return false end
+  for _, id in ipairs(hand) do
+    if canUseIceSlash(player, target, { id }) then return true end
+  end
+  -- 两张材料会改变冰杀的花色，单张均不可用时仍可能有合法组合。
+  -- 当前牌面与材料限制下，再增加材料不会产生新的花色或解除对子集中的禁用。
+  for i, id in ipairs(hand) do
+    for j = i + 1, #hand do
+      if canUseIceSlash(player, target, { id, hand[j] }) then return true end
+    end
+  end
+  return false
 end
 
 local function canDraw(player)
