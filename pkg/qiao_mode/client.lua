@@ -7,6 +7,7 @@ local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local MZ = "qiao__skill_han001_2"
@@ -102,7 +103,7 @@ end
 
 local pileActions = {
   QiaoEdict = Han.CONSUME,
-  QiaoCi = "qiao__skill_em_jin001_banner",
+  QiaoCi = Ci.SKILL,
 }
 
 function QiaoPlayCard:canUsePileAction(holderId, skill)
@@ -117,12 +118,17 @@ function QiaoPlayCard:update(elemType, id, action, data)
     return ReqPlayCard.update(self, elemType, id, action, data)
   end
   if action ~= "click" or not self:canUsePileAction(id, skill) then return false end
+  local chosenCi = elemType == "QiaoCi" and data and data.general
+  if elemType == "QiaoCi" and not Ci.canChoose(self.player, chosenCi) then return false end
   self:selectSkill(skill, { selected = true })
   if not self:feasible() then
     self:doCancelButton()
     return false
   end
-  return ReqPlayCard.update(self, "Button", "OK", action, data)
+  if chosenCi then Fk.skills[skill].interaction.data = chosenCi end
+  local accepted = ReqPlayCard.update(self, "Button", "OK", action, data)
+  if chosenCi then Fk.skills[skill].interaction.data = nil end
+  return accepted
 end
 
 function QiaoClient:initialize(client)
@@ -142,8 +148,9 @@ function QiaoClient:canConsumeEdict(holderId)
   return self:canUsePileAction(holderId, "QiaoEdict")
 end
 
-function QiaoClient:canConsumeCi(holderId)
+function QiaoClient:canConsumeCi(holderId, general)
   return self:canUsePileAction(holderId, "QiaoCi")
+    and Ci.canChoose(self.current_request_handler.player, general)
 end
 
 function QiaoClient:guestIllustrationsEnabled()

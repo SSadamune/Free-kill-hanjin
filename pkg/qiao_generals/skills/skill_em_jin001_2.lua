@@ -2,6 +2,7 @@
 -- 出牌阶段开始前：可以跳过该阶段，然后将场上一张坐骑牌或弃牌堆的
 -- 【临筱玉舆】置入自己装备区；没有合适牌不撤销已支付的跳过。
 local LINXIAO = "qiao__linxiao_yuyu"
+local Placement = require "packages.qiao.pkg.qiao_mode.rules.mount_placement"
 
 local skill = fk.CreateSkill { name = "qiao__skill_em_jin001_2" }
 skill.qiaoImplemented = true
@@ -19,18 +20,13 @@ local function candidates(room, player)
   local list = {}
   for _, p in ipairs(room:getPresentPlayers()) do
     for _, id in ipairs(p:getCardIds(Player.Equip)) do
-      if isRide(id) and player:canMoveCardIntoEquip(id, false) then table.insert(list, id) end
+      if isRide(id) and Placement.canPut(player, id) then table.insert(list, id) end
     end
   end
   for _, id in ipairs(room.discard_pile) do
     local card = Fk:getCardById(id, true)
-    if card ~= nil and (card.name == LINXIAO
-      or (card.type == Card.TypeEquip and card.sub_type == Card.SubtypeDefensiveRide
-        and table.contains(card.subtypes or {}, Card.SubtypeOffensiveRide))) then
-      if player:hasEmptyEquipSlot(Card.SubtypeOffensiveRide)
-        and player:hasEmptyEquipSlot(Card.SubtypeDefensiveRide) then
-        table.insert(list, id)
-      end
+    if card ~= nil and card.name == LINXIAO and Placement.canPut(player, id) then
+      table.insert(list, id)
     end
   end
   return list
@@ -73,7 +69,7 @@ skill:addEffect(fk.EventPhaseChanging, {
       })
     end
     if not table.contains(list, chosen) or not table.contains(candidates(room, player), chosen) then return end
-    room:moveCardIntoEquip(player, chosen, skill.name, false, player)
+    Placement.put(room, player, chosen, skill.name)
   end,
 })
 

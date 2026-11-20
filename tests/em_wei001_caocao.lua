@@ -284,12 +284,12 @@ function Testqiao_em_wei001_caocao:testZongyuMovesZhulong()
   lu.assertIs(room:getCardOwner(zhulong), lord)
 end
 
-function Testqiao_em_wei001_caocao:testZongyuRefusesWhenBothRideSlotsOccupied()
+function Testqiao_em_wei001_caocao:testZongyuReplacesBothOccupiedRideSlots()
   local room, lord, other = FkTest.room, p(1), p(2)
-  local zhulong
+  local zhulong, offensive, defensive
   inRoom(function()
-    local offensive = room:printCard("qiao__chitu", Card.Spade, 5)
-    local defensive = room:printCard("qiao__jueying", Card.Club, 6)
+    offensive = room:printCard("qiao__chitu", Card.Spade, 5)
+    defensive = room:printCard("qiao__jueying", Card.Club, 6)
     room:moveCardTo(offensive, Card.PlayerEquip, lord, fk.ReasonJustMove, "test", nil, true, lord)
     room:moveCardTo(defensive, Card.PlayerEquip, lord, fk.ReasonJustMove, "test", nil, true, lord)
     zhulong = room:printCard("qiao__liulongcanjia", Card.Heart, 7)
@@ -305,7 +305,9 @@ function Testqiao_em_wei001_caocao:testZongyuRefusesWhenBothRideSlotsOccupied()
       room.logic:trigger(fk.Damaged, lord, { who = lord, from = other, damage = 1 })
     end)
   end)
-  lu.assertEquals(room:getCardArea(zhulong), Card.DiscardPile, "两个坐骑栏均占用时不得置入")
+  lu.assertEquals(room:getCardArea(zhulong), Card.PlayerEquip)
+  lu.assertEquals(room:getCardArea(offensive), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(defensive), Card.DiscardPile)
 end
 
 function Testqiao_em_wei001_caocao:testBannerPreservesIndependentRevealAndSkillSources()

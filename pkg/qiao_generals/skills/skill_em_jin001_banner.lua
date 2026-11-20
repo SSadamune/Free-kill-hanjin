@@ -8,13 +8,15 @@ local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local First = require "packages.qiao.pkg.qiao_generals.util.jin_first_reveal"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 
-local skill = fk.CreateSkill { name = "qiao__skill_em_jin001_banner" }
+local skill = fk.CreateSkill { name = Ci.SKILL }
 skill.qiaoImplemented = true
 
 local SHOWN_MARK = "qiao_jin001_first_double"
 local USED_MARK = "qiao_jin001_change_used"
 local CI_MARK = "@[qiao_ci]"
+local CHANGE = "qiao__jin001_banner-change"
 
 local function lord(room)
   if room == nil then return nil end
@@ -167,22 +169,16 @@ skill:addEffect("active", {
   target_num = 0,
   card_num = 0,
   max_phase_use_time = 1,
+  -- 只承接赐列表提交的武将 ID，无需创建额外的技能交互组件。
+  interaction = function() end,
   can_use = function(self, player)
     return player ~= nil and not player.dead and player.phase == Player.Play
       and #ciList(player) > 0 and player:hasSkill(skill.name)
   end,
   on_use = function(self, room, effect)
     local player = effect.from
-    local list = ciList(player)
-    if #list == 0 then return end
-    local chosen = list[1]
-    if #list > 1 then
-      chosen = room:askToChoice(player, {
-        choices = list, skill_name = skill.name,
-        prompt = "#qiao__jin001_banner-ci", cancelable = true,
-      })
-      if chosen == nil or not table.contains(list, chosen) then return end
-    end
+    local chosen = effect.interaction_data
+    if not Ci.canChoose(player, chosen) then return end
     local fish = positionFish(chosen)
     if fish == nil then return end
     local changePositions = matchingPosition(room, player, fish)
@@ -191,16 +187,14 @@ skill:addEffect("active", {
       and "qiao__jin001_banner-resource-maxcard"
       or "qiao__jin001_banner-resource-draw"
     local branches = { resource }
-    if #changePositions > 0 and player:getMark(USED_MARK) == 0 then table.insert(branches, "change") end
-    table.insert(branches, "Cancel")
-    local branch = room:askToChoice(player, {
-      choices = branches, skill_name = skill.name,
-      prompt = "#qiao__jin001_banner-branch", cancelable = true,
-      detailed = true,
-    })
-    if branch == "Cancel" then return end
-    if branch ~= "change" and branch ~= resource then return end
-    if branch == "change" then
+    if #changePositions > 0 and player:getMark(USED_MARK) == 0 then table.insert(branches, CHANGE) end
+    local branch = room:askToChoices(player, {
+      choices = branches, all_choices = { resource, CHANGE },
+      min_num = 1, max_num = 1, single = true, cancelable = true,
+      skill_name = skill.name, prompt = "#qiao__jin001_banner-branch",
+    })[1]
+    if branch == nil or not table.contains(branches, branch) or not Ci.canChoose(player, chosen) then return end
+    if branch == CHANGE then
       local isDeputy
       if #changePositions == 1 then
         isDeputy = changePositions[1]
@@ -255,12 +249,10 @@ Fk:loadTranslationTable {
   ["qiao__ci_consume"] = "消耗一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
-  ["#qiao__jin001_banner-ci"] = "诸王敕封册：选择一枚赐",
   ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
+  [CHANGE] = "变更武将",
   ["qiao__jin001_banner-resource-maxcard"] = "本回合手牌上限+3",
-  [":qiao__jin001_banner-resource-maxcard"] = "消耗此赐：本回合你的手牌上限+3。",
   ["qiao__jin001_banner-resource-draw"] = "将手牌摸至四张",
-  [":qiao__jin001_banner-resource-draw"] = "消耗此赐：你将手牌摸至四张。",
   ["#qiao__jin001_banner-position"] = "诸王敕封册：选择变更位置（main 主将 / deputy 副将）",
 }
 
