@@ -179,6 +179,18 @@ function Testqiao_han005:testMouzhuSameKingdomTargetForcesDiscard()
     { "qiao__jink", Card.Diamond, 4 },
   })
 
+  local discardedAtTargeting
+  installTestSkill(room, "test_mouzhu_before_targeting", {
+    { fk.TargetSpecifying, {
+      global = true,
+      can_refresh = function(self, event, target, player, data)
+        return target == player and player == p3() and data.card.trueName == "slash"
+      end,
+      on_refresh = function()
+        discardedAtTargeting = room:getCardArea(theirs[2]) == Card.DiscardPile
+      end,
+    } },
+  })
   FkTest.setNextReplies(p3(), {
     FkTest.ReplyChooseCards({ theirs[1] }),
     virtualUse(p2(), "qiao__slash"),
@@ -190,7 +202,8 @@ function Testqiao_han005:testMouzhuSameKingdomTargetForcesDiscard()
     "",
   })
 
-  -- 交牌后 p3 手牌 1、何进 3，故视为使用杀；杀真实命中同势力 p2 后弃牌。
+  -- 交牌后 p3 手牌 1、何进 3，故视为使用杀；指定目标前已支付弃牌。
+  lu.assertTrue(discardedAtTargeting)
   lu.assertEquals(p2().hp, p2Hp - 1)
   lu.assertEquals(#p3():getCardIds("h"), 0)
   lu.assertEquals(#p1():getCardIds("h"), 3)
