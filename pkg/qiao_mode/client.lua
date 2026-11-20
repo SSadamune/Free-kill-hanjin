@@ -10,6 +10,8 @@ local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
+local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local LtkUI = require "packages.freekill-core.ltk.client.util"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -185,6 +187,29 @@ local function isQiaoMode()
   return Modes.inRoom(room)
 end
 
+-- 上游国战红颜也通过锁视变更实体牌的有效花色。手牌面板仍显示印刷花色，
+-- 判定、出牌、筛选和花色统计继续读取引擎锁视后的牌。
+local getCardData = LtkUI.getCardData
+function LtkUI:getCardData(id, filterCard)
+  local data = getCardData(self, id, filterCard)
+  if filterCard and isQiaoMode() and Fk:currentRoom():getCardArea(id) == Card.PlayerHand then
+    local card = Fk:getCardById(id)
+    if card and card.skillName == "qiao__skill_wu011_2" then
+      local printed = Fk:getCardById(id, true)
+      data.suit, data.color = printed:getSuitString(), printed:getColorString()
+    end
+  end
+  return data
+end
+
+function QiaoClient:virtualCardPicture(name)
+  local formal = "qiao__" .. name
+  if Fk.all_card_types[formal] and Fk.all_card_types[formal].package.extensionName == "qiao" then
+    return formal
+  end
+  return name
+end
+
 --- 脚注/虚拟牌提示的纯文本化：只覆盖 nocolor == true 的调用，继承
 --- setCardNote 与 showVirtualCard 两条通知路径，不另写重复的脚注流程。
 function QiaoClient:parseMsg(msg, nocolor, visible_data)
@@ -196,11 +221,21 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if command == "SetPlayerMark" and data[2] == Retinues.PUBLIC_MARK and isQiaoMode() then
+    return
+  end
   -- The native rejoin snapshot may emit fake-skill notifications for active skills.
   if command == "AddSkill" and data[3] and data[2] == "qiao__skill_han007_1"
     and isQiaoMode() then return end
   if command == "Ltk.SkillInvoked" and isQiaoMode() then
     data = stripRichText(data)
+  end
+  if command == "CustomDialog" and data.component
+    and data.component.url == "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml"
+    and isQiaoMode() then
+    data = table.simpleClone(data)
+    data.component = table.simpleClone(data.component)
+    data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
   end
   return BaseClient.notifyUI(self, command, data)
 end

@@ -14,7 +14,7 @@ local skill = fk.CreateSkill {
 
 local USED_TARGETS = "qiao__skill_han017_1-given_targets-phase"
 local LOCK = "qiao__skill_han017_1-locked-turn"
-local NEXT_SLASH = "qiao_skill_han017_1_next_slash_damage-turn"
+local NEXT_SLASH = "@[qiao_kannan_damage]-turn"
 local DELAY_SKILL_NAME = "#qiao_skill_han017_1_delay"
 local OPTION_TAKE = "#qiao__skill_han017_1-take"
 local OPTION_DECLINE = "#qiao__skill_han017_1-decline"
@@ -169,6 +169,13 @@ Fk:loadTranslationTable {
   ["#qiao__skill_han017_1-take"] = "戡难：是否取得没赢的拼点牌并令其下张【杀】伤害+1",
   [OPTION_TAKE] = "取得拼点牌",
   [OPTION_DECLINE] = "不取得",
+  ["qiao_kannan_damage"] = "戡难",
+  [NEXT_SLASH] = "戡难",
+}
+
+Fk:addQmlMark {
+  name = "qiao_kannan_damage",
+  how_to_show = function(_, bonus) return bonus and ("伤害+" .. bonus) or "" end,
 }
 
 skill.qiaoImplemented = true

@@ -44,9 +44,9 @@ skill:addEffect("active", {
 })
 
 skill:addEffect(fk.AfterCardsMove, {
-  mute = true,
-  priority = 5,
-  can_trigger = function(self, event, target, player, data)
+  -- 辎随实体木牛移动，清理在装备技能已经卸载或移动事件被终止时也应执行。
+  is_delay_effect = true,
+  can_refresh = function(self, event, target, player, data)
     if #player:getPile("$sa_carriage") == 0 then return false end
     for _, move in ipairs(data) do
       for _, info in ipairs(move.moveInfo) do
@@ -54,68 +54,44 @@ skill:addEffect(fk.AfterCardsMove, {
           if info.fromArea == Card.Processing then
             local room = player.room
             local move_event = room.logic:getCurrentEvent():findParent(GameEvent.MoveCards, true)
-            if not move_event then return end
+            if not (move_event and move_event.parent) then return end
             local parent_event = move_event.parent
             local move_events = room.logic:getEventsByRule(GameEvent.MoveCards, 1, function(e)
               if e.id >= move_event.id or e.parent ~= parent_event then return false end
               for _, last_move in ipairs(e.data) do
                 if last_move.moveReason == fk.ReasonExchange
-                  and last_move.toArea == Card.Processing then
+                  and last_move.from == player and last_move.toArea == Card.Processing
+                  and table.find(last_move.moveInfo, function(last_info)
+                    return last_info.cardId == info.cardId and last_info.fromArea == Card.PlayerEquip
+                  end) then
                   return true
                 end
               end
             end, parent_event.id)
             if #move_events > 0 then
-              for _, last_move in ipairs(move_events[1].data) do
-                if last_move.moveReason == fk.ReasonExchange then
-                  for _, last_info in ipairs(last_move.moveInfo) do
-                    if isOx(last_info.cardId) then
-                      if last_move.from == player and last_info.fromArea == Card.PlayerEquip then
-                        if move.toArea == Card.PlayerEquip then
-                          if move.to ~= player then
-                            event:setCostData(self, { extra_data = move.to })
-                            return true
-                          end
-                        else
-                          event:setCostData(self, nil)
-                          return true
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-            end
-          elseif move.moveReason == fk.ReasonExchange then
-            if move.from == player and info.fromArea == Card.PlayerEquip
-              and move.toArea ~= Card.Processing then
-              event:setCostData(self, nil)
-              return true
-            end
-          elseif move.from == player and info.fromArea == Card.PlayerEquip then
-            if move.toArea == Card.PlayerEquip then
-              if move.to ~= player then
-                event:setCostData(self, { extra_data = move.to })
+              if move.toArea ~= Card.PlayerEquip or move.to ~= player then
+                event:setCostData(self, move.toArea == Card.PlayerEquip and { to = move.to } or nil)
                 return true
               end
-            else
-              event:setCostData(self, nil)
-              return true
             end
+          elseif move.from == player and info.fromArea == Card.PlayerEquip
+            and not (move.moveReason == fk.ReasonExchange and move.toArea == Card.Processing)
+            and not (move.toArea == Card.PlayerEquip and move.to == player) then
+            event:setCostData(self, move.toArea == Card.PlayerEquip and { to = move.to } or nil)
+            return true
           end
         end
       end
     end
   end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player)
+  on_refresh = function(self, event, target, player)
     local room = player.room
     local cards = player:getPile("$sa_carriage")
     if event:getCostData(self) ~= nil then
-      event:getCostData(self).extra_data:addToPile("$sa_carriage", cards, false, self.name)
+      event:getCostData(self).to:addToPile("$sa_carriage", cards, false, skill.name)
     else
       room:moveCardTo(cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile,
-        self.name, nil, true)
+        skill.name, nil, true)
     end
   end,
 })
@@ -128,6 +104,7 @@ skill:addEffect("filter", {
 
 Fk:loadTranslationTable {
   ["qiao__wooden_ox_skill"] = "木牛",
+  ["$sa_carriage"] = "辎",
   ["#wooden_ox-move"] = "你可以将【木牛流马】移动至一名其他角色的装备区",
   ["#wooden_ox-prompt"] = "你可以将一张手牌扣置于木牛流马下",
 }

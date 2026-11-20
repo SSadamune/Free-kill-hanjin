@@ -149,6 +149,12 @@ function Testqiao_lord_equipment:testWoodenOxMovesWithCargoFromOneCancelableTarg
     lu.assertEquals(second:getPile("$sa_carriage"), { cargo.id, extra.id })
     lu.assertEquals(requests, 2)
     room.askToUseActiveSkill = original
+    room:moveCardTo(ox.id, Card.PlayerSpecial, third, fk.ReasonJustMove,
+      "test", "qiao_em_wu001_fenghuo", true, second)
+    lu.assertEquals(third:getPile("qiao_em_wu001_fenghuo"), { ox.id })
+    lu.assertEquals(second:getPile("$sa_carriage"), {})
+    lu.assertEquals(room:getCardArea(cargo.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(extra.id), Card.DiscardPile)
   end)
 end
 
@@ -538,6 +544,16 @@ function Testqiao_lord_equipment:testZouyuProvidesJinkThenDelayedLoseHp()
   local fan = card(ZOUYU)
   local slash = card("qiao__slash", Card.Spade, 5)
   local hp = owner.hp
+  local sendLog = room.sendLog
+  local ending = false
+  local endingInvocations = 0
+  room.sendLog = function(self, log, ...)
+    if ending and log.type:startsWith("#InvokeSkill") and type(log.arg) == "string"
+      and log.arg:find("zouyu_fan", 1, true) then
+      endingInvocations = endingInvocations + 1
+    end
+    return sendLog(self, log, ...)
+  end
   FkTest.runInRoom(function()
     give(room, owner, fan)
     use(room, owner, { owner }, fan)
@@ -550,6 +566,10 @@ function Testqiao_lord_equipment:testZouyuProvidesJinkThenDelayedLoseHp()
       "test", nil, true, owner)
     room:damage { from = attacker, to = owner, damage = 1, damageType = fk.NormalDamage }
     lu.assertEquals(owner.hp, hp - 2, "本次伤害后再失去1点体力")
+    ending = true
+    room.logic:trigger(fk.TurnEnd, attacker, {})
+    room.logic:trigger(fk.TurnEnd, attacker, {})
+    lu.assertEquals(endingInvocations, 0, "驺虞幡已离开装备区，回合末不得反复报发动")
   end)
 end
 

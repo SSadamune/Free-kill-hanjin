@@ -6,9 +6,6 @@
 -- 2. 令其摸一张牌，然后弃置 X 张牌（X 为孙坚已损失的体力值）。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu009_1",
-  dynamic_desc = function(self, player)
-    if player then return self.name .. "-current:" .. player:getLostHp() end
-  end,
 }
 skill.qiaoImplemented = true
 
@@ -93,7 +90,6 @@ skill:addEffect(fk.EventPhaseStart, {
 })
 
 Fk:loadTranslationTable {
-  [":qiao__skill_wu009_1-current"] = "准备阶段，你可以选择一名其他角色并选择一项：1.令其摸{1}张牌，然后弃置一张牌；2.令其摸一张牌，然后弃置{1}张牌。",
   ["#qiao__skill_wu009_1-choose"] = "英魂：选择一名其他角色，令其摸%arg张牌后弃置一张，或摸一张牌后弃置%arg张",
   ["#qiao__skill_wu009_1-choice"] = "英魂：选择对 %dest 执行的一项",
   ["#qiao__skill_wu009_1-throw"] = "英魂：弃置%arg张牌",

@@ -14,7 +14,7 @@ local OPT_HAND = "#qiao__retinue_skill_wenhu-hand"
 local OPT_EQUIP = "#qiao__retinue_skill_wenhu-equip"
 
 local TARGET_MARK_KEQING = "qiao_jin013_2_targets"
-local SOURCE_MARK_KEQING = "qiao_jin013_2_sources"
+local SOURCE_MARK_KEQING = "@[qiao_keqing]"
 
 Testqiao_jin_chain = {}
 Testqiao_jin_chain.tearDown = support.clearRoom

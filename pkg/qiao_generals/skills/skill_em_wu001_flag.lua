@@ -78,7 +78,7 @@ skill:addEffect(fk.EventPhaseStart, {
       min_num = 1,
       max_num = limit,
       skill_name = skill.name,
-      prompt = "#qiao__skill_em_wu001_flag-grant:::" .. count,
+      prompt = "#qiao__skill_em_wu001_flag-grant:::" .. count .. ":" .. limit,
       cancelable = true,
       -- 确认前按技能 ID 显示正式技能说明（':'..id），候选数与多选上限不变。
       detailed = true,
@@ -121,7 +121,7 @@ Fk:loadTranslationTable {
   [P.FLAG] = "缘江烽火图",
   [":" .. P.FLAG] = "吴势力角色出牌阶段限一次，其可以将一张装备牌置于此牌上，称为“烽火”。你的攻击范围+X（X为“烽火”数）。\n吴势力角色的准备阶段，其可以根据“烽火”数于本回合获得以下一个技能：1或以上～“英姿”；2或以上～“好施”；3或以上～“攻心”；4或以上～“度势”；5或以上～可多选择一个技能。\n锁定技，当你受到牌的伤害后，你移去一张“烽火”，然后令你本回合下次受到的伤害-1。",
   [P.PILE] = "烽火",
-  ["#qiao__skill_em_wu001_flag-grant"] = "缘江烽火图：烽火%arg，选择本回合获得的技能",
+  ["#qiao__skill_em_wu001_flag-grant"] = "缘江烽火图：烽火%arg，可选择至多%arg2项技能，本回合获得之",
   ["#qiao__skill_em_wu001_flag-remove"] = "缘江烽火图：选择一张“烽火”移去",
 }
 

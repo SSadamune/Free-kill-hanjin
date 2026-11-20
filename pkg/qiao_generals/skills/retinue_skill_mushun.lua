@@ -157,6 +157,7 @@ end)
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_mushun"] = "穆顺",
   [":qiao__retinue_skill_mushun"] = "每回合限一次，当你弃置任意角色的牌或被其他角色弃置牌后，你可以获得其中一张。若如此做，本回合你下次弃置任意角色的牌或被其他角色弃置牌后，你失去1点体力。",
+  [DELAY_SKILL_NAME] = "穆顺",
   ["#qiao__retinue_skill_mushun-invoke"] = "穆顺：你可以获得其中一张弃置的牌",
   ["#qiao__retinue_skill_mushun-choose"] = "穆顺：选择获得其中一张",
 }

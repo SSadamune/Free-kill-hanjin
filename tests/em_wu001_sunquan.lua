@@ -467,6 +467,7 @@ function Testqiao_em_wu001_sunquan:testFiveFenghuoTwoSkillsKeepIndependentSource
     preparePhase(wu)
   end)
   lu.assertEquals(asked.max_num, 2, "达到五张烽火时可多选一个不同技能")
+  lu.assertEquals(asked.prompt, "#qiao__skill_em_wu001_flag-grant:::5:2")
   lu.assertEquals(#asked.choices, 4, "五张烽火时四项技能均可选")
   lu.assertTrue(asked.detailed, "授技多选应在确认前显示技能说明")
   for _, skillName in ipairs(asked.choices) do

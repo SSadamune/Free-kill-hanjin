@@ -173,9 +173,9 @@ function Testqiao_wu_support:testYinghunDrawThenDiscard()
   end)
   asClient(room(), function(clients)
     local text = Fk:getDescription(YINGHUN, "zh_CN", clients[1])
-    lu.assertStrContains(text, "摸2张牌")
-    lu.assertStrContains(text, "弃置2张牌")
-    lu.assertNil(text:find("X", 1, true))
+    lu.assertEquals(text, Fk:translate(":" .. YINGHUN, "zh_CN"))
+    lu.assertStrContains(text, "摸X张牌")
+    lu.assertStrContains(text, "弃置X张牌")
   end)
   local oldChoose, oldChoice, oldDiscard = room().askToChoosePlayers, room().askToChoice, room().askToDiscard
   skill_test.withSkillRequests(room(), YINGHUN, {

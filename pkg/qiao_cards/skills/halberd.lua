@@ -93,6 +93,7 @@ skill:addEffect(fk.CardEffectCancelledOut, {
 
 Fk:loadTranslationTable {
   ["qiao__halberd_skill"] = "方天画戟",
+  ["#qiao__halberd_active"] = "方天画戟",
   ["#qiao__halberd-ask"] = "方天画戟：令任意名势力各不相同且与已选择的目标势力均不相同的角色和任意名没有势力的角色也成为目标",
 }
 

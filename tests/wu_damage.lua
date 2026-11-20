@@ -357,6 +357,12 @@ function Testqiao_wu_damage:testHongyanSpadeHandEquipAndJudge()
   local equip = addEquip(room, p(1), "qiao__chixiao_sword", Card.Spade, 5)
   lu.assertEquals(Fk:getCardById(hand).suit, Card.Heart)
   lu.assertEquals(Fk:getCardById(equip).suit, Card.Heart)
+  client_room.run(room, function(clients, client)
+    local viewer = require "packages.freekill-core.ltk.client.util"
+    client:filterCard(hand, clients[1])
+    lu.assertEquals(viewer:getCardData(hand, true).suit, "spade")
+    lu.assertEquals(Fk:getCardById(hand).suit, Card.Heart)
+  end)
 
   local judgeIds = seedDrawPile(room, { { "qiao__jink", Card.Spade, 6 } })
   local judge = { who = p(1), reason = "test", pattern = "." }

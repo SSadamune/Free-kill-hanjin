@@ -392,17 +392,21 @@ function Testqiao_wei_support:testTuxiStateHintClearsOnLeaveAndTurnEnd()
   lu.assertEquals(markOf(c2), 0, "已离手的牌不应重新带提示")
 
   -- 回合结束：接口移除状态，并清掉仍在手牌中的提示。
+  local ended = 0
   inRoom(function()
-    local event = fk.TurnEnd:new(room, p1, {})
-    for _, s in ipairs(room.logic.skill_table[fk.TurnEnd] or {}) do
-      local skel = s:getSkeleton()
-      if skel ~= nil and skel.name == TUXI_STATE then
-        s:trigger(event, p1, p1, {})
+    local sendLog = room.sendLog
+    room.sendLog = function(self, log, ...)
+      if log.type == "#qiao_temporary_effect_ended" and log.arg == TUXI_STATE then
+        ended = ended + 1
       end
+      return sendLog(self, log, ...)
     end
+    room.logic:trigger(fk.TurnEnd, p1, {})
+    room.sendLog = sendLog
   end)
   lu.assertFalse(p1:hasSkill(TUXI_STATE), "回合结束应移除突袭状态")
   lu.assertEquals(markOf(c3), 0, "回合结束应清理剩余提示")
+  lu.assertEquals(ended, 1)
 end
 
 -- 放逐：叠置并摸2，足额弃4平置，牌名字数>7失去体力；不足4不进入弃牌分支 --

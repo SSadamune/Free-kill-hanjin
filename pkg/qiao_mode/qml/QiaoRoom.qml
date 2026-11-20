@@ -8,6 +8,7 @@ import "GuestIllustration.js" as GuestIllustration
 Room {
   id: room
   property var mountDistanceLabels: ({})
+  property bool guestIllustrations: false
 
   Column {
     id: openingCountdown
@@ -71,7 +72,9 @@ Room {
       source: {
         const name = deputy ? photo.deputyGeneral : photo.general;
         if (!name || name === "anjiang") return "";
-        return GuestIllustration.picture(name, GuestIllustration.enabledInRoom()) ?? "";
+        const skin = deputy ? photo.deputySkinSource : photo.skinSource;
+        if (!Config.banChangeSkin && skin?.name) return "";
+        return GuestIllustration.picture(name, room.guestIllustrations) ?? "";
       }
       visible: status === Image.Ready
     }
@@ -90,6 +93,7 @@ Room {
   }
 
   function bindPhotoExtras() {
+    guestIllustrations = !!GuestIllustration.enabledInRoom();
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
       bindGuestPortraits(photo);
@@ -118,6 +122,24 @@ Room {
   Connections {
     target: room.dataModel
     function onCardsMoved() { Qt.callLater(room.bindPhotoExtras); }
+    function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
+  }
+
+  function generalAppearance(name) {
+    for (let i = 0; i < photoModel.count; ++i) {
+      const photo = photoModel.get(i).modelData;
+      if (name === photo.general)
+        return { kingdom: photo.kingdom, skin: photo.skin?.name };
+      if (name === photo.deputyGeneral)
+        return { kingdom: photo.kingdom, skin: photo.deputySkin?.name };
+    }
+    return {};
+  }
+
+  function setVirtualPicture(card, name) {
+    if (!card || !name) return;
+    const picture = Lua.ev(`ClientInstance:virtualCardPicture(${JSON.stringify(name)})`);
+    if (picture) card.picName = picture;
   }
 
   Component.onCompleted: {
@@ -126,6 +148,23 @@ Room {
       if (duration > 0) {
         openingAnimation.duration = duration;
         openingAnimation.restart();
+      }
+    });
+    addCallback(Command.ShowVirtualCard, (sender, data) => {
+      const previous = new Set(tablePile.cards);
+      showVirtualCard(sender, data);
+      for (const card of tablePile.cards) {
+        if (!previous.has(card))
+          setVirtualPicture(card.dataModel, card.dataModel.name);
+      }
+    });
+    addCallback(Command.SetCardVirtName, (sender, data) => {
+      dataModel.setCardVirtName(sender, data);
+      const [ids, name, virtual] = data;
+      for (const card of tablePile.cards) {
+        const model = card.dataModel;
+        if (ids.includes(virtual ? model.virtId : model.cardId))
+          setVirtualPicture(model, name);
       }
     });
     Qt.callLater(bindPhotoExtras);
