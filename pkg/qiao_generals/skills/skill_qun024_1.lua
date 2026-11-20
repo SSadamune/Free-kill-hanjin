@@ -21,30 +21,6 @@ local function actualDeputy(target)
     and Fk.generals[name] ~= nil and not Commander.isSoldier(name)
 end
 
-local function candidatePool(player)
-  local list = {}
-  local used = Commander.usedLimitedRetinues(player.room)
-  for general in pairs(Commander.retinues) do
-    if Commander.retinueAllowed(player.room, general)
-      and (not Commander.isLimitedRetinue(general) or used[general] == nil) then
-      table.insert(list, general)
-    end
-  end
-  table.sort(list)
-  return list
-end
-
-local function randomThree(player)
-  local list = candidatePool(player)
-  for i = #list, 2, -1 do
-    local j = math.random(i)
-    list[i], list[j] = list[j], list[i]
-  end
-  local result = {}
-  for i = 1, math.min(3, #list) do table.insert(result, list[i]) end
-  return result
-end
-
 local function grantToZhangRen(player, general)
   local skillName = S.skillFor(general)
   if skillName == nil then return end
@@ -53,12 +29,6 @@ local function grantToZhangRen(player, general)
     skill = skillName,
     origin = "granted",
   })
-  if Commander.isLimitedRetinue(general) then
-    local used=Commander.usedLimitedRetinues(player.room)
-    used[general]={player=player.id,seat=player.seat}
-    player.room:setTag(Commander.USED_RETINUE_TAG,used)
-  end
-
 end
 
 skill:addEffect(fk.DamageCaused, {
@@ -69,22 +39,31 @@ skill:addEffect(fk.DamageCaused, {
     if not player:hasSkill(skill.name) then return false end
     if not DAMAGE_CARDS[data.card.trueName] then return false end
     if data.to == nil or data.to.dead then return false end
-    return R.count(player) < 2 and #candidatePool(player) > 0
+    return R.count(player) < 2 and #Commander.randomRetinueCandidates(player.room) > 0
   end,
   on_cost = function(self, event, target, player, data)
     if not player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
       prompt = "#qiao__skill_qun024_1-invoke",
     }) then return false end
-    local list = randomThree(player)
-    if #list == 0 then return false end
+    local room = player.room
+    local candidates = Commander.randomRetinueCandidates(room)
+    if #candidates == 0 then return false end
+    local list = room:tableRandomPick(candidates, math.min(3, #candidates))
+    room:sendLog {
+      type = "#QiaoChuanxinReveal" .. #list, from = player.id,
+      arg = list[1], arg2 = list[2], arg3 = list[3],
+    }
     local chosen = player.room:askToChoice(player, {
       choices = list,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun024_1-choose",
       cancelable = true,
     })
-    if chosen == nil or not table.contains(list, chosen) then return false end
+    if not table.contains(list, chosen) or not table.contains(Commander.randomRetinueCandidates(room), chosen) then
+      return false
+    end
+    room:sendLog { type = "#QiaoChuanxinChosen", from = player.id, arg = chosen }
     event:setCostData(self, { general = chosen })
     return true
   end,
@@ -121,6 +100,10 @@ Fk:loadTranslationTable {
   ["#qiao__skill_qun024_1-invoke"] = "穿心：可亮出三种翼从并选择一张",
   ["#qiao__skill_qun024_1-choose"] = "穿心：选择一张翼从",
   ["#qiao__skill_qun024_1-change"] = "穿心：是否将副将变更为该翼从",
+  ["#QiaoChuanxinReveal1"] = "%from 亮出了翼从 %arg",
+  ["#QiaoChuanxinReveal2"] = "%from 亮出了翼从 %arg、%arg2",
+  ["#QiaoChuanxinReveal3"] = "%from 亮出了翼从 %arg、%arg2、%arg3",
+  ["#QiaoChuanxinChosen"] = "%from 选择了翼从 %arg",
   ["change"] = "变更副将",
   ["refuse"] = "拒绝",
 }

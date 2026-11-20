@@ -60,6 +60,51 @@ function Testqiao_qun024_zhangren:testChuanxinOnlyOffersEnabledRetinues()
   lu.assertTrue(holder:hasSkill("qiao__retinue_skill_xiyuanjun"))
 end
 
+function Testqiao_qun024_zhangren:testChuanxinPublishesOnlyUnusedOrdinaryRetinues()
+  local room, holder, victim, existing = FkTest.room, p(1), p(2), p(3)
+  local occupied = "qiao_heg__retinue_xiyuanjun"
+  local logs, choices = {}, {}
+  local original = room.sendLog
+  room.sendLog = function(self, log)
+    if log.type:startsWith("#QiaoChuanxin") then table.insert(logs, log) end
+    return original(self, log)
+  end
+  inRoom(function()
+    room:handleAddLoseSkills(holder, "qiao__skill_qun024_1", nil, false, true)
+    room:changeHero(existing, occupied, false, true, false, false, false)
+    victim.hp = 5
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_qun024_1", {
+    askToSkillInvoke = function() return true end,
+    askToChoice = function(_, who, params)
+      if who == victim then return "refuse" end
+      lu.assertEquals(#params.choices, 3)
+      for _, name in ipairs(params.choices) do
+        lu.assertFalse(C.isLimitedRetinue(name))
+        lu.assertNotEquals(name, occupied)
+        for _, selected in ipairs(choices) do lu.assertNotEquals(name, selected) end
+      end
+      local reveal = logs[#logs]
+      lu.assertEquals(reveal.type, "#QiaoChuanxinReveal3")
+      lu.assertEquals({ reveal.arg, reveal.arg2, reveal.arg3 }, params.choices)
+      table.insert(choices, params.choices[1])
+      return params.choices[1]
+    end,
+  }, function()
+    inRoom(function()
+      for _ = 1, 2 do
+        room:damage { from = holder, to = victim, damage = 1, card = Fk:cloneCard("qiao__slash") }
+      end
+    end)
+  end)
+  room.sendLog = original
+  lu.assertEquals(#logs, 4)
+  lu.assertEquals(logs[2].type, "#QiaoChuanxinChosen")
+  lu.assertEquals(logs[2].arg, choices[1])
+  lu.assertEquals(logs[4].arg, choices[2])
+  lu.assertEquals(R.count(holder), 2)
+end
+
 function Testqiao_qun024_zhangren:testLongfeiSharesOwnInstancesWithoutRecursion()
   local holder, mate = p(1), p(2)
   inRoom(function()
