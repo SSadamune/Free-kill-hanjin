@@ -1118,4 +1118,22 @@ function Testqiao_card_use_targets:testPolicyMarkRendersHidden()
   lu.assertEquals(spec.how_to_show(), "#hidden", "内部策略栈不应显示程序键")
 end
 
+function Testqiao_card_use_targets:testExplicitPeachStillRequiresWoundedTarget()
+  local r = room()
+  local from, full, wounded = r.players[1], r.players[2], r.players[3]
+  run(function()
+    full.hp = full.maxHp
+    wounded.hp = wounded.maxHp - 1
+    local peach = Fk:cloneCard("qiao__peach")
+    local policy = C.explicit({ other_roles = true }, {
+      names = { peach.name }, min_targets = 1, max_targets = 1,
+    })
+    local candidates = C.candidates(r, from, peach, policy, { fix_targets = { full.id, wounded.id } })
+    lu.assertFalse(table.contains(candidates, full))
+    lu.assertTrue(table.contains(candidates, wounded))
+    lu.assertFalse(C.validateTargets(r, from, { from = from, card = peach, tos = { full } }, policy, "selection"))
+    lu.assertTrue(C.validateTargets(r, from, { from = from, card = peach, tos = { wounded } }, policy, "selection"))
+  end)
+end
+
 return { name = "qiao_card_use_targets" }

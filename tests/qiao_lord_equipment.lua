@@ -324,11 +324,13 @@ function Testqiao_lord_equipment:testZhoujunEnteringSameCategoryAndNoBigKingdom(
   FkTest.runInRoom(function()
     give(room, owner, seal)
     give(room, ally, gift)
-    FkTest.setRoomBreakpoint(ally, "AskForSkillInvoke", function(data)
-      if data[1] == "qiao__zhoujun_lingbingyin_skill" then giftPrompt = data[2] end
+    FkTest.setRoomBreakpoint(ally, "AskForUseActiveSkill", function(data)
+      if data[1] == "choose_cards_skill" and data[4].skillName == "qiao__zhoujun_lingbingyin_skill" then
+        giftPrompt = data[2]
+      end
       return false
     end)
-    FkTest.setNextReplies(ally, { "1", gift.id })
+    FkTest.setNextReplies(ally, { FkTest.ReplyChooseCards({ gift.id }) })
     use(room, owner, { owner }, seal)
   end)
   lu.assertEquals(giftPrompt, "#qiao__zhoujun-give::" .. owner.id)

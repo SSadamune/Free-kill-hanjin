@@ -96,6 +96,7 @@ function Testqiao_jin_deck:testQianbianFirstHeartBansHandNotResponse()
       fired = true
       room:useCard { from = p, tos = { target }, card = Fk:getCardById(heartSlash) }
       captured.banned = table.simpleClone(D.bannedSuits(p))
+      captured.display = p:getMark(D.BAN_DISPLAY)
       captured.prohibitUse = p:prohibitUse(Fk:getCardById(heartJink))
       captured.prohibitResponse = p:prohibitResponse(Fk:getCardById(heartJink))
       captured.spade = p:prohibitUse(Fk:getCardById(spade))
@@ -115,6 +116,8 @@ function Testqiao_jin_deck:testQianbianFirstHeartBansHandNotResponse()
   end)
 
   lu.assertTrue(table.contains(captured.banned, Card.Heart))
+  lu.assertEquals(captured.display, "♥")
+  lu.assertEquals(p:getMark(D.BAN_DISPLAY), 0)
   lu.assertTrue(captured.prohibitUse)
   lu.assertFalse(captured.prohibitResponse)
   lu.assertFalse(captured.spade)

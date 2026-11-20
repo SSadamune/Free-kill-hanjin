@@ -1,6 +1,7 @@
 -- JIN009 权变/骤霆的公共变量与手牌身份判断。
 local M = {}
 
+M.BAN_DISPLAY = "@qiao_qianbian-phase"
 M.BAN_SUITS = "qiao_jin009_1_ban_suits-phase"
 M.RULE_SKILL = "qiao__jin_deck_rule"
 M.QIANBIAN = "qiao__skill_jin009_1"
@@ -34,12 +35,26 @@ function M.bannedSuits(player)
   return player:getTableMark(M.BAN_SUITS)
 end
 
+local suitSymbols = {
+  [Card.Spade] = "♠", [Card.Heart] = "♥",
+  [Card.Club] = "♣", [Card.Diamond] = "♦",
+}
+
+function M.suitSymbols(suits)
+  local symbols = {}
+  for _, suit in ipairs({ Card.Spade, Card.Heart, Card.Club, Card.Diamond }) do
+    if table.contains(suits, suit) then table.insert(symbols, suitSymbols[suit]) end
+  end
+  return table.concat(symbols)
+end
+
 ---@param room Room
 ---@param player Player
 ---@param suit integer
 function M.banSuit(room, player, suit)
   if room == nil or player == nil or not M.validSuit(suit) then return end
   room:addTableMarkIfNeed(player, M.BAN_SUITS, suit)
+  room:setPlayerMark(player, M.BAN_DISPLAY, M.suitSymbols(M.bannedSuits(player)))
 end
 
 return M

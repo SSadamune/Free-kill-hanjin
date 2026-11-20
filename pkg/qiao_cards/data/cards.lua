@@ -23,19 +23,13 @@ local function zhoujunEnter(room, player)
   room:sortByAction(candidates)
   for _, other in ipairs(candidates) do
     if not other.dead and not other:isRemoved() and #other:getCardIds("he") > 0 then
-      if room:askToSkillInvoke(other, {
+      local card = room:askToCards(other, {
+        min_num = 1, max_num = 1, include_equip = true, cancelable = true,
         skill_name = "qiao__zhoujun_lingbingyin_skill",
         prompt = "#qiao__zhoujun-give::" .. player.id,
-      }) then
-        local card = room:askToChooseCard(other, {
-          target = other,
-          flag = "he",
-          skill_name = "qiao__zhoujun_lingbingyin_skill",
-          prompt = "#qiao__zhoujun-choose",
-        })
-        if card ~= nil and room:getCardOwner(card) == other then
-          room:obtainCard(player, card, false, fk.ReasonGive)
-        end
+      })[1]
+      if card ~= nil and table.contains(other:getCardIds("he"), card) then
+        room:obtainCard(player, card, false, fk.ReasonGive)
       end
     end
   end

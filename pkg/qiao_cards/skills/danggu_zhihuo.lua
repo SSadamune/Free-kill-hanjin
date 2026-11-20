@@ -145,7 +145,6 @@ Fk:loadTranslationTable {
   [skill.name] = "党锢之祸",
   ["#qiao__danggu_zhihuo_skill"] = "党锢之祸：暗置每名其他角色一张武将牌",
   ["#qiao__danggu_zhihuo-give"] = "党锢之祸：你可以交给使用者一张手牌或装备，令此牌对你无效",
-  ["#qiao__danggu_zhihuo-choose"] = "党锢之祸：选择交给使用者的一张牌",
 }
 
 return skill

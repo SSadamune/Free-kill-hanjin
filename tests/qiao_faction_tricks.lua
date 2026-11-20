@@ -482,6 +482,35 @@ function Testqiao_faction_tricks:testDangguRestrictionAppliesWithoutHideableGene
   lu.assertFalse(target:prohibitReveal(), "用牌者下回合开始应撤销其来源")
 end
 
+function Testqiao_faction_tricks:testLuanwuSelfTargetSelectsShownOwnHand()
+  local room, user = FkTest.room, p(1)
+  local card, chosen, kept, requested
+  inRoom(function()
+    local hand = user:getCardIds("he")
+    if #hand > 0 then room:throwCard(hand, "qiao_test_clear", user, user) end
+    card = voidTrick(room, LUANWU)
+    giveFromVoid(room, card, user)
+    chosen = room:printCard("qiao__jink", Card.Heart, 4).id
+    kept = room:printCard("qiao__jink", Card.Spade, 5).id
+    room:obtainCard(user, { chosen, kept }, false, fk.ReasonJustMove)
+  end)
+  FkTest.setRoomBreakpoint(user, "AskForUseActiveSkill", function(data)
+    if data[1] == "choose_cards_skill" and data[4].skillName == "qiao__luanwu_chaos_skill" then
+      requested = data[2]
+    end
+    return false
+  end)
+  FkTest.setNextReplies(user, {
+    { "luanwu_user_discard" }, FkTest.ReplyChooseCards({ chosen }),
+  })
+  inRoom(function()
+    room:useCard { from = user, card = Fk:getCardById(card, true), tos = { user } }
+  end)
+  lu.assertNotNil(requested)
+  lu.assertEquals(room:getCardArea(chosen), Card.DiscardPile)
+  lu.assertTrue(table.contains(user:getCardIds("h"), kept))
+end
+
 function Testqiao_faction_tricks:testLuanwuShowsCardsAndGroupDrawsEmptyHandToHp()
   local room, user, groupTarget, other = FkTest.room, p(1), p(2), p(3)
   local card, shown, kept, arriving, firstDiscard, wire, discarded

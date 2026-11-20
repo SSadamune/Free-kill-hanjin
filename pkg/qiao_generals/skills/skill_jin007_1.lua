@@ -5,6 +5,7 @@
 -- 顺序各声明一个牌名。然后只展示并获得其中一张；仅将这张牌的实际牌名与其
 -- 拥有者的声明比较，不同才获得其余被选择的牌。选牌阶段不展示、不提前公开。
 local H = require "packages.hegemony.util"
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin007_1",
@@ -42,7 +43,9 @@ local function candidates(player)
   local ret = {}
   for _, p in ipairs(room:getPresentPlayers()) do
     if p ~= player and not p.dead and not p:isRemoved() and not p:isKongcheng()
-      and not H.compareKingdomWith(p, player) then
+      and not H.compareKingdomWith(p, player)
+      and (player.kingdom ~= "unknown" or p.kingdom == "unknown"
+        or H.compareExpectedKingdomWith(player, p, true)) then
       table.insert(ret, p)
     end
   end
@@ -56,40 +59,38 @@ skill:addEffect(fk.EventPhaseStart, {
       and data.phase == Player.Start and #candidates(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local targets = candidates(player)
+    local chosen = Invoke.ask(player.room, player, {
+      targets = targets,
+      min_num = 1,
+      max_num = math.min(3, #targets),
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin007_1-invoke",
+      prompt = "#qiao__skill_jin007_1-target",
+      invoke_prompt = "#qiao__skill_jin007_1-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { tos = chosen })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     local picked = {}
-    local remaining = candidates(player)
+    local eligible = candidates(player)
+    local selected = event:getCostData(self).tos
 
-    -- 先逐个隐藏选牌并固定；取消即停止继续选择。
-    while #picked < 3 and #remaining > 0 do
-      local chosen = room:askToChoosePlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        targets = remaining,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin007_1-target",
-        cancelable = true,
-      })
-      local to = chosen and chosen[1]
-      if to == nil then break end
-      if not to:isKongcheng() then
+    room:sortByAction(selected)
+    for _, to in ipairs(selected) do
+      if table.contains(eligible, to) and not to:isKongcheng() then
         local id = room:askToChooseCard(player, {
           target = to,
           flag = "h",
           skill_name = skill.name,
-          prompt = "#qiao__skill_jin007_1-card",
+          prompt = "#qiao__skill_jin007_1-card:::" .. to.seat,
         })
         if id ~= nil and id ~= -1 and table.contains(to:getCardIds(Player.Hand), id) then
           table.insert(picked, { owner = to, id = id, declared = nil })
         end
       end
-      table.removeOne(remaining, to)
     end
 
     if #picked == 0 then return end
@@ -164,8 +165,8 @@ skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
   ["#qiao__skill_jin007_1-invoke"] = "识人：选择其他势力角色各一张隐藏手牌，依次声明牌名后展示并获得其中一张",
-  ["#qiao__skill_jin007_1-target"] = "识人：选择一名其他势力角色（至多三名，可取消停止）",
-  ["#qiao__skill_jin007_1-card"] = "识人：选择其一张手牌（不展示）",
+  ["#qiao__skill_jin007_1-target"] = "识人：选择一至三名其他势力角色",
+  ["#qiao__skill_jin007_1-card"] = "识人：选择 %arg 号位的一张手牌（不展示）",
   ["#qiao__skill_jin007_1-declare"] = "识人：声明一个牌名",
   ["#qiao__skill_jin007_1-declared"] = "“识人”：%from 声明了【%arg】",
   ["#qiao__skill_jin007_1-reveal"] = "识人：选择展示并获得其中一张被选择的牌",

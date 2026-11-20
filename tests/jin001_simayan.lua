@@ -453,24 +453,23 @@ function Testqiao_jin001:testXT05PeachFromHandUsesRealCardAndHealsOther()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testqiao_jin001:testXT06PeachFromEquipmentOnUnwoundedTargetStillOneUse()
+function Testqiao_jin001:testXT06PeachFromEquipmentRejectsFullHpTarget()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p1(), "jueying")
   inRoom(function() p2().hp = p2().maxHp end)
   turnStart(room, p2())
   useAdaptation(room, p2(), p3())
+  inRoom(function() p3().hp = p3().maxHp - 1 end)
   local uses = {}
   installUseProbe(room, uses)
   FkTest.setNextReplies(p1(), {
     { OPTION_EQUIP }, FkTest.ReplyUseSkill(AUX, { p2() }, { equip }),
   })
   turnEnd(room, p2())
-  lu.assertEquals(#uses, 1)
-  lu.assertIs(uses[1].tos[1], p2())
-  lu.assertEquals(uses[1].card.subcards, { equip })
+  lu.assertEquals(#uses, 0)
   lu.assertEquals(p2().hp, p2().maxHp)
-  lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
@@ -549,6 +548,7 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
   FkTest.setRoomBreakpoint(p1(), "AskForUseActiveSkill", function(data)
     return type(data) == "table" and data[1] == AUX
   end)
+  inRoom(function() room:setPlayerProperty(p2(), "hp", p2().maxHp - 1) end)
   turnEnd(room, p2())
   FkTest.runInClient(function()
     local handler = ClientInstance.current_request_handler
@@ -556,6 +556,7 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
     lu.assertEquals(handler.class.name, "QiaoActiveSkill")
     lu.assertEquals(handler.class.super.name, "ReqActiveSkill")
     lu.assertEquals(handler.skill_name, AUX)
+    lu.assertFalse(handler:targetValidity(p1().id), "满体力角色不可选")
     local me = handler.player
     lu.assertEquals(me.class.name, "ClientPlayer")
     lu.assertNil(me.room)
@@ -565,7 +566,9 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
     me.player_cards[Player.Hand] = { equip }
     lu.assertTrue(handler:cardValidity(equip))
     lu.assertFalse(handler:cardValidity(nonEquip))
-    lu.assertTrue(handler:targetValidity(me.id))
+    local wounded = Fk:currentRoom():getPlayerById(p2().id)
+    wounded.hp = wounded.maxHp - 1 -- 同一测试客户端夹具手动同步目标体力。
+    lu.assertTrue(handler:targetValidity(wounded.id))
   end)
   FkTest.resumeRoom()
 end

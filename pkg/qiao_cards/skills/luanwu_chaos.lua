@@ -125,13 +125,22 @@ skill:addEffect("cardskill", {
           room:throwCard(ids, skill.name, target, target)
         end
       elseif choice == CHOICE_USER_DISCARD then
-        local id = room:askToChooseCard(user, {
-          target = target,
-          -- 显式牌组让客户端继续正面显示本次展示的牌。
-          flag = { card_data = { { "$Hand", shownHand } } },
-          skill_name = skill.name,
-          prompt = "#qiao__luanwu_chaos-user-discard::" .. target.id .. ":" .. skill.name,
-        })
+        local id
+        local prompt = "#qiao__luanwu_chaos-user-discard::" .. target.id .. ":" .. skill.name
+        if user == target then
+          id = room:askToCards(user, {
+            min_num = 1, max_num = 1, cancelable = false,
+            pattern = tostring(Exppattern { id = shownHand }),
+            skill_name = skill.name, prompt = prompt,
+          })[1]
+        else
+          id = room:askToChooseCard(user, {
+            target = target,
+            -- 显式牌组让客户端继续正面显示本次展示的牌。
+            flag = { card_data = { { "$Hand", shownHand } } },
+            skill_name = skill.name, prompt = prompt,
+          })
+        end
         if table.contains(shownHand, id) and isInHand(room, target, id) then
           room:moveCardTo(id, Card.DiscardPile, nil, fk.ReasonDiscard, skill.name, nil, true, user)
         end

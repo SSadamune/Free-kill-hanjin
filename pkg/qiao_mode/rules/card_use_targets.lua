@@ -558,6 +558,7 @@ local function validateSelectionList(room, player, card, tos, extra_data, ignore
 
   for _, target in ipairs(players) do
     if not target:isAlive() or target:isRemoved() then return false, "dead-target" end
+    if not ExtraTargets.meetsIntrinsicTargetRequirements(card, target) then return false, "intrinsic-target" end
     if player:isProhibited(target, card) then return false, "prohibit-target" end
   end
 

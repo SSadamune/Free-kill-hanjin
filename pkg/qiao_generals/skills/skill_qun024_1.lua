@@ -54,13 +54,16 @@ skill:addEffect(fk.DamageCaused, {
       type = "#QiaoChuanxinReveal" .. #list, from = player.id,
       arg = list[1], arg2 = list[2], arg3 = list[3],
     }
-    local chosen = player.room:askToChoice(player, {
-      choices = list,
+    local choices = table.map(list, S.skillFor)
+    local chosenSkill = room:askToChoice(player, {
+      choices = choices,
+      detailed = true,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun024_1-choose",
       cancelable = true,
     })
-    if not table.contains(list, chosen) or not table.contains(Commander.randomRetinueCandidates(room), chosen) then
+    local chosen = table.find(list, function(general) return S.skillFor(general) == chosenSkill end)
+    if chosen == nil or not table.contains(Commander.randomRetinueCandidates(room), chosen) then
       return false
     end
     room:sendLog { type = "#QiaoChuanxinChosen", from = player.id, arg = chosen }
@@ -98,7 +101,7 @@ skill:addEffect(fk.DamageCaused, {
 Fk:loadTranslationTable {
   ["qiao__skill_qun024_1"] = "穿心",
   ["#qiao__skill_qun024_1-invoke"] = "穿心：可亮出三种翼从并选择一张",
-  ["#qiao__skill_qun024_1-choose"] = "穿心：选择一张翼从",
+  ["#qiao__skill_qun024_1-choose"] = "穿心：选择一个翼从技能",
   ["#qiao__skill_qun024_1-change"] = "穿心：是否将副将变更为该翼从",
   ["#QiaoChuanxinReveal1"] = "%from 亮出了翼从 %arg",
   ["#QiaoChuanxinReveal2"] = "%from 亮出了翼从 %arg、%arg2",

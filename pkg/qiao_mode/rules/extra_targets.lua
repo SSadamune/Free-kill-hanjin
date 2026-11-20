@@ -5,8 +5,8 @@
 --   must be alive, not currently selected, and not prohibited by the card.
 -- * The concrete card's own target condition is expressed by its CardSkill's
 --   modTargetFilter (the engine's hook for extra/alternate targets).  The
---   central adapter never reimplements a card-specific condition and contains
---   no card-name allow/deny list.
+--   central adapter checks the intrinsic use requirements before evaluating
+--   replaceable target conditions.
 -- * Cards with semantics that cannot be recovered from the current target list
 --   (for example a group card that has already expanded its targets) attach a
 --   structured rule to their own skill.  The rule supplies a stable selection
@@ -80,6 +80,12 @@ local function commonLegal(use, target)
     and not use.from:isProhibited(target, use.card)
 end
 
+-- A full-HP character cannot be a Peach target under any targeting strategy.
+function E.meetsIntrinsicTargetRequirements(card, target)
+  local name = card.trueName
+  return (name ~= "peach" and name ~= "qiao__peach") or target:isWounded()
+end
+
 --- Shared structured target condition.  This is used by both the extra-target
 --- adapter and the initial-use target policy so the two cannot drift.
 --- Supported fields (all ANDed):
@@ -90,7 +96,7 @@ end
 ---   kingdom (string, actual Hegemony kingdom)
 ---   area_has_cards ("h"/"e"/"j"/"hej"/true)
 function E.matchesTarget(room, player, card, target, condition)
-  if type(condition) ~= "table" then return false end
+  if type(condition) ~= "table" or not E.meetsIntrinsicTargetRequirements(card, target) then return false end
   if condition.filter ~= nil
     and condition.filter(room, player, card, target) ~= true then return false end
   if condition.other_roles ~= nil and (target ~= player) ~= (condition.other_roles == true) then
@@ -234,7 +240,8 @@ function E.targetLegal(room, use, target, opts)
   if use == nil or use.from == nil or use.card == nil then return false end
   if not E.isRoleTargetUse(use) then return false end
   if target == nil or not target:isAlive() or target:isRemoved() then return false end
-  if use.from:isProhibited(target, use.card) then return false end
+  if not E.meetsIntrinsicTargetRequirements(use.card, target)
+    or use.from:isProhibited(target, use.card) then return false end
   opts = opts or {}
 
   local explicit = false

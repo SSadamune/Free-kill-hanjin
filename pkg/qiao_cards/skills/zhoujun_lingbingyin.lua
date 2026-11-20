@@ -109,7 +109,6 @@ Fk:loadTranslationTable {
   ["#qiao__zhoujun-invoke"] = "州郡领兵印：是否调整本回合的摸牌、出杀与手牌上限",
   ["#qiao__zhoujun-prepare"] = "州郡领兵印：调整三项增减值",
   ["#qiao__zhoujun-give"] = "州郡领兵印：是否交给 %dest 一张自己的手牌或装备",
-  ["#qiao__zhoujun-choose"] = "州郡领兵印：选择一张自己的手牌或装备交出",
 }
 
 return skill
