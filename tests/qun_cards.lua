@@ -3,6 +3,7 @@
 -- 用牌结果结算。本文件已加入 tests/all.lua，纳入默认国战套件。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local WUSHUANG = "qiao__skill_qun002_1"
 local XIAOMENG = "qiao__skill_qun002_2"
@@ -333,9 +334,13 @@ end
 -- 的原目标弃置两张牌。
 function Testqiao_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
   local p1, p2, p3 = p(1), p(2), p(3)
-  grant(p1, XIAONI)
-  setKingdom(p2, "wei")
-  setKingdom(p3, "shu")
+  inRoom(function()
+    room():changeHero(p1, "qiao_heg__qun027", false, false, false, false, false)
+  end)
+  setKingdom(p(1), "qun")
+  setKingdom(p(2), "wei")
+  setKingdom(p(3), "shu")
+  setKingdom(p(4), "qun")
   for _, q in ipairs({ p1, p2, p3 }) do clearCards(q) end
   local jink = give(p3, "qiao__jink", Card.Heart, 2)
   local c1 = give(p3, "qiao__slash", Card.Spade, 3)
@@ -348,9 +353,35 @@ function Testqiao_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
     p2.hp = p2.maxHp
     p3.hp = p3.maxHp
   end)
+  local reply
+  client_room.run(room(), function(clients)
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local ClientPlay = board.client_klass:new(ClientInstance.client).request_handlers.PlayCard
+    local handler = ClientPlay:new(clients[1])
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(XIAONI))
+    handler:selectSkill(XIAONI, { selected = true })
+    lu.assertFalse(handler:feasible(), "未选人不能确认骁逆")
+    lu.assertFalse(handler:targetValidity(p(4).id), "不能指定同势力角色")
+    lu.assertTrue(handler:targetValidity(p2.id))
+    lu.assertTrue(handler:targetValidity(p3.id), "可指定距离大于一的角色")
+    handler:selectTarget(p2.id, { selected = true })
+    handler:selectTarget(p3.id, { selected = true })
+    lu.assertTrue(handler:feasible())
+    local original = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(handler.doOKButton, handler)
+    ClientInstance.notifyUI = original
+    if not ok then error(err, 0) end
+    handler:_finish()
+  end)
+  lu.assertNotNil(reply)
+  lu.assertEquals(reply.targets, { p2.id, p3.id })
+  lu.assertEquals(p1:usedSkillTimes(XIAONI, Player.HistoryGame), 0)
   FkTest.setNextReplies(p2, { "" })
   FkTest.setNextReplies(p3, { FkTest.ReplyCard(Fk:getCardById(jink)) })
-  FkTest.setNextReplies(p1, { FkTest.ReplyChoosePlayer({ p2, p3 }) })
   local askedCards = false
   skill_test.withSkillRequests(room(), XIAONI, {
     askToChooseCards = function(self, player, params, original)
@@ -361,8 +392,9 @@ function Testqiao_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
       return original(self, player, params)
     end,
   }, function()
-    runActiveSkill(p1, XIAONI, {}, {})
+    inRoom(function() room():handleUseCardReply(p1, reply, nil) end)
   end)
+  lu.assertEquals(p1:usedSkillTimes(XIAONI, Player.HistoryGame), 1)
   lu.assertTrue(askedCards) -- 房间规则确实以 askToChooseCards 选未受伤目标的两张牌
   lu.assertEquals(p2.hp, p2.maxHp - 1)
   lu.assertEquals(p3.hp, p3.maxHp)
