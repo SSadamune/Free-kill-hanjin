@@ -1,5 +1,5 @@
 -- 赤霄剑：使用【杀】指定目标后，按当时双方的大／小势力类别判断；一个大势力、
--- 一个小势力时，该目标须交给装备者一张红色手牌。未交出时只令该目标不能
+-- 一个小势力时，该目标可以交给装备者一张红色手牌。未交出时只令该目标不能
 -- 抵消此次【杀】对自己的结算，其他目标仍分别响应。
 local Heg = require "packages.hegemony.util"
 
@@ -41,16 +41,20 @@ skill:addEffect(fk.TargetSpecified, {
     local red = table.filter(to:getCardIds(Player.Hand), isRedHandCard)
     local card
     if #red > 0 then
-      card = room:askToChooseCard(to, {
-        target = to,
-        flag = { card_data = { { "$Hand", red } } },
+      card = room:askToCards(to, {
+        min_num = 1,
+        max_num = 1,
+        pattern = ".|.|red|hand",
+        cancelable = true,
         skill_name = skill.name,
-        prompt = "#qiao__chixiao_sword-give",
-      })
+        prompt = "#qiao__chixiao_sword-give::" .. player.id,
+      })[1]
     end
-    if card ~= nil and room:getCardOwner(card) == to
+    if card ~= nil and table.contains(red, card) and room:getCardOwner(card) == to
       and room:getCardArea(card) == Card.PlayerHand then
       room:obtainCard(player, card, false, fk.ReasonGive, to, skill.name)
+    else
+      card = nil
     end
     -- 以真实移动结果为准；目标取消/被阻止给牌时，本次目标才不能抵消。
     if card == nil or room:getCardOwner(card) ~= player
@@ -62,7 +66,7 @@ skill:addEffect(fk.TargetSpecified, {
 
 Fk:loadTranslationTable {
   [skill.name] = "赤霄剑",
-  ["#qiao__chixiao_sword-give"] = "赤霄剑：交给使用【杀】的角色一张红色手牌",
+  ["#qiao__chixiao_sword-give"] = "赤霄剑：可以交给 %dest 一张红色手牌，否则不能抵消此【杀】",
 }
 
 return skill
