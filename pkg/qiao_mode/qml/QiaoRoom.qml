@@ -15,6 +15,17 @@ Room {
     ++pileActionRevision;
   }
 
+  function refreshStateSkillButtons() {
+    const model = dataModel.dashboard;
+    const names = Array.from(model.fakeSkills, skill => skill.origName);
+    for (const name of names) {
+      if (name === "reveal_skill&" || Lua.ev(`ClientInstance:isStateOnlySkill(${JSON.stringify(name)})`)) {
+        model.loseSkill(name, true);
+        model.addSkill(name, false);
+      }
+    }
+  }
+
   Column {
     id: openingCountdown
     objectName: "qiaoInitialPrelightCountdown"
@@ -148,6 +159,7 @@ Room {
   }
 
   Component.onCompleted: {
+    addCallback("QiaoRefreshStateSkillButtons", room.refreshStateSkillButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {
       const duration = Number(data[0]);

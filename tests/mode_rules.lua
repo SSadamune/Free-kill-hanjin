@@ -3,8 +3,53 @@ local content = __dofile("../../../tests/support/ascension_content.lua")
 local H = require "packages.hegemony.util"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
+local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
+
+function Testmode_rules:testStateSkillsCannotPrelightButMixedSkillsCan()
+  local room = FkTest.room
+  local player = room.players[1]
+  local hongyan, mashu = "qiao__skill_wu011_2", "qiao__skill_shu006_1"
+  local paoxiao = "qiao__skill_shu003_1"
+  lu.assertTrue(SkillPrelight.isStateOnly(hongyan))
+  lu.assertTrue(SkillPrelight.isStateOnly(mashu))
+  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_wu017_2"))
+  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_jin023_2"))
+  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_wei002_3"))
+  lu.assertFalse(SkillPrelight.isStateOnly("qiao__skill_em_han001_1"))
+  lu.assertFalse(SkillPrelight.isStateOnly("qiao__skill_em_han001_3"))
+  lu.assertFalse(SkillPrelight.isStateOnly(paoxiao))
+
+  FkTest.runInRoom(function()
+    skill_test.installBlankGenerals(room, "shu")
+    for _, name in ipairs({ hongyan, mashu, paoxiao }) do
+      player:addFakeSkill(name)
+      room.callbacks.prelight(room, player.id, { "", "prelight", name, "true" })
+    end
+    player:prelightSkill(Fk.skills[mashu], true)
+  end)
+  lu.assertFalse(table.contains(player.prelighted_skills, Fk.skills[hongyan]))
+  lu.assertFalse(table.contains(player.prelighted_skills, Fk.skills[mashu]))
+  lu.assertTrue(table.contains(player.prelighted_skills, Fk.skills[paoxiao]))
+
+  local clientClass = Fk:getBoardGame("qiao_heg_mode").client_klass
+  local notices = {}
+  local client = clientClass:new({
+    notifyUI = function(_, command, data) table.insert(notices, { command, data }) end,
+  })
+  FkTest.runInRoom(function()
+    client:notifyUI("AddSkill", { player.id, hongyan, true })
+    client:notifyUI("AddSkill", { player.id, paoxiao, true })
+    client:notifyUI("LoseSkill", { player.id, hongyan, true })
+    client:notifyUI("ChangeSelf", player.id)
+  end)
+  lu.assertEquals(notices[1], { "AddSkill", { player.id, hongyan } })
+  lu.assertEquals(notices[3], { "AddSkill", { player.id, paoxiao, true } })
+  lu.assertEquals(notices[5], { "LoseSkill", { player.id, hongyan } })
+  lu.assertEquals(notices[8], { "QiaoRefreshStateSkillButtons", {} })
+end
 
 function Testmode_rules:testOneGlobalWindowAfterAllHandsAreDealt()
   support.clearRoom()

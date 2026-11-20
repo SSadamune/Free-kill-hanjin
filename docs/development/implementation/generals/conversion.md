@@ -145,9 +145,9 @@
 <a id="shu011-1"></a>
 #### 八阵（SHU011 诸葛亮）
 
-- **标识与依据**：`qiao__skill_shu011_1`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_1.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。
-- **实现与接口**：无防具时复用正式八卦阵技能；处理来源明暗置及移除，暗将通过需要闪的请求明置发动，预亮接线由模式 shu_hidden_prelight 提供。
-- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **标识与依据**：`qiao__skill_shu011_1`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_1.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。暗置处理参考[上游八阵](https://gitee.com/qsgs-fans/shzl/blob/master/pkg/fire/skills/bazhen.lua)的假技能检查。
+- **实现与接口**：持有生效的八阵且没有防具时，按来源提供正式八卦阵技能。八阵是状态技，暗置期间不可预亮，请求【闪】时由已生效的八卦阵负责判定。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua) 覆盖暗置时提交预亮并被【杀】指定、明置后发动八卦阵、装备防具切换，以及重新暗置后在自己的出牌阶段走主动亮将回包。
 - **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 <a id="shu011-2"></a>
