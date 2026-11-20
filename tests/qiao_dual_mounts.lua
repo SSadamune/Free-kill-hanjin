@@ -366,8 +366,11 @@ end
 function Testqiao_dual_mounts:testClientDistanceUsesPublicRoomState()
   local room, user, other, ally = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
-    room:setPlayerProperty(user, "kingdom", "wei")
-    room:setPlayerProperty(ally, "kingdom", "wei")
+    for _, player in ipairs(room.players) do
+      local equips = player:getCardIds("e")
+      if #equips > 0 then room:throwCard(equips, "test", player, player) end
+      room:setPlayerProperty(player, "kingdom", (player == user or player == ally) and "wei" or "shu")
+    end
   end)
   local six = place(user, SIX, Card.Heart, 13)
   local chitu = place(ally, CHITU)
