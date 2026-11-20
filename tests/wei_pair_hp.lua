@@ -67,6 +67,28 @@ Testqiao_wei_pair_hp.setup = function()
 end
 Testqiao_wei_pair_hp.tearDown = support.clearRoom
 
+function Testqiao_wei_pair_hp:testDoubleHeavyPairGetsTwoFishOnlyOnDoubleReveal()
+  local p = p1()
+  local r = room()
+  local main, deputy = "qiao_heg__han013", "qiao_heg__shu002"
+  installHiddenPair(p, main, deputy)
+  inRoom(function()
+    r:setPlayerMark(p, "__heg_kingdom", "han")
+    r:setPlayerMark(p, "__heg_init_kingdom", "han")
+    r:setPlayerProperty(p, "kingdom", "han")
+    r:setPlayerMark(p, "@!!yinyangfish", 0)
+    r.logic:broadcastGeneral()
+  end)
+  lu.assertEquals(p.maxHp, 4)
+  lu.assertEquals(p.hp, 4)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 0)
+  inRoom(function() p:revealGeneral(false) end)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 0)
+  inRoom(function() p:revealGeneral(true) end)
+  lu.assertEquals(p:getMark("@!!yinyangfish"), 2)
+  lu.assertEquals(p:getMark("HalfMaxHpLeft"), 0)
+end
+
 function Testqiao_wei_pair_hp:testOpeningHalfUnitsAndBothYingqiVersions()
   local P = pairHp()
   -- 身份/来源接线：两版司马懿引用同一个应期技能 ID，晋不另设骨架或识别项。

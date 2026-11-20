@@ -223,7 +223,7 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   local bothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
     and player.deputyGeneral ~= ""
-  local newPairHalf = PairHp.half_hp(newMain, deputy)
+  local fish = PairHp.half_left(newMain, deputy)
   -- 上游待领标记 >0 表示本次双亮从未发过；已归零表示已领取或已花掉。
   local yinyangEligible = player:getMark(M.YINYANG_MARK) == 0
   local companionEligible = player:getMark(M.COMPANION_MARK) == 0
@@ -236,10 +236,10 @@ function M.ascend(room, player, newMain, kingdom, options)
         room:setPlayerMark(player, M.COMPANION_MARK, 1)
         H.addHegMark(player, "companion")
       end
-      if newPairHalf ~= nil and newPairHalf % 2 == 1
+      if fish > 0
         and player:getMark(M.YINYANG_MARK) == 0 and yinyangEligible then
         room:setPlayerMark(player, M.YINYANG_MARK, 1)
-        H.addHegMark(player, "yinyangfish")
+        H.addHegMark(player, "yinyangfish", fish)
       end
       -- 已在本升变处理过奖励，清掉上游待领标记，避免下一次 reveal 再领一次。
       room:setPlayerMark(player, "HalfMaxHpLeft", 0)

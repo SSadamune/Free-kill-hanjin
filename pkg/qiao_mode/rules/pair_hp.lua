@@ -119,20 +119,26 @@ function M.half_hp(main, deputy)
   return base + M.yinyang(main, deputy)
 end
 
---- 组合体力上限（向下取整）。
+local function doubleHeavyPair(main, deputy)
+  return position_half(main, "mainMaxHpAdjustedValue") == 5
+    and position_half(deputy, "deputyMaxHpAdjustedValue") == 5
+end
+
+--- 组合体力上限。双 2.5 贡献组合保留一格给双亮时的两枚阴阳鱼。
 ---@param main string
 ---@param deputy string
 ---@return integer?
 function M.max_hp(main, deputy)
   local total = M.half_hp(main, deputy)
-  return total and total // 2 or nil
+  return total and total // 2 - (doubleHeavyPair(main, deputy) and 1 or 0) or nil
 end
 
---- 组合的奇偶余数（HalfMaxHpLeft 标记值）。
+--- 双亮待领的阴阳鱼数量，通常为余下的半格，双 2.5 组合为两枚。
 ---@param main string
 ---@param deputy string
 ---@return integer
 function M.half_left(main, deputy)
+  if doubleHeavyPair(main, deputy) then return 2 end
   local total = M.half_hp(main, deputy)
   return total and total % 2 or 0
 end
@@ -158,22 +164,21 @@ function M.actual_deputy(player)
 end
 
 --- 开局接线：引擎先按“主将贡献 + 副将贡献 // 2”写入 maxHp / hp / 余数标记，
---- 这里再把应期的 2 个半格补上。只增加、不减少；重复调用幂等。
+--- 这里再应用应期半格修正或双 2.5 组合的上限与待领奖励。
 ---@param room Room
 ---@param player ServerPlayer
 ---@return boolean @ 是否实际调整了体力上限
 function M.apply_start(room, player)
   local main, deputy = M.actual_main(player), M.actual_deputy(player)
   if main == nil or deputy == nil then return false end
-  if M.yinyang(main, deputy) == 0 then return false end
-  local total = M.half_hp(main, deputy)
-  if total == nil then return false end
-  local desired = total // 2
+  if M.yinyang(main, deputy) == 0 and not doubleHeavyPair(main, deputy) then return false end
+  local desired = M.max_hp(main, deputy)
+  if desired == nil then return false end
   local delta = desired - player.maxHp
-  if delta <= 0 then return false end
+  room:setPlayerMark(player, "HalfMaxHpLeft", M.half_left(main, deputy))
+  if delta == 0 then return false end
   room:setPlayerProperty(player, "maxHp", desired)
   room:setPlayerProperty(player, "hp", math.min(player.hp + delta, desired))
-  room:setPlayerMark(player, "HalfMaxHpLeft", total % 2)
   return true
 end
 
