@@ -76,11 +76,9 @@ skill:addEffect(fk.EventPhaseStart, {
     end
 
     local hand = player:getCardIds("h")
-    local cards = room:askToChooseCards(player, {
-      target = player,
-      flag = "h",
-      min = 0,
-      max = #hand,
+    local cards = room:askToCards(player, {
+      min_num = 0,
+      max_num = #hand,
       skill_name = skill.name,
       prompt = "#qiao__skill_jin010_1-cards:" .. target.id,
       cancelable = false,

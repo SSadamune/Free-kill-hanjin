@@ -37,30 +37,26 @@ skill:addEffect(fk.TargetConfirmed, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han001_1-invoke",
-    }) then
-      return false
-    end
-
     local legal = discardableHand(player)
     local count = math.min(2, #legal)
-    local chosen = {}
-    if count > 0 then
-      if #legal == count then
-        chosen = legal
-      else
-        chosen = room:askToDiscard(player, {
-          min_num = count,
-          max_num = count,
-          include_equip = false,
-          skill_name = skill.name,
-          prompt = "#qiao__skill_han001_1-discard:::" .. count,
-          cancelable = false,
-          skip = true,
-        })
-      end
+    local chosen
+    if #legal == count then
+      if not room:askToSkillInvoke(player, {
+        skill_name = skill.name,
+        prompt = "#qiao__skill_han001_1-invoke",
+      }) then return false end
+      chosen = legal
+    else
+      chosen = room:askToDiscard(player, {
+        min_num = count,
+        max_num = count,
+        include_equip = false,
+        skill_name = skill.name,
+        prompt = "#qiao__skill_han001_1-discard:::" .. count,
+        cancelable = true,
+        skip = true,
+      })
+      if #chosen == 0 then return false end
 
       -- Server-side normalization: only still-owned, non-prohibited hand cards
       -- are moved.  A forged/obsolete reply can neither discard equipment nor
@@ -105,8 +101,7 @@ skill:addTest(function(room, me)
   lu.assertTrue(#hand >= 2)
   local user = room.players[2]
   FkTest.setNextReplies(me, {
-    "1",
-    FkTest.ReplyDiscard({ hand[1], hand[2] }),
+    #hand == 2 and "1" or FkTest.ReplyDiscard({ hand[1], hand[2] }),
     "",
   })
   FkTest.runInRoom(function()

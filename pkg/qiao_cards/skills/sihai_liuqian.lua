@@ -56,6 +56,7 @@ end
 
 skill:addEffect("active", {
   anim_type = "control",
+  card_num = 0,
   target_num = 1,
   can_use = function(self, player)
     return player:hasSkill(skill.name) and treasureId(player) ~= nil

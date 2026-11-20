@@ -5,6 +5,7 @@
 -- 和【五谷丰登】。两张牌共用同一组目标，不能分别重选。
 -- 目标条件使用汉晋显式目标策略：允许自己、允许满血角色；独立的禁止使用、
 -- 禁止指定仍由公共用牌入口复核。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local skill = fk.CreateSkill {
@@ -67,21 +68,15 @@ skill:addEffect(fk.EventPhaseChanging, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han016_2-invoke",
-    }) then
-      return false
-    end
     local targets = candidateTargets(room, player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = #targets,
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_han016_2-targets",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_han016_2-invoke",
     })
     if chosen == nil or #chosen == 0 then return false end
     event:setCostData(self, { tos = chosen })

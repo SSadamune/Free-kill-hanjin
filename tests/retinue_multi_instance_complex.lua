@@ -125,7 +125,7 @@ function Testqiao_retinue_multi_instance_complex:testTwoJinfanInstancesUseRedInd
       end
       discarded = discarded + 1
       local id = discarded == 1 and red1.id or red2.id
-      FkTest.room:throwCard({ id }, "qiao__retinue_skill_jinfanjun", who, who)
+      lu.assertTrue(params.skip)
       return { id }
     end,
   }, function()

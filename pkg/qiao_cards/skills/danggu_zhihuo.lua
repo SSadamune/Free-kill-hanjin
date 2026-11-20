@@ -87,19 +87,12 @@ skill:addEffect(fk.TargetConfirmed, {
     local room = Fk:currentRoom()
     local user = data.from
     if user == nil or user.dead then return end
-    if not room:askToSkillInvoke(target, {
+    local card = room:askToCards(target, {
+      include_equip = true, min_num = 1, max_num = 1, cancelable = true,
       skill_name = skill.name,
       prompt = "#qiao__danggu_zhihuo-give",
-    }) then
-      return
-    end
-    local card = room:askToChooseCard(target, {
-      target = target,
-      flag = "he",
-      skill_name = skill.name,
-      prompt = "#qiao__danggu_zhihuo-choose",
-    })
-    if card == nil or room:getCardOwner(card) ~= target then return end
+    })[1]
+    if card == nil or not table.contains(target:getCardIds("he"), card) then return end
     room:obtainCard(user, card, true, fk.ReasonGive, target)
     -- 只有本次实际交给用牌者，才令此牌仅对该目标无效。
     if room:getCardOwner(card) ~= user then return end
@@ -152,7 +145,6 @@ Fk:loadTranslationTable {
   [skill.name] = "党锢之祸",
   ["#qiao__danggu_zhihuo_skill"] = "党锢之祸：暗置每名其他角色一张武将牌",
   ["#qiao__danggu_zhihuo-give"] = "党锢之祸：你可以交给使用者一张手牌或装备，令此牌对你无效",
-  ["#qiao__danggu_zhihuo-choose"] = "党锢之祸：选择交给使用者的一张牌",
 }
 
 return skill

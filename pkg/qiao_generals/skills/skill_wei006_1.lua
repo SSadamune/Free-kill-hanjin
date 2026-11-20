@@ -9,6 +9,7 @@
 -- 只在目标自己的 TurnEnd 由房间级延迟技能回收；不能在郭嘉回合末被自动清除。
 -- 授予/移除都带来源（轻辎技能名），是衍生技能来源级增删：目标原有的暗将
 -- 神速或之后从其他来源获得的同名技能不会被移除。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local W = require "packages.qiao.pkg.qiao_generals.util.wei_phases"
 
 local skill = fk.CreateSkill {
@@ -69,21 +70,15 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei006_1-invoke",
-    }) then
-      return false
-    end
     local targets = candidates(room, player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei006_1-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_wei006_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

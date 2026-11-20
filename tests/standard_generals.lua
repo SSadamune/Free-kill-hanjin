@@ -372,9 +372,9 @@ function Teststandard_generals:testFormalRoomStartsWithBanSelectionAndHalfHp()
     lu.assertTrue(#Guest.pairKingdoms(room, main, deputy) > 0)
 
     -- 正式开局上限由配将贡献统一计算：引擎默认组合 + 应期等☯️修正。
-    local total = PairHp.half_hp(main, deputy)
-    lu.assertEquals(player.maxHp, total // 2)
-    lu.assertEquals(player:getMark("HalfMaxHpLeft"), total % 2)
+    local pair = main .. " / " .. deputy
+    lu.assertEquals(player.maxHp, PairHp.max_hp(main, deputy, room), pair)
+    lu.assertEquals(player:getMark("HalfMaxHpLeft"), PairHp.half_left(main, deputy, room), pair)
   end
 end
 

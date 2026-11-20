@@ -44,57 +44,39 @@ local function duelTargets(room, gained)
   return ret
 end
 
---- 至少存在一组“得到过牌的角色 + 另一名角色”。
----@param player ServerPlayer
----@return boolean
-local function hasLegalPair(player)
-  for _, gained in ipairs(gainedTargets(player)) do
-    if #duelTargets(player.room, gained) > 0 then return true end
-  end
-  return false
-end
+local SELECT = "#qiao__skill_han006_2_select"
+
+skill:addAuxActiveSkill(SELECT, {
+  card_num = 0,
+  target_num = 2,
+  target_filter = function(self, player, to_select, selected)
+    if to_select.dead or to_select:isRemoved() then return false end
+    if #selected == 0 then return table.contains(self._extra_data.gained, to_select.id) end
+    return #selected == 1 and to_select ~= selected[1]
+  end,
+})
 
 skill:addEffect(fk.EventPhaseEnd, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     return target == player and player:hasSkill(skill.name)
       and data.phase == Player.Play and not player.dead
-      and hasLegalPair(player)
+      and #gainedTargets(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han006_2-invoke",
-    }) then
-      return false
-    end
-
     local gainedList = gainedTargets(player)
     if #gainedList == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
-      min_num = 1,
-      max_num = 1,
-      targets = gainedList,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han006_2-gained",
-      cancelable = false,
-    })
-    local gained = chosen and chosen[1]
-    if not alive(gained) then return false end
-
-    local others = duelTargets(room, gained)
-    if #others == 0 then return false end
-    local second = room:askToChoosePlayers(player, {
-      min_num = 1,
-      max_num = 1,
-      targets = others,
-      skill_name = skill.name,
+    local ok, ret = room:askToUseActiveSkill(player, {
+      skill_name = SELECT,
       prompt = "#qiao__skill_han006_2-target",
-      cancelable = false,
+      cancelable = true,
+      extra_data = { skillName = skill.name, gained = table.map(gainedList, Util.IdMapper) },
     })
-    local to = second and second[1]
-    if not alive(to) or player.dead then return false end
+    local targets = ok and ret and ret.targets or {}
+    local gained, to = targets[1], targets[2]
+    if #targets ~= 2 or not table.contains(gainedList, gained)
+      or not table.contains(duelTargets(room, gained), to) or player.dead then return false end
 
     event:setCostData(self, { gained = gained, to = to })
     return true
@@ -115,9 +97,7 @@ skill:addEffect(fk.EventPhaseEnd, {
 Fk:loadTranslationTable {
   ["qiao__skill_han006_2"] = "定著",
   [":qiao__skill_han006_2"] = "副将技（☯️-1），出牌阶段结束时，你可以选择一名本回合得到过牌的其他角色，其视为对由你指定的另一名角色使用一张【决斗】。",
-  ["#qiao__skill_han006_2-invoke"] = "定著：你可以令一名本回合得到过牌的角色视为使用一张【决斗】",
-  ["#qiao__skill_han006_2-gained"] = "定著：选择一名本回合得到过牌的其他角色",
-  ["#qiao__skill_han006_2-target"] = "定著：选择【决斗】的另一名目标",
+  ["#qiao__skill_han006_2-target"] = "定著：依次选择【决斗】的使用者和目标",
 }
 
 skill.qiaoImplemented = true

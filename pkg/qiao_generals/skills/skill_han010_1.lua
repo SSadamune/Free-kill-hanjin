@@ -5,6 +5,7 @@
 -- “得到”直接查询本回合的 GameEvent.MoveCards 历史，按进入手牌区的牌张计数；
 -- 装备区与当前手牌数都不参与条件，暗置/晚获得技能也不漏掉此前得牌。
 -- 拼点对象在 on_cost 中选定并保存，早于 SkillEffect 的明置/技能效果结算。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han010_1",
 }
@@ -38,22 +39,15 @@ skill:addEffect(fk.TurnEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han010_1-invoke",
-    }) then
-      return false
-    end
-
     local targets = pindianTargets(player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_han010_1-pindian",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_han010_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or player.dead or to.dead or to:isRemoved() then return false end

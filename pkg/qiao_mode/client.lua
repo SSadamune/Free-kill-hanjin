@@ -196,6 +196,9 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  -- The native rejoin snapshot may emit fake-skill notifications for active skills.
+  if command == "AddSkill" and data[3] and data[2] == "qiao__skill_han007_1"
+    and isQiaoMode() then return end
   if command == "Ltk.SkillInvoked" and isQiaoMode() then
     data = stripRichText(data)
   end

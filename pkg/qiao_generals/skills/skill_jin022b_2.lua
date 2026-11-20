@@ -19,36 +19,38 @@ skill:addEffect(fk.EventPhaseStart, {
       and #U.farthestInRange(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin022b_2-invoke",
-    })
+    local room = player.room
+    local candidates = U.farthestInRange(player)
+    local to, id
+    if #candidates == 1 then
+      to = candidates[1]
+      id = room:askToCards(player, {
+        min_num = 1, max_num = 1, cancelable = true,
+        skill_name = skill.name, prompt = "#qiao__skill_jin022b_2-invoke",
+      })[1]
+    else
+      local targets, cards = room:askToChooseCardsAndPlayers(player, {
+        targets = candidates,
+        min_card_num = 1, max_card_num = 1,
+        min_num = 1, max_num = 1,
+        pattern = ".|.|.|hand",
+        skill_name = skill.name, prompt = "#qiao__skill_jin022b_2-invoke",
+        cancelable = true,
+      })
+      to, id = targets and targets[1], cards and cards[1]
+    end
+    if not table.contains(candidates, to) or not table.contains(player:getCardIds("h"), id) then
+      return false
+    end
+    event:setCostData(self, { tos = { to }, cards = { id } })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local id = room:askToChooseCard(player, {
-      target = player,
-      flag = "h",
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin022b_2-card",
-    })
-    if id == nil or id == -1 or not table.contains(player:getCardIds("h"), id) then return end
-
-    local candidates = U.farthestInRange(player)
-    if #candidates == 0 then return end
-    local to = candidates[1]
-    if #candidates > 1 then
-      local chosen = room:askToChoosePlayers(player, {
-        targets = candidates,
-        min_num = 1,
-        max_num = 1,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin022b_2-target",
-      })
-      to = chosen and chosen[1] or nil
-    end
-    if to == nil or to.dead or not player:inMyAttackRange(to) then return end
-
+    local cost = event:getCostData(self)
+    local to, id = cost.tos[1], cost.cards[1]
+    if not table.contains(U.farthestInRange(player), to)
+      or not table.contains(player:getCardIds("h"), id) then return end
     local card = Fk:cloneCard("qiao__chasing_near")
     if card == nil then return end
     card.skillName = skill.name
@@ -71,8 +73,6 @@ skill:addEffect(fk.EventPhaseStart, {
 Fk:loadTranslationTable {
   ["qiao__skill_jin022b_2"] = "勤边",
   ["#qiao__skill_jin022b_2-invoke"] = "勤边：结束阶段，将一张手牌当【逐近弃远】对攻击范围内最远角色使用",
-  ["#qiao__skill_jin022b_2-card"] = "勤边：选择一张手牌",
-  ["#qiao__skill_jin022b_2-target"] = "勤边：选择攻击范围内距离最远的一名角色",
 }
 
 return skill

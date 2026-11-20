@@ -49,7 +49,7 @@ end
 
 -- Run the registered client selector with the live server's request data and
 -- return the reply produced by its confirm button.
-function M.confirmCards(room, player, params, ids)
+function M.confirmSelection(room, player, params, ids, targets, inspect)
   local reply
   M.run(room, function(clients)
     local board = assert(Fk:getBoardGame(room:getSettings("gameMode")))
@@ -64,14 +64,18 @@ function M.confirmCards(room, player, params, ids)
       if command == "ReplyToServer" then reply = data end
     end
     local ok, err = pcall(function()
-      assert(params.skill_name == "choose_cards_skill")
       handler:setup()
+      if inspect then inspect(handler) end
       lu.assertFalse(handler:feasible())
       for _, id in ipairs(ids) do
         lu.assertTrue(handler:cardValidity(id))
         handler:selectCard(id, { selected = true })
       end
       lu.assertEquals(handler.selected_targets, {})
+      for _, target in ipairs(targets or {}) do
+        lu.assertTrue(handler:targetValidity(target.id))
+        handler:selectTarget(target.id, { selected = true })
+      end
       lu.assertTrue(handler:feasible())
       handler:doOKButton()
       handler:_finish()
@@ -80,6 +84,11 @@ function M.confirmCards(room, player, params, ids)
     if not ok then error(err, 0) end
   end)
   return assert(reply, "card selection did not generate a reply")
+end
+
+function M.confirmCards(room, player, params, ids)
+  assert(params.skill_name == "choose_cards_skill")
+  return M.confirmSelection(room, player, params, ids)
 end
 
 return M

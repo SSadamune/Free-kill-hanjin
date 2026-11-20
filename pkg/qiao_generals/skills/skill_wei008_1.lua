@@ -9,6 +9,7 @@
 -- 每执行一项视为使用一张无距离限制的【杀】，不计通常出杀次数。
 -- 已被跳过的阶段不会触发 EventPhaseChanging；判定项还要求摸牌阶段尚未被
 -- 跳过，避免再次消耗。阶段跳过统一走 canSkip/skip。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local skill = fk.CreateSkill {
@@ -68,12 +69,6 @@ skill:addEffect(fk.EventPhaseChanging, {
     local room = player.room
     local prompt = PHASE_PROMPT[data.phase]
     if prompt == nil then return false end
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = prompt,
-    }) then
-      return false
-    end
     local targets = slashTargets(room, player)
     if #targets == 0 then return false end
     local slack = Fk:cloneCard(SLASH)
@@ -81,11 +76,12 @@ skill:addEffect(fk.EventPhaseChanging, {
     if maxNum < 1 then return false end
 
     if data.phase == Player.Judge then
-      local tos = room:askToChoosePlayers(player, {
+      local tos = Invoke.ask(room, player, {
         targets = targets,
         min_num = 1,
         max_num = math.min(maxNum, #targets),
         prompt = "#qiao__skill_wei008_1-judge",
+        invoke_prompt = prompt,
         skill_name = skill.name,
         cancelable = true,
       })
@@ -109,11 +105,12 @@ skill:addEffect(fk.EventPhaseChanging, {
       event:setCostData(self, { tos = tos, cards = cards })
       return true
     elseif data.phase == Player.Discard then
-      local tos = room:askToChoosePlayers(player, {
+      local tos = Invoke.ask(room, player, {
         targets = targets,
         min_num = 1,
         max_num = math.min(maxNum, #targets),
         prompt = "#qiao__skill_wei008_1-discard",
+        invoke_prompt = prompt,
         skill_name = skill.name,
         cancelable = true,
       })

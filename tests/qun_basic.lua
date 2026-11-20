@@ -164,13 +164,12 @@ function Testqiao_qun_basic:testChuliTwoCandidatesSpadeDraws()
   setPlayPhase(p1)
 
   local picks = {}
-  picks[p1.id] = { mine }
   picks[p3.id] = { spade }
   picks[p5.id] = { heart }
   withStubs(CHULI, {
     askToChooseCard = function(_, params) return picks[params.target.id] end,
   }, function()
-    runActiveSkill(p1, CHULI, { p3.id, p5.id })
+    runActiveSkill(p1, CHULI, { p3.id, p5.id }, { mine })
   end)
 
   lu.assertEquals(p1:getHandcardNum(), 0) -- 自己弃置后不摸
@@ -530,7 +529,7 @@ function Testqiao_qun_basic:testSijianLastHandcardDiscardsOtherCard()
   local invoked = 0
   withStubs(SIJIAN, {
     askToSkillInvoke = function() invoked = invoked + 1; return true end,
-    askToChoosePlayers = function() return { p2 } end,
+    askToChoosePlayers = function() invoked = invoked + 1; return { p2 } end,
     askToChooseCard = function() return { victim } end,
   }, function()
     inRoom(function() room():throwCard({ mine }, "test", p1, p1) end)

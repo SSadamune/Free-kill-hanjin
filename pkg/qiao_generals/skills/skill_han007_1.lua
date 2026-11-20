@@ -39,7 +39,8 @@ main.anim_type = "drawcard"
 main.max_phase_use_time = 1
 main.can_use = function(self, player)
   -- 自定义 can_use 时须自行检查次数；额外发动使用 AUX，不经过这里。
-  return self:withinTimesLimit(player, Player.HistoryPhase) and M.canForm13(player)
+  return player.phase == Player.Play
+    and self:withinTimesLimit(player, Player.HistoryPhase) and M.canForm13(player)
 end
 main.on_use = function(self, room, effect)
   M.perform(room, effect.from, effect.cards, skill.name)
@@ -55,16 +56,6 @@ skill:addAuxActiveSkill(AUX, aux)
 skill:addEffect("maxcards", {
   exclude_from = function(self, player, card)
     return card:getMark(M.markName(player)) > 0
-  end,
-})
-
-skill:addEffect(fk.AfterCardsMove, {
-  global = true,
-  can_refresh = function(self, event, target, player)
-    return player == player.room.players[1]
-  end,
-  on_refresh = function(self, event, target, player, data)
-    M.refreshDisplay(player.room, data)
   end,
 })
 

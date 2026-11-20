@@ -11,6 +11,8 @@ local ReqUseCard = require "ltk.core.request_type.use_card"
 local BZ = "qiao__retinue_skill_bingzhou_langqi"
 local HW = "qiao__retinue_skill_huweijun"
 local NJ = "qiao__retinue_skill_niujin"
+local WUSHENG = "qiao__skill_shu002_1"
+local XUEHAI = "qiao__xuehai_mowangzun_skill"
 local AUX = "choose_players_to_move_card_in_board"
 
 -- p1/p2 魏（发动者与回合结束的同势力目标），p3 群为击杀敌人，
@@ -294,7 +296,8 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
   local room = FkTest.room
   grant(p1(), NJ)
   lu.assertTrue(p1():hasSkill(NJ))
-  local slash = setHand(room, p1(), { { "qiao__slash" } })[1]
+  grant(p1(), WUSHENG)
+  local slashMaterial = setHand(room, p1(), { { "qiao__jink", Card.Diamond, 8 } })[1]
   addEquip(room, p1(), "qiao__qinggang_sword", Card.Spade, 2)
   setHand(room, p2(), {})
   setHand(room, p3(), {})
@@ -307,10 +310,8 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
   local reward = { moves = 0, cards = 0 }
   installMoveProbe(room, reward)
   FkTest.setNextReplies(p1(), {
-    "1",
-    { "basic" },
-    FkTest.ReplyCard(Fk:getCardById(slash), { p3() }),
-    { "Cancel" },
+    FkTest.ReplyUseSkill(WUSHENG, { p3() }, { slashMaterial }),
+    "",
   })
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
@@ -345,21 +346,13 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
 
   local captured
   skill_test.withSkillRequests(room, NJ, {
-    askToChoices = function(self, player, params, original)
-      lu.assertTrue(table.contains(params.choices, "Cancel"))
-      lu.assertFalse(table.contains(params.choices, "#qiao__retinue_skill_niujin-stop"))
-      return original(self, player, params)
-    end,
     askToUseCard = function(self, player, params, original)
       captured = params
       return original(self, player, params)
     end,
   }, function()
     FkTest.setNextReplies(p1(), {
-      "1",
-      { "basic" },
       FkTest.ReplyCard(Fk:getCardById(jink), {}),
-      { "Cancel" },
     })
     inRoom(function()
       room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
@@ -373,6 +366,7 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
     "效果内用牌仍应绕过通常次数")
   lu.assertTrue(captured.extra_data.extraUse == true,
     "效果内用牌仍不应占通常次数")
+  lu.assertEquals(p1():usedSkillTimes(NJ, Player.HistoryGame), 0)
   lu.assertTrue(table.contains(p1():getCardIds("h"), jink),
     "服务端应拒绝注入的【闪】，牌留在手牌")
   lu.assertNil(table.find(uses, function(use) return use.name == "qiao__jink" end),
@@ -390,6 +384,62 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
     lu.assertTrue(handler:cardValidity(slash), "客户端仍应允许合法基本牌")
     handler:_finish()
   end)
+end
+
+function Testqiao_wei_retinues:testNiujinSelectsRemainingCategoriesThroughOrdinaryUseRequests()
+  local room, player = FkTest.room, p1()
+  grant(player, NJ)
+  grant(player, WUSHENG)
+  local ids = setHand(room, player, {
+    { "qiao__jink", Card.Spade, 3 },
+    { "qiao__befriend_attacking", Card.Diamond, 2 },
+    { "qiao__eight_diagram", Card.Spade, 4 },
+    { "qiao__slash", Card.Heart, 7 },
+  })
+  addEquip(room, player, "qiao__xuehai_mowangzun")
+  local prompts = {}
+  local uses = {}
+  installUseProbe(room, uses)
+  skill_test.withSkillRequests(room, NJ, {
+    askToUseCard = function(self, who, params, original)
+      table.insert(prompts, params.prompt)
+      withClientRoom(room, function(clients)
+        local me = clients[1]
+        local handler = ReqUseCard:new(me, { NJ, params.pattern, params.prompt, true, params.extra_data })
+        local prior = ClientInstance.current_request_handler
+        ClientInstance.current_request_handler = handler
+        handler:setup()
+        local basicAvailable = #prompts == 1
+        lu.assertEquals(handler:skillButtonValidity(WUSHENG), basicAvailable)
+        lu.assertEquals(handler:skillButtonValidity(XUEHAI), basicAvailable)
+        lu.assertEquals(handler:cardValidity(ids[4]), basicAvailable)
+        lu.assertEquals(handler:cardValidity(ids[2]), #prompts <= 2)
+        lu.assertTrue(handler:cardValidity(ids[3]))
+        handler:_finish()
+        ClientInstance.current_request_handler = prior
+      end)
+      return original(self, who, params)
+    end,
+  }, function()
+    -- 只让装备者实际打出黑桃。酒的转换请求之后才询问下一类别。
+    FkTest.setNextReplies(player, {
+      FkTest.ReplyUseSkill(XUEHAI, { player }),
+      FkTest.ReplyCard(Fk:getCardById(ids[1])),
+      FkTest.ReplyCard(Fk:getCardById(ids[2]), { p3() }),
+      FkTest.ReplyCard(Fk:getCardById(ids[3]), { player }),
+    })
+    inRoom(function()
+      room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
+    end)
+  end)
+  lu.assertEquals(#prompts, 3)
+  lu.assertStrContains(prompts[1], "基本牌、锦囊牌、装备牌")
+  lu.assertStrContains(prompts[2], "锦囊牌、装备牌")
+  lu.assertStrContains(prompts[3], "装备牌")
+  lu.assertTrue(table.find(uses, function(use) return use.name == "analeptic" end) ~= nil)
+  lu.assertTrue(table.find(uses, function(use) return use.name == "qiao__befriend_attacking" end) ~= nil)
+  lu.assertEquals(room:getCardArea(ids[3]), Card.PlayerEquip)
+  lu.assertEquals(player:usedSkillTimes(NJ, Player.HistoryGame), 1)
 end
 
 -- 选人阶段：真实 ClientPlayer 与客户端房间下，场上无牌的角色不能成为移牌

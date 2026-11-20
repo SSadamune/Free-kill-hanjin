@@ -159,9 +159,8 @@ function Testqiao_han011:testJuebieOtherSameKingdomGetsAllCardsBeforeBury()
   local equip = addEquip(room, p3(), "jueying", Card.Club, 6)
 
   FkTest.setNextReplies(p3(), {
-    "1",
-    { OPT_CARDS },
     FkTest.ReplyChoosePlayer({ p1() }),
+    { OPT_CARDS },
   })
   inRoom(function() room:killPlayer { who = p3(), killer = p2(), extra_data = { ignorePunishment = true } } end)
 
@@ -182,9 +181,8 @@ function Testqiao_han011:testJuebieOwnerDeathAlsoAppliesAndBeneficiaryDrawsThree
   setHand(room, p1(), { { "qiao__slash", Card.Spade, 7 } })
 
   FkTest.setNextReplies(p1(), {
-    "1",
-    { OPT_DRAW },
     FkTest.ReplyChoosePlayer({ p2() }),
+    { OPT_DRAW },
   })
   inRoom(function() room:killPlayer { who = p1(), killer = p2(), extra_data = { ignorePunishment = true } } end)
 

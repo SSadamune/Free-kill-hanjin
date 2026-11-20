@@ -213,7 +213,7 @@ function Testqiao_jin001:testCT01MovesIntoEmptyCorrespondingSlotNotHand()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p2(), "jueying")
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   enterDying(room, p2())
   lu.assertTrue(table.contains(p1():getCardIds("e"), equip))
   lu.assertFalse(table.contains(p2():getCardIds("e"), equip))
@@ -227,7 +227,7 @@ function Testqiao_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   clearAllHands(room)
   installJinDeputy(room)
   local equip = addEquip(room, p2(), "jueying")
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   enterDying(room, p2())
   lu.assertTrue(table.contains(p1():getCardIds("e"), equip))
 
@@ -238,7 +238,8 @@ function Testqiao_jin001:testCT02DeputySourceAndHiddenSourceReveal()
   end)
   lu.assertTrue(p1():isFakeSkill(CT))
   local hiddenEquip = addEquip(room, p2(), "qinggang_sword")
-  FkTest.setNextReplies(p1(), { "1", hiddenEquip })
+  -- 引擎对快速确认的预亮技能还会要求一次明置确认。
+  FkTest.setNextReplies(p1(), { "1", "1" })
   enterDying(room, p2())
   lu.assertEquals(p1().deputyGeneral, "qiao_heg__jin001")
   lu.assertFalse(p1():isFakeSkill(CT))
@@ -293,7 +294,7 @@ function Testqiao_jin001:testCT04DyingEventOffersOnceNotPerPeachRequest()
   -- hp 0 会进入求桃流程；垂统只在 EnterDying 提供一次机会。
   for _, p in ipairs(room.players) do FkTest.setNextReplies(p, { "" }) end
   FkTest.cleanNextReplies(p1())
-  FkTest.setNextReplies(p1(), { "1", equip })
+  FkTest.setNextReplies(p1(), { "1" })
   inRoom(function()
     p2().hp = 0
     room:enterDying { who = p2() }
@@ -452,24 +453,23 @@ function Testqiao_jin001:testXT05PeachFromHandUsesRealCardAndHealsOther()
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
-function Testqiao_jin001:testXT06PeachFromEquipmentOnUnwoundedTargetStillOneUse()
+function Testqiao_jin001:testXT06PeachFromEquipmentRejectsFullHpTarget()
   local room = FkTest.room
   clearAllHands(room)
   local equip = addEquip(room, p1(), "jueying")
   inRoom(function() p2().hp = p2().maxHp end)
   turnStart(room, p2())
   useAdaptation(room, p2(), p3())
+  inRoom(function() p3().hp = p3().maxHp - 1 end)
   local uses = {}
   installUseProbe(room, uses)
   FkTest.setNextReplies(p1(), {
     { OPTION_EQUIP }, FkTest.ReplyUseSkill(AUX, { p2() }, { equip }),
   })
   turnEnd(room, p2())
-  lu.assertEquals(#uses, 1)
-  lu.assertIs(uses[1].tos[1], p2())
-  lu.assertEquals(uses[1].card.subcards, { equip })
+  lu.assertEquals(#uses, 0)
   lu.assertEquals(p2().hp, p2().maxHp)
-  lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
   lu.assertEquals(p1():usedSkillTimes(XT, Player.HistoryGame), 1)
 end
 
@@ -548,6 +548,7 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
   FkTest.setRoomBreakpoint(p1(), "AskForUseActiveSkill", function(data)
     return type(data) == "table" and data[1] == AUX
   end)
+  inRoom(function() room:setPlayerProperty(p2(), "hp", p2().maxHp - 1) end)
   turnEnd(room, p2())
   FkTest.runInClient(function()
     local handler = ClientInstance.current_request_handler
@@ -555,6 +556,7 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
     lu.assertEquals(handler.class.name, "QiaoActiveSkill")
     lu.assertEquals(handler.class.super.name, "ReqActiveSkill")
     lu.assertEquals(handler.skill_name, AUX)
+    lu.assertFalse(handler:targetValidity(p1().id), "满体力角色不可选")
     local me = handler.player
     lu.assertEquals(me.class.name, "ClientPlayer")
     lu.assertNil(me.room)
@@ -564,7 +566,9 @@ function Testqiao_jin001:testXT09RealClientPlayerSelectsEquipmentAndTarget()
     me.player_cards[Player.Hand] = { equip }
     lu.assertTrue(handler:cardValidity(equip))
     lu.assertFalse(handler:cardValidity(nonEquip))
-    lu.assertTrue(handler:targetValidity(me.id))
+    local wounded = Fk:currentRoom():getPlayerById(p2().id)
+    wounded.hp = wounded.maxHp - 1 -- 同一测试客户端夹具手动同步目标体力。
+    lu.assertTrue(handler:targetValidity(wounded.id))
   end)
   FkTest.resumeRoom()
 end

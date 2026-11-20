@@ -113,4 +113,36 @@ function Testqiao_card_resolution:testToCardCancellationRemainsSingleEffect()
   lu.assertEquals(uses[1].additionalEffect, 1)
 end
 
+function Testqiao_card_resolution:testFireAttackShowsOnlyHandCardAndKeepsDiscardOptional()
+  local room = FkTest.room
+  local from, to = room.players[1], room.players[2]
+  local showRequests, discardRequests, shown = 0, 0
+  FkTest.runInRoom(function()
+    room:throwCard(to:getCardIds("h"), "test", to, to)
+    local only = room:printCard("qiao__jink", Card.Heart, 2)
+    room:obtainCard(to, only)
+    room:obtainCard(from, room:printCard("qiao__jink", Card.Heart, 3))
+    local ask, show = room.askToUseActiveSkill, room.showCards
+    function room:askToUseActiveSkill(player, params)
+      if params.skill_name == "choose_cards_skill" and params.extra_data.skillName == "fire_attack_skill" then
+        showRequests = showRequests + 1
+      elseif params.skill_name == "discard_skill" and params.extra_data.skillName == "fire_attack_skill" then
+        discardRequests = discardRequests + 1
+        lu.assertTrue(params.cancelable)
+      end
+      return ask(self, player, params)
+    end
+    function room:showCards(ids, player, ...)
+      if player == to then shown = Card:getIdList(ids)[1] end
+      return show(self, ids, player, ...)
+    end
+    local hp = to.hp
+    room:useCard { from = from, tos = { to }, card = Fk:cloneCard("qiao__fire_attack") }
+    lu.assertEquals(shown, only.id)
+    lu.assertEquals(to.hp, hp)
+    lu.assertEquals(showRequests, 0)
+    lu.assertEquals(discardRequests, 1)
+  end)
+end
+
 return { name = "qiao_card_resolution" }

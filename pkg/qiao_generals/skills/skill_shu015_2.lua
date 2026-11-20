@@ -13,7 +13,8 @@ skill:addEffect(fk.DamageFinished, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) or data.from ~= player or data.card == nil
-      or data.card.trueName ~= "slash" or data.to == nil or data.to.dead then
+      or data.card.trueName ~= "slash" or data.to == nil or data.to.dead
+      or data.to:isRemoved() or not player:canPindian(data.to) then
       return false
     end
     local current = player.room.logic:getCurrentEvent()
@@ -31,9 +32,9 @@ skill:addEffect(fk.DamageFinished, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     local to = data.to
-    if to == nil or to.dead or not to:canPindian(player) then return end
+    if player.dead or to == nil or to.dead or to:isRemoved() or not player:canPindian(to) then return end
     local pindian = player:pindian({ to }, skill.name)
-    local result = pindian.results and pindian.results[to]
+    local result = pindian and pindian.results and pindian.results[to]
     local winner = result and result.winner
     if winner ~= player then return end
     local cards = to:getCardIds("he")

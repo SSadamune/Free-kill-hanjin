@@ -171,7 +171,6 @@ function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDam
   inRoom(function() room:addSkill(probe) end)
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ FkTest.room.players[4] }),
   })
   FkTest.setNextReplies(p2(), { "" })

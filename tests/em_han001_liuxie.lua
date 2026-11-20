@@ -118,22 +118,26 @@ function Testqiao_em_han001_liuxie:testZhuanpengPayBranchNullifiesRealSlash()
     room:obtainCard(lord, pay, false, fk.ReasonJustMove)
     lord.hp = lord.maxHp
   end)
-  local invoke = false
+  local paymentRequests, invokeRequests = 0, 0
   skill_test.withSkillRequests(room, P.ZHUANPENG, {
     askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == P.ZHUANPENG then invoke = true return true end
-      return original(self, who, params)
+      if params.skill_name ~= P.ZHUANPENG then return original(self, who, params) end
+      invokeRequests = invokeRequests + 1
+      return false
     end,
     askToCards = function(self, who, params, original)
-      if params.skill_name == P.ZHUANPENG then return { pay.id } end
-      return original(self, who, params)
+      if params.skill_name ~= P.ZHUANPENG then return original(self, who, params) end
+      paymentRequests = paymentRequests + 1
+      lu.assertTrue(params.cancelable)
+      return { pay.id }
     end,
   }, function()
     inRoom(function()
       room:useCard { from = attacker, tos = { lord }, card = Fk:getCardById(slash.id) }
     end)
   end)
-  lu.assertTrue(invoke, "转蓬应真实触发")
+  lu.assertEquals(paymentRequests, 1)
+  lu.assertEquals(invokeRequests, 0)
   lu.assertEquals(lord.hp, lord.maxHp, "普通分支付牌后杀应无效")
   lu.assertTrue(table.contains(attacker:getCardIds("he"), pay.id), "应交给使用者一张牌")
 end

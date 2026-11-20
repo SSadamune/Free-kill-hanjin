@@ -55,16 +55,15 @@ skill:addEffect(fk.BeforeCardsMove, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu007_2-invoke",
-    }) then
-      return false
-    end
     local list = candidates(player, data)
     if #list == 0 then return false end
     local chosen = list[1].id
-    if #list > 1 then
+    if #list == 1 then
+      if not room:askToSkillInvoke(player, {
+        skill_name = skill.name,
+        prompt = "#qiao__skill_shu007_2-invoke",
+      }) then return false end
+    else
       local ids = table.map(list, function(entry) return entry.id end)
       local picked = room:askToCards(player, {
         min_num = 1,
@@ -73,7 +72,7 @@ skill:addEffect(fk.BeforeCardsMove, {
         pattern = tostring(Exppattern { id = ids }),
         skill_name = skill.name,
         prompt = "#qiao__skill_shu007_2-card",
-        cancelable = false,
+        cancelable = true,
       })
       if picked == nil or picked[1] == nil then return false end
       chosen = picked[1]

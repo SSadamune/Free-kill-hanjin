@@ -7,8 +7,8 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local function otherPlayers(player)
-  return table.filter(player.room:getPresentPlayers(), function(p)
+local function otherPlayers(room, player)
+  return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
 end
@@ -16,6 +16,7 @@ end
 skill:addEffect("active", {
   anim_type = "masochism",
   prompt = "#qiao__skill_wu004_1-prompt",
+  card_num = 0,
   target_num = 0,
   max_phase_use_time = 1,
   can_use = function(self, player)
@@ -28,26 +29,21 @@ skill:addEffect("active", {
     room:loseHp(player, 1, skill.name)
     if player.dead then return end
 
-    -- 交给一张牌是可选的；没有收牌者或没有牌时只结算失去体力。
-    if #otherPlayers(player) == 0 or #player:getCardIds("he") == 0 then return end
-    local tos = room:askToChoosePlayers(player, {
-      targets = otherPlayers(player),
-      min_num = 1,
-      max_num = 1,
+    -- 失去体力及其触发先结算，再从此时实际拥有的牌和在场角色选择。
+    if #player:getCardIds("he") == 0 then return end
+    local targets = otherPlayers(room, player)
+    if #targets == 0 then return end
+    local tos, cards = room:askToChooseCardsAndPlayers(player, {
+      targets = targets,
+      min_num = 1, max_num = 1,
+      min_card_num = 1, max_card_num = 1,
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu004_1-target",
+      prompt = "#qiao__skill_wu004_1-give",
       cancelable = true,
     })
-    local to = tos and tos[1]
-    if to == nil or to.dead or to:isRemoved() or player.dead then return end
-
-    local card = room:askToChooseCard(player, {
-      target = player,
-      flag = "he",
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu004_1-card",
-    })
-    if card == nil or card == -1 or not table.contains(player:getCardIds("he"), card) then return end
+    local to, card = tos[1], cards[1]
+    if player.dead or to == nil or to.dead or to:isRemoved() or not table.contains(targets, to)
+      or #cards ~= 1 or #tos ~= 1 or not table.contains(player:getCardIds("he"), card) then return end
     room:moveCardTo({ card }, Card.PlayerHand, to, fk.ReasonGive, skill.name, nil, true, player)
   end,
 })
@@ -56,8 +52,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_wu004_1"] = "苦肉",
   [":qiao__skill_wu004_1"] = "出牌阶段限一次，你可以失去1点体力，然后你可以交给一名其他角色一张牌。",
   ["#qiao__skill_wu004_1-prompt"] = "苦肉：失去1点体力，然后可以交给一名其他角色一张牌",
-  ["#qiao__skill_wu004_1-target"] = "苦肉：选择一名其他角色（取消则不交牌）",
-  ["#qiao__skill_wu004_1-card"] = "苦肉：选择交给其的一张牌",
+  ["#qiao__skill_wu004_1-give"] = "苦肉：选择一张牌和一名其他角色（可取消）",
 }
 
 return skill

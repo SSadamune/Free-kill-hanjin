@@ -4,6 +4,7 @@
 -- 当你对其他角色使用的红色牌被其抵消后，你可以对另一名其他角色造成1点伤害。
 -- “被其抵消”限定为牌的目标本人实际抵消；其他角色用【无懈可击】抵消不属于
 -- “其”抵消，不触发。伤害目标排除自己与抵消者。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local S = require "packages.qiao.pkg.qiao_generals.util.cancel_source"
 
 local skill = fk.CreateSkill {
@@ -27,23 +28,17 @@ skill:addEffect(fk.CardEffectCancelledOut, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu005_2-invoke",
-    }) then
-      return false
-    end
     local candidates = table.filter(room:getPresentPlayers(), function(p)
       return p ~= player and p ~= data.to and not p:isRemoved()
     end)
     if #candidates == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = candidates,
       skill_name = skill.name,
       prompt = "#qiao__skill_shu005_2-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_shu005_2-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

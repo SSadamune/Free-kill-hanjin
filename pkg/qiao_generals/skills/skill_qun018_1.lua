@@ -91,11 +91,10 @@ skill:addEffect("active", {
     -- “然后其交给你一张牌”：由目标自己选择一张手牌或装备牌，按公共给牌流程
     -- 移入你的手牌。目标没有牌时不产生此项效果。
     if #target:getCardIds("he") == 0 then return end
-    local picked = room:askToChooseCards(target, {
-      target = target,
-      flag = "he",
-      min = 1,
-      max = 1,
+    local picked = room:askToCards(target, {
+      include_equip = true,
+      min_num = 1,
+      max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun018_1-give:" .. player.id,
       cancelable = false,

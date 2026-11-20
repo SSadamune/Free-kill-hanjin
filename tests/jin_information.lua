@@ -17,7 +17,7 @@ end
 local function prepare(main)
   local room = support.initQiaoRoom()
   inRoom(function()
-    skill_test.installBlankGenerals(room, { "jin", "jin", "wei" })
+    skill_test.installBlankGenerals(room, { "jin", "shu", "wei" })
     for _, q in ipairs(room.players) do
       local ids = q:getCardIds("he")
       if #ids > 0 then
@@ -58,6 +58,7 @@ function Testqiao_jin_information:testZhaoranVisibilityAndLostLastSuit()
   end)
   lu.assertTrue(p:getMark("qiao_jin003_1_open-phase") > 0)
   lu.assertTrue(viewer:cardVisible(heart))
+  lu.assertEquals(p:getMark("@qiao_zhaoran-phase"), " ")
 
   -- 真实弃置最后一张红桃：只识别一次，选择摸一张。
   FkTest.setNextReplies(p, { { "qiao__skill_jin003_1-draw" } })
@@ -65,13 +66,15 @@ function Testqiao_jin_information:testZhaoranVisibilityAndLostLastSuit()
     room:throwCard({ heart }, "test", p, p)
   end)
   lu.assertTrue(table.contains(p:getTableMark("qiao_jin003_1_lost_suits-phase"), Card.Heart))
+  lu.assertEquals(p:getMark("@qiao_zhaoran-phase"), "♥")
 end
 
 function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
   local room = prepare("qiao_heg__jin007")
-  local p, p2, p3 = room.players[1], room.players[2], room.players[3]
+  local p, p2, p3, p4 = table.unpack(room.players, 1, 4)
   local c2 = give(room, p2, { { "jink", Card.Heart, 4 } })[1]
   local c3 = give(room, p3, { { "peach", Card.Heart, 5 } })[1]
+  local c4 = give(room, p4, { { "duel", Card.Spade, 6 } })[1]
   local declarations = {}
   local sendLog = room.sendLog
   room.sendLog = function(self, log)
@@ -81,15 +84,26 @@ function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
     return sendLog(self, log)
   end
 
-  -- 隐藏选两张，再依次声明；最后只展示并获得者一张。
+  give(room, p2, { { "slash", Card.Club, 6 } })
+  give(room, p3, { { "slash", Card.Diamond, 7 } })
+  give(room, p4, { { "slash", Card.Heart, 8 } })
+  local order = {}
+  local ask = room.askToChooseCard
+  room.askToChooseCard = function(self, player, params)
+    if params.skill_name ~= SHIREN then return ask(self, player, params) end
+    lu.assertEquals(#declarations, 0)
+    lu.assertEquals(params.prompt, "#qiao__skill_jin007_1-card:::" .. params.target.seat)
+    table.insert(order, params.target.id)
+    return ask(self, player, params)
+  end
   FkTest.setNextReplies(p, {
-    "1",
-    FkTest.ReplyChoosePlayer({ p2 }), c2,
-    FkTest.ReplyChoosePlayer({ p3 }), c3,
+    FkTest.ReplyChoosePlayer({ p2, p3, p4 }),
+    c2, c3, c4,
     FkTest.ReplyChoosePlayer({ p2 }),
   })
   FkTest.setNextReplies(p2, { { "slash" } })
   FkTest.setNextReplies(p3, { { "peach" } })
+  FkTest.setNextReplies(p4, { { "duel" } })
   FkTest.setRoomBreakpoint(p, "AskForUseActiveSkill", function(data)
     return data[2] == "#qiao__skill_jin007_1-reveal"
   end)
@@ -99,13 +113,14 @@ function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
     room.logic:trigger(fk.EventPhaseStart, p, { phase = Player.Start })
   end)
 
-  lu.assertEquals(#declarations, 2)
+  lu.assertEquals(#declarations, 3)
   lu.assertEquals({ declarations[1].from, declarations[1].arg }, { p2.id, "slash" })
   lu.assertEquals({ declarations[2].from, declarations[2].arg }, { p3.id, "peach" })
   lu.assertNil(declarations[1].card)
   lu.assertNil(declarations[2].card)
   lu.assertFalse(p:cardVisible(c2))
   lu.assertFalse(p:cardVisible(c3))
+  lu.assertFalse(p:cardVisible(c4))
   FkTest.runInClient(function()
     local handler = ClientInstance.current_request_handler
     lu.assertEquals(handler.skill_name, "choose_players_skill")
@@ -115,12 +130,14 @@ function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
     lu.assertEquals(tips:getTargetTip(p.id), {})
   end)
   FkTest.resumeRoom()
-  room.sendLog = sendLog
+  room.sendLog, room.askToChooseCard = sendLog, ask
+  lu.assertEquals(order, { p2.id, p3.id, p4.id })
 
   -- p2 实际为闪、声明杀：不同，获得其余被选择的 p3 牌。
-  lu.assertEquals(#p:getCardIds("h"), 2)
+  lu.assertItemsEquals(p:getCardIds("h"), { c2, c3, c4 })
   lu.assertFalse(table.contains(p2:getCardIds("h"), c2))
   lu.assertFalse(table.contains(p3:getCardIds("h"), c3))
+  lu.assertFalse(table.contains(p4:getCardIds("h"), c4))
 end
 
 return { name = "qiao_jin_information" }

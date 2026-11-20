@@ -167,7 +167,6 @@ function Testqiao_han009:testMoukuiOtherTargetCancelsNoCounter()
   local p3card = setHand(room, p3(), { { "qiao__jink", Card.Heart, 2 } })[1]
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p2() }),
     { OPTION_DRAW, OPTION_DISCARD },
     p2card,

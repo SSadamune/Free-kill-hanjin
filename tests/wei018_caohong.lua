@@ -114,6 +114,7 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
     end,
     askToChooseCard = function(self, who, params, original)
       if params.skill_name ~= HUYUAN then return original(self, who, params) end
+      chosenPlayer = params.target
       chosenCard = params.target:getCardIds("h")[1]
       return chosenCard
     end,

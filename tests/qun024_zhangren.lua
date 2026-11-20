@@ -5,6 +5,7 @@ local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_qun2"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local L = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_longfei"
 local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Sources = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
 
 local function inRoom(fn)
   local result
@@ -50,17 +51,23 @@ function Testqiao_qun024_zhangren:testChuanxinOnlyOffersEnabledRetinues()
     askToChoice = function(_, who, params)
       if who == victim then return "refuse" end
       offered = params.choices
-      return allowed
+      return Sources.skillFor(allowed)
     end,
   }, function()
     inRoom(function() room:damage { from = holder, to = victim, damage = 1, card = Fk:cloneCard("qiao__slash") } end)
   end)
-  lu.assertEquals(offered, { allowed })
+  lu.assertEquals(offered, { Sources.skillFor(allowed) })
   lu.assertEquals(R.count(holder), 1)
   lu.assertTrue(holder:hasSkill("qiao__retinue_skill_xiyuanjun"))
 end
 
 function Testqiao_qun024_zhangren:testChuanxinPublishesOnlyUnusedOrdinaryRetinues()
+  local disabled = {}
+  for name in pairs(C.retinues) do
+    if name:startsWith("qiao_test__") then table.insert(disabled, name) end
+  end
+  support.clearRoom()
+  setupWithSettings { disabledGenerals = disabled }
   local room, holder, victim, existing = FkTest.room, p(1), p(2), p(3)
   local occupied = "qiao_heg__retinue_xiyuanjun"
   local logs, choices = {}, {}
@@ -79,15 +86,20 @@ function Testqiao_qun024_zhangren:testChuanxinPublishesOnlyUnusedOrdinaryRetinue
     askToChoice = function(_, who, params)
       if who == victim then return "refuse" end
       lu.assertEquals(#params.choices, 3)
-      for _, name in ipairs(params.choices) do
+      lu.assertTrue(params.detailed)
+      local reveal = logs[#logs]
+      lu.assertEquals(reveal.type, "#QiaoChuanxinReveal3")
+      local generals = { reveal.arg, reveal.arg2, reveal.arg3 }
+      lu.assertEquals(params.choices, table.map(generals, Sources.skillFor))
+      for _, choice in ipairs(params.choices) do
+        lu.assertNotEquals(Fk:translate(":" .. choice), ":" .. choice)
+      end
+      for _, name in ipairs(generals) do
         lu.assertFalse(C.isLimitedRetinue(name))
         lu.assertNotEquals(name, occupied)
         for _, selected in ipairs(choices) do lu.assertNotEquals(name, selected) end
       end
-      local reveal = logs[#logs]
-      lu.assertEquals(reveal.type, "#QiaoChuanxinReveal3")
-      lu.assertEquals({ reveal.arg, reveal.arg2, reveal.arg3 }, params.choices)
-      table.insert(choices, params.choices[1])
+      table.insert(choices, generals[1])
       return params.choices[1]
     end,
   }, function()

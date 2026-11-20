@@ -35,20 +35,36 @@ skill:addEffect(fk.CardUsing, {
 
 skill:addEffect(fk.TargetConfirmed, {
   can_trigger = function(self, event, target, player, data)
+    local user = data.from
     return target == player and not player.dead and player:hasSkill(skill.name)
+      and user ~= nil and not user.dead
       and data.card ~= nil and data.card.is_damage_card and data:isOnlyTarget(target)
+      and (usedTrick(player.room, player, user.kingdom) or not player:isNude())
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-invoke",
+    local room, user = player.room, data.from
+    if usedTrick(room, player, user.kingdom) then
+      if not room:askToSkillInvoke(player, {
+        skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-invoke",
+      }) then return false end
+      event:setCostData(self, { reversed = true })
+      return true
+    end
+
+    local cards = room:askToCards(player, {
+      min_num = 1, max_num = 1, include_equip = true,
+      skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-pay", cancelable = true,
     })
+    if #cards ~= 1 or not table.contains(player:getCardIds("he"), cards[1]) then return false end
+    event:setCostData(self, { cards = cards })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     local user = data.from
     if user == nil or user.dead then return end
-    local kingdom = user.kingdom
-    if usedTrick(room, player, kingdom) then
+    local cost = event:getCostData(self) or {}
+    if cost.reversed then
       local cards = room:askToCards(user, {
         min_num = 1, max_num = 1, include_equip = true,
         skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-give", cancelable = true,
@@ -59,11 +75,8 @@ skill:addEffect(fk.TargetConfirmed, {
         data:setNullified(player)
       end
     else
-      local cards = room:askToCards(player, {
-        min_num = 1, max_num = 1, include_equip = true,
-        skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-pay", cancelable = true,
-      })
-      if cards == nil or #cards == 0 then return end
+      local cards = cost.cards or {}
+      if #cards ~= 1 or not table.contains(player:getCardIds("he"), cards[1]) then return end
       room:obtainCard(user, cards, true, fk.ReasonGive, player, skill.name)
       data:setNullified(player)
     end

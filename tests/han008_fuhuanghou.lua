@@ -201,7 +201,6 @@ function Testqiao_han008:testChuikongSlashQiuyuanDeathKeepsRemainingTarget()
   FkTest.setNextReplies(p1(), {
     "1",
     FkTest.ReplyChooseCards({ p1card }),
-    "1",
     FkTest.ReplyChoosePlayer({ p3() }),
   })
   FkTest.setNextReplies(p2(), {
@@ -259,7 +258,6 @@ function Testqiao_han008:testQiuyuanAddsPriorityTargetKeepsEventsAndCancelsRest(
   })
 
   FkTest.setNextReplies(p2(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p3() }),
   })
   FkTest.setNextReplies(p3(), {
@@ -311,7 +309,6 @@ function Testqiao_han008:testQiuyuanPriorityTargetDeathKeepsSlashOnRemainingTarg
   })
 
   FkTest.setNextReplies(p2(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p3() }),
   })
   FkTest.setNextReplies(p3(), { "" })

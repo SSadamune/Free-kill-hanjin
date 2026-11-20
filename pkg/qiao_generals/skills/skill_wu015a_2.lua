@@ -5,6 +5,7 @@
 -- 交给该角色，然后获得其余至多三张牌。只处理真实弃置与弃牌堆；牌若已被
 -- 其他同时机效果取走，则不再作为可选候选。同一事件有多名其他角色满足时，
 -- 由张昭选择对应的该名角色，不自动合并或挑数量最多者。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu015a_2",
 }
@@ -70,33 +71,26 @@ skill:addEffect(fk.AfterCardsMove, {
     return #discardEntries(player, data) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local room = player.room
+    local entries = discardEntries(player, data)
+    local chosen = Invoke.ask(room, player, {
+      min_num = 1, max_num = 1,
+      targets = table.map(entries, function(entry) return entry.owner end),
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu015a_2-invoke",
+      prompt = "#qiao__skill_wu015a_2-owner",
+      invoke_prompt = "#qiao__skill_wu015a_2-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { to = chosen[1] })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local entries = discardEntries(player, data)
-    if #entries == 0 then return end
-
-    local entry = entries[1]
-    if #entries > 1 then
-      local owners = table.map(entries, function(e) return e.owner end)
-      local chosen = room:askToChoosePlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        targets = owners,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu015a_2-owner",
-        cancelable = false,
-      })
-      local owner = chosen and chosen[1]
-      if owner == nil then return end
-      for _, e in ipairs(entries) do
-        if e.owner == owner then entry = e break end
-      end
-    end
+    local selected = event:getCostData(self).to
+    local entry = table.find(discardEntries(player, data), function(candidate)
+      return candidate.owner == selected
+    end)
+    if entry == nil then return end
 
     local owner = entry.owner
     local ids = entry.ids

@@ -7,6 +7,7 @@
 -- 分支（不能少弃）；弃牌须足额四张，牌名字数按实际弃置的牌逐张计算。
 -- 国战“叠置/平置”对应引擎的 faceup：平置 faceup=true，叠置 faceup=false；
 -- 使用原生 turnOver，保留翻面事件、跳回合与客户端朝向显示。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wei014_2",
 }
@@ -48,19 +49,13 @@ skill:addEffect(fk.Damaged, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei014_2-invoke",
-    }) then
-      return false
-    end
-    local tos = room:askToChoosePlayers(player, {
+    local tos = Invoke.ask(room, player, {
       targets = otherAlive(player),
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei014_2-choose",
-      cancelable = true,
+      invoke_prompt = "#qiao__skill_wei014_2-invoke",
     })
     local to = tos and tos[1]
     if to == nil or to.dead or to:isRemoved() then return false end

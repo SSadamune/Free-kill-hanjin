@@ -84,6 +84,7 @@ end
 
 skill:addEffect("active", {
   anim_type = "offensive",
+  card_num = 0,
   target_num = 1,
   prompt = "#qiao__retinue_skill_bingzhou_langqi-prompt",
   target_filter = function(self, player, to_select, selected)

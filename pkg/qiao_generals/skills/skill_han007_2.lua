@@ -67,13 +67,6 @@ skill:addEffect(fk.Death, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han007_2-invoke",
-    }) then
-      return false
-    end
-
     local ok, ret = room:askToUseActiveSkill(player, {
       skill_name = ZHUDE_AUX,
       prompt = "#qiao__skill_han007_2-select",

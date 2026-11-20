@@ -57,12 +57,6 @@ skill:addEffect(fk.DamageInflicted, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu011_1-invoke",
-    }) then
-      return false
-    end
     local candidates = legalHeartCards(player)
     if #candidates == 0 then return false end
     local chosen = room:askToCards(player, {
@@ -72,7 +66,7 @@ skill:addEffect(fk.DamageInflicted, {
       pattern = tostring(Exppattern { id = candidates }),
       skill_name = skill.name,
       prompt = "#qiao__skill_wu011_1-discard",
-      cancelable = false,
+      cancelable = true,
     })
     local card = chosen and chosen[1]
     -- 选牌界面只展示合法候选；支付前再次按当前状态核对花色与禁弃。

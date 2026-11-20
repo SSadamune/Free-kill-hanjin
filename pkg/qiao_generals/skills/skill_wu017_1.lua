@@ -16,16 +16,23 @@ skill.qiaoImplemented = true
 
 local ACTIVE_MARK = "qiao__skill_wu017_1_active-phase"
 
----@param target ServerPlayer
----@return integer[]
-local function blackSuitHand(target)
-  return table.filter(target:getCardIds("h"), function(id)
-    local card = Fk:getCardById(id)
-    return card ~= nil and (card.suit == Card.Spade or card.suit == Card.Club)
-  end)
+local DISCARD = "#qiao__skill_wu017_1-confirm-discard"
+local END_CHOICE = "#qiao__skill_wu017_1-end"
+
+local function isBlackSuit(suit)
+  return suit == Card.Spade or suit == Card.Club
 end
 
---- 先由 target 观看发动者手牌，再由发动者观看 target 的暗将和手牌，最后弃牌。
+skill.extra = {
+  choiceFilter = function(cards, choice, extra_data)
+    if choice == END_CHOICE then return true end
+    if choice ~= DISCARD or #cards < 1 or #cards > 2 then return false end
+    local spades = extra_data.spades
+    return #cards == 1 or table.contains(spades, cards[1]) ~= table.contains(spades, cards[2])
+  end,
+}
+
+--- 先由目标看发动者的手牌，再由发动者看目标的暗将并在手牌面板中决定弃牌。
 ---@param player ServerPlayer
 ---@param target ServerPlayer
 local function resolveShangyi(player, target)
@@ -50,38 +57,41 @@ local function resolveShangyi(player, target)
     H.viewGeneral(player, target, skill.name, mainHidden, deputyHidden)
   end
 
-  local theirHand = target:getCardIds("h")
-  if #theirHand > 0 then
-    room:viewCards(player, {
-      cards = theirHand,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu017_1-theirhand:" .. target.id,
-    })
-  end
-
-  local eligible = blackSuitHand(target)
-  if #eligible == 0 then return end
-  local chosen = room:askToChooseCards(player, {
-    target = target,
-    flag = { card_data = { { "可弃置", eligible } } },
-    min = 0,
-    max = math.min(2, #eligible),
-    skill_name = skill.name,
-    prompt = "#qiao__skill_wu017_1-discard:" .. target.id,
-    cancelable = true,
-  }) or {}
-  local seen, discard = {}, {}
-  for _, id in ipairs(chosen) do
-    local card = Fk:getCardById(id)
-    if card ~= nil and table.contains(eligible, id) then
-      local key = card.suit == Card.Spade and "spade" or "club"
-      if not seen[key] then
-        seen[key] = true
-        table.insert(discard, id)
-      end
+  if player.dead or target.dead or target:isRemoved() then return end
+  local hand = target:getCardIds(Player.Hand)
+  if #hand == 0 then return end
+  local candidates, spades = {}, {}
+  for _, id in ipairs(hand) do
+    local suit = Fk:getCardById(id).suit
+    if isBlackSuit(suit) and not target:prohibitDiscard(id) then
+      table.insert(candidates, id)
+      if suit == Card.Spade then table.insert(spades, id) end
     end
   end
-  if #discard > 0 then room:throwCard(discard, skill.name, target, player) end
+
+  local chosen, choice = room:askToChooseCardsAndChoice(player, {
+    cards = candidates,
+    all_cards = hand,
+    choices = { END_CHOICE, DISCARD },
+    min_num = 0, max_num = math.min(2, #candidates),
+    skill_name = skill.name,
+    prompt = "#qiao__skill_wu017_1-discard:" .. target.id,
+    filter_skel_name = skill.name,
+    extra_data = { spades = spades },
+  })
+  if choice ~= DISCARD or not chosen or #chosen < 1 or #chosen > 2
+    or player.dead or target.dead or target:isRemoved() then return end
+
+  local currentHand = target:getCardIds(Player.Hand)
+  local seen = {}
+  for _, id in ipairs(chosen) do
+    if not table.contains(candidates, id) or not table.contains(currentHand, id)
+      or target:prohibitDiscard(id) then return end
+    local suit = Fk:getCardById(id).suit
+    if not isBlackSuit(suit) or seen[suit] then return end
+    seen[suit] = true
+  end
+  room:throwCard(chosen, skill.name, target, player)
 end
 
 skill:addEffect("active", {
@@ -159,8 +169,9 @@ Fk:loadTranslationTable {
     "出牌阶段限一次/当你响应其他角色的牌后，你可以令一名其他角色/其观看你的手牌，然后你观看其所有暗置武将牌和手牌，且你可以弃置其中每种黑色花色的手牌至多各一张。",
   ["#qiao__skill_wu017_1-prompt"] = "尚义：选择一名其他角色观看你的手牌",
   ["#qiao__skill_wu017_1-myhand"] = "尚义：观看 %src 的手牌",
-  ["#qiao__skill_wu017_1-theirhand"] = "尚义：观看 %src 的手牌",
-  ["#qiao__skill_wu017_1-discard"] = "尚义：可弃置 %src 黑桃、梅花手牌各至多一张",
+  ["#qiao__skill_wu017_1-discard"] = "尚义：观看 %src 的手牌，可弃置其中黑桃、梅花各至多一张",
+  [DISCARD] = "弃置",
+  [END_CHOICE] = "结束观看",
   ["#qiao__skill_wu017_1-response"] = "尚义：是否观看其暗置武将牌和手牌？",
 }
 

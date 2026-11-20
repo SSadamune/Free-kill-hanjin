@@ -5,6 +5,7 @@
 -- 自己），可以选择一名角色的一张手牌；本回合该牌对所有角色可见且持有者
 -- 不能使用/打出，其受到伤害后来源获得之。牌离开手牌即清理禁用约束；回合末
 -- 清理公开与限制。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_xiyuanjun",
 }
@@ -92,25 +93,18 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_xiyuanjun-invoke::" .. target.id,
-    }) then
-      return false
-    end
-
     -- 全场有手牌的合法角色均可选，包括敌方角色。
     local candidates = table.filter(room:getPresentPlayers(), function(p)
       return not p.dead and not p:isRemoved() and #p:getCardIds(Player.Hand) > 0
     end)
     if #candidates == 0 then return false end
-    local tos = room:askToChoosePlayers(player, {
+    local tos = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = candidates,
       skill_name = skill.name,
       prompt = "#qiao__retinue_skill_xiyuanjun-target",
-      cancelable = true,
+      invoke_prompt = "#qiao__retinue_skill_xiyuanjun-invoke::" .. target.id,
     })
     local to = tos and tos[1]
     if to == nil then return false end

@@ -46,7 +46,10 @@ function Testqiao_wei_retrial:testRealJudgeCompletesWithRespondedCard()
 
   local oldInvoke, oldAsk = room().askToSkillInvoke, room().askToCards
   room().askToSkillInvoke = function() return true end
-  room().askToCards = function() return { chosen } end
+  room().askToCards = function(self, who, params)
+    lu.assertTrue(params.cancelable)
+    return { chosen }
+  end
 
   local judge = { who = p1, reason = "qiao_test_judge", pattern = "." }
   local ok, err = pcall(function() inRoom(function() room():judge(judge) end) end)

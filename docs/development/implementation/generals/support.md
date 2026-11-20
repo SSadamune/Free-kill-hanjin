@@ -296,7 +296,7 @@
 #### 结姻（WU008 孙尚香）
 
 - **标识与依据**：运行时 ID `qiao__skill_wu008_1`；源码 [skill_wu008_1.lua](../../../../pkg/qiao_generals/skills/skill_wu008_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)吴区 WU008 与[装备置入](../../../rules/equipment-movement.md)。同将枭姬见[本页](#wu008-2)。
-- **实现与接口**：仅展示合法弃牌／空栏置入候选；体力相等无较大／较小收益；装备置入要求空置对应栏；客户端安全房间访问支持无 `room` 字段的真实 `ClientPlayer`。
+- **实现与接口**：用主动技的同一请求选分支、一张自己的牌和目标。选牌与目标相互校验，装备置入要求空置对应栏，体力相等时没有较大／较小收益；客户端安全房间访问支持无 `room` 字段的真实 `ClientPlayer`。
 - **验证依据**：[wu_support.lua](../../../../tests/wu_support.lua) 覆盖结姻置入及代表性真实 `ClientPlayer` 用例（无 `room` 字段下的可用性与候选）；历史 15/15。
 - **未完成与边界**：客户端置入动画与人工交互未验收。
 
@@ -363,7 +363,7 @@
 #### 除疠（QUN001 华佗）
 
 - **标识与依据**：运行时 ID `qiao__skill_qun001_2`；源码 [skill_qun001_2.lua](../../../../pkg/qiao_generals/skills/skill_qun001_2.lua)。规则见[标准武将表](../../../rules/standard-generals.md)群区 QUN001。同将济世见[伤害、体力与死亡](damage.md#qun001-1)。
-- **实现与接口**：出牌阶段限一次，选至多三名**彼此势力不相同**的其他角色，不要求与华佗不同；随后华佗与这些角色各弃一张手牌或装备。全部弃置完成后按实际失去的牌结算，失去黑桃者各摸一张，后弃的黑桃不漏记。
+- **实现与接口**：出牌阶段限一次，同时选定华佗自己将弃置的一张手牌或装备，以及至多三名**彼此势力不相同**的其他角色。之后按结算顺序选择其他目标的牌并执行各次弃置。全部弃置完成后按实际失去的牌结算，失去黑桃者各摸一张，后弃的黑桃不漏记。
 - **验证依据**：已执行 [qun_basic.lua](../../../../tests/qun_basic.lua) 的 `testChuliTwoCandidatesSpadeDraws`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
 - **客户端入口**：按钮计算经 `Fk:currentRoom()` 读取公开存活角色，不读取 `ClientPlayer` 不具备的 `room` 字段。`testChuliClientAvailabilityWithoutPlayerRoom` 使用配套客户端角色／房间走 `ReqPlayCard.setup` 与 `skillButtonValidity`，覆盖合法候选、本人无牌、全场无候选及阶段次数耗尽；已通过自动化回归。
 - **未完成与边界**：候选势力并列、目标无牌、华佗自己无牌等边界未穷举；客户端选人／弃牌未人工验收。
@@ -434,7 +434,7 @@
 #### 通法（JIN004 贾充）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin004_1`；源码 [skill_jin004_1.lua](../../../../pkg/qiao_generals/skills/skill_jin004_1.lua)。规则见[贾充规范](../../../rules/generals/jin004-jiachong.md)与[应变规范](../../../rules/adaptation.md)。同将悖弑见[伤害、体力与死亡](damage.md#jin004-2)。
-- **实现与接口**：全局监听 `fk.AfterCardUseDeclared`，只对同势力实际使用应变牌的角色触发。使用者自己支付一张手牌/装备（`askToDiscard`，已执行）或交给贾充一张（`askToChooseCard`＋`obtainCard`）；随后 `A.grantIgnore` 只给本次 `use` 增加一个“无视一个尚未满足条件”的应变令牌，不把所有条目一起视为成立，也不覆盖已有条目；条目由共享 [jin_adaptation_rule](../../../../pkg/qiao_mode/skills/jin_adaptation_rule.lua) 在结算时读取。`PAID` 写在 `data.extra_data`，同一使用不重复收费。
+- **实现与接口**：全局监听 `fk.AfterCardUseDeclared`，只对同势力实际使用应变牌的角色触发。使用者自己支付一张手牌/装备（`askToDiscard`，已执行）或从手牌区／装备区选择一张交给贾充（可取消的 `askToCards`＋`obtainCard`）。付款选择本身即确认发动；随后 `A.grantIgnore` 只给本次 `use` 增加一个“无视一个尚未满足条件”的应变令牌，不把所有条目一起视为成立，也不覆盖已有条目；条目由共享 [jin_adaptation_rule](../../../../pkg/qiao_mode/skills/jin_adaptation_rule.lua) 在结算时读取。`PAID` 写在 `data.extra_data`，同一使用不重复收费。
 - **验证依据**：[jin_adaptation.lua](../../../../tests/jin_adaptation.lua) 覆盖付费后一个条目触发与延迟 ignore 令牌；应变定向 5/5；公共应变 25/25、`ignore_times` 14/14 属公共机制历史结果，不挪作本技能覆盖，见[共享验证证据](verification-evidence.md#jin-adaptation)。
 - **未完成与边界**：暗置来源明置、多个应变条目同时满足、无法支付与同一使用多次询问未单独验；客户端交互未人工验收。
 
@@ -442,9 +442,9 @@
 #### 识人（JIN007 王元姬）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin007_1`；源码 [skill_jin007_1.lua](../../../../pkg/qiao_generals/skills/skill_jin007_1.lua)。规则见[王元姬规范](../../../rules/generals/jin007-wangyuanji.md)。同将恤下见本页[恤下](#jin007-2)。
-- **实现与接口**：准备阶段选择至多三名其他势力、仍有手牌的角色，逐个以 `askToChooseCard(flag="h")` 隐藏选牌并先固定。各拥有者按行动顺序用 `askToChoice` 声明，战报公布其声明的牌名，最终选择时在各候选角色旁显示对应牌名。声明及比较按通用牌名口径使用 `trueName`。只展示并获得其中一张，仅在该牌与其拥有者声明不符时获得其余已选牌。
+- **实现与接口**：准备阶段一次选择至多三名其他势力且仍有手牌的角色，再逐个以 `askToChooseCard(flag="h")` 固定隐藏手牌。请求显示对应座位号。各拥有者按行动顺序用 `askToChoice` 声明，战报公布其声明的牌名，最终选择时在各候选角色旁显示对应牌名。声明及比较按通用牌名口径使用 `trueName`。只展示并获得其中一张，仅在该牌与其拥有者声明不符时获得其余已选牌。
 - **验证依据**：[jin_information.lua](../../../../tests/jin_information.lua) 覆盖隐藏选牌、声明与只展示一张。2026-11-20 新增断言，核对实际客户端选人请求内的牌名提示和战报数据。与 `jin_resources` 合跑 17/17。
-- **未完成与边界**：取消选择后的部分名单、目标死亡/手牌变化、声明牌名集合与客户端展示未人工验收。
+- **未完成与边界**：选目标后发生的死亡或手牌变化、声明牌名集合与客户端展示未人工验收。
 
 <a id="jin007-2"></a>
 #### 恤下（JIN007 王元姬）
@@ -466,7 +466,7 @@
 #### 权变（JIN009 司马懿）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin009_1`；源码 [skill_jin009_1.lua](../../../../pkg/qiao_generals/skills/skill_jin009_1.lua)。规则见[司马懿规范](../../../rules/generals/jin009-simayi.md)；共享工具 [jin_deck.lua](../../../../pkg/qiao_generals/util/jin_deck.lua)。同将骤霆见[转化与生成用牌](conversion.md#jin009-2)。
-- **实现与接口**：`fk.AfterCardUseDeclared` 按本阶段 `GameEvent.UseCard` 历史判断每种花色的首张真实手牌使用；响应中的实际使用也计入，纯打出不计。发动后把该花色写入 `jin_deck.lua` 的中性 `-phase` 标记；模式规则 [jin_deck_rule](../../../../pkg/qiao_mode/skills/jin_deck_rule.lua) 在真实用牌入口禁止使用该花色手牌，但不禁止打出、不限制非手牌来源，失技后已建立限制保留。
+- **实现与接口**：`fk.AfterCardUseDeclared` 按本阶段 `GameEvent.UseCard` 历史判断每种花色的首张真实手牌使用；响应中的实际使用也计入，纯打出不计。发动后把该花色写入 `jin_deck.lua` 的中性 `-phase` 标记，同时在角色插画用「权变」列出本阶段被禁止使用的手牌花色；模式规则 [jin_deck_rule](../../../../pkg/qiao_mode/skills/jin_deck_rule.lua) 在真实用牌入口禁止使用该花色手牌，但不禁止打出、不限制非手牌来源，失技后已建立限制保留。
 - **验证依据**：[jin_deck.lua](../../../../tests/jin_deck.lua) 覆盖首张红桃后禁手牌不禁响应；3/3（0.787s），见[共享验证证据](verification-evidence.md#jin-deck)。
 - **未完成与边界**：暗置/晚明置、同花色重复获得、客户端禁选显示未人工验收。
 

@@ -240,7 +240,7 @@ function Testqiao_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
   local before = #target:getCardIds("h")
 
   lu.assertTrue(p:hasSkill(XUXIA))
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCards({ hand, equip }) })
+  FkTest.setNextReplies(p, { FkTest.ReplyChooseCards({ hand, equip }) })
   FkTest.setRoomBreakpoint(p, "AskForUseActiveSkill", function(data)
     return data[2] == "#qiao__skill_jin007_2-give::" .. target.id
   end)
@@ -409,7 +409,7 @@ function Testqiao_jin_resources:testFuxinUnusedLimitedGivesCard()
   end)
   lu.assertTrue(holder:hasSkill(FUXIN))
 
-  FkTest.setNextReplies(holder, { "1", own })
+  FkTest.setNextReplies(holder, { "1", FkTest.ReplyChooseCards({ own }) })
   triggerTurnEnd(room, turnPlayer)
 
   -- 摸一张后交给其一张：持有者仍剩一张，当前回合角色得到一张。
@@ -464,7 +464,7 @@ function Testqiao_jin_resources:testFuxinUsedLimitedSlashUsesTurnPlayersRange()
     room:handleUseCardReply(turnPlayer, FkTest.ReplyUseSkill(probeSkel.name, {}, {}))
   end)
 
-  FkTest.setNextReplies(holder, { "1", FkTest.ReplyChoosePlayer({ victim }) })
+  FkTest.setNextReplies(holder, { FkTest.ReplyChoosePlayer({ victim }) })
   triggerTurnEnd(room, turnPlayer)
 
   -- 目标范围锚定当前回合角色（p2），不是翼从持有者；p3 应受到【杀】伤害。
@@ -500,7 +500,7 @@ function Testqiao_jin_resources:testXuxiaRealDarkSourceIsRegisteredAndTriggers()
   end)
   -- TriggerSkill:doCost adds a fake-skill confirmation when the test backend
   -- completes all cost requests in under one second. Keep that real request.
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCards({ hand[1], hand[2] }), "1" })
+  FkTest.setNextReplies(p, { FkTest.ReplyChooseCards({ hand[1], hand[2] }), "1" })
   inRoom(function() room.current = p end)
   damage(room, p3(), target)
 

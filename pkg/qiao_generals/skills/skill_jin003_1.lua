@@ -4,11 +4,14 @@
 -- 出牌阶段开始时发动：本阶段自己的手牌对所有角色持续可见（之后获得的手牌也
 -- 可见）；每种花色首次失去最后的手牌后，可摸一张或弃其他角色一张牌。阶段事实
 -- 与可见按 -phase 标记清理；同花色已失去事实不因重新获得而重开。
+local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin003_1",
 }
 
 local OPEN = "qiao_jin003_1_open-phase"
+local DISPLAY = "@qiao_zhaoran-phase"
 local LOST = "qiao_jin003_1_lost_suits-phase"
 local OPT_DRAW = "qiao__skill_jin003_1-draw"
 local OPT_DISCARD = "qiao__skill_jin003_1-discard"
@@ -61,6 +64,7 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_use = function(self, event, target, player, data)
     player.room:addPlayerMark(player, OPEN, 1)
+    player.room:setPlayerMark(player, DISPLAY, " ")
   end,
 })
 
@@ -94,6 +98,7 @@ skill:addEffect(fk.AfterCardsMove, {
     for _, suit in ipairs(suits) do
       room:addTableMarkIfNeed(player, LOST, suit)
     end
+    room:setPlayerMark(player, DISPLAY, Deck.suitSymbols(player:getTableMark(LOST)))
     for _, suit in ipairs(suits) do
       if player.dead then return end
       local others = table.filter(room:getPresentPlayers(), function(p)
@@ -140,6 +145,7 @@ skill:addEffect(fk.AfterCardsMove, {
 skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
+  [DISPLAY] = "昭然",
   [OPT_DRAW] = "摸一张牌",
   [OPT_DISCARD] = "弃置其他角色一张牌",
   ["#qiao__skill_jin003_1-invoke"] = "昭然：本阶段你的手牌公开，并在每种花色首次失去最后手牌后选择一项",

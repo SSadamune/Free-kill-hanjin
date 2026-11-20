@@ -33,21 +33,25 @@ local function hasUnspecifiedLegalTarget(player, data)
   return false
 end
 
+local function isFirstTrickTarget(target, player, data)
+  return target == player and player:hasSkill(skill.name) and player:getMark(MARK) == 0
+    and data.card ~= nil and data.card.type == Card.TypeTrick
+end
+
 skill:addEffect(fk.TargetConfirming, {
   anim_type = "defensive",
+  can_refresh = function(self, event, target, player, data)
+    return isFirstTrickTarget(target, player, data) and not hasUnspecifiedLegalTarget(player, data)
+  end,
+  on_refresh = function(self, event, target, player, data)
+    player.room:addPlayerMark(player, MARK)
+  end,
   can_trigger = function(self, event, target, player, data)
-    if target ~= player or not player:hasSkill(skill.name) then return false end
-    if player:getMark(MARK) > 0 then return false end
-    local card = data.card
-    if card == nil or card.type ~= Card.TypeTrick then return false end
-    -- 原文没有排除自己使用的锦囊：自己使用且自己成为目标也计入“首次”。
-    return true
+    return isFirstTrickTarget(target, player, data) and hasUnspecifiedLegalTarget(player, data)
   end,
   on_use = function(self, event, target, player, data)
     player.room:addPlayerMark(player, MARK)
-    if hasUnspecifiedLegalTarget(player, data) then
-      data:cancelCurrentTarget()
-    end
+    data:cancelCurrentTarget()
   end,
 })
 

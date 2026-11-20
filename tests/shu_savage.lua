@@ -147,4 +147,36 @@ function Testqiao_shu_savage:testLiehenPindianWinGainsCard()
   lu.assertTrue(#p1:getCardIds("he") >= 2)
 end
 
+function Testqiao_shu_savage:testLiehenDoesNotPromptIfEitherHandIsEmpty()
+  local p1, p2 = p(1), p(2)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), p1, { main = "qiao_heg__shu015", deputy = "qiao_heg__shu002", kingdom = "shu" })
+  end)
+  clearCards(p1)
+  clearCards(p2)
+  local promptCount = 0
+  local ask = room().askToSkillInvoke
+  room().askToSkillInvoke = function(self, player, params)
+    if params.skill_name == LIEHEN then promptCount = promptCount + 1 end
+    return ask(self, player, params)
+  end
+  local cases = { p1, p2 }
+  for _, holding in ipairs(cases) do
+    clearCards(p1)
+    clearCards(p2)
+    give(holding, "qiao__jink", Card.Heart, 9)
+    inRoom(function()
+      room().current = p1
+      p1.phase = Player.Play
+      p2.hp = p2.maxHp
+      room():useCard(UseCardData:new {
+        from = p1, tos = { p2 }, card = Fk:cloneCard("qiao__slash"), extra_data = {},
+      })
+    end)
+    lu.assertEquals(p2.hp, p2.maxHp - 1)
+  end
+  room().askToSkillInvoke = ask
+  lu.assertEquals(promptCount, 0)
+end
+
 return { name = "qiao_shu_savage" }

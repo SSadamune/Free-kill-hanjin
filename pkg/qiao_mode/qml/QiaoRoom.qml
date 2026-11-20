@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
+import QtQuick.Controls as Controls
 import Fk
 import LunarLtk.Pages
 import "GuestIllustration.js" as GuestIllustration
@@ -7,6 +8,39 @@ import "GuestIllustration.js" as GuestIllustration
 Room {
   id: room
   property var mountDistanceLabels: ({})
+
+  Column {
+    id: openingCountdown
+    objectName: "qiaoInitialPrelightCountdown"
+    anchors.top: parent.top
+    anchors.topMargin: 12
+    anchors.horizontalCenter: parent.horizontalCenter
+    width: Math.min(240, parent.width * 0.4)
+    z: 10
+    spacing: 2
+    visible: openingAnimation.running
+
+    Text {
+      anchors.horizontalCenter: parent.horizontalCenter
+      text: Lua.tr("qiao_initial_prelight")
+      color: "white"
+      style: Text.Outline
+      styleColor: "#262626"
+    }
+
+    Controls.ProgressBar {
+      id: openingProgress
+      width: parent.width
+      from: 0
+      to: 1
+      NumberAnimation on value {
+        id: openingAnimation
+        running: false
+        from: 1
+        to: 0
+      }
+    }
+  }
 
   function refreshMountDistances() {
     const labels = Lua.ev("json.encode(ClientInstance:mountDistanceLabels())");
@@ -86,5 +120,14 @@ Room {
     function onCardsMoved() { Qt.callLater(room.bindPhotoExtras); }
   }
 
-  Component.onCompleted: Qt.callLater(bindPhotoExtras)
+  Component.onCompleted: {
+    addCallback("QiaoInitialPrelight", (_, data) => {
+      const duration = Number(data[0]);
+      if (duration > 0) {
+        openingAnimation.duration = duration;
+        openingAnimation.restart();
+      }
+    });
+    Qt.callLater(bindPhotoExtras);
+  }
 }

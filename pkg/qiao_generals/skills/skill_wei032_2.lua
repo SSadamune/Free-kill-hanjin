@@ -1,6 +1,7 @@
 -- WEI032 郭淮 · 疲攻
 -- 主将技（☯️-1）：当你使用或打出基本牌时，可指定一名角色，其按座次
 -- 将手牌交给其势力的其他角色各一张；不足时能给几张给几张。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local H = require "packages.hegemony.util"
 
 local skill = fk.CreateSkill {
@@ -22,12 +23,11 @@ local function giveToAllies(room, target)
   room:sortByAction(allies)
   for _, receiver in ipairs(allies) do
     if #target:getCardIds("h") == 0 then break end
-    local id = room:askToChooseCard(target, {
-      target = target,
-      flag = "h",
+    local id = room:askToCards(target, {
+      min_num = 1, max_num = 1, cancelable = false,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei032_2-give:" .. receiver.id,
-    })
+    })[1]
     if id == nil or id == -1 or not table.contains(target:getCardIds("h"), id) then break end
     room:obtainCard(receiver, id, true, fk.ReasonGive, target, skill.name)
   end
@@ -42,20 +42,22 @@ local useSpec = {
   global = true,
   can_trigger = triggerSpec,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei032_2-invoke",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       targets = room:getPresentPlayers(),
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei032_2-target",
+      invoke_prompt = "#qiao__skill_wei032_2-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { tos = chosen })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local chosen = event:getCostData(self).tos
     local to = chosen and chosen[1]
     if to ~= nil then giveToAllies(room, to) end
   end,

@@ -183,7 +183,6 @@ function Testqiao_han016:testJinnuAllSlashTriggersOneDistanceFreeSlash()
 
   runPlayTurn(room, {
     "",
-    "1",
     FkTest.ReplyChoosePlayer({ p5() }),
   })
 
@@ -211,7 +210,6 @@ function Testqiao_han016:testJinnuLastTwoNonSlashTriggers()
 
   runPlayTurn(room, {
     "",
-    "1",
     FkTest.ReplyChoosePlayer({ p5() }),
   })
 
@@ -238,7 +236,6 @@ function Testqiao_han016:testWeitunTiedMostHandsSkipsDiscardAndUsesSameGroup()
   installUseProbe(room, uses)
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p1(), p2() }),
   })
   local data = PhaseData:new { who = p1(), phase = Player.Discard, reason = "game_rule" }

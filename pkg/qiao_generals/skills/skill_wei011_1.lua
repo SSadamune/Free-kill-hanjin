@@ -11,6 +11,7 @@ local skill = fk.CreateSkill {
 
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local H = require "packages.qiao.pkg.qiao_mode.rules.wei_history"
+local DISCARD = "#qiao__skill_wei011_1-discard"
 
 local function eligible(player)
   local room = Fk:currentRoom()
@@ -38,44 +39,47 @@ skill:addEffect("active", {
     if player == nil or target == nil or player.dead or target.dead or target:isRemoved() then return end
 
     room:loseHp(player, 1, skill.name)
-    if player.dead then return end
+    if player.dead or target.dead or target:isRemoved() then return end
 
     local hand = target:getCardIds(Player.Hand)
-    -- 真实私看：viewCards 只把牌发给发动者，不是 showCards 的全体展示。
-    if #hand > 0 then
+    if #hand == 0 then return end
+    local hasJink = table.find(hand, function(id)
+      return Fk:getCardById(id).trueName == "jink"
+    end) ~= nil
+    local candidates = not hasJink and table.filter(hand, function(id)
+      return not target:prohibitDiscard(id)
+    end) or {}
+
+    local id
+    if #candidates > 1 then
+      local chosen, choice = room:askToChooseCardsAndChoice(player, {
+        cards = candidates,
+        all_cards = hand,
+        choices = { DISCARD },
+        min_num = 1, max_num = 1,
+        skill_name = skill.name,
+        prompt = "#qiao__skill_wei011_1-panel:" .. target.id,
+      })
+      if choice == DISCARD and chosen and #chosen == 1 and table.contains(candidates, chosen[1]) then
+        id = chosen[1]
+      end
+    else
+      -- 有【闪】、无合法弃牌或只有唯一必弃牌时，只需观看。
       room:viewCards(player, {
         cards = hand,
         skill_name = skill.name,
         prompt = "#qiao__skill_wei011_1-view:" .. target.id,
       })
-    end
-    local hasJink = false
-    for _, id in ipairs(hand) do
-      local card = Fk:getCardById(id)
-      if card ~= nil and card.trueName == "jink" then
-        hasJink = true
-        break
-      end
+      id = candidates[1]
     end
 
+    if player.dead or target.dead or target:isRemoved() then return end
     if hasJink then
       room:setPlayerMark(player, H.WEIKUI_DISTANCE_MARK, target.id)
-      -- 效果指定目标：使用显式目标策略，目标合法性不依赖【杀】的普通距离。
       C.useVirtualCard(room, player, "qiao__slash", nil, { target }, skill.name, true, nil,
         C.explicit({ other_roles = true }, { names = { "qiao__slash" } }))
-    elseif #hand > 0 then
-      local chosen = room:askToChooseCard(player, {
-        target = target,
-        flag = "h",
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wei011_1-discard",
-        cancelable = false,
-      })
-      local id = chosen
-      if type(chosen) == "table" then id = chosen.id or chosen[1] end
-      if id ~= nil then
-        room:throwCard({ id }, skill.name, target, player)
-      end
+    elseif id and table.contains(target:getCardIds(Player.Hand), id) and not target:prohibitDiscard(id) then
+      room:throwCard({ id }, skill.name, target, player)
     end
   end,
 })
@@ -85,7 +89,8 @@ Fk:loadTranslationTable {
   [":qiao__skill_wei011_1"] = "出牌阶段限一次，你可以失去1点体力并观看一名其他角色的手牌。若其中有【闪】，则你视为对其使用一张【杀】，且本回合你计算与其距离视为1；否则你弃置其中一张牌。",
   ["#qiao__skill_wei011_1-prompt"] = "伪溃：失去1点体力并观看一名其他角色的手牌",
   ["#qiao__skill_wei011_1-view"] = "伪溃：观看 %src 的手牌",
-  ["#qiao__skill_wei011_1-discard"] = "伪溃：弃置其一张手牌",
+  ["#qiao__skill_wei011_1-panel"] = "伪溃：观看 %src 的手牌，并弃置其中一张",
+  [DISCARD] = "弃置",
 }
 
 skill.qiaoImplemented = true

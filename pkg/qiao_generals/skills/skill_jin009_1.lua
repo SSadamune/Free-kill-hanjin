@@ -59,6 +59,7 @@ skill:addEffect(fk.AfterCardUseDeclared, {
 skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
+  [D.BAN_DISPLAY] = "权变",
   ["#qiao__skill_jin009_1-invoke"] = "权变：本阶段首次使用此花色手牌，你可以禁止本阶段使用该花色手牌并卜算3、摸一张牌",
 }
 

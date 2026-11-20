@@ -142,8 +142,7 @@ function Testqiao_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
   })
 
   skill_test.withSkillRequests(room, TONGFA, {
-    askToSkillInvoke = function() return true end,
-    askToChooseCard = function() return gift end,
+    askToCards = function() return { gift } end,
   }, function()
     runTurnStart(room, user, function()
       room:useCard { from = user, tos = { target }, card = usedCard }
@@ -174,7 +173,7 @@ function Testqiao_jin_adaptation:testChengliuThunderAndChainActualVictim()
   })
   inRoom(function() room:addSkill(skel:createSkill()) end)
 
-  FkTest.setNextReplies(wangJun, { "1", FkTest.ReplyChoosePlayer({ target }) })
+  FkTest.setNextReplies(wangJun, { "1" })
   runTurnStart(room, wangJun, function()
     room:useCard { from = wangJun, tos = { target }, card = Fk:getCardById(slash) }
   end)
@@ -202,7 +201,7 @@ function Testqiao_jin_adaptation:testChengliuChainWithoutFujia()
   })
   inRoom(function() room:addSkill(skel:createSkill()) end)
 
-  FkTest.setNextReplies(wangJun, { "1", FkTest.ReplyChoosePlayer({ target }) })
+  FkTest.setNextReplies(wangJun, { "1" })
   runTurnStart(room, wangJun, function()
     room:useCard { from = wangJun, tos = { target }, card = Fk:getCardById(slash) }
   end)

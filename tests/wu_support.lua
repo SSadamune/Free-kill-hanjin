@@ -287,18 +287,9 @@ function Testqiao_wu_support:testJieyinPlacesEquipFromHandAndDrawer()
   local sword = give(p1, "qiao__qinggang_sword", Card.Spade, 5)
   setPlayPhase(p1)
 
-  local oldChoice, oldAsk = room().askToChoice, room().askToChooseCards
-  room().askToChoice = function(self, player, params)
-    if params.skill_name ~= JIEYIN then return oldChoice(self, player, params) end
-    return "#qiao__skill_wu008_1-place"
-  end
-  room().askToChooseCards = function(self, player, params)
-    if params.skill_name ~= JIEYIN then return oldAsk(self, player, params) end
-    return { sword }
-  end
-  local ok, err = pcall(function() activate(p1, JIEYIN, { p2 }, {}) end)
-  room().askToChoice, room().askToChooseCards = oldChoice, oldAsk
-  assert(ok, err)
+  local reply = FkTest.ReplyUseSkill(JIEYIN, { p2 }, { sword })
+  reply.interaction_data = "#qiao__skill_wu008_1-place"
+  inRoom(function() room():handleUseCardReply(p1, reply) end)
 
   -- 手牌来源置入目标空栏；你体力较大，你摸，其回复。
   lu.assertEquals(room():getCardOwner(sword).id, p2.id)
@@ -397,7 +388,7 @@ function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
   inRoom(function() p1.hp = p1.maxHp end)
 
   local ownerAsked = false
-  FkTest.setNextReplies(p1, { "1", ids3[1], { ids3[2] } })
+  FkTest.setNextReplies(p1, { ids3[1], { ids3[2] } })
   skill_test.withSkillRequests(room(), GUZHENG, {
     askToChoosePlayers = function(self, player, params)
       ownerAsked = true
@@ -434,9 +425,18 @@ function Testqiao_wu_support:testJieyinClientCanUseWithoutRoom()
   asClient(room(), function(clients)
     local me = clients[1]
     lu.assertNil(me.room)
-    local skill = Fk.skills[JIEYIN]
-    lu.assertTrue(skill:canUse(me))
-    lu.assertTrue(skill:targetFilter(me, clients[2], {}, { sword }))
+    local handler = require("ltk.core.request_type.play_card"):new(me)
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(JIEYIN))
+    handler:selectSkill(JIEYIN, { selected = true })
+    lu.assertTrue(table.contains(Fk.skills[JIEYIN].interaction.spec.choices, "#qiao__skill_wu008_1-place"))
+    lu.assertTrue(handler:cardValidity(sword))
+    handler:selectCard(sword, { selected = true })
+    lu.assertFalse(handler:feasible())
+    lu.assertTrue(handler:targetValidity(clients[2].id))
+    handler:selectTarget(clients[2].id, { selected = true })
+    lu.assertTrue(handler:feasible())
+    handler:_finish()
   end)
 end
 
