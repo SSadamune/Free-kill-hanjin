@@ -55,6 +55,9 @@ function M.register(spec)
       lord.hidden = true
       lord.is_lord = true
       M.lords[spec.lord] = { normal = normal, kingdoms = kingdoms }
+      lord:addCompanionRule(function(self, other)
+        return M.lord_companion(self, other, Fk:currentRoom())
+      end)
     end
     family.lord = spec.lord
   end
@@ -118,6 +121,21 @@ end
 
 function M.lord_is_for(name, kingdom)
   return table.contains(M.lord_kingdoms(name), kingdom)
+end
+
+--- 君主与所属势力的武将成对。房间内采用本局可用的主客势力。
+function M.lord_companion(lord, other, room, kingdom)
+  local version = M.lords[lord.name]
+  if not version or lord == other then return false end
+  local allowed = room and room:getBanner("all_kingdoms")
+  local factions = Ban.affiliations(other)
+  if allowed and #allowed > 0 then
+    local resolved = Guest.resolve(other.name, allowed, Guest.replacementEnabled(room))
+    factions = resolved and resolved.kingdoms or {}
+  end
+  return table.find(version.kingdoms, function(faction)
+    return (not kingdom or faction == kingdom) and table.contains(factions, faction)
+  end) ~= nil
 end
 
 function M.original_of(name)

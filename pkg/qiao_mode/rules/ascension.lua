@@ -221,29 +221,29 @@ function M.ascend(room, player, newMain, kingdom, options)
     }
   end
 
-  local bothRevealed = player.general ~= "anjiang" and player.deputyGeneral ~= "anjiang"
-    and player.deputyGeneral ~= ""
-  local fish = PairHp.half_left(newMain, deputy)
-  -- 上游待领标记 >0 表示本次双亮从未发过；已归零表示已领取或已花掉。
-  local yinyangEligible = player:getMark(M.YINYANG_MARK) == 0
-  local companionEligible = player:getMark(M.COMPANION_MARK) == 0
-  if bothRevealed and deputy ~= nil then
-    local mainGeneral = Fk.generals[newMain]
-    local deputyGeneral = Fk.generals[deputy]
-    if mainGeneral ~= nil and deputyGeneral ~= nil then
-      if mainGeneral:isCompanionWith(deputyGeneral)
-        and player:getMark(M.COMPANION_MARK) == 0 and companionEligible then
-        room:setPlayerMark(player, M.COMPANION_MARK, 1)
-        H.addHegMark(player, "companion")
-      end
-      if fish > 0
-        and player:getMark(M.YINYANG_MARK) == 0 and yinyangEligible then
-        room:setPlayerMark(player, M.YINYANG_MARK, 1)
-        H.addHegMark(player, "yinyangfish", fish)
-      end
-      -- 已在本升变处理过奖励，清掉上游待领标记，避免下一次 reveal 再领一次。
-      room:setPlayerMark(player, "HalfMaxHpLeft", 0)
-      room:setPlayerMark(player, "CompanionEffect", 0)
+  local deputyGeneral = Fk.generals[deputy]
+  local isCompanion = deputyGeneral and (Versions.is_lord(newMain)
+    and (Versions.lord_companion(newGeneral, deputyGeneral, room, kingdom)
+      or table.contains(newGeneral.companions, deputy) or table.contains(deputyGeneral.companions, newMain))
+    or not Versions.is_lord(newMain) and newGeneral:isCompanionWith(deputyGeneral))
+  local companion = player:getMark(M.COMPANION_MARK) == 0 and isCompanion and 1 or 0
+  local fish = player:getMark(M.YINYANG_MARK) == 0 and PairHp.half_left(newMain, deputy) or 0
+  if player.deputyGeneral == "anjiang" then
+    -- 暗副将保留新组合待领资格，随后正常双亮时领，旧组合的标记不再有效。
+    player:setMark("CompanionEffect", companion)
+    player:setMark("HalfMaxHpLeft", fish)
+    player:doNotify("SetPlayerMark", { player.id, "CompanionEffect", companion })
+    player:doNotify("SetPlayerMark", { player.id, "HalfMaxHpLeft", fish })
+  else
+    room:setPlayerMark(player, "CompanionEffect", 0)
+    room:setPlayerMark(player, "HalfMaxHpLeft", 0)
+    if companion > 0 then
+      room:setPlayerMark(player, M.COMPANION_MARK, 1)
+      H.addHegMark(player, "companion")
+    end
+    if fish > 0 then
+      room:setPlayerMark(player, M.YINYANG_MARK, 1)
+      H.addHegMark(player, "yinyangfish", fish)
     end
   end
   return true, { old_main = oldMain, old_pair_max = oldPairMax, new_pair_max = newPairMax }
