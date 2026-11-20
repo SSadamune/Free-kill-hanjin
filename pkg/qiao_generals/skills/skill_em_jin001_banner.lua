@@ -12,11 +12,9 @@ local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local skill = fk.CreateSkill { name = "qiao__skill_em_jin001_banner" }
 skill.qiaoImplemented = true
 
-skill:addAcquireEffect(function(self, player) Flags.refresh(player, self.name) end)
-skill:addLoseEffect(function(self, player) Flags.refresh(player, self.name) end)
-
 local SHOWN_MARK = "qiao_jin001_first_double"
 local USED_MARK = "qiao_jin001_change_used"
+local CI_MARK = "@[qiao_ci]"
 
 local function lord(room)
   if room == nil then return nil end
@@ -45,15 +43,30 @@ local function deputyName(target)
 end
 
 local function ciList(holder)
-  if holder == nil then return {} end
   return table.simpleClone(holder:getTableMark(skill.name))
 end
 
-local function saveCi(room, holder, list)
-  room:setPlayerMark(holder, skill.name, #list > 0 and list or 0)
+local function refreshCiMark(room, holder)
+  local count = #holder:getTableMark(skill.name)
+  -- 0 会移除标记，持旗者的空列表也需要能打开。
+  local value = (count > 0 or holder:hasShownSkill(skill.name, true)) and count + 1 or 0
+  if holder:getMark(CI_MARK) ~= value then room:setPlayerMark(holder, CI_MARK, value) end
 end
 
-local function pickCi(room, holder, target)
+local function refreshFlag(self, holder)
+  Flags.refresh(holder, self.name)
+  refreshCiMark(holder.room, holder)
+end
+
+skill:addAcquireEffect(refreshFlag)
+skill:addLoseEffect(refreshFlag)
+
+local function saveCi(room, holder, list)
+  room:setPlayerMark(holder, skill.name, #list > 0 and list or 0)
+  refreshCiMark(room, holder)
+end
+
+local function drawCi(room, holder, target)
   local name = deputyName(target)
   if name == nil or name:startsWith("blank_") or Commander.isSoldier(name) or Commander.isRetinue(name) then return end
   local deputy = Fk.generals[name]
@@ -70,16 +83,7 @@ local function pickCi(room, holder, target)
     end
   end
   if #candidates == 0 then return end
-  local chosen
-  if #candidates == 1 then
-    chosen = candidates[1]
-  else
-    chosen = room:askToChoice(holder, {
-      choices = candidates, skill_name = skill.name,
-      prompt = "#qiao__jin001_banner-pick", cancelable = true,
-    })
-    if chosen == nil or not table.contains(candidates, chosen) then return end
-  end
+  local chosen = candidates[room:random(1, #candidates)]
   table.removeOne(room.general_pile, chosen)
   local list = ciList(holder)
   list[#list + 1] = chosen
@@ -100,7 +104,7 @@ skill:addEffect(fk.GeneralRevealed, {
   end,
   on_use = function(self, event, target, player, data)
     local holder = lord(target.room)
-    if holder ~= nil then pickCi(target.room, holder, target) end
+    if holder ~= nil then drawCi(target.room, holder, target) end
   end,
 })
 
@@ -123,7 +127,7 @@ skill:addEffect(fk.Death, {
     local holder = lord(room)
     if holder == nil then return end
     room:setPlayerMark(target, "qiao_jin001_death_ci", 1)
-    pickCi(room, holder, target)
+    drawCi(room, holder, target)
   end,
 })
 
@@ -219,18 +223,37 @@ skill:addEffect("active", {
         if n > 0 then player:drawCards(n, skill.name) end
       end
     end
-    table.removeOne(list, chosen)
-    saveCi(room, player, list)
+    local remaining = ciList(player)
+    table.removeOne(remaining, chosen)
+    saveCi(room, player, remaining)
     -- 消费后解除占用，赐将牌回到剩余池。
     if not table.contains(room.general_pile, chosen) then table.insert(room.general_pile, chosen) end
   end,
 })
 
+Fk:addQmlMark {
+  name = "qiao_ci",
+  how_to_show = function(_, value) return tostring(value - 1) end,
+  qml = function(_, _, holder)
+    if not holder then return nil end
+    return {
+      url = "packages/qiao/pkg/qiao_mode/qml/CiPile.qml",
+      prop = { cardNames = ciList(holder), holderId = holder.id },
+    }
+  end,
+}
+
+-- 和诏书一样，弹窗提交普通主动技回包。
+Fk:addPostLoadFunc(function()
+  Fk.skills[skill.name].visible = false
+end)
+
 Fk:loadTranslationTable {
   [skill.name] = "诸王敕封册",
-  [":" .. skill.name] = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以将一张符合其副将牌面势力的剩余武将牌置为“赐”。",
-  ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否将一张剩余武将牌置为“赐”",
-  ["#qiao__jin001_banner-pick"] = "诸王敕封册：选择一张剩余武将牌作为赐",
+  [":" .. skill.name] = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以随机将一张符合其副将牌面势力的剩余武将牌置为“赐”。",
+  [CI_MARK] = "赐",
+  ["qiao__ci_consume"] = "消耗一枚赐",
+  ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
   ["#qiao__jin001_banner-ci"] = "诸王敕封册：选择一枚赐",
   ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
