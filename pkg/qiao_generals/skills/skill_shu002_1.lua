@@ -24,7 +24,8 @@ end
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = "qiao__slash",
+  pattern = "slash|.|.|.|qiao__slash",
+  mute_card = true,
   prompt = "#qiao__skill_shu002_1-prompt",
   handly_pile = true,
   filter_pattern = {

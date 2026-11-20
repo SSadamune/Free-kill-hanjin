@@ -2,8 +2,7 @@
 --
 -- 规则基线：docs/rules/standard-generals.md 翼从牛金、docs/rules/general-principles.md。
 -- 同势力角色回合结束时，牛金持有者可以使用基本/锦囊/装备每类至多一张。
--- 原文没有固定顺序：每次由玩家选择一个尚未使用的类别；每类可放弃，逐次
--- 进入正常用牌窗口。效果内用牌 bypass_times=true + extraUse=true（不占
+-- 自由用牌窗口同时提供尚未使用的所有类别，取消即结束。效果内用牌 bypass_times=true + extraUse=true（不占
 -- 通常出杀次数），禁止与目标条件照常。来源记录在本次 UseCard.extra_data，
 -- Death 时向上追溯本次用牌，避免实体牌复用污染；奖励由房间级延迟监听执行，
 -- 不绑定持有者之后是否仍有技能。
@@ -19,12 +18,12 @@ local SOURCE_KEY = "qiao_niujin_source"
 local ACTIVE_MARK = "qiao_niujin_window"
 local REWARD_SKILL = "#qiao_niujin_reward"
 
-local CATEGORIES = {
-  basic = { pattern = ".|.|.|.|.|basic", prompt = "#qiao__retinue_skill_niujin-basic" },
-  trick = { pattern = ".|.|.|.|.|trick", prompt = "#qiao__retinue_skill_niujin-trick" },
-  equip = { pattern = ".|.|.|.|.|equip", prompt = "#qiao__retinue_skill_niujin-equip" },
+local CATEGORIES = { "basic", "trick", "equip" }
+local CATEGORY_LABELS = {
+  basic = "qiao_niujin_basic",
+  trick = "qiao_niujin_trick",
+  equip = "qiao_niujin_equip",
 }
-local ORDER = { "basic", "trick", "equip" }
 
 local reward_skill
 
@@ -43,7 +42,7 @@ local function ensureReward(room)
         local current = player.room.logic:getCurrentEvent()
         local use = current and current:findParent(GameEvent.UseCard, true)
         return use ~= nil and use.data ~= nil and use.data.extra_data ~= nil
-          and use.data.extra_data[SOURCE_KEY] == true
+          and use.data.extra_data[SOURCE_KEY] == killer.id
       end,
       on_refresh = function(self, event, target, player, data)
         local killer = data.killer
@@ -63,14 +62,17 @@ local function sameKingdom(player, target)
   return player == target or H.compareKingdomWith(player, target)
 end
 
----@param player ServerPlayer
----@return string[] remaining 类别 key
-local function categoryChoices(remaining)
-  local choices = {}
-  for _, key in ipairs(ORDER) do
-    if remaining[key] then table.insert(choices, key) end
-  end
-  return choices
+local function askForCard(player, remaining)
+  local labels = table.map(remaining, function(category)
+    return Fk:translate(CATEGORY_LABELS[category])
+  end)
+  return FreeUse.askToUseCard(player, {
+    pattern = ".|.|.|.|.|" .. table.concat(remaining, ","),
+    skill_name = skill.name,
+    prompt = "#qiao__retinue_skill_niujin-use:::" .. table.concat(labels, "、"),
+    cancelable = true,
+    extra_data = { bypass_times = true, extraUse = true },
+  })
 end
 
 skill:addEffect(fk.TurnEnd, {
@@ -81,61 +83,42 @@ skill:addEffect(fk.TurnEnd, {
       and not player.dead and sameKingdom(player, target)
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_niujin-invoke::" .. target.id,
-    })
+    local use = askForCard(player, CATEGORIES)
+    if not use then return false end
+    event:setCostData(self, { firstUse = use })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     ensureReward(room)
+    local previous = player:getMark(ACTIVE_MARK)
     room:addPlayerMark(player, ACTIVE_MARK, 1)
-    local remaining = { basic = true, trick = true, equip = true }
-    local used = 0
-    while used < 3 and not player.dead do
-      local choice = room:askToChoice(player, {
-        choices = categoryChoices(remaining),
-        skill_name = skill.name,
-        prompt = "#qiao__retinue_skill_niujin-choice",
-        cancelable = true,
-      })
-      if choice == nil or choice == "" or choice == "Cancel" then break end
-      local category = CATEGORIES[choice]
-      if category == nil or not remaining[choice] then break end
-      remaining[choice] = nil
-      used = used + 1
-
-      -- 自由用牌窗口：声明 not_passive，客户端不提供【闪】【无懈可击】等
-      -- 无响应时机的被动牌；返回后由公共入口复核被动、禁止与目标。
-      local use = FreeUse.askToUseCard(player, {
-        pattern = category.pattern,
-        skill_name = skill.name,
-        prompt = category.prompt,
-        cancelable = true,
-        -- 效果内用牌不占通常次数；正常禁止与目标条件仍由用牌流程检查。
-        extra_data = { bypass_times = true, extraUse = true },
-      })
-      if use ~= nil and use.card ~= nil then
-        -- 顶层 extraUse 才让引擎不计通常出杀次数；extra_data 仅作技能来源记录。
-        use.extraUse = true
-        use.extra_data = use.extra_data or {}
-        use.extra_data.bypass_times = true
-        use.extra_data[SOURCE_KEY] = true
-        room:useCard(use)
-      end
+    local remaining = table.simpleClone(CATEGORIES)
+    local use = event:getCostData(self).firstUse
+    while use and player:isAlive() and not player:isRemoved() do
+      local category = use.card:getTypeString()
+      if not table.contains(remaining, category) then break end
+      -- 顶层 extraUse 才让引擎不计通常出杀次数。
+      use.extraUse = true
+      use.extra_data = use.extra_data or {}
+      use.extra_data.bypass_times = true
+      use.extra_data[SOURCE_KEY] = player.id
+      room:useCard(use)
+      table.removeOne(remaining, category)
+      if #remaining == 0 or player.dead or player:isRemoved() then break end
+      use = askForCard(player, remaining)
     end
-    room:setPlayerMark(player, ACTIVE_MARK, 0)
+    room:setPlayerMark(player, ACTIVE_MARK, previous)
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_niujin"] = "牛金",
   [":qiao__retinue_skill_niujin"] = "与你势力相同的角色回合结束时，你可以使用每种类别至多各一张牌，你以此法杀死角色后摸三张牌。",
-  ["#qiao__retinue_skill_niujin-invoke"] = "牛金：你可以使用每种类别至多各一张牌",
-  ["#qiao__retinue_skill_niujin-choice"] = "牛金：选择一个尚未使用的类别，取消则结束",
-  ["#qiao__retinue_skill_niujin-basic"] = "牛金：可以使用一张基本牌（可放弃）",
-  ["#qiao__retinue_skill_niujin-trick"] = "牛金：可以使用一张锦囊牌（可放弃）",
-  ["#qiao__retinue_skill_niujin-equip"] = "牛金：可以使用一张装备牌（可放弃）",
+  ["#qiao__retinue_skill_niujin-use"] = "牛金：你可以使用一张牌（可以是%arg）。",
+  ["qiao_niujin_basic"] = "基本牌",
+  ["qiao_niujin_trick"] = "锦囊牌",
+  ["qiao_niujin_equip"] = "装备牌",
 }
 
 return skill

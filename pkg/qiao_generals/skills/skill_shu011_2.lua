@@ -10,7 +10,8 @@ skill.qiaoImplemented = true
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = "qiao__fire_attack",
+  pattern = "fire_attack|.|.|.|qiao__fire_attack",
+  mute_card = true,
   prompt = "#qiao__skill_shu011_2-prompt",
   handly_pile = true,
   filter_pattern = {

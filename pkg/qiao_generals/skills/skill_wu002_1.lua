@@ -10,7 +10,8 @@ skill.qiaoImplemented = true
 
 skill:addEffect("viewas", {
   anim_type = "control",
-  pattern = "qiao__dismantlement",
+  pattern = "dismantlement|.|.|.|qiao__dismantlement",
+  mute_card = true,
   prompt = "#qiao__skill_wu002_1-prompt",
   handly_pile = true,
   filter_pattern = {
