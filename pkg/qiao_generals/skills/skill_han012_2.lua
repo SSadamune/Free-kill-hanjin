@@ -158,8 +158,16 @@ skill:addEffect(fk.CardUseFinished, {
       cancelable = true,
       skip = true,
       expand_pile = remaining,
+      visible_pile = remaining,
     })
-    if not table.find(room.players, function(to) return #(list[to.id] or {}) > 0 end) then return false end
+    local distributed = {}
+    for _, cards in pairs(list) do
+      for _, id in ipairs(cards) do
+        if not table.contains(remaining, id) or distributed[id] then return false end
+        distributed[id] = true
+      end
+    end
+    if not table.every(remaining, function(id) return distributed[id] == true end) then return false end
     event:setCostData(self, { distribution = list })
     return true
   end,

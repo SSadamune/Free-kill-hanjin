@@ -2,6 +2,7 @@
 -- 规则依据：docs/rules/generals/han007-wangrong.md、docs/rules/general-principles.md。
 -- 验收依据：docs/development/implementation/generals/support.md#han007-1、damage.md#han007-2。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local MS = "qiao__skill_han007_1"
 local ZD = "qiao__skill_han007_2"
@@ -299,9 +300,20 @@ function Testqiao_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination
     } },
   })
 
-  FkTest.setNextReplies(p1(), {
-    FkTest.ReplyUseSkill(ZD_AUX, { p2() }, { hearts[1], hearts[2] }),
-  })
+  local requests = 0
+  local ask = room.askToUseActiveSkill
+  room.askToUseActiveSkill = function(self, player, params)
+    if params.skill_name == ZD_AUX then
+      requests = requests + 1
+      local reply = client_room.confirmSelection(room, player, params,
+        { hearts[1], hearts[2] }, { p2() }, function(handler)
+          lu.assertTrue(params.cancelable)
+          lu.assertFalse(handler:cardValidity(hearts[3]))
+        end)
+      FkTest.setNextReplies(player, { reply })
+    end
+    return ask(self, player, params)
+  end
   -- 用异势力凶手，避免国战奖惩清空受赠者手牌。
   inRoom(function()
     p2().kingdom = "wei"
@@ -309,6 +321,8 @@ function Testqiao_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination
     room:killPlayer { who = p1(), killer = p2(), extra_data = { ignorePunishment = true } }
   end)
 
+  room.askToUseActiveSkill = ask
+  lu.assertEquals(requests, 1)
   lu.assertTrue(p1().dead)
   -- 先展示，再交给；两张红桃都在展示记录中。
   lu.assertEquals(#shown, 2)

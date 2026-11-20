@@ -2,6 +2,7 @@
 -- 规则依据：docs/rules/standard-generals.md 汉区、rulebook/events/use-card.md、
 -- rulebook/terms/card-op-terms/recast.md、give.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local ZD = "qiao__skill_han012_1"
 local BT = "qiao__skill_han012_2"
@@ -203,21 +204,34 @@ function Testqiao_han012:testBotongFourSuitsAndGiveAfterUse()
     { "qiao__jink", Card.Heart, 3 },
     { "qiao__slash", Card.Club, 4 },
     { "qiao__slash", Card.Diamond, 5 },
+    { "qiao__peach", Card.Heart, 7 },
   })
+  local unrelated = table.remove(cards)
   local use = FkTest.ReplyUseSkill(BT, { p2() }, cards)
   use.interaction_data = "qiao__slash"
 
+  local ask = room.askToUseActiveSkill
+  local requests = 0
+  room.askToUseActiveSkill = function(self, player, params)
+    if params.skill_name == "distribution_select_skill" and params.extra_data.skillName == BT then
+      requests = requests + 1
+      local reply = client_room.confirmSelection(room, player, params, cards, { p2() }, function(handler)
+        lu.assertFalse(handler:cardValidity(unrelated))
+        lu.assertItemsEquals(handler.visible_pile, cards)
+      end)
+      FkTest.setNextReplies(player, { reply, "" })
+    end
+    return ask(self, player, params)
+  end
   FkTest.setNextReplies(p2(), { "" })
-  runPlayPhase(room, p1(), {
-    use,
-    FkTest.ReplyUseSkill("distribution_select_skill", { p2() }, cards),
-    "",
-  })
+  runPlayPhase(room, p1(), { use })
+  room.askToUseActiveSkill = ask
+  lu.assertEquals(requests, 1)
   lu.assertEquals(#p2():getCardIds("h"), 4)
   for _, id in ipairs(cards) do
     lu.assertTrue(table.contains(p2():getCardIds("h"), id))
   end
-  lu.assertEquals(#p1():getCardIds("h"), 0)
+  lu.assertEquals(p1():getCardIds("h"), { unrelated })
 end
 
 function Testqiao_han012:testBotongThreeCategoriesDiscardsWhenNotGiven()
