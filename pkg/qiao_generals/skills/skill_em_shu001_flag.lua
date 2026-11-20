@@ -90,7 +90,8 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   ["qiao__skill_em_shu001_flag"] = "六师率义旗",
-  [":qiao__skill_em_shu001_flag"] = "其他蜀势力角色的出牌阶段限一次，其可以交给你两张牌，然后于本回合获得一项场上没有的技能。",
+  [":qiao__skill_em_shu001_flag"] = "其他蜀势力角色的出牌阶段限一次，其可以交给你两张牌，然后于本回合获得以下一项场上没有的技能："
+    .. " “武圣”、“咆哮”、“龙胆” “铁骑”、“烈勇”、“狂骨”。",
   ["#qiao__skill_em_shu001_flag-prompt"] = "六师率义旗：交给君主刘备两张牌",
   ["#qiao__skill_em_shu001_flag-choose"] = "六师率义旗：选择本回合获得的技能",
 }

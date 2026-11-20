@@ -55,7 +55,7 @@ skill:addEffect(fk.TurnEnd, {
   global = true,
   can_refresh = function(self, event, target, player, data)
     return player:hasSkill(skill.name) and player:getMark(CANCELLED) > 0
-      and target ~= nil and not target.dead
+      and target ~= nil and target ~= player and not target.dead
   end,
   on_refresh = function(self, event, target, player, data)
     local room = player.room
