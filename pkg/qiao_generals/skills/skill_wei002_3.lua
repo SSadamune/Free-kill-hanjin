@@ -16,4 +16,5 @@ local skill = fk.CreateSkill {
 }
 
 skill.qiaoImplemented = true
+skill.qiaoStateOnly = true
 return skill

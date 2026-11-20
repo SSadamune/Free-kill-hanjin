@@ -6,6 +6,7 @@ local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
+local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -228,6 +229,10 @@ function QiaoClient:virtualCardPicture(name)
   return name
 end
 
+function QiaoClient:isStateOnlySkill(skillName)
+  return SkillPrelight.isStateOnly(skillName)
+end
+
 --- 脚注/虚拟牌提示的纯文本化：只覆盖 nocolor == true 的调用，继承
 --- setCardNote 与 showVirtualCard 两条通知路径，不另写重复的脚注流程。
 function QiaoClient:parseMsg(msg, nocolor, visible_data)
@@ -239,6 +244,10 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if (command == "AddSkill" or command == "LoseSkill") and data[3]
+    and isQiaoMode() and SkillPrelight.isStateOnly(data[2]) then
+    data = { data[1], data[2] }
+  end
   if command == "SetPlayerMark" and data[2] == Retinues.PUBLIC_MARK and isQiaoMode() then
     return
   end
@@ -256,6 +265,9 @@ function QiaoClient:notifyUI(command, data)
     data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
   end
   BaseClient.notifyUI(self, command, data)
+  if command == "ChangeSelf" and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoRefreshStateSkillButtons", {})
+  end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})
   end
