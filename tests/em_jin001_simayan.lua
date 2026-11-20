@@ -11,6 +11,7 @@ local LORD = "qiao_heg__em_jin001"
 local NORMAL = "qiao_heg__jin001"
 local TAIKANG = "qiao__skill_em_jin001_1"
 local BANNER = "qiao__skill_em_jin001_banner"
+local CI_MARK = "@[qiao_ci]"
 local CAIXING = "qiao__skill_em_jin001_2"
 local DINGFEI = "qiao__skill_em_jin001_3"
 local RESOURCE_MAXCARD = "qiao__jin001_banner-resource-maxcard"
@@ -75,6 +76,7 @@ function Testqiao_em_jin001_simayan:testRegistrationAndAscension()
   lu.assertEquals(p(1).general, LORD)
   lu.assertTrue(p(1):hasSkill(TAIKANG))
   lu.assertTrue(p(1):hasSkill(BANNER), "太康应授予诸王敕封册")
+  lu.assertEquals(p(1):getMark(CI_MARK), 1, "持旗者应能打开空列表")
 end
 
 function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch()
@@ -82,29 +84,25 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   local pileBefore
   inRoom(function()
     content.setupHidden(room, target, "qiao_heg__jin002", "qiao_heg__jin003", "jin")
-    -- 固定剩余将池：放入两张真实晋势力候选（非君主/士兵/翼从），使“赐”的
-    -- 选将请求必然发生且结果由本夹具确定，而不是依赖随机将池里恰好有晋将。
-    for _, name in ipairs({ "qiao_heg__jin004", "qiao_heg__jin005" }) do
-      table.removeOne(room.general_pile, name)
-      table.insert(room.general_pile, 1, name)
-      if type(room.disabled_generals) == "table" then
-        table.removeOne(room.disabled_generals, name)
-      end
-    end
+    room.general_pile = { "qiao_heg__jin004", "qiao_heg__wei001", LORD, "qiao_heg__jin005", "qiao_heg__jin006" }
+    room.disabled_generals = { "qiao_heg__jin006" }
     pileBefore = #room.general_pile
   end)
-  local invokes, picks = 0, 0
+  local invokes, picks, drawRange = 0, 0, nil
+  local random = room.random
   skill_test.withSkillRequests(room, BANNER, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == BANNER then invokes = invokes + 1 return true end
-      return original(self, who, params)
-    end,
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == BANNER then
-        picks = picks + 1
-        return params.choices[1]
+    askToSkillInvoke = function(self)
+      invokes = invokes + 1
+      self.random = function(_, lo, hi)
+        self.random = random
+        drawRange = { lo, hi }
+        return 2
       end
-      return original(self, who, params)
+      return true
+    end,
+    askToChoice = function(_, _, params)
+      picks = picks + 1
+      return params.choices[1]
     end,
   }, function()
     inRoom(function()
@@ -112,10 +110,13 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
       target:revealGeneral(true)
     end)
   end)
+  room.random = random
   local ci = lord:getTableMark(BANNER) or {}
-  lu.assertEquals(#ci, 1, "首次双亮应产生一枚赐; invokes=" .. tostring(invokes) .. " picks=" .. tostring(picks))
+  lu.assertEquals(ci, { "qiao_heg__jin005" })
+  lu.assertEquals(drawRange, { 1, 2 }, "只在两张合法晋将中随机抽取")
   lu.assertEquals(invokes, 1, "旗确认应一次")
-  lu.assertEquals(picks, 1, "选将应一次")
+  lu.assertEquals(picks, 0, "取得赐时不询问玩家选将")
+  lu.assertEquals(lord:getMark(CI_MARK), 2, "赐入口应显示一张牌")
   lu.assertEquals(#room.general_pile, pileBefore - 1, "该将牌应占用剩余将池")
   -- 真实消费：用刚取得的赐走资源分支，验证消耗与回池。
   local ciName = ci[1]
@@ -136,6 +137,7 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
     end)
   end)
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "执行分支应消耗赐")
+  lu.assertEquals(lord:getMark(CI_MARK), 1, "消耗最后一张后仍可打开列表")
   lu.assertTrue(table.contains(room.general_pile, ciName), "消费后赐将牌应回剩余池")
 end
 
@@ -164,8 +166,8 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   local oldDeputy, chosen
   inRoom(function()
     content.setupHidden(room, target, "qiao_heg__jin002", "qiao_heg__jin003", "jin")
-    table.removeOne(room.general_pile, "qiao_heg__jin002")
-    table.insert(room.general_pile, 1, "qiao_heg__jin002")
+    room.general_pile = { "qiao_heg__jin005" }
+    room.disabled_generals = {}
     oldDeputy = lord.deputyGeneral
     lord.phase = Player.Play
   end)
@@ -177,7 +179,6 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     end
     local resource = resourceChoice(params)
     if resource ~= nil then return resource end
-    if params.prompt == "#qiao__jin001_banner-pick" then return params.choices[1] end
     chosen = params.choices[1]
     return chosen
   end
@@ -196,8 +197,9 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   end)
   local ci = lord:getTableMark(BANNER) or {}
   lu.assertEquals(#ci, 1, "真实首次双亮应生成一枚赐")
-  lu.assertEquals(ci[1], "qiao_heg__jin002", "固定池后首张赐应可确定")
+  lu.assertEquals(ci[1], "qiao_heg__jin005", "固定池后首张赐应可确定")
   lu.assertFalse(table.contains(room.general_pile, ci[1]), "生成的赐不应仍留在剩余池")
+  inRoom(function() room.general_pile = { "qiao_heg__jin004", "qiao_heg__jin006" } end)
   skill_test.withSkillRequests(room, BANNER, { askToChoice = handler }, function()
     inRoom(function()
       room:useSkill(lord, Fk.skills[BANNER], function()
@@ -377,17 +379,59 @@ local function withClientRoom(current, fn)
   return clients, clientRoom
 end
 
-function Testqiao_em_jin001_simayan:testClientCiCanUse()
+function Testqiao_em_jin001_simayan:testClientCiPopupUsesOrdinaryActiveSkill()
   local room, lord = FkTest.room, p(1)
+  local stored = "qiao_heg__jin004"
   inRoom(function()
     lord.phase = Player.Play
-    room:setPlayerMark(lord, BANNER, { "qiao_heg__jin004" })
+    table.removeOne(room.general_pile, stored)
+    room:setPlayerMark(lord, BANNER, { stored })
+    room:setPlayerMark(lord, CI_MARK, 2)
   end)
+  local reply
   withClientRoom(room, function(clients)
     local me = clients[1]
     lu.assertNil(me.room)
-    lu.assertTrue(Fk.skills[BANNER]:canUse(me), "客户端赐入口应可用")
+    lu.assertFalse(Fk.skills[BANNER].visible, "消费按钮应只放在赐列表内")
+    local mark = assert(Fk.qml_marks.qiao_ci)
+    local popup = mark.qml(CI_MARK, me:getMark(CI_MARK), me)
+    lu.assertEquals(mark.how_to_show(CI_MARK, me:getMark(CI_MARK)), "1")
+    lu.assertEquals(popup.url, "packages/qiao/pkg/qiao_mode/qml/CiPile.qml")
+    lu.assertEquals(popup.prop, { holderId = me.id, cardNames = { stored } })
+
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local client = board.client_klass:new(ClientInstance.client)
+    local play = client.request_handlers.PlayCard:new(me)
+    client.current_request_handler = play
+    lu.assertFalse(client:canConsumeCi(clients[2].id))
+    me.phase = Player.Finish
+    lu.assertFalse(client:canConsumeCi(me.id))
+    me.phase = Player.Play
+    lu.assertTrue(client:canConsumeCi(me.id))
+
+    local originalNotify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, cmd, data)
+      if cmd == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function() play:update("QiaoCi", me.id, "click", {}) end)
+    ClientInstance.notifyUI = originalNotify
+    if not ok then error(err, 0) end
+    lu.assertNotNil(reply, "点击列表按钮应产生标准技能回包")
+    lu.assertEquals(reply.card.skill, BANNER)
+    lu.assertEquals(reply.card.subcards, {})
+    lu.assertEquals(reply.targets, {})
+    lu.assertFalse(client:canConsumeCi(me.id), "提交后不可重复点击")
+    play:_finish()
   end)
+  skill_test.withSkillRequests(room, BANNER, {
+    askToChoice = function(_, _, params) return resourceChoice(params) end,
+  }, function()
+    inRoom(function() room:handleUseCardReply(lord, reply) end)
+  end)
+  lu.assertEquals(lord:getTableMark(BANNER), {})
+  lu.assertEquals(lord:getMark(CI_MARK), 1)
+  lu.assertEquals(lord:usedSkillTimes(BANNER, Player.HistoryPhase), 1)
+  lu.assertTrue(table.contains(room.general_pile, stored))
 end
 
 return { name = "qiao_em_jin001_simayan" }

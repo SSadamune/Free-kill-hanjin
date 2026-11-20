@@ -7,6 +7,8 @@ local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local MZ = "qiao__skill_han001_2"
 
 --- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
@@ -98,18 +100,24 @@ function QiaoPlayCard:feasible()
   return ReqPlayCard.feasible(self)
 end
 
-function QiaoPlayCard:canConsumeEdict(holderId)
+local pileActions = {
+  QiaoEdict = Han.CONSUME,
+  QiaoCi = "qiao__skill_em_jin001_banner",
+}
+
+function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
-    and self.player:hasSkill(Han.CONSUME) and self:skillButtonValidity(Han.CONSUME)
+    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
-  if elemType ~= "QiaoEdict" then
+  local skill = pileActions[elemType]
+  if not skill then
     return ReqPlayCard.update(self, elemType, id, action, data)
   end
-  if action ~= "click" or not self:canConsumeEdict(id) then return false end
-  self:selectSkill(Han.CONSUME, { selected = true })
+  if action ~= "click" or not self:canUsePileAction(id, skill) then return false end
+  self:selectSkill(skill, { selected = true })
   if not self:feasible() then
     self:doCancelButton()
     return false
@@ -123,10 +131,27 @@ function QiaoClient:initialize(client)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
 end
 
-function QiaoClient:canConsumeEdict(holderId)
+function QiaoClient:canUsePileAction(holderId, action)
   local request = self.current_request_handler
+  local skill = pileActions[action]
   return not self.observing and not self.replaying and request ~= nil
-    and request:isInstanceOf(QiaoPlayCard) and request:canConsumeEdict(holderId)
+    and skill ~= nil and request:isInstanceOf(QiaoPlayCard) and request:canUsePileAction(holderId, skill)
+end
+
+function QiaoClient:canConsumeEdict(holderId)
+  return self:canUsePileAction(holderId, "QiaoEdict")
+end
+
+function QiaoClient:canConsumeCi(holderId)
+  return self:canUsePileAction(holderId, "QiaoCi")
+end
+
+function QiaoClient:guestIllustrationsEnabled()
+  return self.settings ~= nil and Guest.replacementEnabled(self)
+end
+
+function QiaoClient:mountDistanceLabels()
+  return MountDistance.labels(self.players)
 end
 
 -- ClientBase.serialize assumes the concrete class is a direct Client subclass and

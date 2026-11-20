@@ -4,6 +4,7 @@ local Pool = require "packages.qiao.pkg.qiao_mode.rules.general_pool"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
+local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 
 Testqiao_guest_allegiance = {
   setup = function()
@@ -14,14 +15,13 @@ Testqiao_guest_allegiance = {
   tearDown = support.clearRoom,
 }
 
-local function forcedBackend()
+local function forcedBackend(winners)
   -- The test client is created for eight seats; keep rooms at that size and
   -- exercise the four-player path through the pure version plan instead.
   local backend = FkTest.createFakeRoom({ 1, 2, 3, 4, 5, 6, 7, 8 })
-  -- Force the ban plan to leave wu/qun/han/jin: the two previous winners are
-  -- banned and no other kingdom is protected from the random choice.
+  -- Use the two previous winners to make this room's bans deterministic.
   backend._session_data = json.encode {
-    qiao_faction_ban_v1 = { version = 1, winners = { "wei", "shu" }, banned = {} },
+    qiao_faction_ban_v1 = { version = 1, winners = winners or { "wei", "shu" }, banned = {} },
   }
   return backend
 end
@@ -77,6 +77,45 @@ function Testqiao_guest_allegiance:testGuestResolutionOrder()
   lu.assertEquals(guest.kingdoms, { "han" })
   lu.assertNil(Guest.resolve("qiao_test__guest_banned", allowed))
   lu.assertNil(Guest.resolve("qiao_test__wei_1", { "wu", "qun" }))
+end
+
+function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
+  local client = QiaoClient:new(ClientInstance.client)
+  lu.assertFalse(client:guestIllustrationsEnabled())
+  client.settings = { gameMode = "qiao_heg_mode" }
+  lu.assertTrue(client:guestIllustrationsEnabled())
+  client.settings.qiao_guest_replacement = false
+  lu.assertFalse(client:guestIllustrationsEnabled())
+end
+
+function Testqiao_guest_allegiance:testOpeningPortraitsFollowRoomSettingWithoutGuestCandidates()
+  local offers = { "qiao_test__han_1", "qiao_test__han_2" }
+  for _, enabled in ipairs({ true, false }) do
+    local room = create { settings = { qiao_guest_replacement = enabled } }
+    FkTest.runInRoom(function()
+      local component = Selection.askData(room, offers).component
+      local extra = component.model.prop.extraData
+      lu.assertEquals(extra.guestIllustrations, enabled)
+      lu.assertEquals(extra.guests, {})
+      lu.assertEquals(component.url, enabled and Selection.redraw_url or nil)
+    end)
+    support.clearRoom()
+  end
+end
+
+function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelectedPackage()
+  local name = "qiao_heg__han001"
+  local pack = Fk.generals[name].package.name
+  local guests = Guest.registeredInPackage(pack)
+  lu.assertEquals(guests[name], { "qun", "wei" })
+  lu.assertEquals(guests.qiao_heg__wei013, { "han" })
+  lu.assertEquals(guests.qiao_heg__qun001, { "wei", "shu", "wu", "han" })
+  lu.assertNil(guests.qiao_heg__han003)
+  lu.assertNil(Guest.registeredInPackage("qiao_zhenshi")[name])
+  for general, factions in pairs(guests) do
+    lu.assertEquals(Fk.generals[general].package.name, pack)
+    lu.assertEquals(factions, Guest.guestKingdoms(general))
+  end
 end
 
 function Testqiao_guest_allegiance:testPairingUsesResolvedGuestFactions()
@@ -422,6 +461,17 @@ function Testqiao_guest_allegiance:testClientDialogContract()
   lu.assertFalse(blocked)
 end
 
+function Testqiao_guest_allegiance:testLiuBeiDraftReceivesAllThreeGuestFactions()
+  local name = "qiao_heg__shu001"
+  local room = create { backend = forcedBackend({ "shu", "wu" }) }
+  FkTest.runInRoom(function()
+    lu.assertEquals(room:getBanner("qiao_banned_kingdoms"), { "shu", "wu" })
+    local extra = Selection.askData(room, { name, "qiao_test__han_1" }).component.model.prop.extraData
+    lu.assertEquals(extra.guestFactions[name], { "han", "qun", "wei" })
+    lu.assertEquals(extra.guests, { name })
+  end)
+end
+
 function Testqiao_guest_allegiance:testFreeAssignDialogAndServerAcceptOutsideBannedPair()
   local room = create { settings = { enableFreeAssign = true, qiao_wild_count = 0 } }
   local player = room.players[1]
@@ -502,6 +552,28 @@ function Testqiao_guest_allegiance:testFreeAssignPrefersNormalGuestResolution()
   lu.assertEquals(first.kingdoms, { "han" })
   lu.assertEquals(second.source, "guest")
   lu.assertEquals(second.kingdoms, { "han" })
+end
+
+function Testqiao_guest_allegiance:testFreeAssignOutsideOfferShowsHuatuoGuestFactions()
+  local room = create { backend = forcedBackend({ "qun", "jin" }), settings = { enableFreeAssign = true } }
+  local player = room.players[1]
+  local huatuo, partner = "qiao_heg__qun001", "qiao_test__wei_1"
+  local offers = { [player] = { partner, "qiao_test__wei_2" } }
+  local extra, pairs, kingdoms, fallbacks
+  FkTest.setRoomBreakpoint(player, "CustomDialog", function(data)
+    extra = data.component.model.prop.extraData
+    return false
+  end)
+  FkTest.setNextReplies(player, { { huatuo, partner } })
+  FkTest.runInRoom(function()
+    pairs, kingdoms, fallbacks = Selection.choose(room, { player }, offers)
+  end)
+  lu.assertEquals(extra.guestFactions[huatuo], { "wei", "shu", "wu", "han" })
+  lu.assertFalse(table.contains(extra.guests, huatuo))
+  lu.assertEquals(pairs[player], { huatuo, partner })
+  lu.assertEquals(kingdoms[player], "wei")
+  lu.assertEquals(fallbacks, {})
+  lu.assertTrue(Guest.isGuest(room, huatuo))
 end
 
 function Testqiao_guest_allegiance:testFreeAssignPruneUnusedRemovesSelectedExactNames()

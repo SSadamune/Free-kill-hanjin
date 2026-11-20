@@ -47,6 +47,20 @@ function M.guestKingdoms(name)
   return table.simpleClone(M.guests[name] or {})
 end
 
+---Return the catalog's registered guest factions by general name.
+---@return table<string, string[]>
+function M.registeredInPackage(packageName)
+  local package = Fk.packages[packageName]
+  if not package then return {} end
+  local factions = {}
+  for _, general in ipairs(package.generals) do
+    if M.guests[general.name] and not general.total_hidden then
+      factions[general.name] = M.guestKingdoms(general.name)
+    end
+  end
+  return factions
+end
+
 ---Resolve one general against this game's allowed kingdoms.
 ---
 ---Order: keep the printed affiliations that are allowed; only when every

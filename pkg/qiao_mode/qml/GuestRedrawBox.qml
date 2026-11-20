@@ -8,6 +8,7 @@ import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Models.Popups
 import LunarLtk.Pages.Popups
+import "GuestIllustration.js" as GuestIllustration
 
 pragma ComponentBehavior: Bound
 
@@ -26,9 +27,18 @@ GraphicsBox {
 
   property bool waitingForRedraw: false
 
+  function displayFactions(name) {
+    const kingdoms = Array.from(dataModel.extraData.guestFactions[name] ?? []);
+    if (kingdoms.length >= 3) {
+      const rank = { han: 0, wei: 1, shu: 2, wu: 3, qun: 4, jin: 5 };
+      kingdoms.sort((a, b) => (rank[a] ?? 6) - (rank[b] ?? 6));
+    }
+    return kingdoms;
+  }
+
   function setFactions(model) {
-    const kingdoms = dataModel.extraData.guestFactions[model.name];
-    if (kingdoms) {
+    const kingdoms = displayFactions(model.name);
+    if (kingdoms.length > 0) {
       model.kingdom = kingdoms[0];
       model.subkingdom = kingdoms[1] || "";
     }
@@ -210,31 +220,19 @@ GraphicsBox {
       }
       draggable: !root.draggingCard || root.draggingCard === this
 
-      readonly property var factions: root.dataModel.extraData.guestFactions[dataModel.name] || []
+      readonly property var factions: root.displayFactions(dataModel.name)
+      cardFrontSource: GuestIllustration.picture(dataModel.name,
+        root.dataModel.extraData.guestIllustrations ?? GuestIllustration.enabledInRoom()) ?? dataModel.frontSkin
       readonly property var factionColors: ({ wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
                                                qun: "#92959a", han: "#aa832e", jin: "#845ba8" })
-      Rectangle {
+      GuestFactionBadges {
+        card: card
+        factions: card.factions
+      }
+
+      GuestFactionBorder {
         anchors.fill: parent
-        color: "transparent"
-        visible: card.factions.length > 0
-        border.width: 2
-        border.color: card.factionColors[card.factions[0]] || "#888888"
-        Rectangle {
-          anchors.right: parent.right
-          width: parent.width / 2
-          height: parent.height
-          color: "transparent"
-          clip: true
-          visible: card.factions.length > 1
-          Rectangle {
-            anchors.right: parent.right
-            width: card.width
-            height: card.height
-            color: "transparent"
-            border.width: 2
-            border.color: card.factionColors[card.factions[1]] || "#888888"
-          }
-        }
+        colors: card.factions.map(faction => card.factionColors[faction] || "#888888")
       }
 
       MetroButton {

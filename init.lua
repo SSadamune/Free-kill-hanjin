@@ -3,10 +3,17 @@ Fk:loadTranslationTable {
   ["qiao"] = "平行时空国战",
 }
 
--- GeneralsOverview builds its left-side extension list from
--- Fk.extension_names in raw order. Move qiao immediately after the actual
--- 国战 extension (hegemony), preserving every other extension's order.
 Fk:addPostLoadFunc(function()
+  local standard = Fk.packages.standard
+  for _, page in ipairs(standard and standard.customPages or {}) do
+    if page.name == "Generals Overview" then
+      page.qml = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralsOverview.qml" }
+      break
+    end
+  end
+
+  -- GeneralsOverview uses this order for its extension list.
+  -- Put qiao immediately after hegemony (国战).
   local names = Fk.extension_names
   local qiaoIndex, hegemonyIndex
   for i, name in ipairs(names) do

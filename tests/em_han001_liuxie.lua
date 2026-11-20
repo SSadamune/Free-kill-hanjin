@@ -255,6 +255,7 @@ function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
     lu.assertTrue(Fk.skills[P.BANNER]:canUse(me), "客户端诏书入口应可用")
     lu.assertTrue(Fk.skills[P.CONSUME]:canUse(me), "客户端四花色消费应可用")
     lu.assertFalse(Fk.skills[P.CONSUME].visible, "取锦囊不应出现在技能按钮栏")
+    lu.assertEquals(Fk:translate("qiao__edict_take_trick"), "获得势力锦囊")
 
     local mark = assert(Fk.qml_marks[P.PILE_MARK])
     lu.assertEquals(mark.how_to_show(P.PILE, me:getPile(P.PILE), me), "4")

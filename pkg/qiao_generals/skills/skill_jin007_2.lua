@@ -85,18 +85,15 @@ skill:addEffect(fk.Damaged, {
       return false
     end
     -- “交给”不是弃置，不能用弃置接口过滤禁弃牌。
-    local _, cards = room:askToChooseCardsAndPlayers(player, {
-      targets = { player },
-      min_num = 1,
-      max_num = 1,
-      min_card_num = 2,
-      max_card_num = 2,
-      pattern = ".",
+    local cards = room:askToCards(player, {
+      min_num = 2,
+      max_num = 2,
+      include_equip = true,
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin007_2-give",
+      prompt = "#qiao__skill_jin007_2-give::" .. target.id,
       cancelable = true,
     })
-    if cards == nil or #cards ~= 2 then return false end
+    if not cards or #cards ~= 2 or cards[1] == cards[2] then return false end
     local legal = ownCards(player)
     for _, id in ipairs(cards) do
       if not table.contains(legal, id) then return false end
@@ -130,7 +127,7 @@ skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
   ["#qiao__skill_jin007_2-invoke"] = "恤下：你可以交给 %dest 两张牌，然后摸两张牌",
-  ["#qiao__skill_jin007_2-give"] = "恤下：选择交给其的两张牌",
+  ["#qiao__skill_jin007_2-give"] = "恤下：选择交给 %dest 的两张牌",
 }
 
 return skill

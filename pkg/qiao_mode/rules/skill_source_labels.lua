@@ -10,6 +10,7 @@ local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local Dying = require "packages.qiao.pkg.qiao_generals.util.qun_dying"
 
 local M = {}
 
@@ -92,6 +93,9 @@ function M.register(retinues)
   local getDescription = Fk.getDescription
   function Fk:getDescription(name, lang, player)
     local text = getDescription(self, name, lang, player)
+    if name == Dying.JISHI_SKILL then
+      return Dying.formatJishiDescription(text, self:currentRoom())
+    end
     if name == "qiao__skill_jin013_1" then
       return (text:gsub("<富甲→改为雷电伤害>", "&lt;富甲→改为雷电伤害&gt;"))
     end

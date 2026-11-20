@@ -442,16 +442,16 @@
 #### 识人（JIN007 王元姬）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin007_1`；源码 [skill_jin007_1.lua](../../../../pkg/qiao_generals/skills/skill_jin007_1.lua)。规则见[王元姬规范](../../../rules/generals/jin007-wangyuanji.md)。同将恤下见本页[恤下](#jin007-2)。
-- **实现与接口**：准备阶段选择至多三名其他势力、仍有手牌的角色，逐个以 `askToChooseCard(flag="h")` 隐藏选牌并先固定；随后按行动顺序让各拥有者用 `askToChoice` 声明一个牌名。只展示并获得其中一张；仅将该牌实际牌名与其拥有者声明比较，不同才把其余已选牌一并获得。选牌阶段不展示、不提前公开；声明及比较按通用牌名口径与 `trueName` 去重；不将应变分组专属的属性杀区分规则推广到识人。
-- **验证依据**：[jin_information.lua](../../../../tests/jin_information.lua) 覆盖隐藏选牌、声明与只展示一张；2/2（0.511s）通过，见[共享验证证据](verification-evidence.md#jin-information)。
+- **实现与接口**：准备阶段选择至多三名其他势力、仍有手牌的角色，逐个以 `askToChooseCard(flag="h")` 隐藏选牌并先固定。各拥有者按行动顺序用 `askToChoice` 声明，战报公布其声明的牌名，最终选择时在各候选角色旁显示对应牌名。声明及比较按通用牌名口径使用 `trueName`。只展示并获得其中一张，仅在该牌与其拥有者声明不符时获得其余已选牌。
+- **验证依据**：[jin_information.lua](../../../../tests/jin_information.lua) 覆盖隐藏选牌、声明与只展示一张。2026-11-20 新增断言，核对实际客户端选人请求内的牌名提示和战报数据。与 `jin_resources` 合跑 17/17。
 - **未完成与边界**：取消选择后的部分名单、目标死亡/手牌变化、声明牌名集合与客户端展示未人工验收。
 
 <a id="jin007-2"></a>
 #### 恤下（JIN007 王元姬）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin007_2`；源码 [skill_jin007_2.lua](../../../../pkg/qiao_generals/skills/skill_jin007_2.lua)。规则见[王元姬规范](../../../rules/generals/jin007-wangyuanji.md)。同将识人见本页[识人](#jin007-1)。
-- **实现与接口**：全局监听 `fk.Damaged`，目标为受伤的其他角色；按 `H.getGeneralsRevealedNum` 读取实际明置将数，少于王元姬（含暗置来源的预测）才可发动，每回合一次（`HistoryTurn`）。消耗为交给目标两张自己的手牌/装备，使用 `askToChooseCardsAndPlayers` 的“交给”而非弃置过滤；随后摸两张。暗置来源的明置由引擎 `SkillEffect` 完成，技能只预测并检查 `prohibitReveal`，不自行明置。
-- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 有交两张摸两张、明置数不足与两张牌门槛；定向 15/15（3.686s）；恤下真实“0 明置→发动后明置→交给两张→摸两张”已通过，见[共享验证证据](verification-evidence.md#jin-resources)。
+- **实现与接口**：全局监听 `fk.Damaged`，受伤的其他角色即收牌人。按 `H.getGeneralsRevealedNum` 读取实际明置将数，少于王元姬（含暗置来源的预测）才可发动，每回合一次（`HistoryTurn`）。用 `askToCards` 从手牌或装备区选择两张交给收牌人，随后摸两张。暗置来源的明置由引擎 `SkillEffect` 完成，技能预测明置数并检查 `prohibitReveal`。
+- **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖交两张摸两张、明置数和牌数门槛及暗将发动。2026-11-20 的原生定向复核实际客户端只选一张时无法确认，混选一卡手牌和一张装备后可以确认。与 `jin_information` 合跑 17/17。
 - **未完成与边界**：目标死亡、禁明置、交给中插入移牌、客户端交互未人工验收。
 
 <a id="jin008-1"></a>

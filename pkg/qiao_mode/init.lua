@@ -44,6 +44,7 @@ Fk:loadTranslationTable {
   ["qiao_faction_ban_enabled"] = "势力禁用规则",
   ["help: qiao_faction_ban_enabled"] = "随机选择四个势力备选，其余势力将被禁用",
   ["qiao_guest_replacement"] = "客将替换规则",
+  ["qiao_guest_illustrations"] = "客将势力",
   ["help: qiao_guest_replacement"] = "主势力均被禁用的武将可以作为客将出场",
   ["qiao_candidate_kingdoms"] = "备选势力",
   ["help: qiao_candidate_kingdoms"] = "候选外的势力不会出现。",

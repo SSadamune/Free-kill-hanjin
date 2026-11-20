@@ -233,14 +233,43 @@ function Testqiao_jin_resources:testXuxiaGivesTwoThenDrawsTwo()
   local p, target = p1(), p2()
   install(room, p, "qiao_heg__jin007")
   inRoom(function() target:hideGeneral(true) end)
-  local hand = setHand(room, p, { { "jink" }, { "peach" } })
+  local hand = setHand(room, p, { { "jink" } })[1]
+  addEquip(room, p, "jueying")
+  local equip = p:getCardIds("e")[1]
   local before = #target:getCardIds("h")
 
   lu.assertTrue(p:hasSkill(XUXIA))
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCardAndPlayers({ p }, { hand[1], hand[2] }) })
+  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCards({ hand, equip }) })
+  FkTest.setRoomBreakpoint(p, "AskForUseActiveSkill", function(data)
+    return data[2] == "#qiao__skill_jin007_2-give::" .. target.id
+  end)
   damage(room, p3(), target)
+  FkTest.runInClient(function()
+    local handler = ClientInstance.current_request_handler
+    lu.assertEquals(handler.skill_name, "choose_cards_skill")
+    local me = handler.player
+    local handCards, equips = me.player_cards[Player.Hand], me.player_cards[Player.Equip]
+    me.player_cards[Player.Hand], me.player_cards[Player.Equip] = { hand }, { equip }
+    local CardItem = require("ui_emu.common").CardItem
+    if not handler.scene:getAllItems("CardItem")[hand] then
+      handler.scene:addItem(CardItem:new(handler.scene, hand))
+    end
+    handler:setup()
+    lu.assertTrue(handler:cardValidity(hand))
+    lu.assertTrue(handler:cardValidity(equip))
+    handler:update("CardItem", hand, "click", { selected = true })
+    lu.assertFalse(handler.scene:getAllItems("Button").OK.enabled)
+    handler:update("CardItem", equip, "click", { selected = true })
+    lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
+    lu.assertEquals(handler.selected_targets, {})
+    lu.assertFalse(handler:targetValidity(me.id))
+    me.player_cards[Player.Hand], me.player_cards[Player.Equip] = handCards, equips
+  end)
+  FkTest.resumeRoom()
 
   lu.assertEquals(#target:getCardIds("h"), before + 2)
+  lu.assertTrue(table.contains(target:getCardIds("h"), hand))
+  lu.assertTrue(table.contains(target:getCardIds("h"), equip))
   lu.assertEquals(#p:getCardIds("h"), 2)
   lu.assertEquals(p:usedSkillTimes(XUXIA, Player.HistoryTurn), 1)
 end
@@ -452,7 +481,7 @@ function Testqiao_jin_resources:testXuxiaRealDarkSourceIsRegisteredAndTriggers()
   end)
   -- TriggerSkill:doCost adds a fake-skill confirmation when the test backend
   -- completes all cost requests in under one second. Keep that real request.
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCardAndPlayers({ p }, { hand[1], hand[2] }), "1" })
+  FkTest.setNextReplies(p, { "1", FkTest.ReplyChooseCards({ hand[1], hand[2] }), "1" })
   inRoom(function() room.current = p end)
   damage(room, p3(), target)
 

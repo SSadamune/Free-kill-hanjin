@@ -591,13 +591,16 @@ function M.convertPosition(player, isDeputy)
   if #choices == 0 then return false end
   local choice = choices[1]
   if #choices > 1 then
-    local answer = room:askToChooseGeneral(player, {
-      generals = choices,
-      n = 1,
-      no_convert = true,
-      prompt = "#qiao_commander_choose_retinue",
+    -- Registered retinues are hidden from normal drafting. Use the same card
+    -- picker with the eligible retinue list as the validation boundary.
+    local request = Request:new(player, "AskForGeneral")
+    request.timeout = room:getSettings("generalTimeout")
+    request:setData(player, {
+      choices, 1, true, false, "askForGeneralsChosen", "#qiao_commander_choose_retinue", { n = 1 },
     })
-    if type(answer) == "table" then answer = answer[1] end
+    request:setDefaultReply(player, room:tableRandomPick(choices, 1))
+    local answer = request:getResult(player)
+    if type(answer) == "table" then answer = #answer == 1 and answer[1] or nil end
     if table.contains(choices, answer) then choice = answer end
   end
   return M.assignRetinue(player, isDeputy, choice)

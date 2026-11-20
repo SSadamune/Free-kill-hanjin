@@ -20,6 +20,12 @@ M.JISHI_SKILL = "qiao__skill_qun001_1"
 -- 完杀标记不属于任何技能来源，交换时不会被当作技能标记迁走。
 M.WANSHA_MARK = "qiao_qun007_wansha_dying"
 
+-- The lobby preview uses the default (enabled) form before room settings exist.
+function M.formatJishiDescription(text, room)
+  local showExchange = not room or not room.settings or Guest.replacementEnabled(room)
+  return (text:gsub("%s*%[([^%]]*)%]", showExchange and "%1" or ""))
+end
+
 local function exchange()
   return require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 end

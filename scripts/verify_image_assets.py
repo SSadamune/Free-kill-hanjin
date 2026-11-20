@@ -2,7 +2,7 @@
 
 Usage:
     python scripts/verify_image_assets.py              # batch specs + coverage
-    python scripts/verify_image_assets.py --release    # built .dev/dist/qiao.zip
+    python scripts/verify_image_assets.py --release    # today's ZIP for the current commit
     python scripts/verify_image_assets.py --sync DIR   # an isolated dev.ps1 sync
 """
 from __future__ import annotations
@@ -12,6 +12,8 @@ import hashlib
 import re
 import sys
 from pathlib import Path
+
+from build_release import release_output_path
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ENTRIES = ('init.lua', 'pkg', 'image', 'audio')
@@ -219,15 +221,16 @@ def check_sync(destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release', nargs='?', const=str(ROOT / '.dev/dist/qiao.zip'),
-                        help='check the built ZIP, default .dev/dist/qiao.zip')
+    parser.add_argument('--release', nargs='?', const=True, metavar='ZIP',
+                        help="check a ZIP, defaulting to today's build for the current commit")
     parser.add_argument('--sync', metavar='DIR', help='check a synced package directory')
     args = parser.parse_args()
     errors = []
     if args.sync:
         errors += check_sync(args.sync)
-    elif args.release:
-        errors += check_release(args.release)
+    elif args.release is not None:
+        zip_path = release_output_path() if args.release is True else args.release
+        errors += check_release(zip_path)
     else:
         errors += check_assets()
     for error in errors:

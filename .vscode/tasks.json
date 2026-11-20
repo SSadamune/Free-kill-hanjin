@@ -23,6 +23,14 @@
       "problemMatcher": []
     },
     {
+      "label": "平行时空：构建用户安装包",
+      "type": "process",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/build_release.py"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "平行时空：检查 Lua 语法",
       "type": "process",
       "command": "python",
