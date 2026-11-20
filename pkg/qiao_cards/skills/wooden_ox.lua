@@ -3,6 +3,10 @@ local skill = fk.CreateSkill {
   attached_equip = "qiao__wooden_ox",
 }
 
+local function isOx(id)
+  return Fk:getCardById(id, true).name == skill.attached_equip
+end
+
 skill:addEffect("active", {
   prompt = "#wooden_ox-prompt",
   can_use = function(self, player)
@@ -18,19 +22,19 @@ skill:addEffect("active", {
     local player = effect.from
     player:addToPile("$sa_carriage", effect.cards[1], false, self.name)
     if player.dead then return end
-    local ox = table.find(player:getCardIds("e"), function(id)
-      return Fk:getCardById(id).name == self.attached_equip
-    end)
+    local ox = table.find(player:getCardIds("e"), isOx)
     if ox then
       local targets = table.filter(room:getPresentPlayers(), function(p)
-        return p ~= player and p:hasEmptyEquipSlot(Card.SubtypeTreasure)
+        return p ~= player and p:canMoveCardIntoEquip(ox, false)
       end)
       if #targets > 0 then
         local tos = room:askToChoosePlayers(player, {
           cancelable = true, max_num = 1, min_num = 1,
           skill_name = self.name, targets = targets, prompt = "#wooden_ox-move",
         })
-        if #tos > 0 then
+        if tos[1] and table.contains(targets, tos[1]) and not tos[1]:isRemoved()
+          and room:getCardOwner(ox) == player and room:getCardArea(ox) == Card.PlayerEquip
+          and tos[1]:canMoveCardIntoEquip(ox, false) then
           room:moveCardTo(ox, Card.PlayerEquip, tos[1], fk.ReasonPut, self.name,
             nil, true, player, nil)
         end
@@ -43,10 +47,10 @@ skill:addEffect(fk.AfterCardsMove, {
   mute = true,
   priority = 5,
   can_trigger = function(self, event, target, player, data)
-    if player:getPile("$sa_carriage") == 0 then return false end
+    if #player:getPile("$sa_carriage") == 0 then return false end
     for _, move in ipairs(data) do
       for _, info in ipairs(move.moveInfo) do
-        if Fk:getCardById(info.cardId).name == self.attached_equip then
+        if isOx(info.cardId) then
           if info.fromArea == Card.Processing then
             local room = player.room
             local move_event = room.logic:getCurrentEvent():findParent(GameEvent.MoveCards, true)
@@ -65,7 +69,7 @@ skill:addEffect(fk.AfterCardsMove, {
               for _, last_move in ipairs(move_events[1].data) do
                 if last_move.moveReason == fk.ReasonExchange then
                   for _, last_info in ipairs(last_move.moveInfo) do
-                    if Fk:getCardById(last_info.cardId).name == self.attached_equip then
+                    if isOx(last_info.cardId) then
                       if last_move.from == player and last_info.fromArea == Card.PlayerEquip then
                         if move.toArea == Card.PlayerEquip then
                           if move.to ~= player then

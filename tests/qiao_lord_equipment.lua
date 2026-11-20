@@ -4,6 +4,7 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
+local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local Heg = require "packages.hegemony.util"
 local AllianceCards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 
@@ -91,6 +92,64 @@ local function confirmRequest(handler)
   ClientInstance.notifyUI = originalNotify
   if not ok then error(err, 0) end
   return assert(reply, "client did not send a card-use reply")
+end
+
+function Testqiao_lord_equipment:testWoodenOxMovesWithCargoFromOneCancelableTargetRequest()
+  local room = FkTest.room
+  local first, second, third = p(1), p(2), p(3)
+  inRoom(function()
+    local ox = give(room, first, room:printCard("qiao__wooden_ox", Card.Diamond, 5))
+    use(room, first, { first }, ox)
+    local original = room.askToUseActiveSkill
+    local requests = 0
+    room.askToUseActiveSkill = function(self, player, params)
+      if params.prompt == "#wooden_ox-move" then
+        requests = requests + 1
+        local target = player == first and second or third
+        lu.assertEquals(params.skill_name, "choose_players_skill")
+        client_room.run(room, function(clients)
+          local selector = Fk.skills[params.skill_name]
+          local previous = selector._extra_data
+          selector._extra_data = params.extra_data
+          local handler = ReqActiveSkill:new(clients[player.seat], {
+            params.skill_name, params.prompt, params.cancelable, params.extra_data,
+          })
+          local ok, err = pcall(function()
+            handler:setup()
+            lu.assertTrue(handler.cancelable)
+            lu.assertFalse(handler:feasible(), "无目标时不能确认移动")
+            lu.assertTrue(handler:targetValidity(target.id))
+            handler:selectTarget(target.id, { selected = true })
+            lu.assertTrue(handler:feasible())
+            handler:_finish()
+          end)
+          selector._extra_data = previous
+          if not ok then error(err, 0) end
+        end)
+      end
+      return original(self, player, params)
+    end
+    local cargo = give(room, first, room:printCard("qiao__slash", Card.Spade, 3))
+    local extra = give(room, second, room:printCard("qiao__jink", Card.Heart, 2))
+    local oxSkill = "qiao__wooden_ox_skill"
+    local function load(player, material, reply)
+      room.current, player.phase = player, Player.Play
+      FkTest.setNextReplies(player, { reply })
+      room:handleUseCardReply(player, FkTest.ReplyUseSkill(oxSkill, {}, { material.id }), nil)
+    end
+    load(first, cargo, FkTest.ReplyChoosePlayer({ second }))
+    local owner = room:getCardOwner(ox.id)
+    lu.assertEquals(owner and owner.id, second.id)
+    lu.assertEquals(room:getCardArea(ox.id), Card.PlayerEquip)
+    lu.assertEquals(first:getPile("$sa_carriage"), {})
+    lu.assertEquals(second:getPile("$sa_carriage"), { cargo.id })
+    load(second, extra, "")
+    owner = room:getCardOwner(ox.id)
+    lu.assertEquals(owner and owner.id, second.id)
+    lu.assertEquals(second:getPile("$sa_carriage"), { cargo.id, extra.id })
+    lu.assertEquals(requests, 2)
+    room.askToUseActiveSkill = original
+  end)
 end
 
 function Testqiao_lord_equipment:testChixiaoBigSmallTargetGivesRedOrCannotOffset()
