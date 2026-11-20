@@ -75,25 +75,13 @@ GeneralsOverview {
         card.dataModel.subkingdom = factions[1] ?? "";
         const picture = GuestIllustration.picture(modelData, true);
         if (picture) card.cardFrontSource = picture;
+        factionBadges.card = card;
       }
 
-      // The standard card has two faction slots. Put any remaining badges below its HP.
-      Row {
-        x: 32
-        y: 16
-        spacing: 2
+      GuestFactionBadges {
+        id: factionBadges
+        factions: tile.factions
         z: 1
-
-        Repeater {
-          model: tile.factions.slice(2)
-          Image {
-            required property string modelData
-            width: 13
-            height: 15
-            fillMode: Image.PreserveAspectFit
-            source: SkinBank.getGeneralCardDir(modelData) + modelData
-          }
-        }
       }
     }
 

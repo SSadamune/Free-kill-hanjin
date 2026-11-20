@@ -192,6 +192,16 @@ function M.askData(room, offers, guests)
     if entry and entry.source == "guest" then guestFactions[name] = entry.kingdoms end
     if entry and entry.wild then wild[name] = true end
   end
+  if freeAssign and guestIllustrations then
+    -- Free assignment can insert a general that was not offered. Send its
+    -- resolved factions for display, while redraw stays tied to the offer.
+    for name in pairs(Guest.guests) do
+      if not guestFactions[name] and validFreeGeneral(name) then
+        local entry = Guest.factionsOf(room, name)
+        if entry and entry.source == "guest" then guestFactions[name] = entry.kingdoms end
+      end
+    end
+  end
   local data = {
     component = {
       name = "ChooseGeneralBox", uri = "LunarLtk.Pages.Popups",
