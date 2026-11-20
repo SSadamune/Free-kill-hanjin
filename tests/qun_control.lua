@@ -163,7 +163,6 @@ function Testqiao_qun_control:testShuangrenWinUsesOneSlashWithOpponent()
   local seen = installUseProbe()
 
   FkTest.setNextReplies(p1, {
-    "1",
     FkTest.ReplyChoosePlayer({ p2 }),
     FkTest.ReplyChooseCards({ mine }),
     FkTest.ReplyChoosePlayer({ p3 }),
@@ -209,7 +208,6 @@ function Testqiao_qun_control:testShuangrenLoseRestrictsHandSlashUntilTurnEnd()
   local high = give(p2, "qiao__jink", Card.Heart, 13)
 
   FkTest.setNextReplies(p1, {
-    "1",
     FkTest.ReplyChoosePlayer({ p2 }),
     FkTest.ReplyChooseCards({ low }),
   })
@@ -295,7 +293,6 @@ function Testqiao_qun_control:testShuangrenConversionSurvivesLosingTheSkillBody(
   local high = give(p2, "qiao__jink", Card.Heart, 13)
 
   FkTest.setNextReplies(p1, {
-    "1",
     FkTest.ReplyChoosePlayer({ p2 }),
     FkTest.ReplyChooseCards({ low }),
   })

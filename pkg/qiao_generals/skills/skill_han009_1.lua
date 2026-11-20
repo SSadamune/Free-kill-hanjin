@@ -8,6 +8,7 @@
 -- 记录“已发动”和目标，后续目标事件不再询问。双选后的反弃绑定该 use 与
 -- 被选中的目标；其他目标抵消不触发。反弃由房间级延迟监听处理，不依赖
 -- 伏完是否仍有谋溃。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han009_1",
 }
@@ -75,30 +76,19 @@ skill:addEffect(fk.TargetSpecified, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han009_1-invoke",
-    }) then
-      return false
-    end
-
     local use = data.use
     local targets = table.filter(use.tos or {}, function(p)
       return p ~= nil and p:isAlive() and not p:isRemoved()
     end)
-    if #targets == 0 then return false end
-    local to = targets[1]
-    if #targets > 1 then
-      local chosen = room:askToChoosePlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        targets = targets,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_han009_1-target",
-        cancelable = false,
-      })
-      to = chosen and chosen[1]
-    end
+    local chosen = Invoke.ask(room, player, {
+      min_num = 1,
+      max_num = 1,
+      targets = targets,
+      skill_name = skill.name,
+      prompt = "#qiao__skill_han009_1-target",
+      invoke_prompt = "#qiao__skill_han009_1-invoke",
+    })
+    local to = chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end
 
     local options = { OPTION_DRAW }

@@ -7,6 +7,7 @@
 -- UseCardData:changeCard 完成，沿用本次使用与实体材料，不另起第二次使用。
 -- 只有实际执行改牌后，才在该次用牌结束、确认未造成伤害时获得横置/重置机会。
 -- 手牌上限加的是当前横置角色总数，与本次是否走到横置分支无关。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_chain"
 
@@ -50,25 +51,26 @@ local function ensureFollowListener(room)
           and not J.dealtDamage(data)
       end,
       on_cost = function(self, event, target, player, data)
-        return player.room:askToSkillInvoke(player, {
-          skill_name = skill.name,
-          prompt = "#qiao__skill_jin005_1-follow",
-        })
-      end,
-      on_use = function(self, event, target, player, data)
         local room = player.room
         local candidates = table.filter(room:getPresentPlayers(), function(p)
           return p ~= nil and not p.dead and not p:isRemoved()
         end)
-        if #candidates == 0 then return end
-        local chosen = room:askToChoosePlayers(player, {
-          min_num = 0,
+        if #candidates == 0 then return false end
+        local chosen = Invoke.ask(room, player, {
+          min_num = 1,
           max_num = math.min(2, #candidates),
           targets = candidates,
           skill_name = skill.name,
           prompt = "#qiao__skill_jin005_1-targets",
-          cancelable = true,
+          invoke_prompt = "#qiao__skill_jin005_1-follow",
         })
+        if #chosen == 0 then return false end
+        event:setCostData(self, { tos = chosen })
+        return true
+      end,
+      on_use = function(self, event, target, player, data)
+        local room = player.room
+        local chosen = event:getCostData(self).tos
         for _, p in ipairs(chosen or {}) do
           if p.dead or p:isRemoved() then goto continue end
           local choice = room:askToChoice(player, {

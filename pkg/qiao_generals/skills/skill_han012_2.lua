@@ -142,55 +142,44 @@ skill:addEffect(fk.CardUseFinished, {
     return #left > 0 and #otherTargets(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local room = player.room
+    local remaining = room:getSubcardsByRule(data.card, { Card.Processing })
+    local targets = otherTargets(player)
+    if #remaining == 0 or #targets == 0 then return false end
+
+    -- 第一次分配可以取消。开始分配后，剩余子牌也须交给其他角色。
+    local list = room:askToYiji(player, {
+      cards = remaining,
+      targets = targets,
+      min_num = #remaining,
+      max_num = #remaining,
       skill_name = skill.name,
-      prompt = "#qiao__skill_han012_2-give-invoke",
+      prompt = "#qiao__skill_han012_2-give",
+      cancelable = true,
+      skip = true,
+      expand_pile = remaining,
     })
+    if not table.find(room.players, function(to) return #(list[to.id] or {}) > 0 end) then return false end
+    event:setCostData(self, { distribution = list })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     local remaining = room:getSubcardsByRule(data.card, { Card.Processing })
-    if #remaining == 0 then return end
-
-    local targets = otherTargets(player)
-    if #targets == 0 then return end
-
-    -- 接受给牌后须把当前可给的子牌全部分配完；不允许只给一部分后取消。
-    -- 每次选择一名其他角色及其获得的牌，最后统一一次 doYiji 完成一次正常
-    -- 给牌移动。
-    local list = {}
-    while #remaining > 0 and #targets > 0 do
-      local tos, chosen, ok = room:askToChooseCardsAndPlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        min_card_num = 1,
-        max_card_num = #remaining,
-        targets = targets,
-        pattern = ".",
-        skill_name = skill.name,
-        prompt = "#qiao__skill_han012_2-give",
-        cancelable = false,
-        expand_pile = remaining,
-      })
-      if not ok or #tos == 0 or #chosen == 0 then break end
-
-      local to = tos[1]
-      local valid = {}
-      for _, id in ipairs(chosen) do
-        if table.contains(remaining, id) and not table.contains(valid, id) then
-          table.insert(valid, id)
-        end
+    local list = event:getCostData(self).distribution
+    for id, cards in pairs(list) do
+      local to = room:getPlayerById(id)
+      if to == nil or to.dead or to:isRemoved() or to == player then
+        list[id] = nil
+      else
+        list[id] = table.filter(cards, function(card)
+          if not table.contains(remaining, card) then return false end
+          table.removeOne(remaining, card)
+          return true
+        end)
       end
-      if #valid == 0 then break end
-
-      list[to.id] = list[to.id] or {}
-      table.insertTable(list[to.id], valid)
-      for _, id in ipairs(valid) do table.removeOne(remaining, id) end
     end
-
-    if next(list) ~= nil then
-      room:doYiji(list, player, skill.name)
-    end
+    room:doYiji(list, player, skill.name)
   end,
 })
 
@@ -199,7 +188,6 @@ Fk:loadTranslationTable {
   ["qiao__skill_han012_2"] = "博通",
   [":qiao__skill_han012_2"] = "你可以将四种花色或三种类别各一张牌当任意一种基本牌使用，然后你可以将这些牌交给其他角色。",
   ["#qiao__skill_han012_2-prompt"] = "博通：选择四张四种花色的牌，或三张基本/锦囊/装备牌",
-  ["#qiao__skill_han012_2-give-invoke"] = "博通：你可以将以此法使用的牌交给其他角色",
   ["#qiao__skill_han012_2-give"] = "博通：选择其他角色和要交给其的牌",
 }
 

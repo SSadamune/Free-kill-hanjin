@@ -11,8 +11,6 @@ local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 
 local RED_USED = "qiao__retinue_skill_jinfanjun_red-turn"
 local BLACK_USED = "qiao__retinue_skill_jinfanjun_black-turn"
-local OPT_RED = "#qiao__retinue_skill_jinfanjun-red"
-local OPT_BLACK = "#qiao__retinue_skill_jinfanjun-black"
 
 local function usedColors(player, instance)
   if instance ~= nil then
@@ -114,53 +112,39 @@ skill:addEffect(fk.AfterCardsMove, {
     local instance = R.currentForEvent(self, event)
     local colors = availableColors(player, data, instance)
     if #colors == 0 then return false end
-    if not player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_jinfanjun-invoke",
-    }) then return false end
-    local color = colors[1]
-    if #colors > 1 then
-      local option = player.room:askToChoice(player, {
-        choices = { OPT_RED, OPT_BLACK },
-        skill_name = skill.name,
-        prompt = "#qiao__retinue_skill_jinfanjun-color",
-        cancelable = false,
-      })
-      color = option == OPT_RED and Card.Red or Card.Black
+    local ids = {}
+    for _, color in ipairs(colors) do
+      table.insertTable(ids, discardableOfColor(player, color))
     end
-    if not table.contains(colors, color) then return false end
-    event:setCostData(self, { color = color, instance = instance })
+    if #ids == 0 then return false end
+    local cards = player.room:askToDiscard(player, {
+      min_num = 1, max_num = 1, include_equip = true,
+      pattern = tostring(Exppattern { id = ids }),
+      skill_name = skill.name,
+      prompt = "#qiao__retinue_skill_jinfanjun-discard",
+      cancelable = true,
+      skip = true,
+    })
+    if #cards ~= 1 or not table.contains(ids, cards[1]) then return false end
+    local color = Fk:getCardById(cards[1]).color
+    event:setCostData(self, { card = cards[1], color = color, instance = instance })
     return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local cost = event:getCostData(self) or {}
-    local color = cost.color
-    local instance = cost.instance
-    if color == nil or #discardableOfColor(player, color) == 0 then return end
-    local cards = room:askToDiscard(player, {
-      min_num = 1,
-      max_num = 1,
-      include_equip = true,
-      pattern = color == Card.Red and ".|.|red" or ".|.|black",
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_jinfanjun-discard",
-      cancelable = false,
-    })
-    if cards == nil or #cards ~= 1 then return end
+    local cost = event:getCostData(self)
+    local id, color, instance = cost.card, cost.color, cost.instance
+    if not table.contains(discardableOfColor(player, color), id) then return end
     markUsed(player, color, instance)
-    player:drawCards(2, skill.name)
+    room:throwCard({ id }, skill.name, player, player)
+    if not player.dead then player:drawCards(2, skill.name) end
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_jinfanjun"] = "锦帆军",
   [":qiao__retinue_skill_jinfanjun"] = "每回合每颜色限一次，你弃置任意角色的牌后，你可以弃置一张其中包含的颜色的牌，然后摸两张牌。",
-  ["#qiao__retinue_skill_jinfanjun-invoke"] = "锦帆军：你可以弃置一张其中包含的颜色的牌，然后摸两张牌",
-  ["#qiao__retinue_skill_jinfanjun-color"] = "锦帆军：选择一种包含的颜色",
-  ["#qiao__retinue_skill_jinfanjun-discard"] = "锦帆军：弃置一张该颜色的牌",
-  [OPT_RED] = "红色",
-  [OPT_BLACK] = "黑色",
+  ["#qiao__retinue_skill_jinfanjun-discard"] = "锦帆军：弃置一张符合颜色条件的牌，然后摸两张牌",
 }
 
 return skill

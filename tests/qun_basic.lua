@@ -530,7 +530,7 @@ function Testqiao_qun_basic:testSijianLastHandcardDiscardsOtherCard()
   local invoked = 0
   withStubs(SIJIAN, {
     askToSkillInvoke = function() invoked = invoked + 1; return true end,
-    askToChoosePlayers = function() return { p2 } end,
+    askToChoosePlayers = function() invoked = invoked + 1; return { p2 } end,
     askToChooseCard = function() return { victim } end,
   }, function()
     inRoom(function() room():throwCard({ mine }, "test", p1, p1) end)

@@ -71,12 +71,6 @@ skill:addEffect(fk.Damaged, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin007_2-invoke::" .. target.id,
-    }) then
-      return false
-    end
     -- 询问阶段尚未明置（TriggerSkill:doCost 先于 room:useSkill/SkillEffect），
     -- 不能在此读取“实际”明置数；先检查合法来源是否被禁止明置，并按预测值
     -- 判断，真实明置后的复核放到 on_use。

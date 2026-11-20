@@ -7,6 +7,7 @@
 --   2. 体力值变化为 1 后：比较变化前后，只有从非 1 变为 1 才触发；维持在 1 或
 --      变为 0 都不触发，也不要求这次变化是失去体力。
 -- 效果：弃置一名其他角色的一张牌，只含手牌和装备（不含判定区），不附带回复。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_qun016_1",
 }
@@ -21,21 +22,15 @@ end
 
 local function onCost(self, event, target, player)
   local room = player.room
-  if not room:askToSkillInvoke(player, {
-    skill_name = skill.name,
-    prompt = "#qiao__skill_qun016_1-invoke",
-  }) then
-    return false
-  end
   local targets = discardablePlayers(player)
   if #targets == 0 then return false end
-  local chosen = room:askToChoosePlayers(player, {
+  local chosen = Invoke.ask(room, player, {
     min_num = 1,
     max_num = 1,
     targets = targets,
     skill_name = skill.name,
     prompt = "#qiao__skill_qun016_1-target",
-    cancelable = true,
+    invoke_prompt = "#qiao__skill_qun016_1-invoke",
   })
   local to = chosen and chosen[1]
   if to == nil or to.dead or to:isRemoved() or #to:getCardIds("he") == 0 then return false end

@@ -6,6 +6,7 @@
 -- 适用（比较对象包含死者自身）。
 --
 -- 「其可以」的发动、选项和受益者均由死亡角色选择；本技能不硬编码只限他人。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han011_2",
 }
@@ -63,12 +64,17 @@ skill:addEffect(fk.Death, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(target, {
+    local tos = Invoke.ask(room, target, {
+      min_num = 1,
+      max_num = 1,
+      targets = candidates(target, player),
       skill_name = skill.name,
-      prompt = "#qiao__skill_han011_2-invoke",
-    }) then
-      return false
-    end
+      prompt = "#qiao__skill_han011_2-target",
+      invoke_prompt = "#qiao__skill_han011_2-invoke",
+    })
+    local to = tos[1]
+    if to == nil or to == target or not to:isAlive() or to:isRemoved() then return false end
+    if not sameKingdom(player, to) then return false end
 
     local choice = room:askToChoice(target, {
       choices = { OPT_CARDS, OPT_DRAW },
@@ -76,21 +82,7 @@ skill:addEffect(fk.Death, {
       prompt = "#qiao__skill_han011_2-choice",
       cancelable = true,
     })
-    if choice == nil or choice == "" or choice == "Cancel" then return false end
     if choice ~= OPT_CARDS and choice ~= OPT_DRAW then return false end
-
-    local tos = room:askToChoosePlayers(target, {
-      min_num = 1,
-      max_num = 1,
-      targets = candidates(target, player),
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han011_2-target",
-      cancelable = true,
-    })
-    local to = tos and tos[1]
-    if to == nil or to == target or not to:isAlive() or to:isRemoved() then return false end
-    if not sameKingdom(player, to) then return false end
-
     event:setCostData(self, { choice = choice, to = to })
     return true
   end,

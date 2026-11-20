@@ -199,7 +199,7 @@ function Testqiao_wu_damage:testKurouLosesHpTriggersZhaxiangAndGivesCard()
   grant(p(1), ZHAXIANG)
   local hp = p(1).hp
 
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }), mine })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCardAndPlayers({ p(2) }, { mine }) })
   activate(room, p(1), KUROU, {}, {})
 
   lu.assertEquals(p(1).hp, hp - 1)
@@ -265,7 +265,6 @@ function Testqiao_wu_damage:testTianxiangPreventsAndSourceDamages()
   local hp1, hp3 = p(1).hp, p(3).hp
 
   FkTest.setNextReplies(p(1), {
-    "1",
     FkTest.ReplyChooseCards({ heart }),
     FkTest.ReplyChoosePlayer({ p(3) }),
     { TIANXIANG_OPT_DAMAGE },
@@ -290,7 +289,6 @@ function Testqiao_wu_damage:testTianxiangPreventsThenTargetLosesHpAndObtainsCard
   local hp1, hp4 = p(1).hp, p(4).hp
 
   FkTest.setNextReplies(p(1), {
-    "1",
     FkTest.ReplyChooseCards({ heart }),
     FkTest.ReplyChoosePlayer({ p(4) }),
     { TIANXIANG_OPT_LOSEHP },
@@ -705,8 +703,8 @@ function Testqiao_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurnEn
     { "qiao__peach", Card.Heart, 11 },
   })
 
-  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard(cost), "1" })
-  activate(room, p(1), DIMENG, { p(2), p(3) }, {})
+  FkTest.setNextReplies(p(1), { "1" })
+  activate(room, p(1), DIMENG, { p(2), p(3) }, cost)
 
   lu.assertEquals(#p(2):getCardIds(Player.Hand), 3)
   lu.assertEquals(#p(3):getCardIds(Player.Hand), 5)
@@ -738,7 +736,7 @@ end
 function Testqiao_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
   local room = FkTest.room
   grant(p(1), DIMENG)
-  setHand(room, p(1), {
+  local cost = setHand(room, p(1), {
     { "qiao__peach", Card.Heart, 2 },
     { "qiao__jink", Card.Diamond, 3 },
   })
@@ -771,7 +769,21 @@ function Testqiao_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
   asClient(room, function(clients)
     local me = clients[1]
     lu.assertNil(me.room)
-    lu.assertTrue(Fk.skills[DIMENG]:canUse(me))
+    local handler = require("ltk.core.request_type.play_card"):new(me)
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(DIMENG))
+    handler:selectSkill(DIMENG, { selected = true })
+    lu.assertTrue(handler:targetValidity(clients[2].id))
+    handler:selectTarget(clients[2].id, { selected = true })
+    lu.assertTrue(handler:targetValidity(clients[3].id))
+    handler:selectTarget(clients[3].id, { selected = true })
+    lu.assertFalse(handler:feasible())
+    for _, id in ipairs(cost) do
+      lu.assertTrue(handler:cardValidity(id))
+      handler:selectCard(id, { selected = true })
+    end
+    lu.assertTrue(handler:feasible())
+    handler:_finish()
   end)
 end
 
@@ -782,7 +794,7 @@ function Testqiao_wu_damage:testJinfanjunDiscardsColorThenDraws()
   local cost = setHand(room, p(1), { { "qiao__jink", Card.Heart, 2 } })[1]
   local victim = setHand(room, p(2), { { "qiao__slash", Card.Diamond, 3 } })[1]
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyDiscard({ cost }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyDiscard({ cost }) })
   inRoom(function() room:throwCard({ victim }, "test", p(2), p(1)) end)
 
   lu.assertEquals(room:getCardArea(victim), Card.DiscardPile)

@@ -70,16 +70,16 @@ local function tuxiDraw(room, onNotify)
   -- 获得顺序按当前回合角色起逆时针；按实际排序准备对应目标的手牌回复。
   local order = { p(2), p(3) }
   inRoom(function() room:sortByAction(order) end)
-  local replies = { "1", FkTest.ReplyChoosePlayer({ p(2), p(3) }) }
+  local replies = { FkTest.ReplyChoosePlayer({ p(2), p(3) }) }
   for _, target in ipairs(order) do
     table.insert(replies, target == p(2) and c2 or c3)
   end
   table.insert(replies, "1")
   FkTest.setNextReplies(p(1), replies)
-  local invokePrompt
-  FkTest.setRoomBreakpoint(p(1), "AskForSkillInvoke", function(data)
-    if data[2] and data[2]:startsWith("#" .. TUXI .. "-invoke:") then
-      invokePrompt = data[2]
+  local choosePrompt
+  FkTest.setRoomBreakpoint(p(1), "AskForUseActiveSkill", function(data)
+    if data[2] and data[2]:startsWith("#" .. TUXI .. "-choose:") then
+      choosePrompt = data[2]
     end
     return false
   end)
@@ -94,7 +94,7 @@ local function tuxiDraw(room, onNotify)
     room.logic:trigger(fk.DrawNCards, p(1), data)
     room.doBroadcastNotify = original
   end)
-  lu.assertEquals(invokePrompt, "#" .. TUXI .. "-invoke:::2")
+  lu.assertEquals(choosePrompt, "#" .. TUXI .. "-choose:::2")
   return c2, c3
 end
 
@@ -204,7 +204,7 @@ function Testqiao_wei_support:testTuxiDrawReductionAndTurnRestriction()
   -- 获得顺序按当前回合角色起逆时针；按实际排序准备对应目标的手牌回复。
   local order = { p(2), p(3) }
   inRoom(function() room:sortByAction(order) end)
-  local replies = { "1", FkTest.ReplyChoosePlayer({ p(2), p(3) }) }
+  local replies = { FkTest.ReplyChoosePlayer({ p(2), p(3) }) }
   for _, target in ipairs(order) do
     table.insert(replies, target == p(2) and c2 or c3)
   end
@@ -423,7 +423,7 @@ function Testqiao_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
   })
   local hp = p(2).hp
 
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(2) }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   FkTest.setNextReplies(p(2), { FkTest.ReplyDiscard({ four[1], four[2], four[3], four[4] }) })
   inRoom(function() room:damage { from = p(3), to = p(1), damage = 1 } end)
 
@@ -443,7 +443,7 @@ function Testqiao_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
   -- 不足四张：不提供弃牌分支，保持叠置也不失去体力。
   local hp2 = p(2).hp
   setHand(room, p(2), { { "qiao__peach", Card.Heart, 7 } })
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(2) }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   inRoom(function() room:damage { from = p(3), to = p(1), damage = 1 } end)
   lu.assertFalse(p(2).faceup)
   lu.assertEquals(p(2).hp, hp2)
@@ -455,7 +455,7 @@ function Testqiao_wei_support:testFangzhuStackDrawDiscardAndHpLoss()
   end)
   lu.assertTrue(p(2).faceup)
   setHand(room, p(2), { { "qiao__peach", Card.Heart, 8 } })
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(2) }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   inRoom(function() room:damage { from = p(3), to = p(1), damage = 1 } end)
   lu.assertFalse(p(2).faceup)
 end

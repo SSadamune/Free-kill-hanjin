@@ -37,6 +37,26 @@ local function eligibleCards(player, data)
   end)
 end
 
+local SELECT = "#qiao__skill_wu006_2_select"
+
+local function allows(extra, card, to)
+  local targets = extra and extra.targetsByCard[tostring(card)]
+  return targets ~= nil and (to == nil or table.contains(targets, to.id))
+end
+
+skill:addAuxActiveSkill(SELECT, {
+  card_num = 1,
+  target_num = 1,
+  include_equip = true,
+  card_filter = function(self, player, id, selected, targets)
+    return #selected == 0 and allows(self._extra_data, id, targets[1])
+  end,
+  target_filter = function(self, player, to_select, selected, cards)
+    if #selected > 0 or #cards ~= 1 then return false end
+    return allows(self._extra_data, cards[1], to_select)
+  end,
+})
+
 skill:addEffect(fk.TargetConfirming, {
   anim_type = "defensive",
   can_trigger = function(self, event, target, player, data)
@@ -47,36 +67,22 @@ skill:addEffect(fk.TargetConfirming, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu006_2-invoke",
-    }) then
-      return false
+    local targetsByCard = {}
+    for _, id in ipairs(discardableCards(player)) do
+      local targets = candidates(player, data, { id })
+      if #targets > 0 then targetsByCard[tostring(id)] = table.map(targets, Util.IdMapper) end
     end
-
-    local eligible = eligibleCards(player, data)
-    if #eligible == 0 then return false end
-    local cardId = room:askToChooseCard(player, {
-      target = player,
-      flag = "he",
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu006_2-card",
-    })
-    if cardId == nil or not table.contains(eligible, cardId) then return false end
-
-    -- 先完成目标选择，再在 on_use 支付费用；取消选人不弃牌。
-    local tos = candidates(player, data, { cardId })
-    if #tos == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
-      min_num = 1,
-      max_num = 1,
-      targets = tos,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu006_2-target",
+    if next(targetsByCard) == nil then return false end
+    local ok, ret = room:askToUseActiveSkill(player, {
+      skill_name = SELECT,
+      prompt = "#qiao__skill_wu006_2-invoke",
       cancelable = true,
+      extra_data = { skillName = skill.name, targetsByCard = targetsByCard },
     })
-    local to = chosen and chosen[1]
-    if to == nil or to.dead or to:isRemoved() then return false end
+    if not ok or not ret or #ret.cards ~= 1 or #ret.targets ~= 1 then return false end
+    local cardId, to = ret.cards[1], ret.targets[1]
+    if not table.contains(discardableCards(player), cardId)
+      or not table.contains(candidates(player, data, { cardId }), to) then return false end
     event:setCostData(self, { card = cardId, to = to })
     return true
   end,
@@ -97,8 +103,6 @@ skill:addEffect(fk.TargetConfirming, {
 Fk:loadTranslationTable {
   ["qiao__skill_wu006_2"] = "流离",
   ["#qiao__skill_wu006_2-invoke"] = "流离：弃置一张牌，将此【杀】转移给攻击范围内的另一名其他角色",
-  ["#qiao__skill_wu006_2-card"] = "流离：弃置一张牌",
-  ["#qiao__skill_wu006_2-target"] = "流离：选择转移目标（你攻击范围内的另一名其他角色）",
 }
 
 return skill

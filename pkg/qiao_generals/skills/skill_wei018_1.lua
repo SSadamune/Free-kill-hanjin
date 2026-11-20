@@ -4,6 +4,7 @@
 -- 第一段：自己的回合内，任意牌实际置入一名角色的装备区后，可弃置该角色距离1
 -- 的另一名角色区域里（含判定区）一张牌；距离从被装备角色计算。
 -- 第二段：结束阶段，可将自己一张装备牌置入一名角色对应空栏，不是使用装备。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local AUX = "#qiao__skill_wei018_1_active"
 
 local skill = fk.CreateSkill {
@@ -101,23 +102,17 @@ skill:addEffect(fk.AfterCardsMove, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei018_1-invoke",
-    }) then
-      return false
-    end
     local equipped = equippedBy(data)
     if equipped == nil then return false end
     local targets = discardTargets(room, equipped)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       targets = targets,
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei018_1-target",
-      cancelable = true,
+      invoke_prompt = "#qiao__skill_wei018_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

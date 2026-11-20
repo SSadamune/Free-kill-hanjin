@@ -3,6 +3,7 @@
 -- 每回合结束时，可以令一名本回合失去过所有手牌的角色摸两张牌，然后周泰失去
 -- 1 点体力。是否“失去过所有手牌”由本回合真实的手牌移动历史记录：手牌因使用、
 -- 打出、弃置、交给等离开后变为 0 才标记；本来就没有手牌不算。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu013_2",
 }
@@ -56,23 +57,24 @@ skill:addEffect(fk.TurnEnd, {
       and #candidates(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu013_2-invoke",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
     local tos = candidates(player)
-    if #tos == 0 then return end
-    local chosen = room:askToChoosePlayers(player, {
+    if #tos == 0 then return false end
+    local chosen = Invoke.ask(room, player, {
       targets = tos,
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_wu013_2-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_wu013_2-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { tos = chosen })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local chosen = event:getCostData(self).tos
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return end
     to:drawCards(2, skill.name)

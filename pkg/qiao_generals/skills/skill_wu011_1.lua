@@ -57,12 +57,6 @@ skill:addEffect(fk.DamageInflicted, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu011_1-invoke",
-    }) then
-      return false
-    end
     local candidates = legalHeartCards(player)
     if #candidates == 0 then return false end
     local chosen = room:askToCards(player, {

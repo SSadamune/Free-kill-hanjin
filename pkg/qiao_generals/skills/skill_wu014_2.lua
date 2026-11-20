@@ -15,13 +15,6 @@ local HAOSHI = "qiao__skill_wu014_1"
 local EXPIRY = "qiao__wu_dimeng_expiry"
 local GRANT_MARK = "qiao_wu_dimeng_granted"
 
---- 客户端可用性计算时没有 ServerPlayer.room；回退到当前房间。
----@param player ServerPlayer | ClientPlayer
----@return Room?
-local function currentRoom(player)
-  return Fk:currentRoom()
-end
-
 local function ensureExpiry(room)
   if room == nil then return end
   if not room:hasSkill(EXPIRY) then
@@ -30,21 +23,29 @@ local function ensureExpiry(room)
 end
 
 local function others(player)
-  local room = currentRoom(player)
-  if room == nil then return {} end
+  local room = Fk:currentRoom()
   return table.filter(room:getPresentPlayers(), function(p)
     return p ~= player and p:isAlive() and not p:isRemoved()
   end)
 end
 
---- 当前可被该角色弃置的牌数（含手牌/装备，排除禁弃）。
----@param player ServerPlayer | ClientPlayer
----@return integer
+local function canDiscard(player, id)
+  return table.contains(player:getCardIds("he"), id) and not player:prohibitDiscard(id)
+end
+
 local function discardableCount(player)
   return #table.filter(player:getCardIds("he"), function(id)
-    local card = Fk:getCardById(id)
-    return card ~= nil and not player:prohibitDiscard(card)
+    return not player:prohibitDiscard(id)
   end)
+end
+
+local function handGap(a, b)
+  return math.abs(a:getHandcardNum() - b:getHandcardNum())
+end
+
+local function canPay(a, b, minCards, maxCards)
+  local diff = handGap(a, b)
+  return a ~= b and diff > 0 and diff >= minCards and diff <= maxCards
 end
 
 local function canPayAnyPair(player)
@@ -52,9 +53,7 @@ local function canPayAnyPair(player)
   local owned = discardableCount(player)
   for i = 1, #list do
     for j = i + 1, #list do
-      local diff = math.abs(#list[i]:getCardIds(Player.Hand) - #list[j]:getCardIds(Player.Hand))
-      -- 差为 0 时无法实际弃置牌，不能作为发动消耗。
-      if diff > 0 and diff <= owned then return true end
+      if canPay(list[i], list[j], 1, owned) then return true end
     end
   end
   return false
@@ -64,14 +63,26 @@ skill:addEffect("active", {
   anim_type = "control",
   prompt = "#qiao__skill_wu014_2-prompt",
   target_num = 2,
+  min_card_num = 1,
+  max_card_num = function(self, player) return discardableCount(player) end,
+  include_equip = true,
   max_phase_use_time = 1,
-  target_filter = function(self, player, to_select, selected)
-    if to_select == player or not to_select:isAlive() or to_select:isRemoved() then return false end
-    if table.contains(selected, to_select) then return false end
-    if #selected == 0 then return true end
-    local first = selected[1]
-    local diff = math.abs(#first:getCardIds(Player.Hand) - #to_select:getCardIds(Player.Hand))
-    return diff > 0 and diff <= discardableCount(player)
+  card_filter = function(self, player, to_select, selected, targets)
+    if not canDiscard(player, to_select) then return false end
+    return #targets < 2 or #selected < handGap(targets[1], targets[2])
+  end,
+  target_filter = function(self, player, to_select, selected, cards)
+    if to_select == player or not to_select:isAlive() or to_select:isRemoved() or #selected >= 2 then
+      return false
+    end
+    local minCards, maxCards = #cards, discardableCount(player)
+    if #selected == 1 then return canPay(selected[1], to_select, minCards, maxCards) end
+    return table.find(others(player), function(other)
+      return canPay(to_select, other, minCards, maxCards)
+    end) ~= nil
+  end,
+  feasible = function(self, player, targets, cards)
+    return #targets == 2 and #cards > 0 and #cards == handGap(targets[1], targets[2])
   end,
   can_use = function(self, player)
     return self:withinTimesLimit(player, Player.HistoryPhase) and canPayAnyPair(player)
@@ -80,24 +91,21 @@ skill:addEffect("active", {
     local player = effect.from
     local tos = effect.tos or {}
     local a, b = tos[1], tos[2]
-    if player == nil or player.dead or a == nil or b == nil or a == b then return end
+    if player == nil or player.dead or #tos ~= 2 or a == nil or b == nil
+      or a == b or a == player or b == player then return end
     if not a:isAlive() or not b:isAlive() or a:isRemoved() or b:isRemoved() then return end
 
-    local beforeA = #a:getCardIds(Player.Hand)
-    local beforeB = #b:getCardIds(Player.Hand)
+    local beforeA, beforeB = a:getHandcardNum(), b:getHandcardNum()
     local diff = math.abs(beforeA - beforeB)
-    if diff <= 0 or diff > discardableCount(player) then return end
-
-    local costCards = room:askToDiscard(player, {
-      min_num = diff,
-      max_num = diff,
-      include_equip = true,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu014_2-discard:::" .. diff,
-      cancelable = false,
-    })
-    if costCards == nil or #costCards ~= diff then return end
-    if player.dead then return end
+    local costCards = effect.cards or {}
+    if diff == 0 or #costCards ~= diff then return end
+    local seen = {}
+    for _, id in ipairs(costCards) do
+      if seen[id] or not canDiscard(player, id) then return end
+      seen[id] = true
+    end
+    room:throwCard(costCards, skill.name, player, player)
+    if player.dead or a.dead or b.dead or a:isRemoved() or b:isRemoved() then return end
 
     room:swapAllCards(player, { a, b }, skill.name)
     if a.dead or b.dead then return end
@@ -142,8 +150,7 @@ end)
 Fk:loadTranslationTable {
   ["qiao__skill_wu014_2"] = "缔盟",
   [":qiao__skill_wu014_2"] = "出牌阶段限一次，你可以选择两名其他角色并弃置等同其手牌数差的牌，令其交换手牌，你可以对其中手牌未增加的角色纵横“好施”。",
-  ["#qiao__skill_wu014_2-prompt"] = "缔盟：选择两名其他角色",
-  ["#qiao__skill_wu014_2-discard"] = "缔盟：弃置 %arg 张牌",
+  ["#qiao__skill_wu014_2-prompt"] = "缔盟：选择两名其他角色及等同于其手牌数之差的弃牌",
   ["#qiao__skill_wu014_2-target"] = "缔盟：选择一名手牌未增加的角色",
   ["#qiao__skill_wu014_2-grant"] = "缔盟：你可以令 %dest 纵横“好施”直到其下个回合结束",
 }

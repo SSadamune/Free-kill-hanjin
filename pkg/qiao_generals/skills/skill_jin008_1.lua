@@ -6,6 +6,7 @@
 -- 然后从剩余牌中再获得一张。只取一张，不收取全部剩余；只有一张时不获得第二张。
 -- 已被其他同时机效果移走的牌不再从新区域强取，第一步合法执行后不因第二步
 -- 无法执行而倒推取消。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 
 local skill = fk.CreateSkill {
@@ -76,33 +77,26 @@ skill:addEffect(fk.AfterCardsMove, {
     return #discardEntries(player, data) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local room = player.room
+    local entries = discardEntries(player, data)
+    local chosen = Invoke.ask(room, player, {
+      min_num = 1, max_num = 1,
+      targets = table.map(entries, function(entry) return entry.proposer end),
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin008_1-invoke",
+      prompt = "#qiao__skill_jin008_1-owner",
+      invoke_prompt = "#qiao__skill_jin008_1-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { to = chosen[1] })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local entries = discardEntries(player, data)
-    if #entries == 0 then return end
-
-    local entry = entries[1]
-    if #entries > 1 then
-      local owners = table.map(entries, function(e) return e.proposer end)
-      local chosen = room:askToChoosePlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        targets = owners,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin008_1-owner",
-        cancelable = false,
-      })
-      local proposer = chosen and chosen[1]
-      if proposer == nil then return end
-      for _, e in ipairs(entries) do
-        if e.proposer == proposer then entry = e break end
-      end
-    end
+    local selected = event:getCostData(self).to
+    local entry = table.find(discardEntries(player, data), function(candidate)
+      return candidate.proposer == selected
+    end)
+    if entry == nil then return end
 
     local proposer = entry.proposer
     local ids = entry.ids

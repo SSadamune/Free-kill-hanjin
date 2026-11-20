@@ -223,7 +223,6 @@ function Testqiao_wei_phases:testShensuJudgePhaseSkipsJudgeAndDraw()
   local hp = p2().hp
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p2() }),
   })
   inRoom(function()
@@ -248,7 +247,6 @@ function Testqiao_wei_phases:testShensuPlayPhaseDiscardsEquipmentAndSkipsPlay()
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Play }
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChooseCardAndPlayers({ p2() }, { equip }),
   })
   inRoom(function() room.logic:trigger(fk.EventPhaseChanging, p1(), data) end)
@@ -268,7 +266,7 @@ function Testqiao_wei_phases:testShensuDiscardPhaseLosesHpAndSkipsDiscard()
   local hp = p2().hp
 
   local data = PhaseData:new { who = p1(), reason = "game_rule", phase = Player.Discard }
-  FkTest.setNextReplies(p1(), { "1", FkTest.ReplyChoosePlayer({ p2() }) })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p2() }) })
   inRoom(function() room.logic:trigger(fk.EventPhaseChanging, p1(), data) end)
 
   lu.assertTrue(data.skipped)
@@ -310,12 +308,14 @@ function Testqiao_wei_phases:testShensuInvokePromptUsesCurrentPhase()
       addEquip(room, p1(), "qiao__chixiao_sword", Card.Club, 5)
     end
     local prompt
+    local function observe(self, who, params, original)
+      if params.skill_name ~= SS then return original(self, who, params) end
+      prompt = params.prompt
+      return {}
+    end
     skill_test.withSkillRequests(room, SS, {
-      askToSkillInvoke = function(self, who, params, original)
-        if params.skill_name ~= SS then return original(self, who, params) end
-        prompt = params.prompt
-        return false
-      end,
+      askToChoosePlayers = observe,
+      askToChooseCardsAndPlayers = observe,
     }, function()
       if case.phase == Player.Judge then
         inRoom(function()
@@ -485,7 +485,7 @@ function Testqiao_wei_phases:testDuanliangTriggersOnAnyOthersDrawPhaseSkipped()
   setHand(room, p2(), {})
   seedDrawPile(room, { { "qiao__peach", Card.Heart, 7 } })
 
-  FkTest.setNextReplies(p1(), { "1", FkTest.ReplyChoosePlayer({ p1() }) })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ p1() }) })
   triggerPhase(room, p2(), Player.Draw, fk.EventPhaseSkipped)
 
   lu.assertEquals(#p1():getCardIds("h"), 1)
@@ -724,7 +724,7 @@ end
 local function grantGodSpeed(room, target, equip)
   local original = room.askToChooseCard
   room.askToChooseCard = function() return equip end
-  FkTest.setNextReplies(p1(), { "1", FkTest.ReplyChoosePlayer({ target }) })
+  FkTest.setNextReplies(p1(), { "1" })
   triggerPhase(room, p1(), Player.Start)
   room.askToChooseCard = original
 end

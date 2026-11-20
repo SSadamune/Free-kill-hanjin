@@ -106,7 +106,6 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   -- 羊祜：改牌；不造成伤害后的后续；选择 p2 横置、p3 重置。
   FkTest.setNextReplies(p(1), {
     "1",
-    "1",
     FkTest.ReplyChoosePlayer({ p(2), p(3) }),
     { OPT_CHAIN },
     { OPT_RESET },
@@ -183,7 +182,6 @@ function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
   })
 
   FkTest.setNextReplies(p(1), {
-    "1",
     "1",
     FkTest.ReplyChoosePlayer({ p(2) }),
     { OPT_CHAIN },

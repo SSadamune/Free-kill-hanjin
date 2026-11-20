@@ -210,8 +210,7 @@ function Testqiao_han012:testBotongFourSuitsAndGiveAfterUse()
   FkTest.setNextReplies(p2(), { "" })
   runPlayPhase(room, p1(), {
     use,
-    "1",
-    FkTest.ReplyChooseCardAndPlayers({ p2() }, cards),
+    FkTest.ReplyUseSkill("distribution_select_skill", { p2() }, cards),
     "",
   })
   lu.assertEquals(#p2():getCardIds("h"), 4)

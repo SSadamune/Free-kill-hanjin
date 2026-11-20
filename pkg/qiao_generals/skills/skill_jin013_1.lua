@@ -7,6 +7,7 @@
 -- 不能仅凭 hasSkill 给未明置技能效果。雷伤标记写在本次 use 上，由独立房间规则
 -- 读取，不因本次使用中途失去乘流而撤销。结算后的横置是新的可选技能，按当时
 -- 来源判断，且不要求富甲条目已经触发。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_adaptation"
 
@@ -60,12 +61,6 @@ skill:addEffect(fk.CardUseFinished, {
       and J.isDamageCard(data.card) and J.dealtDamage(data)
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin013_1-turn-invoke",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
     local victims = {}
     for victim, num in pairs(data.damageDealt or {}) do
@@ -73,16 +68,22 @@ skill:addEffect(fk.CardUseFinished, {
         table.insert(victims, victim)
       end
     end
-    if #victims == 0 then return end
+    if #victims == 0 then return false end
     room:sortByAction(victims)
-    local chosen = room:askToChoosePlayers(player, {
-      min_num = 0,
+    local chosen = Invoke.ask(room, player, {
+      min_num = 1,
       max_num = #victims,
       targets = victims,
       skill_name = skill.name,
       prompt = "#qiao__skill_jin013_1-turn",
-      cancelable = true,
+      invoke_prompt = "#qiao__skill_jin013_1-turn-invoke",
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { tos = chosen })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local chosen = event:getCostData(self).tos
     for _, victim in ipairs(chosen or {}) do
       if victim:isAlive() and not victim:isRemoved() and not victim.chained then
         victim:setChainState(true)

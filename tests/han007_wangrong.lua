@@ -117,6 +117,14 @@ local function initializeGenerals(room)
   return room
 end
 
+function Testqiao_han007:testMinsiHasNoPrelightTrigger()
+  local skill = assert(Fk.skills[MS])
+  lu.assertTrue(skill:isInstanceOf(ActiveSkill))
+  for _, related in ipairs(skill.related_skills) do
+    lu.assertFalse(related:isInstanceOf(TriggerSkill))
+  end
+end
+
 local function prepare()
   return initializeGenerals(support.initQiaoRoom())
 end
@@ -292,7 +300,6 @@ function Testqiao_han007:testZhuideGivesHeartsDrawsAndExtraMinsiNeedsCombination
   })
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyUseSkill(ZD_AUX, { p2() }, { hearts[1], hearts[2] }),
   })
   -- 用异势力凶手，避免国战奖惩清空受赠者手牌。
@@ -344,7 +351,6 @@ function Testqiao_han007:testZhuideHiddenGeneralAllowsExtraMinsiAndKeepsPhaseLim
   lu.assertEquals(p1().general, "anjiang")
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyUseSkill(ZD_AUX, { p2() }, { hearts[1] }),
   })
   FkTest.setNextReplies(p2(), {

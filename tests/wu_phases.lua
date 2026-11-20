@@ -261,7 +261,7 @@ function Testqiao_wu_phases:testLiuliTransfersSlashToAnotherTarget()
   local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
   give(p1, "qiao_test__blank_basic", Card.Heart)
   local slash = give(p2, "qiao__slash", Card.Spade)
-  FkTest.setNextReplies(p1, { "1", cost, FkTest.ReplyChoosePlayer({ near }) })
+  FkTest.setNextReplies(p1, { FkTest.ReplyUseSkill("#qiao__skill_wu006_2_select", { near }, { cost }) })
   inRoom(function()
     room().current = p2
     p2.phase = Player.Play
@@ -290,7 +290,7 @@ function Testqiao_wu_phases:testLiuliCancelDoesNotDiscard()
   local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
   local slash = give(p2, "qiao__slash", Card.Spade)
   -- 取消转移目标：不支付弃牌，原【杀】仍以大乔为目标。
-  FkTest.setNextReplies(p1, { "1", cost, FkTest.ReplyChoosePlayer({}) })
+  FkTest.setNextReplies(p1, { "" })
   inRoom(function()
     room().current = p2
     p2.phase = Player.Play

@@ -174,7 +174,7 @@ function Testqiao_jin_adaptation:testChengliuThunderAndChainActualVictim()
   })
   inRoom(function() room:addSkill(skel:createSkill()) end)
 
-  FkTest.setNextReplies(wangJun, { "1", FkTest.ReplyChoosePlayer({ target }) })
+  FkTest.setNextReplies(wangJun, { "1" })
   runTurnStart(room, wangJun, function()
     room:useCard { from = wangJun, tos = { target }, card = Fk:getCardById(slash) }
   end)
@@ -202,7 +202,7 @@ function Testqiao_jin_adaptation:testChengliuChainWithoutFujia()
   })
   inRoom(function() room:addSkill(skel:createSkill()) end)
 
-  FkTest.setNextReplies(wangJun, { "1", FkTest.ReplyChoosePlayer({ target }) })
+  FkTest.setNextReplies(wangJun, { "1" })
   runTurnStart(room, wangJun, function()
     room:useCard { from = wangJun, tos = { target }, card = Fk:getCardById(slash) }
   end)

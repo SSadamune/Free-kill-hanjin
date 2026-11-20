@@ -8,6 +8,7 @@
 -- 再用普通攻击距离阻挡；已禁止、已在目标列表中的角色仍排除。
 -- 新增目标 id 只记录在本次 UseCardData 上；效果结算顺序在
 -- BeforeCardUseEffect 调整，不在 onAim 中排序，不提前目标事件。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han008_2",
 }
@@ -107,25 +108,18 @@ skill:addEffect(fk.TargetConfirming, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han008_2-invoke",
-    }) then
-      return false
-    end
-
     local use = data.use
     local candidates = E.candidates(room, use, {
       target_condition = { other_roles = true },
     })
     if #candidates == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = candidates,
       skill_name = skill.name,
       prompt = "#qiao__skill_han008_2-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_han008_2-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

@@ -59,16 +59,16 @@ function Testqiao_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
     player.phase = Player.Play
   end)
 
-  local asked = 0
+  local asked, selected = 0, 0
   local choices = 0
   skill_test.withSkillRequests(FkTest.room, XIYUAN, {
     askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == XIYUAN then return true end
+      if params.skill_name == XIYUAN then asked = asked + 1; return true end
       return original(self, who, params)
     end,
     askToChoosePlayers = function(self, who, params, original)
       if params.skill_name ~= XIYUAN then return original(self, who, params) end
-      asked = asked + 1
+      selected = selected + 1
       return { target }
     end,
     askToChooseCard = function(self, who, params, original)
@@ -83,6 +83,7 @@ function Testqiao_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
   end)
 
   lu.assertEquals(asked, 2, "两份同名共享实例应各自发起一次选择")
+  lu.assertEquals(selected, 0, "唯一目标应跳过选人")
   lu.assertEquals(choices, 2, "两份实例应各自完成一次选牌成本")
 end
 

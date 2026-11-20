@@ -3,6 +3,7 @@
 -- 使用伤害牌指定目标后，选择其中一名目标，弃置自己或该目标一张坐骑/宝物，
 -- 然后只令此牌对该目标伤害+1。加伤绑定本次 UseCardData 与所选目标，
 -- 不改整张牌的全目标伤害。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_adaptation"
 
 local skill = fk.CreateSkill {
@@ -50,22 +51,15 @@ skill:addEffect(fk.TargetSpecified, {
     local room = player.room
     local use = data.use
     use[USED] = true
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun081_1-invoke",
-    }) then
-      return false
-    end
-
     local targets = eligibleTargets(player, use)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun081_1-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_qun081_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

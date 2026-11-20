@@ -397,7 +397,7 @@ function Testqiao_wu_support:testGuzhengChoosesOwnerWhenMultipleDiscarders()
   inRoom(function() p1.hp = p1.maxHp end)
 
   local ownerAsked = false
-  FkTest.setNextReplies(p1, { "1", ids3[1], { ids3[2] } })
+  FkTest.setNextReplies(p1, { ids3[1], { ids3[2] } })
   skill_test.withSkillRequests(room(), GUZHENG, {
     askToChoosePlayers = function(self, player, params)
       ownerAsked = true

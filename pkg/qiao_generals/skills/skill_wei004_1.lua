@@ -10,6 +10,7 @@
 -- 转换入口与卡面提示由独立状态骨架 qiao__wei_tuxi_state 提供（复用双刃的
 -- 接线方式）：失去突袭后仍可把这批牌当【杀】使用或打出；骨架只给本次获得的
 -- 实体牌加提示，且只通知持有者，回合结束/离手时清理。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 
 local STATE = "qiao__wei_tuxi_state"
@@ -34,22 +35,16 @@ skill:addEffect(fk.DrawNCards, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei004_1-invoke:::" .. data.n,
-    }) then
-      return false
-    end
     local targets = handTargets(player)
     local max = math.min(data.n, #targets)
     if max < 1 then return false end
-    local tos = room:askToChoosePlayers(player, {
+    local tos = Invoke.ask(room, player, {
       targets = targets,
       min_num = 1,
       max_num = max,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei004_1-choose:::" .. max,
-      cancelable = true,
+      invoke_prompt = "#qiao__skill_wei004_1-invoke:::" .. data.n,
     })
     if #tos == 0 then return false end
     room:sortByAction(tos)

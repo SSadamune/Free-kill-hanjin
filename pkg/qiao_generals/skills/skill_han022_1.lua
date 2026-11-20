@@ -2,6 +2,7 @@
 --
 -- 每回合结束时（含自己回合）：存活角色中至少两名小势力角色本回合受过伤害时，
 -- 可令当前回合角色将所有手牌置于牌堆顶，再由刘虞指定起点使用五谷丰登。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
@@ -51,16 +52,10 @@ skill:addEffect(fk.TurnEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han022_1-invoke",
-    }) then
-      return false
-    end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1, max_num = 1, targets = orderFrom(player),
       skill_name = skill.name, prompt = "#qiao__skill_han022_1-start",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_han022_1-invoke",
     })
     local start = chosen and chosen[1]
     if start == nil then return false end

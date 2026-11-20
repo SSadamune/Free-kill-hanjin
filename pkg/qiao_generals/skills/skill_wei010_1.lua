@@ -5,6 +5,7 @@
 -- 其他角色跳过摸牌阶段后，可以令一名角色摸一张牌。这里监听真实的
 -- fk.EventPhaseSkipped（阶段已被跳过之后），不依赖兵粮寸断这一具体来源：
 -- 任何原因造成的摸牌阶段跳过都可以触发。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wei010_1",
 }
@@ -40,21 +41,21 @@ skill:addEffect(fk.EventPhaseSkipped, {
       and data.phase == Player.Draw and target:isAlive() and not target:isRemoved()
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei010_1-invoke::" .. target.id,
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = room:getPresentPlayers(),
       skill_name = skill.name,
       prompt = "#qiao__skill_wei010_1-draw",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_wei010_1-invoke::" .. target.id,
     })
+    if #chosen == 0 then return false end
+    event:setCostData(self, { tos = chosen })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local chosen = event:getCostData(self).tos
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return end
     to:drawCards(1, skill.name)

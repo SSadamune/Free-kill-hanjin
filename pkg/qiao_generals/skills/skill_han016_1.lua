@@ -7,6 +7,7 @@
 -- 纯“打出”（GameEvent.RespondCard，例如响应决斗打出【杀】）不是“使用”，
 -- 不进入本条件；使用【闪】这类真正的使用仍会生成 UseCard 事件。
 -- 零用牌不满足任一分支。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local skill = fk.CreateSkill {
@@ -71,21 +72,15 @@ skill:addEffect(fk.EventPhaseEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han016_1-invoke",
-    }) then
-      return false
-    end
     local targets = legalTargets(room, player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_han016_1-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_han016_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end

@@ -28,12 +28,6 @@ skill:addEffect(fk.AskForRetrial, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wei002_2-invoke",
-    }) then
-      return false
-    end
     local ids = playableIds(player)
     local equip = table.filter(player:getCardIds("e"), function(id)
       return table.contains(ids, id)

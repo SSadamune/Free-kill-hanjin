@@ -289,10 +289,10 @@ function Testqiao_han_standard_pindian:testDingzhuUsesGainedHistoryNotCurrentHan
 
   -- p3 手里有牌但本回合没有得到过牌，不是合法候选。
   local captured
-  local original = room.askToChoosePlayers
-  room.askToChoosePlayers = function(self, player, params)
-    if params.skill_name == DZ and captured == nil then
-      captured = table.map(params.targets, Util.IdMapper)
+  local original = room.askToUseActiveSkill
+  room.askToUseActiveSkill = function(self, player, params)
+    if params.skill_name == "#qiao__skill_han006_2_select" and captured == nil then
+      captured = params.extra_data.gained
     end
     return original(self, player, params)
   end
@@ -300,14 +300,12 @@ function Testqiao_han_standard_pindian:testDingzhuUsesGainedHistoryNotCurrentHan
   local uses = {}
   installUseProbe(room, uses)
   FkTest.setNextReplies(p1(), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p2() }),
-    FkTest.ReplyChoosePlayer({ p4() }),
+    FkTest.ReplyUseSkill("#qiao__skill_han006_2_select", { p2(), p4() }),
   })
   inRoom(function()
     room.logic:trigger(fk.EventPhaseEnd, p1(), { phase = Player.Play })
   end)
-  room.askToChoosePlayers = original
+  room.askToUseActiveSkill = original
 
   lu.assertNotNil(captured)
   lu.assertTrue(table.contains(captured, p2().id))
@@ -350,9 +348,7 @@ function Testqiao_han_standard_pindian:testDingzhuIsUnavailableAsMainGeneral()
   local deputyUses = {}
   installUseProbe(room, deputyUses)
   FkTest.setNextReplies(p1(), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p2() }),
-    FkTest.ReplyChoosePlayer({ p4() }),
+    FkTest.ReplyUseSkill("#qiao__skill_han006_2_select", { p2(), p4() }),
   })
   inRoom(function()
     room.logic:trigger(fk.EventPhaseEnd, p1(), { phase = Player.Play })
@@ -379,7 +375,6 @@ function Testqiao_han_standard_pindian:testChengzhaoNeedsTwoGainedCardsAndIgnore
   installArmorProbe(room, armor)
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p2() }),
     FkTest.ReplyChooseCards({ gained[1] }),
   })
@@ -431,7 +426,6 @@ function Testqiao_han_standard_pindian:testChengzhaoNoSlashWhenPindianNotWon()
   installUseProbe(room, uses)
 
   FkTest.setNextReplies(p1(), {
-    "1",
     FkTest.ReplyChoosePlayer({ p2() }),
     FkTest.ReplyChooseCards({ gained[1] }),
   })

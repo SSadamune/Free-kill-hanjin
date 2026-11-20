@@ -7,6 +7,7 @@
 -- 限定技按真实技能标签与每次发动历史判断；本回合历史由模式级
 -- jin_resources_rule 记录，不使用统领能力的全局限一记录。第二项目标范围
 -- 属于当前回合角色（其攻击范围），不是翼从持有者；接入显式目标策略。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 local R = require "packages.qiao.pkg.qiao_generals.util.jin_resources"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
@@ -91,21 +92,15 @@ skill:addEffect(fk.TurnEnd, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_fuxin_sishi-slash-invoke:" .. target.id,
-    }) then
-      return false
-    end
     local candidates = slashCandidates(target, player)
     if #candidates == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = candidates,
       skill_name = skill.name,
       prompt = "#qiao__retinue_skill_fuxin_sishi-slash",
-      cancelable = true,
+      invoke_prompt = "#qiao__retinue_skill_fuxin_sishi-slash-invoke:" .. target.id,
     })
     local to = chosen and chosen[1]
     if to == nil or not table.contains(candidates, to) then return false end

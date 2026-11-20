@@ -12,6 +12,7 @@
 --     骨架 qun_shuangren_state 提供，失去双刃后两者都仍可用。匹配按当前手牌
 --     范围，所以之后得到的【杀】同样受限；实体牌牌名不改。转换后的
 --     【借刀杀人】仍按该牌自身规则真实选择主目标与副目标。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
@@ -103,21 +104,15 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun015_1-invoke",
-    }) then
-      return false
-    end
     local targets = pindianTargets(player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       targets = targets,
       min_num = 1,
       max_num = 1,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun015_1-pindian",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_qun015_1-invoke",
     })
     local opponent = chosen and chosen[1]
     if opponent == nil or player.dead or opponent.dead or opponent:isRemoved() then

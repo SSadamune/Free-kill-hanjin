@@ -3,6 +3,7 @@
 -- 规则基线：docs/rules/standard-generals.md 蜀区 SHU016。
 -- 当你回复1点体力后，你可以选择一名其他角色，令其回复1点体力，或与其各摸一张牌。
 -- 每实际回复1点提供一次独立机会；目标已满体力时不能选择回复分支。
+local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu016_1",
 }
@@ -28,21 +29,15 @@ skill:addEffect(fk.HpRecover, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu016_1-invoke",
-    }) then
-      return false
-    end
     local candidates = others(player)
     if #candidates == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
+    local chosen = Invoke.ask(room, player, {
       min_num = 1,
       max_num = 1,
       targets = candidates,
       skill_name = skill.name,
       prompt = "#qiao__skill_shu016_1-target",
-      cancelable = false,
+      invoke_prompt = "#qiao__skill_shu016_1-invoke",
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return false end
