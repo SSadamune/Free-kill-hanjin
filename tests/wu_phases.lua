@@ -5,6 +5,8 @@
 -- 定向运行：
 --   python scripts/test.py --file tests/wu_phases.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local KEJI = "qiao__skill_wu003_1"
 local MOUDUAN = "qiao__skill_wu003_2"
@@ -358,10 +360,41 @@ function Testqiao_wu_phases:testGuoseBothBranchesIndependentLimits()
   local guoseActive = activeName(GUOSE)
   lu.assertNotNil(guoseActive)
 
+  local function playGuose(material, branch)
+    local reply
+    client_room.run(room(), function(clients)
+      local me = table.find(clients, function(client) return client.id == p1.id end)
+      local handler = ReqPlayCard:new(me)
+      handler:setup()
+      lu.assertTrue(handler:skillButtonValidity(guoseActive))
+      handler:selectSkill(guoseActive, { selected = true })
+      local interaction = Fk.skills[guoseActive].interaction
+      lu.assertEquals(interaction.spec.type, "combo")
+      lu.assertEquals(interaction.spec.choices, { branch })
+      lu.assertFalse(handler:targetValidity(p2.id), "先选转换材料")
+      lu.assertTrue(handler:cardValidity(material))
+      handler:selectCard(material, { selected = true })
+      lu.assertTrue(handler:targetValidity(p2.id))
+      handler:selectTarget(p2.id, { selected = true })
+      lu.assertTrue(handler:feasible())
+      local notify = ClientInstance.notifyUI
+      ClientInstance.notifyUI = function(_, command, payload)
+        if command == "ReplyToServer" then reply = payload end
+      end
+      local ok, err = pcall(function() handler:doOKButton() end)
+      ClientInstance.notifyUI = notify
+      if not ok then error(err, 0) end
+      handler:_finish()
+    end)
+    lu.assertNotNil(reply)
+    lu.assertEquals(reply.interaction_data, branch)
+    inRoom(function() room():handleUseCardReply(p1, reply) end)
+  end
+
   -- 分支 1：方片当【乐不思蜀】，然后摸一张。
   local diamond = give(p1, "qiao_test__blank_basic", Card.Diamond)
   local before = p1:getHandcardNum()
-  activate(p1, guoseActive, { p2 }, { diamond }, "qiao__skill_wu006_1-use")
+  playGuose(diamond, "qiao__skill_wu006_1-use")
   lu.assertEquals(p2:getCardIds(Player.Judge)[1] ~= nil, true)
   lu.assertEquals(p1:getMark("qiao__skill_wu006_1_use-phase"), 1)
   lu.assertEquals(p1:getMark("qiao__skill_wu006_1_discard-phase"), 0)
@@ -376,7 +409,7 @@ function Testqiao_wu_phases:testGuoseBothBranchesIndependentLimits()
   -- 分支 2：弃方片 + 场上延时锦囊，然后摸一张；分支 1 已限次不影响本分支。
   local second = give(p1, "qiao_test__blank_basic", Card.Diamond)
   local before2 = p1:getHandcardNum()
-  activate(p1, guoseActive, { p2 }, { second }, "qiao__skill_wu006_1-discard")
+  playGuose(second, "qiao__skill_wu006_1-discard")
   lu.assertEquals(#p2:getCardIds(Player.Judge), 0)
   lu.assertEquals(p1:getMark("qiao__skill_wu006_1_discard-phase"), 1)
   lu.assertEquals(p1:getHandcardNum(), before2)
