@@ -13,6 +13,7 @@
 - [牌状态改变事件](events/change-state.md)
 - [伤害事件](events/damage.md)
 - [死亡事件](events/death.md)
+- [起始手牌与手气卡](events/initial-hand.md)
 - [牌的打出相关事件](events/drop-card.md)
 - [濒死事件](events/dying.md)
 - [判定事件](events/judge.md)

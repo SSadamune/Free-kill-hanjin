@@ -1,10 +1,11 @@
 -- 汉晋 FAQ 公共硬规则回归：
 -- 1. 10 人局每国最多 4 人（第 5 人起转野，统一明置、效忠与升变预演）；
--- 2. 7 人及以上局，7 号位及之后的角色开局各自拥有 1 次独立手气卡；
+-- 2. 大合集和启用后置位补偿的自由模式中，7 人及以上局的 7 号位起各有 1 次额外手气卡；
 -- 3. 4 人及以下局限制君主升变/继位，首亮角色不获得先驱（主动技能授先驱不受影响）；
 -- 4. 阴阳鱼标记通用获得上限为 5 枚，且严格隔离于汉晋模式。
 local H = require "packages.hegemony.util"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
+local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
@@ -31,7 +32,7 @@ local function cleanupRoom()
   end
 end
 
-local function createQiaoRoomWithPlayers(count, settings, configure)
+local function createQiaoRoomWithPlayers(count, settings, mode)
   local ids = {}
   local want = {}
   for i = 1, count do
@@ -62,11 +63,10 @@ local function createQiaoRoomWithPlayers(count, settings, configure)
   end
 
   return support.createRoom {
-    mode = "qiao_heg_mode",
+    mode = mode or "qiao_heg_mode",
     realSelection = true,
     backend = backend,
     settings = settings,
-    configure = configure,
   }
 end
 
@@ -157,10 +157,15 @@ function Testfaq_core_rules:testTenPlayerPopulationBlocksAscensionAndLoyalty()
   end)
 end
 
-function Testfaq_core_rules:testSeatSevenPlusIndependentLuckCardWhenBaseZero()
+function Testfaq_core_rules:testCollectionIgnoresRoomLuckAndStampsRedrawnCards()
   local askedPrompts = {}
-  local initialBefore = {}
+  local initialBefore, replacement, stamped = {}, {}, {}
   local redrawCount = { [7] = 0, [8] = 0 }
+  local originalStampCards = Adaptation.stampCards
+  Adaptation.stampCards = function(room, cards, audience)
+    stamped[audience[1].seat] = table.simpleClone(cards)
+    return originalStampCards(room, cards, audience)
+  end
   local originalAsk = Request.ask
   Request.ask = function(self, ...)
     if self.focus_text == "AskForLuckCard" then
@@ -170,8 +175,11 @@ function Testfaq_core_rules:testSeatSevenPlusIndependentLuckCardWhenBaseZero()
       end
       local p7 = self.room.players[7]
       local p8 = self.room.players[8]
-      initialBefore[7] = table.simpleClone(p7:getCardIds("h"))
       initialBefore[8] = table.simpleClone(p8:getCardIds("h"))
+      -- 选牌堆中的四张牌，保证重抽结果与原手牌不同。
+      local pile = self.room.draw_pile
+      replacement = { pile[1], pile[2], pile[3], pile[4] }
+      self.luck_data[p7.id].fix_ids = replacement
       local origDiscard = self.luck_data.discardInit
       self.luck_data.discardInit = function(r, pl)
         redrawCount[pl.seat] = (redrawCount[pl.seat] or 0) + 1
@@ -186,14 +194,15 @@ function Testfaq_core_rules:testSeatSevenPlusIndependentLuckCardWhenBaseZero()
 
   local room
   local ok, err = pcall(function()
-    room = createQiaoRoomWithPlayers(8, { luckTime = 0 })
+    room = createQiaoRoomWithPlayers(8, { luckTime = 1 })
   end)
   Request.ask = originalAsk
+  Adaptation.stampCards = originalStampCards
   assert(ok, err)
 
-  -- 1~6 号位不应收到手气卡询问；7、8 号位各自收到 1 次独立手气卡
+  -- 大合集忽略房间次数，7、8 号位仍各自只收到 1 次手气卡。
   for seat = 1, 6 do
-    lu.assertNil(askedPrompts[seat], "房间 luckTime=0 时 1~6 号位不应弹手气卡")
+    lu.assertNil(askedPrompts[seat], "大合集 1~6 号位不应收到手气卡")
   end
   lu.assertEquals(askedPrompts[7], "#AskForLuckCard:::1")
   lu.assertEquals(askedPrompts[8], "#AskForLuckCard:::1")
@@ -201,11 +210,47 @@ function Testfaq_core_rules:testSeatSevenPlusIndependentLuckCardWhenBaseZero()
   -- 7 号位确认重抽恰好发生 1 次；8 号位默认取消不重抽且起始手牌不变
   lu.assertEquals(redrawCount[7], 1, "7 号位确认手气卡后应真实重抽 1 次")
   lu.assertEquals(redrawCount[8], 0, "8 号位取消手气卡后不应重抽")
-  lu.assertEquals(#room.players[7]:getCardIds("h"), 4)
+  local hand = room.players[7]:getCardIds("h")
+  lu.assertItemsEquals(hand, replacement)
+  lu.assertEquals(stamped[7], hand, "应变显示应收到重抽后的手牌")
   lu.assertEquals(room.players[8]:getCardIds("h"), initialBefore[8], "8 号位取消手气卡后起始手牌不变")
+  lu.assertEquals(stamped[8], initialBefore[8])
 end
 
-function Testfaq_core_rules:testSeatSevenPlusStacksWithRoomLuckTimeAndSixPlayerNoBonus()
+function Testfaq_core_rules:testFreeModeSeatLuckFollowsRoomSetting()
+  local function prompts(count, baseLuck, compensation)
+    local asked = {}
+    local originalAsk = Request.ask
+    Request.ask = function(self, ...)
+      if self.focus_text == "AskForLuckCard" then
+        for _, player in ipairs(self.players) do
+          asked[player.seat] = self.data[player.id][2]
+          FkTest.cleanNextReplies(player)
+        end
+      end
+      return originalAsk(self, ...)
+    end
+    local ok, err = pcall(createQiaoRoomWithPlayers, count, {
+      luckTime = baseLuck, [FaqRules.seatLuckSetting] = compensation,
+    }, "qiao_free_mode")
+    Request.ask = originalAsk
+    assert(ok, err)
+    cleanupRoom()
+    return asked
+  end
+
+  lu.assertEquals(prompts(7, 0), {})
+  lu.assertEquals(prompts(7, 0, FaqRules.seatLuckNone), {})
+  local normal = prompts(7, 1, FaqRules.seatLuckNone)
+  local compensated = prompts(7, 1, FaqRules.seatLuckCard)
+  for seat = 1, 7 do
+    lu.assertEquals(normal[seat], "#AskForLuckCard:::1")
+    lu.assertEquals(compensated[seat], seat == 7 and "#AskForLuckCard:::2" or "#AskForLuckCard:::1")
+  end
+  lu.assertEquals(prompts(6, 0, FaqRules.seatLuckCard), {})
+end
+
+function Testfaq_core_rules:testFreeModeUsesTwoRedrawsAndSixPlayerCollectionIgnoresRoomLuck()
   local asked8 = {}
   local p7Redraws = 0
   local originalAsk = Request.ask
@@ -231,7 +276,9 @@ function Testfaq_core_rules:testSeatSevenPlusStacksWithRoomLuckTimeAndSixPlayerN
   end
 
   local ok1, err1 = pcall(function()
-    createQiaoRoomWithPlayers(8, { luckTime = 1 })
+    createQiaoRoomWithPlayers(8, {
+      luckTime = 1, [FaqRules.seatLuckSetting] = FaqRules.seatLuckCard,
+    }, "qiao_free_mode")
   end)
   Request.ask = originalAsk
   assert(ok1, err1)
@@ -244,14 +291,14 @@ function Testfaq_core_rules:testSeatSevenPlusStacksWithRoomLuckTimeAndSixPlayerN
   lu.assertEquals(asked8[8], "#AskForLuckCard:::2")
   lu.assertEquals(p7Redraws, 2, "房间 luckTime=1 时 7 号位应可连续重抽 2 次")
 
-  -- 6 人局（luckTime = 0）不应触发任何手气卡询问
+  -- 大合集不足 7 人时，即使房间设置了手气卡次数，也不询问。
   local asked6 = 0
   Request.ask = function(self, ...)
     if self.focus_text == "AskForLuckCard" then asked6 = asked6 + 1 end
     return originalAsk(self, ...)
   end
   local ok2, err2 = pcall(function()
-    createQiaoRoomWithPlayers(6, { luckTime = 0 })
+    createQiaoRoomWithPlayers(6, { luckTime = 1 })
   end)
   Request.ask = originalAsk
   assert(ok2, err2)

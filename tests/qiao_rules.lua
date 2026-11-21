@@ -191,9 +191,12 @@ end
 function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
   local W = require "ui_emu.preferences"
   local modes = Fk.game_modes
-  local function preferences(mode)
+  local function preferences(mode, seatCompensation)
     local groups, rows = {}, {}
-    local config = { _mode = { qiao_faction_ban_enabled = false, qiao_guest_replacement = false } }
+    local config = { _mode = {
+      qiao_faction_ban_enabled = false, qiao_guest_replacement = false,
+      qiao_late_seat_compensation = seatCompensation,
+    } }
     local data = W.toQmlData(mode.ui_settings, config)
     lu.assertEquals(data[1].title, "qiao_rule_settings")
     for _, group in ipairs(data) do
@@ -221,11 +224,18 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
     return item._settingsKey
   end), { "qiao_candidate_han", "qiao_candidate_jin" })
   lu.assertNil(collection.qiao_wolves)
+  lu.assertNil(collection.qiao_late_seat_compensation)
   lu.assertNil(collection.qiao_kingdom_limit)
   lu.assertFalse(collection.qiao_faction_ban_enabled.value)
   lu.assertStrContains(collection.qiao_faction_ban_enabled._qml.url, "CheckRow.qml")
   lu.assertNotNil(free.qiao_wolves)
   lu.assertNotNil(free.qiao_kingdom_limit)
+  local compensation = free.qiao_late_seat_compensation
+  lu.assertEquals(compensation._qml.name, "TranslatedComboRow")
+  lu.assertEquals(compensation.model, { "qiao_late_seat_none", "qiao_late_seat_luck_card" })
+  lu.assertEquals(compensation.value, "qiao_late_seat_none")
+  local _, saved = preferences(modes.qiao_free_mode, "qiao_late_seat_luck_card")
+  lu.assertEquals(saved.qiao_late_seat_compensation.value, "qiao_late_seat_luck_card")
   for name, pack in pairs(Fk.packages) do
     -- The ascension fixture is registered only for its collection-mode suites.
     if not pack._ascension_content then

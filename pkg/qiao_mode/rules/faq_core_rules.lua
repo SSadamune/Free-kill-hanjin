@@ -1,6 +1,6 @@
 -- 汉晋 FAQ 公共硬规则：
 -- 1. 10 人（及以上）局同势力上限 4 人（第 5 人起转野），统一明置、效忠与升变预演；
--- 2. 7 人及以上局，7 号位及之后的角色开局各自拥有 1 次独立手气卡；
+-- 2. 启用后置位补偿时，7 人及以上局的 7 号位起各有 1 次额外手气卡；
 -- 3. 4 人及以下局，君主不可普通升变或死亡继位，首亮角色不获得「先驱」标记；
 -- 4. 阴阳鱼标记通用获得上限为 5 枚，统一约束所有来源。
 --
@@ -14,6 +14,9 @@ M.MIN_LORD_PLAYERS = 5
 M.BONUS_LUCK_MIN_PLAYERS = 7
 M.BONUS_LUCK_MIN_SEAT = 7
 M.MAX_YINYANG_FISH = 5
+M.seatLuckSetting = "qiao_late_seat_compensation"
+M.seatLuckNone = "qiao_late_seat_none"
+M.seatLuckCard = "qiao_late_seat_luck_card"
 
 local revealWasUnknownDepth = setmetatable({}, { __mode = "k" })
 
@@ -34,14 +37,6 @@ end
 function M.allows_first_show_vanguard(room)
   local total = room and room.players and #room.players or 0
   return total >= M.MIN_LORD_PLAYERS
-end
-
-function M.seat_luck_bonus(room, player)
-  if room == nil or player == nil or room.players == nil then return 0 end
-  if #room.players >= M.BONUS_LUCK_MIN_PLAYERS and (player.seat or 0) >= M.BONUS_LUCK_MIN_SEAT then
-    return 1
-  end
-  return 0
 end
 
 --- 在 fk.GeneralShown 最早期强制执行汉晋同势力人数上限（10 人局第 5 人起转野）。
@@ -201,28 +196,35 @@ local function installSeatLuckCard()
   GameEvent.DrawInitial.main = function(self)
     local room = self.room
     local data = self.data
-    if not Modes.inRoom(room) or data == nil or data.disable_luck
-      or room.players == nil or #room.players < M.BONUS_LUCK_MIN_PLAYERS then
+    if not Modes.inRoom(room) or data == nil or data.disable_luck then
       return original(self)
     end
 
     data.who = data.who or room.alive_players
-    local baseLuck = math.max(0, room:getSettings("luckTime") or 0)
+    local mode = room:getGameMode()
+    local collection = mode.name == Modes.collection
+    local seatLuckEnabled = #room.players >= M.BONUS_LUCK_MIN_PLAYERS
+      and (collection or room:getSettings(M.seatLuckSetting) == M.seatLuckCard)
+    local baseLuck = collection and 0 or math.max(0, room:getSettings("luckTime") or 0)
     local luck_data = {
-      drawInit = drawInit,
       discardInit = discardInit,
       playerList = table.map(data.who, Util.IdMapper),
-      cards = {},
     }
+    -- Request 重抽时不使用返回值，在这里记录每次实际发出的牌。
+    function luck_data.drawInit(room, player, n, fix_ids)
+      luck_data[player.id].cards = drawInit(room, player, n, fix_ids)
+    end
 
     local luckPlayers = {}
     for _, player in ipairs(data.who) do
-      local draw_data = DrawInitialData:new { num = 4 }
+      local adjusted = mode:getAdjustedProperty(player)
+      local draw_data = DrawInitialData:new { num = 4 + (adjusted.draw_init or 0) }
       room.logic:trigger(fk.DrawInitialCards, player, draw_data)
       luck_data[player.id] = draw_data
       local extra = tonumber(draw_data.extra_luck_time) or 0
-      local totalLuck = baseLuck + M.seat_luck_bonus(room, player) + math.max(0, extra)
-      if player.id < 0 or data.disable_luck then
+      local seatLuck = seatLuckEnabled and player.seat >= M.BONUS_LUCK_MIN_SEAT and 1 or 0
+      local totalLuck = baseLuck + seatLuck + math.max(0, extra)
+      if player.id < 0 then
         totalLuck = 0
       end
       luck_data[player.id].luckTime = totalLuck
@@ -230,14 +232,13 @@ local function installSeatLuckCard()
         table.insert(luckPlayers, player)
       end
       if draw_data.num > 0 then
-        draw_data.cards = drawInit(room, player, draw_data.num, luck_data[player.id].fix_ids)
+        luck_data.drawInit(room, player, draw_data.num, draw_data.fix_ids)
       else
         draw_data.cards = Util.DummyTable
       end
-      luck_data[player.id].cards = draw_data.cards
     end
 
-    if #luckPlayers > 0 and not data.disable_luck then
+    if #luckPlayers > 0 then
       local request = Request:new(luckPlayers, "AskForSkillInvoke")
       for _, p in ipairs(luckPlayers) do
         local times = luck_data[p.id].luckTime
@@ -257,7 +258,6 @@ local function installSeatLuckCard()
     for _, player in ipairs(data.who) do
       local draw_data = luck_data[player.id]
       draw_data.luckTime = nil
-      draw_data.cards = luck_data[player.id].cards
       room.logic:trigger(fk.AfterDrawInitialCards, player, draw_data)
     end
   end

@@ -346,6 +346,14 @@ function M.create(base, name)
       _settingsKey = Variants.key, title = "qiao_wolves",
       value = function(settings) return modeOf(settings)[Variants.key] == true end,
     })
+    table.insert(ruleSettings, 2, W.ComboRow {
+      _settingsKey = FaqRules.seatLuckSetting, title = FaqRules.seatLuckSetting,
+      model = { FaqRules.seatLuckNone, FaqRules.seatLuckCard },
+      value = function(settings)
+        return modeOf(settings)[FaqRules.seatLuckSetting] == FaqRules.seatLuckCard
+          and FaqRules.seatLuckCard or FaqRules.seatLuckNone
+      end,
+    })
   end
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
