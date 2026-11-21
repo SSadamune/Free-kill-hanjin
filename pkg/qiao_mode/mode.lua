@@ -188,6 +188,11 @@ function M.create(base, name)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      if collection then
+        local settings = self.room.settings
+        settings._mode = settings._mode or {}
+        settings._mode.generalTimeout = settings._mode.generalTimeout or Selection.defaultTimeout
+      end
       RemovedTargets.installServer(self.room)
       MandatoryCards.install(self.room)
       FaqRules.installServer(self.room)

@@ -245,6 +245,66 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
   end
 end
 
+function Testqiao_rules:testOnlyCollectionDisablesOverriddenGameSettings()
+  local function rows(mode, useOperationTimeout)
+    local data = GetUIDataOfSettings(mode, {
+      gameMode = mode, timeout = 40, _mode = {},
+      _game = { generalTimeout = 50, timeoutAsGeneralTimeout = useOperationTimeout },
+    }, true)
+    local result = {}
+    for _, group in ipairs(data) do
+      for _, row in ipairs(group._children) do result[row._settingsKey] = row end
+    end
+    return result
+  end
+
+  local collection = rows("qiao_heg_mode", true)
+  local free = rows("qiao_free_mode", false)
+  local upstream = rows("new_heg_mode", false)
+  for _, key in ipairs({ "generalNum", "generalTimeout", "timeoutAsGeneralTimeout", "luckTime", "enableDeputy" }) do
+    lu.assertFalse(collection[key].enabled, key)
+    lu.assertNotNil(collection[key].subTitle, key)
+    lu.assertNotEquals(free[key].enabled, false, key)
+    lu.assertNotEquals(upstream[key].enabled, false, key)
+  end
+  lu.assertNil(collection.generalTimeout.value)
+  lu.assertNotEquals(collection.enableFreeAssign.enabled, false)
+  lu.assertNotEquals(collection.disableSameConvert.enabled, false)
+  lu.assertEquals(free.generalTimeout.value, 50)
+  local freeLinked = rows("qiao_free_mode", true)
+  lu.assertFalse(freeLinked.generalTimeout.enabled)
+  lu.assertEquals(freeLinked.generalTimeout.value, 40)
+end
+
+function Testqiao_rules:testCollectionUsesModeSettingsInSelectionRequest()
+  local function selectionRequest(modeTimeout)
+    support.clearRoom()
+    local captured
+    local original = Request.ask
+    Request.ask = function(self, ...)
+      if self.command == "CustomDialog" and self.focus_text == "AskForGeneral" then
+        local props = self.data[self.players[1].id].component.model.prop
+        captured = { self.timeout, #props.generals, props.choiceNum }
+      end
+      return original(self, ...)
+    end
+    local ok, result = pcall(support.createRoom, {
+      mode = "qiao_heg_mode", realSelection = true,
+      settings = {
+        _game = { generalTimeout = 35, timeoutAsGeneralTimeout = true, generalNum = 3, enableDeputy = false },
+        _mode = { generalTimeout = modeTimeout, qiao_offer_count = 6 },
+      },
+    })
+    Request.ask = original
+    assert(ok, result)
+    lu.assertEquals(result.settings._game.generalTimeout, 35)
+    return captured
+  end
+
+  lu.assertEquals(selectionRequest(nil), { 90, 6, 2 })
+  lu.assertEquals(selectionRequest(150), { 150, 6, 2 })
+end
+
 function Testqiao_rules:testFinishedGameRecordsResultInItsNativeRoom()
   local room = FkTest.room
   local p = room.players[1]
