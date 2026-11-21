@@ -40,13 +40,6 @@ skill:addEffect(fk.AfterPropertyChange, spec)
 skill:addEffect(fk.TurnStart, spec)
 skill:addEffect(H.PlayerRemoved, spec)
 
--- 阵法召唤：汉晋 FAQ 采用出牌阶段限一次；公共 ArraySummonSkill 已按
--- HistoryPhase 计次，且阵法身份/效果不因人数少而失效。正式入口只需确保
--- 本技能在将池中即可出现召唤入口。
-skill:addEffect("arraysummon", {
-  array_type = "formation",
-})
-
 Fk:loadTranslationTable {
   ["qiao__skill_wei018_2"] = "鹤翼",
   [":qiao__skill_wei018_2"] = "阵法技，你队列的角色拥有“飞影”。",
