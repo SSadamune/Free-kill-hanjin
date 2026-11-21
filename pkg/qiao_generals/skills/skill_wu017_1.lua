@@ -109,7 +109,9 @@ skill:addEffect("active", {
     if not player:hasSkill(skill.name) then return false end
     if player:getMark(ACTIVE_MARK) ~= 0 then return false end
     local room = Fk:currentRoom()
-    return room ~= nil and #room:getOtherPlayers(player, false) > 0
+    return room ~= nil and table.find(room:getPresentPlayers(), function(other)
+      return other ~= player
+    end) ~= nil
   end,
   on_use = function(self, room, effect)
     local player = effect.from
