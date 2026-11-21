@@ -28,6 +28,26 @@ local function basicHandIds(player)
   end)
 end
 
+-- 只数此次弃牌移动实际进入弃牌堆的牌。移动后的技能可以立即取走它们。
+local function discardCount(room, who, ids, area)
+  if #ids == 0 then return 0 end
+  local parent = room.logic:getCurrentEvent()
+  local before = room.logic.current_event_id
+  room:throwCard(ids, skill.name, who, who)
+  local moves = parent:searchEvents(GameEvent.MoveCards, 1, function(e)
+    return e.id > before and e.parent == parent
+  end)
+  local count = 0
+  for _, move in ipairs(moves[1] and moves[1].data or {}) do
+    if move.from == who and move.moveReason == fk.ReasonDiscard and move.toArea == Card.DiscardPile then
+      for _, info in ipairs(move.moveInfo) do
+        if info.fromArea == area and table.contains(ids, info.cardId) then count = count + 1 end
+      end
+    end
+  end
+  return count
+end
+
 skill:addEffect(fk.EventPhaseStart, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
@@ -59,16 +79,15 @@ skill:addEffect(fk.EventPhaseStart, {
     local basics = cost.cards
     local to = cost.to
     if #basics == 0 or to == nil or to.dead then return end
-    room:throwCard(basics, skill.name, player, player)
+    local paid = discardCount(room, player, basics, Card.PlayerHand)
+    if paid == 0 or to.dead then return end
 
-    local equipIds = to:getCardIds(Player.Equip)
-    local discarded = {}
-    local need = math.min(#basics, #equipIds)
+    local equipIds = table.filter(to:getCardIds(Player.Equip), function(id) return not to:prohibitDiscard(id) end)
+    local discarded = 0
+    local need = math.min(paid, #equipIds)
     if need > 0 then
-      if need == #equipIds then
-        discarded = equipIds
-      else
-        discarded = room:askToDiscard(to, {
+      if need < #equipIds then
+        equipIds = room:askToDiscard(to, {
           min_num = need,
           max_num = need,
           include_equip = true,
@@ -79,13 +98,11 @@ skill:addEffect(fk.EventPhaseStart, {
           skip = true,
         })
       end
-      if #discarded > 0 then
-        room:throwCard(discarded, skill.name, to, player)
-      end
+      discarded = discardCount(room, to, equipIds, Card.PlayerEquip)
     end
 
     if player.dead then return end
-    if #basics > #discarded then
+    if paid > discarded then
       if to.dead then return end
       room:damage {
         from = player,

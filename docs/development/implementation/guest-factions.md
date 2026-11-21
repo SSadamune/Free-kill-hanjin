@@ -31,7 +31,7 @@
 2. 服务端核对玩家、牌位和原候选，仅处理本人的有效客将。补发前检查替换后是否仍有合法主副将，并从剩余将池取牌。
 3. 只有找到合法补发时才移除原候选、从本房间将池补发并记入弃牌堆；补发失败时原候选、候选顺序和将池都不变，并记录 `qiao_guest_redraw_failures_v1`。
 4. 补发牌回到原牌位。新牌若仍为客将，可继续重抽；其余未点选客将保留重抽权。若补发失败，保留原牌并关闭该牌的重抽按钮。多人重抽按服务端收到请求的顺序使用剩余将池。
-5. 成功换掉的牌立即加入 `qiao_general_discard_v1` 与 `disabled_generals`，并从 `general_pile` 移除。`general_discard.lua` 在汉晋房间内拦截 `getNGenerals`、`findGeneral`、`findGenerals`、`askToChooseIniticalGeneral`和 `returnToGeneralPile`，本局后续取将及回池都不会重新放入；其他模式不受影响。
+5. 客将重抽成功换下的牌，以及变更武将成功换下的旧武将牌，都立即加入 `qiao_general_discard_v1` 与 `disabled_generals`，并从 `general_pile` 移除。`general_discard.lua` 在汉晋房间内拦截 `getNGenerals`、`findGeneral`、`findGenerals`、`askToChooseIniticalGeneral`和 `returnToGeneralPile`，本局后续取将及回池都不会重新放入；其他模式不受影响。
 6. 最终选将使用 `ChooseGeneralBox` 与 `qiao_heg_pair` 规则，服务端按 `guest` 及 `wild` 结果重新验证主副将、同名替换、初始势力和重复牌；超时、取消、越界或非法组合回退到该玩家仍合法的候选组合。初始势力在合法交集中单独询问并再次校验。
 
 ### 边界

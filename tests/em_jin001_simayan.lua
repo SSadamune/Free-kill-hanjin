@@ -4,6 +4,8 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local DATA = require "packages.qiao.pkg.qiao_bingqing.data.bingqing_lord_jin"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local content = __dofile("../../../tests/support/ascension_content.lua")
 
@@ -40,6 +42,18 @@ local function inRoom(fn, label)
   return result
 end
 local function p(n) return FkTest.room.players[n] end
+
+local function setCi(room, holder, names)
+  for _, name in ipairs(names) do table.removeOne(room.general_pile, name) end
+  room:setPlayerMark(holder, BANNER, names)
+  room:setPlayerMark(holder, CI_MARK, #names + 1)
+end
+
+local function assertDiscarded(room, name)
+  lu.assertTrue(Discard.contains(room, name), "武将弃牌堆应包含 " .. name)
+  room:returnToGeneralPile({ name })
+  lu.assertFalse(table.contains(room.general_pile, name), "本局不能再抽到 " .. name)
+end
 
 local function setupLord()
   local room = FkTest.room
@@ -119,9 +133,14 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   lu.assertEquals(picks, 0, "取得赐时不询问玩家选将")
   lu.assertEquals(lord:getMark(CI_MARK), 2, "赐入口应显示一张牌")
   lu.assertEquals(#room.general_pile, pileBefore - 1, "该将牌应占用剩余将池")
-  -- 真实消费：用刚取得的赐走资源分支，验证消耗与回池。
+  -- 羊祜为四鱼，用刚取得的赐摸至四张。
   local ciName = ci[1]
-  inRoom(function() lord.phase = Player.Play end)
+  lu.assertFalse(Discard.contains(room, ciName))
+  inRoom(function()
+    room:throwCard(lord:getCardIds("h"), "test", lord, lord)
+    lord.phase = Player.Play
+  end)
+  lu.assertEquals(#lord:getCardIds("h"), 0)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoices = function(_, _, params)
       lu.assertTrue(params.single)
@@ -138,7 +157,8 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
   end)
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "执行分支应消耗赐")
   lu.assertEquals(lord:getMark(CI_MARK), 1, "消耗最后一张后仍可打开列表")
-  lu.assertTrue(table.contains(room.general_pile, ciName), "消费后赐将牌应回剩余池")
+  lu.assertEquals(#lord:getCardIds("h"), 4)
+  assertDiscarded(room, ciName)
 end
 
 function Testqiao_em_jin001_simayan:testFirstDoubleWithoutBannerDoesNotBackfill()
@@ -198,7 +218,12 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   lu.assertEquals(#ci, 1, "真实首次双亮应生成一枚赐")
   lu.assertEquals(ci[1], "qiao_heg__jin005", "固定池后首张赐应可确定")
   lu.assertFalse(table.contains(room.general_pile, ci[1]), "生成的赐不应仍留在剩余池")
-  inRoom(function() room.general_pile = { "qiao_heg__jin004", "qiao_heg__jin006" } end)
+  inRoom(function()
+    room.general_pile = { "qiao_heg__jin004", "qiao_heg__jin006" }
+    local factions = {}
+    for _, name in ipairs(room.general_pile) do factions[name] = Guest.resolve(name, { "jin" }, true) end
+    Guest.store(room, factions)
+  end)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoice = handler,
     askToChoices = function(_, _, params)
@@ -214,14 +239,16 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   end)
   lu.assertNotNil(chosen)
   lu.assertEquals(lord.deputyGeneral, chosen, "赐变更应通过公共 changeHero 换上所选副将")
-  lu.assertTrue(table.contains(room.general_pile, oldDeputy), "旧普通武将应回将池")
+  assertDiscarded(room, oldDeputy)
+  assertDiscarded(room, ci[1])
+  lu.assertFalse(Discard.contains(room, chosen))
   lu.assertFalse(table.contains(room.general_pile, chosen), "新武将不应重复留在池中")
   lu.assertTrue(lord:getMark("qiao_jin001_change_used") > 0, "变更分支应记录整局已用")
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "变更应消耗赐")
   local branches
   inRoom(function()
     lord.phase = Player.Play
-    room:setPlayerMark(lord, BANNER, { "qiao_heg__jin004" })
+    setCi(room, lord, { "qiao_heg__jin007" })
   end)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoices = function(_, _, params)
@@ -232,16 +259,133 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     end,
   }, function()
     inRoom(function()
-      Fk.skills[BANNER]:onUse(room, { from = lord, interaction_data = "qiao_heg__jin004" })
+      Fk.skills[BANNER]:onUse(room, { from = lord, interaction_data = "qiao_heg__jin007" })
     end)
   end)
   lu.assertNotNil(branches)
-  local expected = Fk.generals["qiao_heg__jin004"].maxHp <= 3 and RESOURCE_MAXCARD or RESOURCE_DRAW
-  lu.assertTrue(table.contains(branches, expected),
-    "资源分支应按所选赐显示“本回合手牌上限+3”或“将手牌摸至四张”")
+  lu.assertTrue(table.contains(branches, RESOURCE_MAXCARD))
+  lu.assertEquals(lord:getMark(MarkEnum.AddMaxCardsInTurn), 3)
+  assertDiscarded(room, "qiao_heg__jin007")
   lu.assertFalse(table.contains(branches, CHANGE), "整局限一次后变更按钮不可用")
   lu.assertEquals(#(lord:getTableMark(BANNER) or {}), 0, "资源分支应消耗赐")
 end
+
+function Testqiao_em_jin001_simayan:testCiAtFourCardsStillPaysForDraw()
+  local room, lord, name = FkTest.room, p(1), "qiao_heg__jin005"
+  inRoom(function()
+    lord.phase = Player.Play
+    setCi(room, lord, { name })
+  end)
+  local hand = table.simpleClone(lord:getCardIds("h"))
+  lu.assertEquals(#hand, 4, "以四张起始手牌验证可以摸零张")
+  skill_test.withSkillRequests(room, BANNER, {
+    askToChoices = function() return { RESOURCE_DRAW } end,
+  }, function()
+    inRoom(function() Fk.skills[BANNER]:onUse(room, { from = lord, interaction_data = name }) end)
+  end)
+  lu.assertEquals(lord:getCardIds("h"), hand)
+  lu.assertEquals(lord:getTableMark(BANNER), {})
+  assertDiscarded(room, name)
+end
+
+function Testqiao_em_jin001_simayan:testCiKeptOnCancelOrNoChangeCandidate()
+  local room, lord, name = FkTest.room, p(1), "qiao_heg__jin005"
+  inRoom(function()
+    lord.phase = Player.Play
+    room.general_pile = {}
+    setCi(room, lord, { name })
+  end)
+  for _, reply in ipairs({ {}, { CHANGE } }) do
+    skill_test.withSkillRequests(room, BANNER, {
+      askToChoices = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, CHANGE))
+        return reply
+      end,
+    }, function()
+      inRoom(function() Fk.skills[BANNER]:onUse(room, { from = lord, interaction_data = name }) end)
+    end)
+    lu.assertEquals(lord:getTableMark(BANNER), { name })
+    lu.assertFalse(Discard.contains(room, name))
+    lu.assertEquals(lord:getMark("qiao_jin001_change_used"), 0)
+  end
+end
+
+function Testqiao_em_jin001_simayan:testCiPreventsOwnSkippedDrawPhase()
+  local room, lord = FkTest.room, p(1)
+  local spent, kept = "qiao_heg__jin005", "qiao_heg__jin004"
+  inRoom(function() setCi(room, lord, { kept, spent }) end)
+  local phase = PhaseData:new { who = lord, phase = Player.Draw, reason = "game_rule", skipped = true }
+  local hand, asks = #lord:getCardIds("h"), 0
+  FkTest.setRoomBreakpoint(lord, "AskForChoices", function(data)
+    if data[5] == BANNER then
+      lu.assertEquals(data[1], { kept, spent })
+      lu.assertEquals(data[3], { 1, 1 })
+      lu.assertTrue(data[4])
+      lu.assertStrContains(data[6], "phase_draw")
+      lu.assertFalse(data[8], "此请求需显示阶段标题和取消按钮")
+      asks = asks + 1
+    end
+    return false
+  end)
+  FkTest.setNextReplies(lord, { { spent } })
+  inRoom(function() GameEvent.Phase:create(phase):exec() end)
+  lu.assertEquals(asks, 1)
+  lu.assertFalse(phase.skipped)
+  lu.assertEquals(#lord:getCardIds("h"), hand + 2)
+  lu.assertEquals(lord:getTableMark(BANNER), { kept })
+  lu.assertEquals(lord:getMark(CI_MARK), 2)
+  lu.assertFalse(Discard.contains(room, kept))
+  assertDiscarded(room, spent)
+end
+
+function Testqiao_em_jin001_simayan:testPreventSkippingPlayLeavesActiveCiUseAvailable()
+  local room, lord = FkTest.room, p(1)
+  local prevent, resource = "qiao_heg__jin005", "qiao_heg__jin004"
+  local phase = PhaseData:new { who = lord, phase = Player.Play, reason = "game_rule" }
+  local active = FkTest.ReplyUseSkill(BANNER, {}, {})
+  active.interaction_data = resource
+  inRoom(function() setCi(room, lord, { prevent, resource }) end)
+  skill_test.withSkillRequests(room, CAIXING, {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    FkTest.setNextReplies(lord, { { prevent }, active, { RESOURCE_MAXCARD } })
+    inRoom(function() GameEvent.Phase:create(phase):exec() end)
+  end)
+  lu.assertFalse(phase.skipped, "可以防止採幸产生的出牌阶段跳过")
+  lu.assertEquals(lord:getTableMark(BANNER), {}, "恢复的出牌阶段仍能另行消耗一枚赐")
+  assertDiscarded(room, prevent)
+  assertDiscarded(room, resource)
+end
+
+function Testqiao_em_jin001_simayan:testCiSkipDeclinedOrUnavailable()
+  local room, lord, other = FkTest.room, p(1), p(2)
+  local name, asks = "qiao_heg__jin005", 0
+  local function skippedDraw(who)
+    local phase = PhaseData:new { who = who, phase = Player.Draw, reason = "game_rule", skipped = true }
+    local hand = #who:getCardIds("h")
+    inRoom(function() GameEvent.Phase:create(phase):exec() end)
+    lu.assertTrue(phase.skipped)
+    lu.assertEquals(#who:getCardIds("h"), hand)
+  end
+  skill_test.withSkillRequests(room, BANNER, {
+    askToChoices = function(_, who)
+      lu.assertIs(who, lord)
+      asks = asks + 1
+      return {}
+    end,
+  }, function()
+    skippedDraw(lord)
+    lu.assertEquals(asks, 0, "没有赐时不询问")
+    inRoom(function() setCi(room, lord, { name }) end)
+    skippedDraw(other)
+    lu.assertEquals(asks, 0, "他人的阶段不询问持旗者")
+    skippedDraw(lord)
+  end)
+  lu.assertEquals(asks, 1)
+  lu.assertEquals(lord:getTableMark(BANNER), { name })
+  lu.assertFalse(Discard.contains(room, name))
+end
+
 function Testqiao_em_jin001_simayan:testCaixingMultipleMountsOpensClientCardChooser()
   local room, lord, other = FkTest.room, p(1), p(2)
   local field, discarded, oldOffensive, oldDefensive
@@ -455,7 +599,8 @@ function Testqiao_em_jin001_simayan:testClientCiPopupUsesOrdinaryActiveSkill()
   lu.assertEquals(lord:getTableMark(BANNER), { otherCi })
   lu.assertEquals(lord:getMark(CI_MARK), 2)
   lu.assertEquals(lord:usedSkillTimes(BANNER, Player.HistoryPhase), 1)
-  lu.assertTrue(table.contains(room.general_pile, stored))
+  assertDiscarded(room, stored)
+  lu.assertFalse(Discard.contains(room, otherCi))
 end
 
 return { name = "qiao_em_jin001_simayan" }

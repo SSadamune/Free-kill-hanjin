@@ -2,9 +2,17 @@
 -- 受到伤害后可选择：1. 摸牌至与来源手牌数相同（至多五张）；2. 移除副将并
 -- 回复 1 点体力，然后来源弃置手牌至与你相同。
 local H = require "packages.hegemony.util"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 
 local skill = fk.CreateSkill { name = "qiao__skill_wei044_1" }
 skill.qiaoImplemented = true
+
+local function canRemoveDeputy(player)
+  local name = Exchange.actualGeneral(player, true)
+  return Fk.generals[name] ~= nil and name ~= "anjiang" and not Exchange.isSoldier(name)
+    and not Exchange.isLordPosition(player, true) and not Wei.isPositionRestricted(player.room, player, true)
+end
 
 skill:addEffect(fk.Damaged, {
   can_trigger = function(self, event, target, player, data)
@@ -12,12 +20,17 @@ skill:addEffect(fk.Damaged, {
       and data.from ~= nil
   end,
   on_cost = function(self, event, target, player, data)
+    local choices = {}
+    if not data.from.dead then table.insert(choices, "1") end
+    if canRemoveDeputy(player) then table.insert(choices, "2") end
+    if #choices == 0 then return false end
+    table.insert(choices, "Cancel")
     local choice = player.room:askToChoice(player, {
-      choices = { "1", "2", "Cancel" },
+      choices = choices, all_choices = { "1", "2", "Cancel" },
       skill_name = skill.name,
       prompt = "#qiao__wei044_prompt",
     })
-    if choice == "Cancel" then return false end
+    if choice == "Cancel" or not table.contains(choices, choice) then return false end
     event:setCostData(self, { choice = choice })
     return true
   end,
@@ -31,7 +44,7 @@ skill:addEffect(fk.Damaged, {
       if n > 0 and not player.dead then player:drawCards(n, skill.name) end
       return
     end
-    if player.deputyGeneral == nil or player.deputyGeneral == "" then return end
+    if not canRemoveDeputy(player) then return end
     local oldDeputy = player.deputyGeneral
     local oldMark = player:getMark("__heg_deputy")
     H.removeGeneral(player, true)
