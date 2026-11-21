@@ -61,6 +61,10 @@ function Testqiao_em_shu001_liubei:testSkillsAndDragonPhoenixIdentity()
   for _, name in ipairs({ ZHANGWU, TIANYI, JIZHAO, FLAG }) do
     lu.assertNotNil(Fk.skills[name], "missing skill skeleton: " .. name)
   end
+  local description = Fk:getDescription(FLAG)
+  for _, name in ipairs({ "武圣", "咆哮", "龙胆", "铁骑", "烈勇", "狂骨" }) do
+    lu.assertNotNil(description:find("“" .. name .. "”", 1, true))
+  end
   local card = assert(Fk.all_card_types["qiao__dragon_phoenix"])
   lu.assertEquals(card.type, Card.TypeEquip)
   lu.assertEquals(card.display_name or Fk:translate(card.name), "飞龙夺凤")

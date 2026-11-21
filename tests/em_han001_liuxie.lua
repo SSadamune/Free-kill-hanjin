@@ -241,20 +241,22 @@ local function withClientRoom(current, fn)
   return clients, clientRoom
 end
 
-function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
-  local room, lord = FkTest.room, p(1)
+local function verifyClientEdictConsumption(room, holder)
+  local candidates = P.availableTricks(room)
+  lu.assertTrue(#candidates > 0)
   local suits = { Card.Spade, Card.Heart, Card.Club, Card.Diamond }
+  local fourth
   inRoom(function()
     for i, suit in ipairs(suits) do
       local c = room:printCard("qiao__jink", suit, i)
-      lord:addToPile(P.PILE, { c.id }, true, BANNER)
+      holder:addToPile(P.PILE, { c.id }, true, BANNER)
+      fourth = c.id
     end
-    lord.phase = Player.Play
-    P.syncTricks(room)
+    holder.phase = Player.Play
   end)
   local reply
-  withClientRoom(room, function(clients)
-    local me = clients[1]
+  withClientRoom(room, function(clients, clientRoom)
+    local me = clients[holder.seat]
     lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
     lu.assertTrue(Fk.skills[P.BANNER]:canUse(me), "客户端诏书入口应可用")
     lu.assertTrue(Fk.skills[P.CONSUME]:canUse(me), "客户端四花色消费应可用")
@@ -271,10 +273,30 @@ function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
     local client = board.client_klass:new(ClientInstance.client)
     local play = client.request_handlers.PlayCard:new(me)
     client.current_request_handler = play
-    lu.assertFalse(client:canConsumeEdict(clients[2].id), "他人的诏书不可操作")
+    local other = clients[holder.seat % #clients + 1]
+    lu.assertFalse(client:canConsumeEdict(other.id), "他人的诏书不可操作")
     me.phase = Player.Finish
     lu.assertFalse(client:canConsumeEdict(me.id), "出牌阶段外不可操作")
     me.phase = Player.Play
+    local pile = table.simpleClone(me:getPile(P.PILE))
+    table.removeOne(pile, fourth)
+    me.special_cards = table.simpleClone(me.special_cards)
+    me.special_cards[P.PILE] = pile
+    lu.assertFalse(client:canConsumeEdict(me.id), "三花色不能消费")
+    table.insert(pile, fourth)
+
+    client.banners = table.simpleClone(room.banners)
+    clientRoom.banners = client.banners
+    local notices = {}
+    client.notifyUI = function(_, command) table.insert(notices, command) end
+    client:handleSetBanner({ P.TRICK_BANNER, {} })
+    lu.assertEquals(notices, { "QiaoPileActionChanged" })
+    lu.assertFalse(client:canConsumeEdict(me.id), "没有公开候选时不能消费")
+    client:handleSetBanner({ P.TRICK_BANNER, P.trickNames(room) })
+    lu.assertTrue(client:canConsumeEdict(me.id))
+    play.selected_card = Fk:getCardById(me:getCardIds("h")[1])
+    lu.assertFalse(client:canConsumeEdict(me.id), "已有选牌操作时不能消费")
+    play.selected_card = nil
     lu.assertTrue(client:canConsumeEdict(me.id))
 
     local originalNotify = ClientInstance.notifyUI
@@ -297,10 +319,17 @@ function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
   skill_test.withSkillRequests(room, P.CONSUME, {
     askToChoice = function(_, _, params) return params.choices[1] end,
   }, function()
-    inRoom(function() room:handleUseCardReply(lord, reply) end)
+    inRoom(function() room:handleUseCardReply(holder, reply) end)
   end)
-  lu.assertEquals(P.count(lord), 0, "标准回包应支付诏书上的所有牌")
-  lu.assertEquals(lord:usedSkillTimes(P.CONSUME, Player.HistoryPhase), 1)
+  lu.assertEquals(P.count(holder), 0, "标准回包应支付诏书上的所有牌")
+  lu.assertEquals(holder:usedSkillTimes(P.CONSUME, Player.HistoryPhase), 1)
+  lu.assertNotNil(table.find(candidates, function(candidate)
+    return table.contains(holder:getCardIds("h"), candidate.id)
+  end), "取得原游戏外区域的实体锦囊")
+end
+
+function Testqiao_em_han001_liuxie:testClientBannerConsumeAvailability()
+  verifyClientEdictConsumption(FkTest.room, p(1))
 end
 
 
@@ -397,6 +426,27 @@ function Testqiao_em_han001_liuxie:testImperialOrderTurnEndGrantsZhaoshuWhenNobo
   lu.assertTrue(user:hasSkill(P.CONSUME), "持有者获得四花色消费入口")
   lu.assertTrue(lord:hasSkill(P.BANNER), "同势力角色获得交牌入口")
   lu.assertFalse(p(4):hasSkill(P.BANNER), "异势力不获得交牌入口")
+  verifyClientEdictConsumption(room, user)
+end
+
+function Testqiao_em_han001_liuxie:testImperialOrderTurnEndStartsAtCurrentSeat()
+  local room, current = FkTest.room, p(3)
+  local asked = {}
+  skill_test.withSkillRequests(room, "qiao__imperial_order_skill", {
+    askToChoice = function(_, player)
+      table.insert(asked, player.seat)
+      return "loseHp"
+    end,
+  }, function()
+    inRoom(function()
+      room:setPlayerProperty(p(1), "kingdom", "unknown")
+      room:setPlayerProperty(p(7), "kingdom", "unknown")
+      imperialToDiscard(room)
+      room:setCurrent(current)
+      room.logic:trigger(fk.TurnEnd, current, {})
+    end)
+  end)
+  lu.assertEquals(asked, { 7, 1 })
 end
 
 function Testqiao_em_han001_liuxie:testImperialOrderTurnEndSkipsEntityThatLeftDiscardPile()

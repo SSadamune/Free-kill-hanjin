@@ -11,6 +11,8 @@ local skill = fk.CreateSkill {
   tags = { Skill.Compulsory },
 }
 skill.qiaoImplemented = true
+-- TargetSpecified 承载响应数量修正；暗置时阵法仍不生效。
+skill.qiaoStateOnly = true
 
 skill:addEffect(fk.TargetSpecified, {
   anim_type = "offensive",
@@ -28,11 +30,6 @@ skill:addEffect(fk.TargetSpecified, {
     -- 在已有响应次数上追加一张【闪】，不覆盖其他技能已设置的要求。
     data:setResponseTimes(data:getResponseTimes(to) + 1, to)
   end,
-})
-
--- 阵法召唤：汉晋 FAQ 采用出牌阶段限一次；围攻身份/效果不因人数少而失效。
-skill:addEffect("arraysummon", {
-  array_type = "siege",
 })
 
 Fk:loadTranslationTable {

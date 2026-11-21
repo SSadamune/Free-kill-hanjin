@@ -13,6 +13,7 @@
 -- 未声明的技能不在此拦截，继续由既有 can_use/on_use 业务逻辑处理。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+local Array = require "packages.qiao.pkg.qiao_mode.rules.array_summon"
 local M = {}
 
 local function inMode(room)
@@ -79,6 +80,8 @@ function M.installServer(room)
     if params == nil and type(data) == "table" and type(data.card) == "table" then
       local skill = Fk.skills[data.card.skill]
       if M.exhausted(skill, player, self) then return nil end
+      if data.card.skill == Array.skill and (not skill:canUse(player)
+        or #(data.card.subcards or {}) > 0 or #(data.targets or {}) > 0) then return nil end
       if data.card.skill == Ci.SKILL and not Ci.canChoose(player, data.interaction_data) then return nil end
     end
     return handleReply(self, player, data, params)

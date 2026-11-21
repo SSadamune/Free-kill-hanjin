@@ -88,6 +88,7 @@ function M.grant(room, player)
   if holder ~= nil then return holder == player end
   room:setPlayerMark(player, M.MARK, 1)
   M.sync(room)
+  M.syncTricks(room)
   return true
 end
 

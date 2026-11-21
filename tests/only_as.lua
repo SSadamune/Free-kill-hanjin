@@ -192,19 +192,17 @@ function Testqiao_only_as:testRealUseRequestRejectsDirectPeachAndAllowsConversio
   lu.assertFalse(table.contains(player:getCardIds("h"), peach.id))
 end
 
-function Testqiao_only_as:testHiddenBazhenDeclineKeepsConvertedResponseRequest()
+function Testqiao_only_as:testHiddenBazhenKeepsConvertedResponseRequest()
   local player = room().players[1]
   run(function()
     skill_test.installDualGenerals(room(), player, {
       main = "qiao_heg__shu011", deputy = "qiao_test__shu_2", kingdom = "shu",
     })
     player:hideGeneral(false)
-    player:prelightSkill("qiao__skill_shu011_1", true)
   end)
   enterBattleRoyal()
   local peach = give(player, "qiao__peach", Card.Heart, 4)
-  -- 八阵的询问先于 AskForResponseCard；先放弃八阵，再提交真实转换回复。
-  FkTest.setNextReplies(player, { "", {
+  FkTest.setNextReplies(player, { {
     card = { skill = BattleRoyal.SKILL, subcards = { peach.id } },
     targets = {}, interaction_data = "qiao__jink",
   } })
