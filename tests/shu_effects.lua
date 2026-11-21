@@ -237,17 +237,26 @@ function Testqiao_shu_effects:testKanpoRecordsJinkCancellation()
   lu.assertEquals(p3.hp, p3.maxHp)
   lu.assertTrue(p3:getMark("qiao__skill_shu011_3-cancelled-turn") > 0)
 
-  local viewed = false
+  local viewed, selfInvoked = false, false
   local oldView = room().viewCards
   local oldInvoke = room().askToSkillInvoke
   room().askToSkillInvoke = function(self, player, params)
-    if params.skill_name == KANPO then return true end
+    if params.skill_name == KANPO then
+      if self.current == p3 then selfInvoked = true end
+      return true
+    end
     return oldInvoke(self, player, params)
   end
   room().viewCards = function(self, player, params)
     viewed = true
     return oldView(self, player, params)
   end
+  inRoom(function()
+    room().current = p3
+    room().logic:trigger(fk.TurnEnd, p3, {})
+  end)
+  lu.assertFalse(selfInvoked)
+  lu.assertFalse(viewed)
   inRoom(function()
     room().current = p1
     room().logic:trigger(fk.TurnEnd, p1, {})

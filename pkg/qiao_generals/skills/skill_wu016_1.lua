@@ -6,26 +6,24 @@
 -- 额外目标在多目标声明后加入，目标条件明确为“距离1”，不再叠加原【杀】
 -- 的攻击范围条件。额外【闪】按每个目标分别写入 AimData 的响应张数，
 -- 因此只影响距离1的目标；多目标【杀】的其他目标仍只需求一张【闪】。
+local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu016_1",
 }
 skill.qiaoImplemented = true
 
-local function distanceOneCandidates(player, data)
-  return table.filter(data:getExtraTargets(), function(p)
-    return p:isAlive() and not p:isRemoved() and player:distanceTo(p) == 1
-  end)
-end
+local TARGETS = { target_condition = { distance = 1, other_roles = true } }
 
 skill:addEffect(fk.AfterCardTargetDeclared, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) or data.from ~= player then return false end
     if data.card == nil or data.card.trueName ~= "slash" then return false end
-    return #distanceOneCandidates(player, data) > 0
+    return #ExtraTargets.candidates(player.room, data, TARGETS) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    local tos = distanceOneCandidates(player, data)
+    local tos = ExtraTargets.candidates(player.room, data, TARGETS)
     if #tos == 0 then return false end
     local chosen = player.room:askToChoosePlayers(player, {
       min_num = 1,
@@ -42,9 +40,8 @@ skill:addEffect(fk.AfterCardTargetDeclared, {
   end,
   on_use = function(self, event, target, player, data)
     local to = event:getCostData(self) and event:getCostData(self).to
-    if to == nil or not to:isAlive() or to:isRemoved() then return end
     -- 复核仍是本次的额外目标候选：拒绝重复/伪造的过时回复。
-    if not table.contains(distanceOneCandidates(player, data), to) then return end
+    if not ExtraTargets.isCandidate(player.room, data, to, TARGETS) then return end
     data:addTarget(to)
   end,
 })

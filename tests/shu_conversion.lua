@@ -617,7 +617,7 @@ function Testqiao_shu_conversion:testBazhenRealShu011HiddenAndRemovalDoesNotLeak
   lu.assertTrue(p1:hasSkill(ARMOR_SKILL))
 end
 
-function Testqiao_shu_conversion:testBazhenHiddenPrelightCanRevealOnJinkRequest()
+function Testqiao_shu_conversion:testHiddenBazhenDoesNotRevealOnJinkRequest()
   local p1 = p(1)
   clearCards(p1)
   inRoom(function()
@@ -625,22 +625,21 @@ function Testqiao_shu_conversion:testBazhenHiddenPrelightCanRevealOnJinkRequest(
     room():setPlayerMark(p1, "__heg_general", "qiao_heg__shu011")
     p1:addFakeSkill(Fk.skills[BAZHEN])
     room().logic:trigger(fk.GamePrepared, p1, {})
+    room().callbacks.prelight(room(), p1.id, { "", "prelight", BAZHEN, "true" })
   end)
-  lu.assertTrue(table.contains(p1.prelighted_skills, Fk.skills[BAZHEN]))
+  lu.assertFalse(table.contains(p1.prelighted_skills, Fk.skills[BAZHEN]))
   lu.assertFalse(p1:hasSkill(ARMOR_SKILL))
 
-  -- 需要【闪】时由八阵自身询问；答应后自动明置并调用正式八卦阵判定。
+  -- 即使判定会是红色，暗置八阵也不能提供八卦阵入口。
   inRoom(function()
     room():moveCardTo(room():printCard("qiao__slash", Card.Heart, 3), Card.DrawPile)
     p1.hp = p1.maxHp
   end)
-  FkTest.setNextReplies(p1, { "1" })
+  FkTest.setNextReplies(p1, { "" })
   use(p(2), Fk:cloneCard("qiao__slash"), { p1 })
-  lu.assertEquals(p1.hp, p1.maxHp)
-  lu.assertEquals(p1.general, "qiao_heg__shu011")
-  lu.assertTrue(p1:hasSkill(BAZHEN))
-  lu.assertTrue(p1:hasSkill(ARMOR_SKILL))
-
+  lu.assertEquals(p1.hp, p1.maxHp - 1)
+  lu.assertEquals(p1.general, "anjiang")
+  lu.assertFalse(p1:hasSkill(ARMOR_SKILL))
 end
 
 function Testqiao_shu_conversion:testLianhuanRecastStopsWithMainSkill()
@@ -779,7 +778,7 @@ function Testqiao_shu_conversion:testXiangleDiscardBasicKeepsSlashEffective()
 end
 
 
-function Testqiao_shu_conversion:testBazhenRealHideRestoresHiddenRequestEntry()
+function Testqiao_shu_conversion:testBazhenCanBeRevealedByOrdinaryPlayAction()
   local player = p(1)
   inRoom(function()
     skill_test.installDualGenerals(room(), player, {
@@ -788,8 +787,23 @@ function Testqiao_shu_conversion:testBazhenRealHideRestoresHiddenRequestEntry()
     player:hideGeneral(false)
   end)
   lu.assertEquals(player.general, "anjiang")
-  lu.assertTrue(table.contains(player.prelighted_skills, Fk.skills[BAZHEN]))
+  lu.assertTrue(player:isFakeSkill(BAZHEN))
+  lu.assertFalse(table.contains(player.prelighted_skills, Fk.skills[BAZHEN]))
   lu.assertFalse(player:hasSkill(ARMOR_SKILL))
+  lu.assertTrue(player:isFakeSkill("reveal_skill&"))
+
+  inRoom(function()
+    room():setCurrent(player)
+    player.phase = Player.Play
+    room():handleUseCardReply(player, {
+      card = { skill = "reveal_skill&", subcards = {} },
+      targets = {},
+      interaction_data = "revealMain:::qiao_heg__shu011",
+    })
+  end)
+  lu.assertEquals(player.general, "qiao_heg__shu011")
+  lu.assertTrue(player:hasShownSkill(BAZHEN))
+  lu.assertTrue(player:hasSkill(ARMOR_SKILL))
 end
 
 return { name = "qiao_shu_conversion" }

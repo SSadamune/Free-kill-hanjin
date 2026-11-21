@@ -1,7 +1,9 @@
 -- JIN017 王浑：数据片段、遄征移除副将并获得献捷。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin2"
+local ZONGRONG = "qiao__skill_jin017_1"
 local XIANJIE = "qiao__skill_jin017_3"
 
 local function inRoom(fn)
@@ -33,6 +35,45 @@ function Testqiao_jin017_wanghun:testChuanzhengGrantsXianjie()
     me.phase = Player.Play
     Fk.skills["qiao__skill_jin017_2"]:onUse(FkTest.room, { from = me })
     lu.assertTrue(me:hasSkill(XIANJIE), "移除副将后获得永久献捷")
+  end)
+end
+
+function Testqiao_jin017_wanghun:testZongrongOnlyRelaxesTheHoldersLimitsAgainstChainedTargets()
+  local room, holder, other, distant = FkTest.room, p(1), p(2), p(4)
+  local ids = {}
+  inRoom(function()
+    room:handleAddLoseSkills(holder, ZONGRONG, nil, false, true)
+    holder.phase = Player.Play
+    other.phase = Player.Play
+    distant:setChainState(true)
+    for i, name in ipairs({ "qiao__slash", "qiao__fire__slash", "qiao__ice__slash" }) do
+      local card = room:printCard(name, Card.Spade, i)
+      room:obtainCard(holder, card, true, fk.ReasonJustMove)
+      ids[#ids + 1] = card.id
+    end
+    for _, id in ipairs(ids) do
+      local card = Fk:getCardById(id)
+      lu.assertFalse(card.skill:withinDistanceLimit(other, true, card, distant))
+      lu.assertTrue(card.skill:withinDistanceLimit(holder, true, card, distant))
+      holder:addCardUseHistory("slash", 1)
+      lu.assertTrue(card.skill:withinTimesLimit(holder, Player.HistoryPhase, card, nil, distant))
+      lu.assertFalse(card.skill:withinTimesLimit(holder, Player.HistoryPhase, card, nil, other))
+    end
+  end)
+  client_room.run(room, function(clients)
+    local req = require("ltk.core.request_type.play_card"):new(clients[1])
+    for _, id in ipairs(ids) do
+      req.selected_card = Fk:getCardById(id)
+      lu.assertTrue(req:cardValidity(id))
+      lu.assertTrue(req:targetValidity(clients[4].id))
+      lu.assertFalse(req:targetValidity(clients[2].id))
+    end
+  end)
+  inRoom(function()
+    room:setPlayerMark(holder, MarkEnum.InvalidSkills, { [ZONGRONG] = true })
+    local card = Fk:getCardById(ids[1])
+    lu.assertFalse(card.skill:withinDistanceLimit(holder, true, card, distant))
+    lu.assertFalse(card.skill:withinTimesLimit(holder, Player.HistoryPhase, card, nil, distant))
   end)
 end
 

@@ -54,7 +54,11 @@ ColumnLayout {
     Layout.alignment: Qt.AlignHCenter
     text: Lua.tr("qiao__ci_consume")
     visible: root.isHolder
-    enabled: visible && root.scene?.progress.visible && root.canConsume()
+    enabled: {
+      // The Lua query itself has no QML change signal.
+      root.scene?.pileActionRevision;
+      return visible && root.scene?.progress.visible && root.canConsume();
+    }
 
     onClicked: {
       if (!root.canConsume()) return;
