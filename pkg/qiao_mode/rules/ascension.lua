@@ -12,6 +12,7 @@ local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
+local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local M = {}
 
 M.RULE_SKILL = "#qiao_ascension_rule"
@@ -49,7 +50,16 @@ function M.pair_max_hp(main, deputy, room)
   return PairHp.max_hp(main, deputy, room) or 0
 end
 
+function M.max_kingdom_players(room)
+  return FaqRules.max_kingdom_players(room)
+end
+
+function M.allows_lord_ascension(room)
+  return FaqRules.allows_lord_ascension(room)
+end
+
 --- 势力人数预演。包含其他存活角色与已死亡的同势力角色；君主在场不豁免。
+--- 10 人局仍每国最多 4 人，第 5 人起超员转野。
 --- 角色已经属于目标势力时不再进行“首次确定势力”的转野判定。
 function M.population_blocks(room, player, kingdom)
   if isUnknown(kingdom) or kingdom == "wild" then return true end
@@ -60,7 +70,7 @@ function M.population_blocks(room, player, kingdom)
       count = count + 1
     end
   end
-  return count >= #room.players // 2
+  return count >= M.max_kingdom_players(room)
 end
 
 function M.has_lord(room, kingdom)
@@ -96,8 +106,9 @@ function M.is_first_turn(player)
 end
 
 --- 死亡继位候选人：主将（明置或暗置）能升变为死者所属势力的君主，
---- 且不会因加入后超员而转为野心家。
+--- 且不会因加入后超员而转为野心家。四人及以下局不可升变君主。
 function M.lord_candidate(room, player, deadKingdom)
+  if not M.allows_lord_ascension(room) then return nil end
   if player == nil or player.dead or player:isRemoved() then return nil end
   local main = M.actual_main(player)
   if main == nil then return nil end
@@ -164,7 +175,10 @@ function M.ascend(room, player, newMain, kingdom, options)
   assert(options.kind ~= "lord" or Versions.is_lord(newMain), "Lord ascension needs a lord version")
   assert(options.kind ~= "loyalty" or Versions.is_loyalty(newMain),
     "Loyalty ascension needs a loyalty version")
-  -- 防御性复核：提供选项前各入口已过滤；询问期间到提交前若目标被禁则不执行。
+  -- 防御性复核：提供选项前各入口已过滤；询问期间到提交前若目标被禁或人数不符则不执行。
+  if (options.kind == "lord" or options.kind == "succession") and not M.allows_lord_ascension(room) then
+    return false
+  end
   if not RoomBans.allows(room, newMain) then return false end
 
   local oldMain = M.actual_main(player)
@@ -406,6 +420,7 @@ function M.reset(room)
 end
 
 function M.on_turn_start(room, player)
+  if not M.allows_lord_ascension(room) then return end
   if player.dead or not M.is_first_turn(player) or player.general ~= "anjiang" then return end
   local main = M.actual_main(player)
   if main == nil or Fk.generals[main] == nil or Fk.generals[main].kingdom == "wild" then return end
