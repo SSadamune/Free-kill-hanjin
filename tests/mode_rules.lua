@@ -8,6 +8,45 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
 Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
+function Testmode_rules:testSkillButtonLabelsKeepActionableAndProtectedSkills()
+  local clientClass = Fk:getBoardGame("qiao_heg_mode").client_klass
+  local cases = {
+    { "qiao__skill_em_shu001_flag", "六师率义旗", "六师" },
+    { "qiao__retinue_skill_bingzhou_langqi", "并州狼骑", "并州骑" },
+    { "qiao__retinue_skill_qingzhou_jingrui", "青州精锐", "青州兵" },
+    { "qiao__retinue_skill_lujiang_shangjia", "庐江上甲", "庐江兵" },
+    { "qiao__luminous_pearl_skill", "定澜夜明珠", "夜明珠" },
+    { "qiao__sihai_liuqian_skill", "四海流钱", "流钱" },
+    { "qiao__five_elements_fan_skill", "五行鹤翎扇", "五行扇" },
+    { "qiao__spear_skill", "丈八蛇矛", "丈八矛" },
+    { "qiao__xuehai_mowangzun_skill", "血海魔王樽", "魔王樽" },
+    { "qiao__halberd_skill", "方天画戟", "方天戟" },
+    { "qiao__blade_skill", "青龙偃月刀", "青龙刀" },
+    { "qiao__triblade_skill", "三尖两刃刀", "三尖刀" },
+    { "qiao__black_chain_skill", "乌铁锁链", "乌铁链" },
+    { "qiao__crossbow_skill", "诸葛连弩", "诸葛弩" },
+    { "qiao__dragon_phoenix_skill", "飞龙夺凤", "龙凤剑" },
+    { "qiao__shenshou_sizhao_skill", "神授思召", "思召剑" },
+    { "qiao__xuwang_zhimian_skill", "虚妄之冕", "虚妄冕" },
+    { "qiao__jinxiu_zhengpao_skill", "锦绣征袍", "锦绣袍" },
+    { "qiao__zhoujun_lingbingyin_skill", "州郡领兵印", "领兵印" },
+    { "qiao__retinue_skill_bingzhou_distance", "并州狼骑·距离", false },
+    { "qiao__retinue_skill_baima_yicong", "白马义从", false },
+    { "qiao__skill_em_wei001_banner", "霸者求贤状", false },
+    { "qiao__retinue_skill_bazhenbing_viewas", "八阵兵", "八阵兵" },
+    { "qiao__retinue_skill_baima_yicong", "白马·义", "白马·义" },
+    { "qiao__skill_wu011_2", "红颜状态", "红颜状" },
+    { "qiao__dark_armor_skill", "黑光铠防具", "黑光铠" },
+  }
+  for _, case in ipairs(cases) do
+    local name, full, expected = table.unpack(case)
+    lu.assertNotNil(Fk.skills[name], name)
+    lu.assertEquals(clientClass.skillButtonLabel(nil, name, full, false), expected, name)
+  end
+  lu.assertEquals(clientClass.skillButtonLabel(nil, "qiao__retinue_skill_baima_yicong",
+    "白马义从", true), "白马义")
+end
+
 function Testmode_rules:testStateSkillsCannotPrelightButMixedSkillsCan()
   local room = FkTest.room
   local player = room.players[1]

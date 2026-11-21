@@ -7,6 +7,7 @@ local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
+local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -231,6 +232,10 @@ end
 
 function QiaoClient:isStateOnlySkill(skillName)
   return SkillPrelight.isStateOnly(skillName)
+end
+
+function QiaoClient:skillButtonLabel(skillName, label, prelight)
+  return SkillButtons.label(Fk.skills[skillName], label, prelight, Self)
 end
 
 --- 脚注/虚拟牌提示的纯文本化：只覆盖 nocolor == true 的调用，继承

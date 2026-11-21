@@ -26,6 +26,27 @@ Room {
     }
   }
 
+  function refreshSkillButtonLabels() {
+    const dashboard = dataModel.dashboard;
+    const updateLabel = skill => {
+      if (skill.name.length < 4) return true;
+      const label = Lua.ev(`ClientInstance:skillButtonLabel(${JSON.stringify(skill.origName)}, ${JSON.stringify(skill.name)}, ${skill.isPrelight})`);
+      if (label === false) return false;
+      if (typeof label === "string" && label !== skill.name) skill.name = label;
+      return true;
+    };
+    const visibleSkills = Array.from(dashboard.skills).filter(updateLabel);
+    if (visibleSkills.length !== dashboard.skills.length)
+      dashboard.skills = visibleSkills;
+    for (const skill of dashboard.fakeSkills) updateLabel(skill);
+  }
+
+  Connections {
+    target: room.dataModel.dashboard
+    function onSkillsChanged() { Qt.callLater(room.refreshSkillButtonLabels); }
+    function onFakeSkillsChanged() { Qt.callLater(room.refreshSkillButtonLabels); }
+  }
+
   Column {
     id: openingCountdown
     objectName: "qiaoInitialPrelightCountdown"
@@ -186,5 +207,6 @@ Room {
       }
     });
     Qt.callLater(bindPhotoExtras);
+    Qt.callLater(refreshSkillButtonLabels);
   }
 }
