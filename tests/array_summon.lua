@@ -100,9 +100,16 @@ function Testqiao_array_summon:testSiegeBothDirectionsAndIndependentHuyi()
     local room, owner = prepare("han014", "han")
     hide(room, 3, "han")
     hide(room, 7, "han")
-    local asked = play(room, owner, function()
-      return "revealMain:::qiao_test__han_1"
-    end)
+    local asked = {}
+    for _, seat in ipairs({3, 7}) do
+      local who = room.players[seat]
+      FkTest.setRoomBreakpoint(who, "AskForChoices", function(data)
+        if data[5] == A.skill then table.insert(asked, seat) end
+        return false
+      end)
+      FkTest.setNextReplies(who, {{"revealMain:::qiao_test__han_1"}})
+    end
+    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
     lu.assertEquals(asked, {3, 7})
     lu.assertTrue(H.inSiegeRelation(owner, room.players[3], room.players[2]))
     lu.assertTrue(H.inSiegeRelation(owner, room.players[7], room.players[8]))
@@ -200,7 +207,7 @@ function Testqiao_array_summon:testGuestAllegianceAndWildMainMayOnlyRevealDeputy
   end)
 end
 
-function Testqiao_array_summon:testTimeoutDeclinesAndAProhibitedGeneralStaysHidden()
+function Testqiao_array_summon:testCancelledRevealRequestsLeaveBothGeneralsHidden()
   FkTest.runInRoom(function()
     local room, owner = prepare("wei018", "wei")
     local second = hide(room, 2, "wei")
@@ -208,18 +215,19 @@ function Testqiao_array_summon:testTimeoutDeclinesAndAProhibitedGeneralStaysHidd
     room:setPlayerMark(second, MarkEnum.RevealProhibited, {"m", "d"})
     room:setPlayerMark(last, MarkEnum.RevealProhibited, {"m"})
     local observed = {}
-    fixture.withSkillRequests(room, A.skill, {
-      askToChoices = function(_, who, params)
-        table.insert(observed, who.seat)
-        lu.assertTrue(params.cancelable)
-        if who == second then
-          lu.assertEquals(params.choices, {"Cancel"})
-        else
-          lu.assertEquals(params.choices, {"revealDeputy:::qiao_test__wei_2", "Cancel"})
+    for _, who in ipairs({second, last}) do
+      FkTest.setRoomBreakpoint(who, "AskForChoices", function(data)
+        if data[5] == A.skill then
+          table.insert(observed, who.seat)
+          lu.assertTrue(data[4], "响应询问须可取消")
+          lu.assertEquals(data[1], who == second and {"Cancel"} or {"revealDeputy:::qiao_test__wei_2", "Cancel"})
         end
-        return {} -- 与真实可取消请求没有获得有效响应时相同
-      end,
-    }, function() room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil) end)
+        return false
+      end)
+      -- 先点可见的取消选项，再走原生请求未收到有效选择的取消分支。
+      FkTest.setNextReplies(who, who == second and {{"Cancel"}} or {{}})
+    end
+    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
     lu.assertEquals(observed, {2, 8})
     lu.assertEquals(last.kingdom, "unknown")
     lu.assertEquals(second.general, "anjiang")
@@ -227,23 +235,37 @@ function Testqiao_array_summon:testTimeoutDeclinesAndAProhibitedGeneralStaysHidd
   end)
 end
 
-function Testqiao_array_summon:testPopulationCapDuringRecruitmentAndInTenPlayerCount()
+function Testqiao_array_summon:testTenPlayerRoomStopsAsSoonAsFourthAllyReveals()
+  support.clearRoom()
+  local backend = FkTest.createFakeRoom({1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
+  -- 引擎默认测试客户端只登记前八座，再同步本房其余两位。
+  for seat = 9, 10 do
+    local who = backend:getPlayers():at(seat - 1)
+    ClientInstance:addPlayer({who:getId(), who:getScreenName(), who:getAvatar(), true, 0})
+  end
+  support.createRoom {mode = "qiao_heg_mode", backend = backend, realSelection = true}
   FkTest.runInRoom(function()
     local room, owner = prepare("wei018", "wei")
-    hide(room, 2, "wei")
-    hide(room, 8, "wei")
+    lu.assertEquals(#room.players, 10)
+    local first = hide(room, 2, "wei")
+    local other = hide(room, 10, "wei")
     for _, seat in ipairs({4, 5}) do room:setPlayerProperty(room.players[seat], "kingdom", "wei") end
+    room.players[4].dead = true
+    table.removeOne(room.alive_players, room.players[4])
     room:setPlayerMark(room.players[5], MarkEnum.PlayerRemoved .. "-turn", 1)
-    lu.assertEquals(play(room, owner, function() return "revealAll" end), {2})
-    lu.assertEquals(room.players[8].kingdom, "unknown", "第四人亮将后，另一侧不再询问")
+    local asked = {}
+    for _, who in ipairs({first, other}) do
+      FkTest.setRoomBreakpoint(who, "AskForChoices", function(data)
+        if data[5] == A.skill then table.insert(asked, who.seat) end
+        return false
+      end)
+      FkTest.setNextReplies(who, {{"revealAll"}})
+    end
+    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
+    lu.assertEquals(asked, {2})
+    lu.assertEquals(first.kingdom, "wei")
+    lu.assertEquals(other.kingdom, "unknown", "第四人亮将后，另一侧不再询问")
     lu.assertEquals(A.choices(room, owner), {})
-    -- 同一公开座次，另有两名已阵亡的其他势力玩家，总人数增至十。
-    local ten = {players = table.simpleClone(room.players), current = owner}
-    table.insert(ten.players, {kingdom = "wu", dead = true})
-    table.insert(ten.players, {kingdom = "shu", dead = true})
-    lu.assertEquals(A.choices(ten, owner), {})
-    room:setPlayerProperty(room.players[4], "kingdom", "wu")
-    lu.assertEquals(A.choices(ten, owner), {"formation"})
   end)
 end
 

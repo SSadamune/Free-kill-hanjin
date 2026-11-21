@@ -98,14 +98,15 @@ local function respond(room, target, player, kind)
       table.insert(choices, deputy)
     end
   end
-  local prompt = #choices == 0 and "#qiao_array_pass" or "#qiao_array_respond_" .. kind
+  local prompt = (#choices == 0 and "#qiao_array_pass_" or "#qiao_array_respond_") .. kind
   if #choices == 2 then table.insert(choices, "revealAll") end
   table.insert(choices, "Cancel")
   -- 上游 askToRevealGenerals 使用不可取消的请求，超时可能随机亮将。
   -- 公开座次命中的人均收到私有选择，以免公开的思考读条泄露暗将势力。
   local choice = room:askToChoice(target, {
     skill_name = M.skill, choices = choices, all_choices = choices, cancelable = true,
-    prompt = prompt .. ":" .. player.id,
+    -- v0.5.25 的紧凑单选框会隐藏标题，召唤人及阵法须始终对响应者可见。
+    detailed = true, prompt = prompt .. ":" .. player.id,
   })
   if choice == main then target:revealGeneral(false)
   elseif choice == deputy then target:revealGeneral(true)
@@ -120,7 +121,7 @@ function M.resolve(room, player)
   local kind = choices[1]
   if #choices > 1 then
     local labels = table.map(choices, function(value) return "qiao_array_" .. value end)
-    local choice = room:askToChoice(player, {choices = labels, skill_name = M.skill, prompt = "#qiao_array_choose"})
+    local choice = room:askToChoice(player, {choices = labels, skill_name = M.skill, prompt = "#qiao_array_choose", detailed = true})
     if not table.contains(labels, choice) then return end
     kind = choice:sub(#"qiao_array_" + 1)
   end

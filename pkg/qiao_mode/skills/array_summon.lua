@@ -26,7 +26,8 @@ Fk:loadTranslationTable {
   ["qiao_array_siege"] = "围攻召唤",
   ["#qiao_array_respond_formation"] = "%src 发动队列召唤，你可以明置武将牌加入队列",
   ["#qiao_array_respond_siege"] = "%src 发动围攻召唤，你可以明置武将牌参与围攻",
-  ["#qiao_array_pass"] = "%src 发动阵法召唤，你当前无法响应，请选择取消",
+  ["#qiao_array_pass_formation"] = "%src 发动队列召唤，你没有可以明置并加入队列的武将牌，请选择取消",
+  ["#qiao_array_pass_siege"] = "%src 发动围攻召唤，你没有可以明置并参与围攻的武将牌，请选择取消",
 }
 
 return skill
