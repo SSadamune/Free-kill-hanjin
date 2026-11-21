@@ -24,7 +24,8 @@
 
 - 时机、消耗、次数及“然后”依[通用约定](general-principles.md)，使用／打出／响应依[使用牌事件](../../rulebook/events/use-card.md)分别处理。“指定目标后”逐目标产生，不自行以firstTarget限制为整张牌一次。
 - 主将、副将是位置。普通士兵、翼从、偏将均为士兵牌，不是武将牌。变更主将／副将／武将允许操作士兵占据的位置；明确变更或移除武将牌则必须有武将牌。穿心的“副将武将牌”不包含副将位置上的士兵，其不能执行变更分支时结算“否则”。详见[位置与牌类别](general-principles.md#武将位置武将牌与士兵牌)、[变更](../../rulebook/terms/general-op-terms/change.md)及[移除](../../rulebook/terms/general-op-terms/remove.md)。
-- 队列与围攻分别依[队列](../../rulebook/terms/description-terms/queue.md)、[围攻](../../rulebook/terms/description-terms/siege.md)，不能仅按同势力或攻击范围判断。[阵法技](../../rulebook/terms/description-terms/array.md)底稿的少于四人无效，与[汉晋FAQ](../../assets/docs/规则向FAQ文件.md#阵法技阵法阵法召唤)四人及以下仍有效存在差异；阵法召唤另有出牌阶段限一次口径，须在公共实现中显式处理。
+- 汉晋在四人及以下仍按当前座次判定阵法技、队列和围攻。明置将牌上有阵法技的已确定势力角色（野心家除外），在自己的出牌阶段可以发动一次阵法召唤。多个阵法技共用这一次机会，无人亮将也算发动。见[汉晋 FAQ](../../assets/docs/规则向FAQ文件.md#阵法技阵法阵法召唤)、[队列](../../rulebook/terms/description-terms/queue.md)及[围攻](../../rulebook/terms/description-terms/siege.md)。
+- 两侧均符合时先处理下家方向。队列沿同势力角色向外延伸，遇到拒绝或不能加入的角色就结束该方向。围攻询问与发动者之间隔着一名明置异势力角色的暗将。响应者自行选择能使其与发动者同势力的明置方式。本项目确认，同一次召唤中两侧遇到同一角色只问一次，即使该角色先前已拒绝。基础条文见[阵法召唤](../../rulebook/terms/description-terms/arraycall.md)。
 - 关系判断采用当前国战势力与座次；移出游戏角色依[FAQ](../../assets/docs/规则向FAQ文件.md#将角色移出游戏)处理，不借私有暗将资料公开形成同势力关系。状态授予与已建立回合效果依[效果分类](../../rulebook/topics/skill-effect-classification.md)区分。
 - 装备置入按[空栏规则](equipment-movement.md)；锋械各一张牌交换按[交换](../../rulebook/terms/card-op-terms/swap.md)经处理区入对方手牌。若效果明确另定区域则依其明文。“至多”按[数值定义](../../rulebook/terms/value-terms/atMost.md)不含0。
 - 大小势力按[大势力](../../rulebook/terms/description-terms/dashili.md)、[小势力](../../rulebook/terms/description-terms/xiaoshili.md)定义；没有大势力时不能把全场归为小势力。旗修正的计算人数与实际角色列表区分。

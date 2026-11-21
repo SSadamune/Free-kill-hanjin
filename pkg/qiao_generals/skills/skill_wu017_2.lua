@@ -30,11 +30,6 @@ skill:addEffect(fk.TargetSpecified, {
   end,
 })
 
--- 阵法召唤：汉晋 FAQ 采用出牌阶段限一次；围攻身份/效果不因人数少而失效。
-skill:addEffect("arraysummon", {
-  array_type = "siege",
-})
-
 Fk:loadTranslationTable {
   ["qiao__skill_wu017_2"] = "鸟翔",
   [":qiao__skill_wu017_2"] =

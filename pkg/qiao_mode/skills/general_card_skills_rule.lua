@@ -2,8 +2,10 @@
 local G = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local H = require "packages.hegemony.util"
 local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+local Array = require "packages.qiao.pkg.qiao_mode.rules.array_summon"
 
 Fk:addPostLoadFunc(SameName.register)
+G.addChangeListener(Array.sync)
 
 local skill = fk.CreateSkill { name = "qiao__general_card_skills_rule" }
 
