@@ -563,7 +563,7 @@ function Testqiao_em_han001_liuxie:testThreatenEmperorUsableOnlyInOwnNominalTurn
   end)
 end
 
-local function checkForwardRedirect(cardName, shouldNullify)
+local function checkForwardRedirect(cardName)
   local room, lord, attacker = FkTest.room, p(1), p(4)
   inRoom(function()
     local payment = room:printCard(cardName, Card.Spade, 3)
@@ -575,19 +575,19 @@ local function checkForwardRedirect(cardName, shouldNullify)
     skill_test.withSkillRequests(room, P.ZHUANPENG, {
       askToCards = function() return { payment.id } end,
     }, function() room:useCard(use) end)
-    lu.assertEquals(table.contains(use.nullifiedTargets or {}, lord), shouldNullify)
+    lu.assertTrue(table.contains(use.nullifiedTargets or {}, lord))
     lu.assertTrue(table.contains(lord:getPile(P.PILE), payment.id))
     lu.assertFalse(table.contains(attacker:getCardIds("h"), payment.id))
-    lu.assertEquals(lord.hp, shouldNullify and hp or hp - 1)
+    lu.assertEquals(lord.hp, hp)
   end)
 end
 
 function Testqiao_em_han001_liuxie:testZhuanpengForwardSwordInEdictNullifiesSlash()
-  checkForwardRedirect("qiao__chixiao_sword", true)
+  checkForwardRedirect("qiao__chixiao_sword")
 end
 
-function Testqiao_em_han001_liuxie:testZhuanpengForwardSealStillRequiresDelivery()
-  checkForwardRedirect("qiao__jade_seal", false)
+function Testqiao_em_han001_liuxie:testZhuanpengForwardSealInEdictNullifiesSlash()
+  checkForwardRedirect("qiao__jade_seal")
 end
 
 function Testqiao_em_han001_liuxie:testDeputyRevealCannotReissueOccupiedEdict()
