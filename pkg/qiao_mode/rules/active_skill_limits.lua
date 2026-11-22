@@ -78,11 +78,18 @@ function M.installServer(room)
   local handleReply = room.handleUseCardReply
   function room:handleUseCardReply(player, data, params)
     if params == nil and type(data) == "table" and type(data.card) == "table" then
+      -- 旧版赐面板用旗的名字回包，仍按标记持有者的独立消耗入口校验。
+      if data.card.skill == Ci.SKILL then
+        data = table.simpleClone(data)
+        data.card = table.simpleClone(data.card)
+        data.card.skill = Ci.CONSUME
+      end
       local skill = Fk.skills[data.card.skill]
       if M.exhausted(skill, player, self) then return nil end
       if data.card.skill == Array.skill and (not skill:canUse(player)
         or #(data.card.subcards or {}) > 0 or #(data.targets or {}) > 0) then return nil end
-      if data.card.skill == Ci.SKILL and not Ci.canChoose(player, data.interaction_data) then return nil end
+      if data.card.skill == Ci.CONSUME and (not Ci.canChoose(player, data.interaction_data)
+        or #(data.card.subcards or {}) > 0 or #(data.targets or {}) > 0) then return nil end
     end
     return handleReply(self, player, data, params)
   end

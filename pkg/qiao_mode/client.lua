@@ -107,7 +107,7 @@ end
 
 local pileActions = {
   QiaoEdict = Han.CONSUME,
-  QiaoCi = Ci.SKILL,
+  QiaoCi = Ci.CONSUME,
 }
 
 local pileActionUpdates = {
@@ -123,7 +123,7 @@ local pileActionUpdates = {
 function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
-    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
+    and (skill == Ci.CONSUME or self.player:hasSkill(skill)) and self:skillButtonValidity(skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
