@@ -174,6 +174,78 @@ function Testgeneral_exchange:testSamePlayerSwapDoesNotMoveSharedPile()
   end)
 end
 
+function Testgeneral_exchange:testZhouTaiKeepsScarsHiddenAndTakesThemToNewDeputyPosition()
+  local room = FkTest.room
+  local a, b = room.players[1], room.players[2]
+  local scars
+  FkTest.runInRoom(function()
+    content.setup(room, a, "qiao_heg__wu013", "qiao_heg__wu004", "wu")
+    content.setup(room, b, "qiao_heg__wu011", "qiao_heg__wu012", "wu")
+    -- 再明置会读取选将时锁定的势力；同步本场景的吴势力配将。
+    room:setPlayerMark(a, "__heg_kingdom", "wu")
+    room:setPlayerMark(b, "__heg_kingdom", "wu")
+    scars = content.putPile(room, a, "创", 2)
+    a:hideGeneral(false)
+    lu.assertEquals(a:getPile("创"), scars)
+    a:revealGeneral(false)
+    lu.assertEquals(a:getPile("创"), scars)
+    assert(Exchange.exchange(room, main(a), deputy(b)))
+  end)
+  lu.assertEquals(b.deputyGeneral, "qiao_heg__wu013")
+  lu.assertEquals(a:getPile("创"), {})
+  lu.assertEquals(b:getPile("创"), scars)
+  FkTest.runInRoom(function()
+    b:hideGeneral(true)
+    lu.assertEquals(b:getPile("创"), scars)
+    H.removeGeneral(b, true)
+  end)
+  lu.assertNotEquals(b.deputyGeneral, "qiao_heg__wu013")
+  lu.assertEquals(b:getPile("创"), {})
+  for _, id in ipairs(scars) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
+end
+
+local function assertZhouTaiScarsDiscarded(remove)
+  local room, player = FkTest.room, FkTest.room.players[1]
+  local scars
+  FkTest.runInRoom(function()
+    content.setup(room, player, "qiao_heg__wu004", "qiao_heg__wu013", "wu")
+    scars = content.putPile(room, player, "创", 2)
+    remove(room, player)
+  end)
+  lu.assertEquals(player:getPile("创"), {})
+  for _, id in ipairs(scars) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
+end
+
+function Testgeneral_exchange:testScarsDiscardedWhenShownBuquIsLost()
+  assertZhouTaiScarsDiscarded(function(room, player)
+    room:handleAddLoseSkills(player, "-qiao__skill_wu013_1")
+  end)
+end
+
+function Testgeneral_exchange:testScarsDiscardedWhenHiddenBuquIsPermanentlyLost()
+  local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+  assertZhouTaiScarsDiscarded(function(room, player)
+    player:hideGeneral(true)
+    assert(loss.loseCardSkill(room, player, true, "qiao__skill_wu013_1"))
+  end)
+end
+
+function Testgeneral_exchange:testScarsDiscardedWhenHiddenZhouTaiIsReplaced()
+  assertZhouTaiScarsDiscarded(function(room, player)
+    player:hideGeneral(true)
+    room:changeHero(player, "qiao_heg__wu012", false, true, false, false, false)
+  end)
+end
+
+function Testgeneral_exchange:testRemovingZhouTaiDiscardsScarsEvenWithAnotherBuquSource()
+  assertZhouTaiScarsDiscarded(function(room, player)
+    -- 另一来源仍授予同名技能，但旧“创”属于被移走的周泰牌。
+    player:addSkill("qiao__skill_wu013_1", "qiao__skill_wu004_1")
+    H.removeGeneral(player, true)
+    lu.assertTrue(player:hasSkill("qiao__skill_wu013_1"))
+  end)
+end
+
 function Testgeneral_exchange:testDeputyToDeputySwap()
   local room, a, b = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   FkTest.runInRoom(function()

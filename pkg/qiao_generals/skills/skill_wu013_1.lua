@@ -6,6 +6,8 @@
 --   3. 同花色有多张“创”时，由周泰选择保留哪一张，移去其余同花色“创”；
 --   4. 若本次没有移去任何牌，改为回复体力至 1 点。
 -- “无须移去”以放牌并处理同花色后的实际结果为准。
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local H = require "packages.hegemony.util"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu013_1",
   tags = { Skill.Compulsory },
@@ -14,7 +16,45 @@ skill.qiaoImplemented = true
 
 local DYING_COUNT = "qiao__skill_wu013_1_dying-turn"
 local CHUANG = "创"
+skill.qiao_piles_kept_when_hidden = { CHUANG }
 local SUIT_ORDER = { Card.Spade, Card.Heart, Card.Club, Card.Diamond, Card.NoSuit }
+
+skill:addLoseEffect(function(self, player, isDeath)
+  if isDeath or #player:getPile(CHUANG) == 0 then return end -- 死亡时由掩埋处理所有牌堆。
+  for _, deputy in ipairs({ false, true }) do
+    if not Exchange.isRevealed(player, deputy)
+      and Exchange.cardProvidesSkill(player.room, Exchange.actualGeneral(player, deputy), skill.name) then
+      return
+    end
+  end
+  if not player:hasSkill(skill.name, true, true) then Exchange.discardPilesKeptWhenHidden(player, skill.name) end
+end)
+
+-- 暗将被直接替换、或另有来源继续授予不屈时，移将仍要清理原牌上的创。
+local leavingGeneral = {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    if target ~= player or #player:getPile(CHUANG) == 0 then return false end
+    if event == H.GeneralRemoved then
+      return Exchange.cardProvidesSkill(player.room, data.origName, skill.name)
+    end
+    local results = data.results or {}
+    for _, field in ipairs({ "generalChange", "deputyChange" }) do
+      local change = results[field]
+      if change then
+        local old = change[1]
+        if old == "anjiang" then
+          old = player:getMark(field == "generalChange" and "__heg_general" or "__heg_deputy")
+        end
+        if old ~= change[2] and Exchange.cardProvidesSkill(player.room, old, skill.name) then return true end
+      end
+    end
+    return false
+  end,
+  on_refresh = function(self, event, target, player)
+    Exchange.discardPilesKeptWhenHidden(player, skill.name)
+  end,
+}
 
 --- 对同花色多于一张的“创”逐一询问保留哪一张，移去其余。
 ---@return integer 移去的张数
@@ -98,6 +138,9 @@ skill:addEffect(fk.EnterDying, {
     end
   end,
 })
+
+skill:addEffect(fk.AfterPropertyChange, leavingGeneral)
+skill:addEffect(H.GeneralRemoved, leavingGeneral)
 
 Fk:loadTranslationTable {
   ["qiao__skill_wu013_1"] = "不屈",

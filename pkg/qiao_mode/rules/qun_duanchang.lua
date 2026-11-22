@@ -264,6 +264,7 @@ function M.loseCardSkill(room, player, isDeputy, skillName)
   if skill == nil then return true end
   if not Exchange.isRevealed(player, isDeputy) and player:isFakeSkill(skill) then
     player:loseFakeSkill(skill)
+    Exchange.discardPilesKeptWhenHidden(player, skillName)
   elseif player:hasSkill(skillName, true, true) then
     room:handleAddLoseSkills(player, "-" .. skillName, nil, true, false)
   end
@@ -307,6 +308,7 @@ local function applyLoss(room, player, isDeputy, cardName, printed)
       local skill = Fk.skills[skillName]
       if not revealed and skill and player:isFakeSkill(skill) then
         player:loseFakeSkill(skill)
+        Exchange.discardPilesKeptWhenHidden(player, skillName)
       elseif player:hasSkill(skillName, true, true) then
         table.insert(toLose, skillName)
       end
