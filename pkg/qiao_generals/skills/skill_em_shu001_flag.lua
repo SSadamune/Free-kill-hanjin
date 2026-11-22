@@ -81,7 +81,11 @@ skill:addEffect("active", {
       detailed = true,
     })
     ensureRule(room)
-    room:handleAddLoseSkills(player, chosen, skill.name, false, true)
+    if player:hasSkill(chosen, true, true) then
+      player:addSkill(chosen, skill.name)
+    else
+      room:handleAddLoseSkills(player, chosen, skill.name, false, true)
+    end
     local list = room:getTag(GRANTED) or {}
     table.insert(list, { player = player.id, skill = chosen })
     room:setTag(GRANTED, list)
