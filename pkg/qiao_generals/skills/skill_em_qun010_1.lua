@@ -3,7 +3,7 @@
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 
 local skill = fk.CreateSkill {
-  name = "qiao__skill_em_qun010_1",
+  name = P.HONGFA,
 }
 skill.qiaoImplemented = true
 
@@ -17,7 +17,11 @@ local function grantBanner(player)
 end
 
 local function removeBanner(player)
-  player.room:handleAddLoseSkills(player, "-" .. P.BANNER_SKILL, skill.name, false, true)
+  -- 引擎移除弘法时已撤掉它提供的旗，但不会为该派生技能调用失技回调。
+  -- 若仍有独立旗来源，其牌堆和入口应保留。
+  if not player:hasSkill(P.BANNER_SKILL, true, true) then
+    Fk.skills[P.BANNER_SKILL]:getSkeleton():onLose(player, false)
+  end
 end
 
 skill:addEffect(fk.GameStart, {
