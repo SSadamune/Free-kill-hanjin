@@ -167,6 +167,11 @@ function QiaoClient:canConsumeCi(holderId, general)
     and Ci.canChoose(self.current_request_handler.player, general)
 end
 
+function QiaoClient:ciCardsForDisplay(holderId)
+  local holder = self:getPlayerById(holderId)
+  return holder and holder:getMark(Ci.MARK) ~= 0 and Ci.cards(holder) or false
+end
+
 function QiaoClient:handleSetBanner(data)
   BaseClient.handleSetBanner(self, data)
   -- The base client forwards only visible (@) banners to QML.
@@ -249,6 +254,11 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if command == "SetPlayerMark" and data[2] == Ci.MARK and isQiaoMode() then
+    -- Both live updates and the rejoin snapshot take this path. The room's
+    -- picture-mark row owns the button, so omit the default text mark.
+    return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
+  end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
     and isQiaoMode() and SkillPrelight.isStateOnly(data[2]) then
     data = { data[1], data[2] }

@@ -72,7 +72,7 @@ local function drawCi(room, holder, target)
   if #candidates == 0 then return end
   local chosen = candidates[room:random(1, #candidates)]
   table.removeOne(room.general_pile, chosen)
-  local list = holder:getTableMark(skill.name)
+  local list = Ci.cards(holder)
   list[#list + 1] = chosen
   Ci.save(room, holder, list)
 end
@@ -122,10 +122,10 @@ skill:addEffect(fk.Death, {
 skill:addEffect(fk.BuryVictim, {
   global = true,
   can_refresh = function(self, event, target, player)
-    return target == player and #player:getTableMark(skill.name) > 0
+    return target == player and #Ci.cards(player) > 0
   end,
   on_refresh = function(self, event, target, player)
-    Discard.add(player.room, player:getTableMark(skill.name))
+    Discard.add(player.room, Ci.cards(player))
     Ci.save(player.room, player, {})
   end,
 })
@@ -133,7 +133,7 @@ skill:addEffect(fk.BuryVictim, {
 local function transferGroups(room, holder)
   local allowed = room:getBanner("all_kingdoms") or {}
   local groups = {}
-  for _, name in ipairs(holder:getTableMark(skill.name)) do
+  for _, name in ipairs(Ci.cards(holder)) do
     for _, kingdom in ipairs(availableKingdoms(room, name, allowed)) do
       groups[kingdom] = groups[kingdom] or {}
       table.insert(groups[kingdom], name)
@@ -150,7 +150,7 @@ end
 
 skill:addEffect(fk.Damage, {
   can_trigger = function(self, event, target, player, data)
-    return canGive(player, target) and #player:getTableMark(skill.name) > 0
+    return canGive(player, target) and #Ci.cards(player) > 0
   end,
   on_cost = function(self, event, target, player)
     local groups = transferGroups(player.room, player)
@@ -169,10 +169,10 @@ skill:addEffect(fk.Damage, {
     local room = player.room
     local moved = transferGroups(room, player)[event:getCostData(self)]
     if not moved then return end
-    local remaining = table.filter(player:getTableMark(skill.name), function(name)
+    local remaining = table.filter(Ci.cards(player), function(name)
       return not table.contains(moved, name)
     end)
-    local received = target:getTableMark(skill.name)
+    local received = Ci.cards(target)
     table.insertTable(received, moved)
     Ci.save(room, player, remaining)
     Ci.save(room, target, received)
@@ -182,15 +182,15 @@ skill:addEffect(fk.Damage, {
 skill:addEffect(fk.EventPhaseSkipping, {
   can_trigger = function(self, event, target, player, data)
     return target == player and data.skipped and not player.dead and player:hasSkill(skill.name)
-      and #player:getTableMark(skill.name) > 0
+      and #Ci.cards(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
     local chosen = player.room:askToChoices(player, {
       -- 选一张后确认。保留阶段提示与取消按钮，也适用于只剩一枚赐时。
-      choices = player:getTableMark(skill.name), min_num = 1, max_num = 1, cancelable = true,
+      choices = Ci.cards(player), min_num = 1, max_num = 1, cancelable = true,
       skill_name = skill.name, prompt = "#qiao__jin001_banner-prevent-skip:::" .. Util.PhaseStrMapper(data.phase),
     })[1]
-    if not table.contains(player:getTableMark(skill.name), chosen) then return false end
+    if not table.contains(Ci.cards(player), chosen) then return false end
     event:setCostData(self, chosen)
     return true
   end,
@@ -200,18 +200,6 @@ skill:addEffect(fk.EventPhaseSkipping, {
     end
   end,
 })
-
-Fk:addQmlMark {
-  name = "qiao_ci",
-  how_to_show = function(_, value) return tostring(value - 1) end,
-  qml = function(_, _, holder)
-    if not holder then return nil end
-    return {
-      url = "packages/qiao/pkg/qiao_mode/qml/CiPile.qml",
-      prop = { cardNames = holder:getTableMark(skill.name), holderId = holder.id },
-    }
-  end,
-}
 
 -- 旗和消费都从面板展示。
 Fk:addPostLoadFunc(function()
