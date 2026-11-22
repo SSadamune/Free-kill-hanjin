@@ -1,6 +1,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/general_exchange_content.lua")
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local H = require "packages.hegemony.util"
@@ -457,6 +458,7 @@ function Testgeneral_exchange:testHiddenLordPositionIsProtectedWithoutSideEffect
     -- Removal/transform/changeHero must reject before the card is revealed,
     -- loses skills or returns to the general pile.
     lu.assertFalse(H.removeGeneral(a, false))
+    lu.assertFalse(Discard.contains(room, LORD))
     lu.assertFalse(H.transformGeneral(room, a, true))
     lu.assertFalse(room:changeHero(a, G.plain.name, false, false, false, false, false))
     lu.assertEquals(a.general, "anjiang")
@@ -473,6 +475,51 @@ function Testgeneral_exchange:testHiddenLordPositionIsProtectedWithoutSideEffect
     lu.assertTrue(a.deputyGeneral ~= G.shu.name)
     lu.assertEquals(a:getMark("__heg_general"), LORD)
   end)
+end
+
+function Testgeneral_exchange:testRemovedGeneralsCannotBeDrawnAgain()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  local seen = {}
+  local probe = fk.CreateSkill { name = "#qiao_test_general_removed_pile" }
+  local prevent = true
+  probe:addEffect(H.GeneralRemoving, {
+    can_trigger = function(self, event, target, owner) return prevent and target == player and owner == player end,
+    on_trigger = function() return true end,
+  })
+  probe:addEffect(H.GeneralRemoved, {
+    can_refresh = function(self, event, target, owner) return target == player and owner == player end,
+    on_refresh = function(self, event, target, owner, data)
+      seen[#seen + 1] = data.origName
+      lu.assertTrue(Discard.contains(room, data.origName))
+      lu.assertNil(room:findGeneral(data.origName), "移除后时机中也不能检索到旧将")
+      if #seen == 1 then room:returnToGeneralPile({ G.plain.name }) end
+    end,
+  })
+  local watcher = probe:createSkill()
+  Fk:addSkill(watcher)
+  local finished = false
+  FkTest.runInRoom(function()
+    content.setup(room, player, G.wei_a.name, G.deputy.name, "wei")
+    room.general_pile = {}
+    room:addSkill(watcher)
+    H.removeGeneral(player, true)
+    lu.assertEquals(player.deputyGeneral, G.deputy.name)
+    lu.assertFalse(Discard.contains(room, G.deputy.name))
+    lu.assertEquals(seen, {})
+    prevent = false
+    H.removeGeneral(player, true)
+    H.removeGeneral(player, false)
+    lu.assertTrue(Exchange.isWhiteSoldier(player.general))
+    lu.assertTrue(Exchange.isWhiteSoldier(player.deputyGeneral))
+    H.removeGeneral(player, true)
+    lu.assertEquals(seen, { G.deputy.name, G.wei_a.name })
+    lu.assertEquals(Discard.list(room), seen)
+    room:returnToGeneralPile({ G.wei_a.name, G.deputy.name }, "top")
+    lu.assertEquals(room:findGenerals(function(name) return name == G.deputy.name end, 1), {})
+    lu.assertEquals(room:getNGenerals(1), { G.plain.name })
+    finished = true
+  end)
+  lu.assertTrue(finished)
 end
 
 function Testgeneral_exchange:testAscensionAndLordDeathFlipStillWork()

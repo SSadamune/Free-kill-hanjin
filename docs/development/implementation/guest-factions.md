@@ -34,6 +34,8 @@
 5. 成功换掉的牌立即加入 `qiao_general_discard_v1` 与 `disabled_generals`，并从 `general_pile` 移除。`general_discard.lua` 在汉晋房间内拦截 `getNGenerals`、`findGeneral`、`findGenerals`、`askToChooseIniticalGeneral`和 `returnToGeneralPile`，本局后续取将及回池都不会重新放入；其他模式不受影响。
 6. 最终选将使用 `ChooseGeneralBox` 与 `qiao_heg_pair` 规则，服务端按 `guest` 及 `wild` 结果重新验证主副将、同名替换、初始势力和重复牌；超时、取消、越界或非法组合回退到该玩家仍合法的候选组合。初始势力在合法交集中单独询问并再次校验。
 
+通用移除也使用这个武将弃牌堆。上游把成功移除的牌换成士兵后，会先归还旧将再触发「移除武将牌后」。汉晋在这一次归还时将旧将记入弃牌堆，后续技能在该时机内就已无法检索它。移除被阻止时，原将及将池保持原状。
+
 ### 边界
 
 - 正式标准包已有 51 张武将登记客将势力并接入正式将池；其专属技能仍仅展示。`tests/support/guest_allegiance_content.lua` 的独立测试武将不进入正式将池。
