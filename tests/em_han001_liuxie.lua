@@ -142,7 +142,7 @@ function Testqiao_em_han001_liuxie:testZhuanpengPayBranchNullifiesRealSlash()
   lu.assertTrue(table.contains(attacker:getCardIds("he"), pay.id), "应交给使用者一张牌")
 end
 
-function Testqiao_em_han001_liuxie:testZhuanpengReplacementWhenTrickUsed()
+local function checkReverseGift(redirectSword)
   local room, lord, attacker = FkTest.room, p(1), p(4)
   local trick, slash, gift
   inRoom(function()
@@ -157,10 +157,17 @@ function Testqiao_em_han001_liuxie:testZhuanpengReplacementWhenTrickUsed()
       "刘协使用魏势力锦囊后应记录历史")
     slash = room:printCard("qiao__slash", Card.Spade, 9)
     room:obtainCard(attacker, slash, false, fk.ReasonJustMove)
-    gift = room:printCard("qiao__jink", Card.Club, 5)
-    room:obtainCard(attacker, gift, false, fk.ReasonJustMove)
+    if redirectSword then
+      room:handleAddLoseSkills(attacker, P.TIANSHOU, nil, false, true)
+      gift = room:printCard("qiao__chixiao_sword", Card.Club, 5)
+      room:moveCardTo(gift, Card.PlayerEquip, attacker, fk.ReasonJustMove)
+    else
+      gift = room:printCard("qiao__jink", Card.Club, 5)
+      room:obtainCard(attacker, gift, false, fk.ReasonJustMove)
+    end
     lord.hp = lord.maxHp
   end)
+  local use = { from = attacker, card = slash, tos = { lord } }
   skill_test.withSkillRequests(room, P.ZHUANPENG, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == P.ZHUANPENG then return true end
@@ -171,12 +178,24 @@ function Testqiao_em_han001_liuxie:testZhuanpengReplacementWhenTrickUsed()
       return original(self, who, params)
     end,
   }, function()
-    inRoom(function()
-      room:useCard { from = attacker, tos = { lord }, card = Fk:getCardById(slash.id) }
-    end)
+    inRoom(function() room:useCard(use) end)
   end)
-  lu.assertEquals(lord.hp, lord.maxHp - 1, "替代分支已交牌时杀应继续生效")
-  lu.assertTrue(table.contains(lord:getCardIds("he"), gift.id), "应由使用者交给刘协一张牌")
+  lu.assertEquals(table.contains(use.nullifiedTargets or {}, lord), redirectSword)
+  lu.assertEquals(table.contains(lord:getCardIds("h"), gift.id), not redirectSword)
+  if redirectSword then
+    lu.assertTrue(table.contains(attacker:getPile(P.PILE), gift.id))
+    lu.assertEquals(lord.hp, lord.maxHp, "反向交牌未送达，【杀】应无效")
+  else
+    lu.assertEquals(lord.hp, lord.maxHp - 1, "使用者实际交牌后，【杀】继续生效")
+  end
+end
+
+function Testqiao_em_han001_liuxie:testZhuanpengReplacementWhenTrickUsed()
+  checkReverseGift(false)
+end
+
+function Testqiao_em_han001_liuxie:testZhuanpengReverseSwordStillRequiresDelivery()
+  checkReverseGift(true)
 end
 
 function Testqiao_em_han001_liuxie:testTianshouRedirectsEquipToPileAndDraws()
@@ -544,20 +563,31 @@ function Testqiao_em_han001_liuxie:testThreatenEmperorUsableOnlyInOwnNominalTurn
   end)
 end
 
-function Testqiao_em_han001_liuxie:testZhuanpengSwordRedirectDoesNotNullifySlash()
+local function checkForwardRedirect(cardName, shouldNullify)
   local room, lord, attacker = FkTest.room, p(1), p(4)
   inRoom(function()
-    local sword = room:printCard("qiao__chixiao_sword", Card.Spade, 3)
-    room:moveCardTo(sword, Card.PlayerEquip, lord, fk.ReasonJustMove)
+    local payment = room:printCard(cardName, Card.Spade, 3)
+    room:moveCardTo(payment, Card.PlayerEquip, lord, fk.ReasonJustMove)
     local hp = lord.hp
     local slash = room:printCard("qiao__slash", Card.Spade, 8)
     room:obtainCard(attacker, slash, false, fk.ReasonJustMove)
+    local use = { from = attacker, card = slash, tos = { lord } }
     skill_test.withSkillRequests(room, P.ZHUANPENG, {
-      askToCards = function() return {sword.id} end,
-    }, function() room:useCard {from = attacker, card = slash, tos = {lord}} end)
-    lu.assertTrue(table.contains(lord:getPile(P.PILE), sword.id))
-    lu.assertEquals(lord.hp, hp - 1)
+      askToCards = function() return { payment.id } end,
+    }, function() room:useCard(use) end)
+    lu.assertEquals(table.contains(use.nullifiedTargets or {}, lord), shouldNullify)
+    lu.assertTrue(table.contains(lord:getPile(P.PILE), payment.id))
+    lu.assertFalse(table.contains(attacker:getCardIds("h"), payment.id))
+    lu.assertEquals(lord.hp, shouldNullify and hp or hp - 1)
   end)
+end
+
+function Testqiao_em_han001_liuxie:testZhuanpengForwardSwordInEdictNullifiesSlash()
+  checkForwardRedirect("qiao__chixiao_sword", true)
+end
+
+function Testqiao_em_han001_liuxie:testZhuanpengForwardSealStillRequiresDelivery()
+  checkForwardRedirect("qiao__jade_seal", false)
 end
 
 function Testqiao_em_han001_liuxie:testDeputyRevealCannotReissueOccupiedEdict()

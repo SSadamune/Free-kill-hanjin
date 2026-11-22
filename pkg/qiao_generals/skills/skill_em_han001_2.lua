@@ -9,19 +9,30 @@ skill.qiaoImplemented = true
 
 local USED = "qiao_em_han001_used_tricks"
 
--- 移牌替换可能让牌根本没进接收者手里。已交付后又被移动仍算交付。
-local function giveCard(room, from, to, cards)
+-- 以本次实际移牌判断交付。刘协主动支付装备区的赤霄剑时，天授改置诏书也算支付。
+local function giveCard(room, from, to, cards, allowSwordInEdict)
   if not cards or #cards ~= 1 or not table.contains(from:getCardIds("he"), cards[1]) then
     return false
   end
+  local id = cards[1]
+  local checkEdict = allowSwordInEdict and room:getCardArea(id) == Card.PlayerEquip
+    and Fk:getCardById(id, true).name == "qiao__chixiao_sword"
+  local parent = room.logic:getCurrentEvent()
   local start = room.logic.current_event_id
   room:obtainCard(to, cards, true, fk.ReasonGive, from, skill.name)
   local moves = room.logic:getEventsByRule(GameEvent.MoveCards, 1, function(e)
     if e.interrupted then return false end
     return table.find(e.data, function(move)
-      return move.from == from and move.to == to and move.toArea == Card.PlayerHand
-        and move.moveReason == fk.ReasonGive and move.skillName == skill.name
-        and table.find(move.moveInfo, function(info) return info.cardId == cards[1] end)
+      if move.from ~= from then return false end
+      if move.to == to and move.toArea == Card.PlayerHand and move.moveReason == fk.ReasonGive
+        and move.skillName == skill.name then
+        return table.find(move.moveInfo, function(info) return info.cardId == id end)
+      end
+      return checkEdict and e.parent == parent and move.skillName == P.TIANSHOU
+        and move.to == from and move.toArea == Card.PlayerSpecial and move.specialName == P.PILE
+        and move.moveReason == fk.ReasonPut and table.find(move.moveInfo, function(info)
+          return info.cardId == id and info.fromArea == Card.PlayerEquip
+        end)
     end)
   end, start)
   return #moves > 0
@@ -88,7 +99,7 @@ skill:addEffect(fk.TargetConfirmed, {
         skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-give", cancelable = true,
       })
       if not giveCard(room, user, player, cards) then data:setNullified(player) end
-    elseif giveCard(room, player, user, cost.cards) then
+    elseif giveCard(room, player, user, cost.cards, true) then
       data:setNullified(player)
     end
   end,

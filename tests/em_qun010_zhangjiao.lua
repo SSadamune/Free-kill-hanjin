@@ -291,18 +291,42 @@ function Testqiao_em_qun010_zhangjiao:testDamageDoesNotConsumeTianbing()
   end
 end
 
-function Testqiao_em_qun010_zhangjiao:testNonHolderUsesCrossPileTianbingAsThunderSlash()
+-- 同步发生在弘法无效期间。恢复后直接进入原用牌/响应请求，中间不靠回合开始补发入口。
+local function restoreAfterKingdomChanges(owner, count)
+  local room = FkTest.room
+  return inRoom(function()
+    fixture.installBlankGenerals(room, { "qun", "qun", "wei", "qun", "wei", "wu", "jin", "han" })
+    room:handleAddLoseSkills(owner, P.HONGFA, nil, false, true)
+    local ids = room:getNCards(count)
+    P.add(owner, ids, P.BANNER_SKILL)
+    room:invalidateSkill(owner, P.HONGFA)
+    room:changeKingdom(p(3), "qun")
+    room:changeKingdom(p(4), "wei")
+    lu.assertEquals(P.tianbingIds(room), {})
+    lu.assertEquals(P.kingdomCount(room, "qun"), 3)
+    for _, member in ipairs({ p(2), p(3) }) do
+      lu.assertNil(Fk.skills[P.ENTRY]:viewAs(member, { ids[1] }))
+      lu.assertFalse(Fk.skills[P.ENTRY]:enabledAtResponse(member, false))
+    end
+    room:validateSkill(owner, P.HONGFA)
+    lu.assertTrue(p(2):hasSkill(P.ENTRY), "原群角色应立即有入口")
+    lu.assertTrue(p(3):hasSkill(P.ENTRY), "新群角色应立即有入口")
+    lu.assertFalse(p(4):hasSkill(P.ENTRY), "已离开群势力的角色不再有入口")
+    lu.assertEquals(P.kingdomCount(room, "qun"), 3 + count)
+    return ids
+  end)
+end
+
+function Testqiao_em_qun010_zhangjiao:testNonHolderUsesTianbingImmediatelyAfterHongfaRestores()
   local room = FkTest.room
   local owner, user, target = p(1), p(2), p(3)
-  local ids = installBanner(owner, 3,
-    { "qun", "qun", "qun", "qun", "wei", "wei", "shu", "shu" })
-  lu.assertTrue(user:hasSkill(P.ENTRY), "旗授予时同势力非持旗者应获得入口")
-  local chosen = ids[2]
   inRoom(function()
     target.hp = target.maxHp
     room.current = user
     user.phase = Player.Play
   end)
+  local ids = restoreAfterKingdomChanges(owner, 3)
+  local chosen = ids[2]
   local thunder = installThunderProbe()
   local moves = installMoveProbe(chosen)
   local reply = clientUseReply(room, user, target, chosen)
@@ -327,10 +351,10 @@ function Testqiao_em_qun010_zhangjiao:testNonHolderUsesCrossPileTianbingAsThunde
   lu.assertEquals(P.count(owner), 2)
 end
 
-function Testqiao_em_qun010_zhangjiao:testNonHolderRespondsWithCrossPileTianbing()
+function Testqiao_em_qun010_zhangjiao:testNewQunMemberRespondsImmediatelyAfterHongfaRestores()
   local room = FkTest.room
-  local owner, user = p(1), p(2)
-  local ids = installBanner(owner, 2, "qun")
+  local owner, user = p(1), p(3)
+  local ids = restoreAfterKingdomChanges(owner, 2)
   local chosen = ids[1]
   local moves = installMoveProbe(chosen)
   FkTest.setNextReplies(user, {
@@ -470,6 +494,7 @@ function Testqiao_em_qun010_zhangjiao:testHongfaInvalidationAndLoss()
     room:handleAddLoseSkills(lord, "-" .. P.HONGFA, nil, false, true)
     lu.assertEquals(P.kingdomCount(room, "qun"), 2)
     lu.assertEquals(P.tianbingIds(room), {})
+    lu.assertFalse(ally:hasSkill(P.ENTRY, true))
     for _, id in ipairs(ids) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
     return true
   end)

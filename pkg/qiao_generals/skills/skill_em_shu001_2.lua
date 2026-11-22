@@ -48,7 +48,7 @@ skill:addEffect(fk.BeforeCardsMove, {
         if #taken > 0 then
           move.moveInfo = keep
           if #keep == 0 then table.remove(data, index) end
-          table.insert(data, {
+          table.insert(data, MoveCardsData:new {
             from = move.from, to = player, toArea = Card.PlayerHand,
             moveReason = move.moveReason, proposer = move.proposer,
             moveVisible = false, moveInfo = taken,
