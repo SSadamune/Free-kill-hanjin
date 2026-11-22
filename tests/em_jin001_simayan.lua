@@ -795,4 +795,50 @@ function Testqiao_em_jin001_simayan:testRecipientCanSpendAfterLordBuried()
   end)
 end
 
+function Testqiao_em_jin001_simayan:testTransferredCiChangesDeputyAfterLordDeathTurnsRecipientWild()
+  local room, lord, recipient = FkTest.room, p(1), p(2)
+  local gift, oldDeputy = "qiao_heg__jin005", "qiao_heg__jin006"
+  local jin, wei = "qiao_heg__jin004", "qiao_heg__wei005"
+  inRoom(function()
+    skill_test.installDualGenerals(room, recipient, {
+      main = "qiao_test__jin_1", deputy = oldDeputy, kingdom = "jin",
+    })
+    -- 即使开局身份与当前晋势力不同，转野时脱离的仍是晋。
+    room:setPlayerMark(recipient, "__heg_init_kingdom", "wei")
+    setCi(room, lord, {gift})
+    room.general_pile = {jin, wei}
+    FkTest.setNextReplies(lord, {{"jin"}})
+    room:damage {from = recipient, to = p(4), damage = 1}
+    lu.assertEquals(recipient:getTableMark(CI_MARK), {gift})
+    room:killPlayer {who = lord}
+    lu.assertTrue(lord.dead)
+    lu.assertEquals(recipient.kingdom, "wild")
+    lu.assertEquals(recipient:getMark("__heg_kingdom"), "wild")
+    lu.assertEquals(Fk.generals[oldDeputy].maxHp, Fk.generals[gift].maxHp)
+    room.current, recipient.phase = recipient, Player.Play
+    skill_test.withSkillRequests(room, BANNER, {
+      askToChoices = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, CHANGE), "转野后仍可用赐换将")
+        return {CHANGE}
+      end,
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, "deputy"))
+        return "deputy"
+      end,
+    }, function()
+      local reply = FkTest.ReplyUseSkill(CONSUME, {}, {})
+      reply.interaction_data = gift
+      room:handleUseCardReply(recipient, reply)
+    end)
+    lu.assertEquals(recipient.deputyGeneral, jin)
+    lu.assertEquals(recipient.kingdom, "wild")
+    lu.assertTrue(table.contains(room.general_pile, wei))
+    lu.assertFalse(table.contains(room.general_pile, jin))
+    lu.assertEquals(recipient:getTableMark(CI_MARK), {})
+    lu.assertEquals(recipient:getMark("qiao_jin001_change_used"), 1)
+    assertDiscarded(room, gift)
+    assertDiscarded(room, oldDeputy)
+  end)
+end
+
 return { name = "qiao_em_jin001_simayan" }

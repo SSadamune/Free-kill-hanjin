@@ -14,14 +14,18 @@ local function canRemoveDeputy(player)
     and not Exchange.isLordPosition(player, true) and not Wei.isPositionRestricted(player.room, player, true)
 end
 
+local function livingSource(data)
+  return data.from ~= nil and data.from:isAlive()
+end
+
 skill:addEffect(fk.Damaged, {
   can_trigger = function(self, event, target, player, data)
     return target == player and not player.dead and player:hasSkill(skill.name)
-      and data.from ~= nil
+      and (livingSource(data) or canRemoveDeputy(player))
   end,
   on_cost = function(self, event, target, player, data)
     local choices = {}
-    if not data.from.dead then table.insert(choices, "1") end
+    if livingSource(data) then table.insert(choices, "1") end
     if canRemoveDeputy(player) then table.insert(choices, "2") end
     if #choices == 0 then return false end
     table.insert(choices, "Cancel")

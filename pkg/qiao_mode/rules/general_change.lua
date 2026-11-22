@@ -2,6 +2,7 @@
 -- 不触发“明置武将牌后”、不重算体力；禁选/君主/野心家与客将按公开登记判断。
 local M = {}
 
+local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local CardState = require "packages.qiao.pkg.qiao_mode.rules.general_card_state"
 local CardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
@@ -12,8 +13,15 @@ local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
 local function kingdomOf(player)
   local kingdom = player:getMark("__heg_kingdom")
-  if type(kingdom) == "string" and kingdom ~= "" and kingdom ~= "unknown" then return kingdom end
-  return player.kingdom
+  if type(kingdom) ~= "string" or kingdom == "" or kingdom == "unknown" then
+    kingdom = player.kingdom
+  end
+  if kingdom == "wild" and player:getMark("__heg_wild") ~= 1 then
+    -- 优先用转野当时的归属。旧局未记录时沿用国战的初始归属回退。
+    local departed = player.tag.qiao_departed_kingdom or player:getMark("__heg_init_kingdom")
+    if Ban.isKnown(departed) then return departed end
+  end
+  return kingdom
 end
 
 local function positionName(player, isDeputy)

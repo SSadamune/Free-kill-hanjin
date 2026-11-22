@@ -1462,6 +1462,40 @@ function Testqiao_em_wei001_caocao:testDanliCannotRemoveBannerDeputy()
   end)
 end
 
+function Testqiao_em_wei001_caocao:testLightningWithoutSourceAllowsDanliDeputyOnly()
+  local room, user = FkTest.room, p(2)
+  local danli = "qiao__skill_wei044_1"
+  inRoom(function()
+    room:handleAddLoseSkills(user, danli, nil, false, true)
+    room:setPlayerProperty(user, "maxHp", 4)
+    room:setPlayerProperty(user, "hp", 4)
+    local lightning = room:printCard("qiao__lightning", Card.Spade, 1)
+    room:obtainCard(user, lightning, false, fk.ReasonJustMove)
+    room:useCard {from = user, card = lightning, tos = {user}}
+    lu.assertEquals(room:getCardArea(lightning.id), Card.PlayerJudge)
+    local judge = room:printCard("qiao__jink", Card.Spade, 5)
+    room:moveCards {ids = {judge.id}, toArea = Card.DrawPile, drawPilePosition = 1,
+      moveReason = fk.ReasonPut}
+    local asked = 0
+    skill_test.withSkillRequests(room, danli, {
+      askToChoice = function(_, who, params)
+        lu.assertIs(who, user)
+        lu.assertEquals(params.choices, {"2", "Cancel"})
+        asked = asked + 1
+        return "2"
+      end,
+      askToDiscard = function() error("无伤害来源时不应要求弃牌") end,
+    }, function()
+      GameEvent.Phase:create(PhaseData:new {who = user, phase = Player.Judge}):exec()
+      lu.assertEquals(room:getCardArea(lightning.id), Card.DiscardPile)
+      lu.assertEquals(user.hp, 2, "闪电造成三点伤害后，胆戾回复一点")
+      lu.assertTrue(Exchange.isSoldier(user.deputyGeneral))
+      room:damage {to = user, damage = 1}
+      lu.assertEquals(asked, 1, "无来源且已无可移除的副将，不再询问")
+    end)
+  end)
+end
+
 function Testqiao_em_wei001_caocao:testDanliDeadSourceAllowsLegalDeputy()
   local room, user, source = FkTest.room, p(2), p(4)
   local danli = "qiao__skill_wei044_1"
