@@ -407,4 +407,44 @@ function Testqiao_qun_cards:testXiaoniMultiTargetDiscardsFromUndamagedTarget()
   lu.assertFalse(table.contains(p3:getCardIds("h"), c2))
 end
 
+-- 一张材料只允许【奇策】声明一个决斗目标。【虓猛】在声明后追加的目标同样结算。
+function Testqiao_qun_cards:testQiceOneCardDuelAcceptsXiaomengExtraTarget()
+  local user, first, extra = p(1), p(3), p(4)
+  local qice = "qiao__skill_wei020_1"
+  grant(user, qice)
+  grant(user, XIAOMENG)
+  setKingdom(first, "wei")
+  setKingdom(extra, "shu")
+  for _, player in ipairs({ user, first, extra }) do clearCards(player) end
+  local material = give(user, "qiao__jink", Card.Heart, 4)
+  inRoom(function()
+    room().current = user
+    user.phase = Player.Play
+  end)
+  local firstHp, extraHp = first.hp, extra.hp
+  FkTest.setNextReplies(user, { FkTest.ReplyChoosePlayer({ extra }) })
+  FkTest.setNextReplies(first, { "" })
+  FkTest.setNextReplies(extra, { "" })
+  local completed = inRoom(function()
+    local skill = Fk.skills[qice]
+    skill.interaction.data = "qiao__duel"
+    lu.assertTrue(skill:feasible(user, { first }, {}))
+    lu.assertFalse(skill:feasible(user, { first, extra }, {}))
+    skill_test.withSkillRequests(room(), qice, {
+      askToChoice = function() return "Cancel" end,
+    }, function()
+      room():handleUseCardReply(user, {
+        card = { skill = qice, subcards = {} }, interaction_data = "qiao__duel",
+        targets = { first.id },
+      })
+    end)
+    return true
+  end)
+  lu.assertTrue(completed)
+  lu.assertEquals(user:usedCardTimes("duel", Player.HistoryGame), 1)
+  lu.assertEquals(room():getCardArea(material), Card.DiscardPile)
+  lu.assertEquals(first.hp, firstHp - 1)
+  lu.assertEquals(extra.hp, extraHp - 1)
+end
+
 return { name = "qiao_qun_cards" }
