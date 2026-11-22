@@ -103,6 +103,32 @@ function Testqiao_qun_cards:testWushuangStacksWithDuanbing()
   lu.assertEquals(p2.hp, p2.maxHp - 1)
 end
 
+function Testqiao_qun_cards:testDuanbingAddsDistanceOneTargetEvenOutsideAttackRange()
+  local user, original, adjacent = p(1), p(3), p(8)
+  grant(user, DUANBING)
+  clearCards(original)
+  clearCards(adjacent)
+  local slash = give(user, "qiao__slash", Card.Spade, 8)
+  local added, distance, inRange
+  FkTest.setNextReplies(user, { FkTest.ReplyChoosePlayer({ adjacent }) })
+  FkTest.setNextReplies(original, { "" })
+  FkTest.setNextReplies(adjacent, { "" })
+  inRoom(function()
+    room():setCurrent(user)
+    user.inMyAttackRange = function(_, target) return target == original end
+    distance = user:distanceTo(adjacent)
+    inRange = user:inMyAttackRange(adjacent)
+    local use = UseCardData:new {
+      from = user, tos = { original }, card = Fk:getCardById(slash), extra_data = {},
+    }
+    room():useCard(use)
+    added = table.contains(use.tos, adjacent)
+  end)
+  lu.assertEquals(distance, 1)
+  lu.assertFalse(inRange)
+  lu.assertTrue(added)
+end
+
 -- 乱武要求真实使用【杀】且目标包含最近角色；其余角色取消则各失去 1 点体力。
 function Testqiao_qun_cards:testLuanwuRealSlashIncludesNearest()
   local p1, p2 = p(1), p(2)
@@ -264,6 +290,42 @@ function Testqiao_qun_cards:testXiaomengCurrentTurnAddsDifferentKingdomToConvert
   lu.assertEquals(p3.hp, p3.maxHp - 1)
   lu.assertEquals(p4.hp, p4.maxHp - 1)
   lu.assertEquals(p2.hp, p2.maxHp)
+end
+
+function Testqiao_qun_cards:testXiaomengWithPhysicalHandDuelAndPublicDifferentKingdom()
+  local user, original, extra, hidden = p(1), p(2), p(3), p(4)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), user, {
+      main = "qiao_heg__qun002", deputy = user.deputyGeneral, kingdom = "qun",
+    })
+    room():setCurrent(user)
+    user.phase = Player.Play
+  end)
+  setKingdom(extra, "wei")
+  setKingdom(hidden, "unknown")
+  for i = 1, 8 do clearCards(p(i)) end
+  local duel = give(user, "qiao__duel", Card.Spade, 1)
+  local chooserId, candidateIds
+  skill_test.withSkillRequests(room(), XIAOMENG, {
+    askToChoosePlayers = function(self, player, params, ask)
+      chooserId = player.id
+      candidateIds = table.map(params.targets, Util.IdMapper)
+      return ask(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(user, { FkTest.ReplyChoosePlayer({ extra }) })
+    FkTest.setNextReplies(original, { "" })
+    FkTest.setNextReplies(extra, { "" })
+    inRoom(function()
+      local use = room():handleUseCardReply(user, { card = duel, targets = { original.id } })
+      use.extra_data = {}
+      room():useCard(UseCardData:new(use))
+    end)
+  end)
+  lu.assertEquals(chooserId, user.id)
+  lu.assertEquals(candidateIds, { extra.id })
+  lu.assertEquals(user:usedCardTimes("duel", Player.HistoryGame), 1)
+  lu.assertEquals(extra.hp, extra.maxHp - 1)
 end
 
 -- 双雄：真实摸牌阶段结束弃红牌，本回合将黑色牌当【决斗】使用；决斗令自己

@@ -278,7 +278,7 @@ JIN003 挟征、JIN004 悖弑的定向套件。最新实际执行：6/6（1.465 
 <a id="jin-sources"></a>
 ### jin_sources.lua
 
-JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。最新实际执行：9/9（2.179 秒）通过。扼绝已用真实 `Exchange.exchange` 验证保留失技及外部来源不随牌移动；风物已用真实 `ClientPlayer` 与四花色验证；伤逝零材料的明确确认已验证；复礼的独立 `jin_sources_rule` 已正式 mode 接线。相关公共套件 `qun_duanchang` 5/5（1.194 秒）、`general_exchange` 17/17（1.498 秒）。
+JIN010 扼绝/伤逝、JIN016 复礼/风物的定向套件。扼绝已用真实 `Exchange.exchange` 验证保留失技及外部来源不随牌移动；风物已用真实 `ClientPlayer` 与四花色验证；复礼的独立 `jin_sources_rule` 已正式 mode 接线。Issue #32 后定向 11/11（5.889 秒）。伤逝覆盖结束阶段选择、拒绝零材料、潜袭禁止手牌材料，以及以合法材料实际使用冰【杀】。
 
 ### 晋包整合中的可见性与响应夹具修正
 

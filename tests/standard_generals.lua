@@ -508,6 +508,12 @@ function Teststandard_generals:testSourceLabelsDescribeNonGeneralSkills()
     "诸王敕封册应带旗标签")
   lu.assertTrue(labeled("qiao__skill_em_jin001_banner", "赐"),
     "诸王敕封册应另标赐的消费入口")
+  local weiFlag = Fk:getDescription(Wei.BANNER, nil, player)
+  lu.assertStrContains(weiFlag, "≥4：“突袭”")
+  lu.assertStrContains(weiFlag, "≤3：“驱虎”")
+  local jinFlag = Fk:getDescription("qiao__skill_em_jin001_banner", nil, player)
+  lu.assertStrContains(jinFlag, "本回合手牌上限+3")
+  lu.assertStrContains(jinFlag, "摸牌至四张")
 
   -- 太康在武将牌上，诸王敕封册由太康授予，不是牌上技能。
   local simayan = assert(Fk.generals["qiao_heg__em_jin001"])

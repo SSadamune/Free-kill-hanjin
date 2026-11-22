@@ -1,4 +1,4 @@
--- 武将弃牌堆 for 客将 redraw.
+-- 武将弃牌堆：收纳变更换下的武将牌、客将重抽换下的牌及已消耗的“赐”。
 --
 -- A successfully redrawn guest leaves the game for the rest of the room's
 -- game. Every later general draw must skip it and the return-to-pile flow must
@@ -52,9 +52,9 @@ function M.add(room, names)
       table.insert(added, name)
     end
     table.insertIfNeed(room.disabled_generals, name)
-    table.removeOne(room.general_pile, name)
   end
   room:setTag(M.key, discarded)
+  M.purge(room)
   return added
 end
 
@@ -86,9 +86,27 @@ function M.install()
   if type(Room) ~= "table" or type(Room.returnToGeneralPile) ~= "function" then return false end
   M.installed = true
 
+  local H = require "packages.hegemony.util"
+  local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   local originalReturn = Room.returnToGeneralPile
   function Room:returnToGeneralPile(generals, position)
     if active(self) then
+      -- 上游成功换成白板士兵后，在 RemoveGeneral 本事件内归还刚卸下的实体，
+      -- 随即触发 GeneralRemoved。就在这一次归还时分流，避免其间可以抽到旧将。
+      local event = self.logic and self.logic:getCurrentEvent()
+      if event and event.event == H.GameEvent.RemoveGeneral and not event.qiaoRemovalSettled
+        and #generals == 1 and position == nil then
+        local data = event.data
+        local occupant = data.isDeputy and data.who.deputyGeneral or data.who.general
+        if Exchange.isWhiteSoldier(occupant) then
+          event.qiaoRemovalSettled = true
+          local name = generals[1]
+          if Fk.generals[name] and not Exchange.isSoldier(name) then
+            M.add(self, { name })
+            return true
+          end
+        end
+      end
       generals = M.filter(self, generals)
       if #generals == 0 then return true end
     end

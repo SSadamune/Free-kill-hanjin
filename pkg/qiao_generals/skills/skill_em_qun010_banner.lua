@@ -14,7 +14,7 @@ local skill = fk.CreateSkill {
 skill:addEffect(fk.EventPhaseStart, {
   can_trigger = function(self, event, target, player, data)
     return target == player and not player.dead and player.phase == Player.Start
-      and player:hasSkill(skill.name) and P.count(player) == 0
+      and P.flagActive(player) and P.count(player) == 0
   end,
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
@@ -38,7 +38,7 @@ skill:addEffect(fk.EventPhaseStart, {
 skill:addEffect(fk.PreHpLost, {
   anim_type = "defensive",
   can_trigger = function(self, event, target, player, data)
-    return target == player and not player.dead and player:hasSkill(skill.name)
+    return target == player and not player.dead and P.flagActive(player)
       and data ~= nil and not data.prevented and (data.num or 0) > 0
       and P.count(player) > 0
   end,
@@ -91,7 +91,10 @@ end
 local function syncEntries(room)
   if room == nil or SYNCING[room] then return end
   SYNCING[room] = true
-  local hasFlag = #P.flagHolders(room) > 0
+  -- 群角色随旗的持有状态获得入口。弘法暂时无效时，由入口按有效旗筛选天兵。
+  local hasFlag = table.find(room.alive_players, function(holder)
+    return not holder:isRemoved() and holder:hasSkill(P.BANNER_SKILL, true)
+  end) ~= nil
   for _, player in ipairs(room.players) do
     local eligible = hasFlag and player:isAlive() and not player:isRemoved()
       and player.kingdom == "qun"

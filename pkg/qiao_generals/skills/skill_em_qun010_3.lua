@@ -38,13 +38,13 @@ skill:addEffect("active", {
   max_phase_use_time = 1,
   can_use = function(self, player)
     return player.phase == Player.Play and not player.dead
-      and #redCards(player) > 0 and findPeace(Fk:currentRoom()) ~= nil
+      and self:withinTimesLimit(player, Player.HistoryPhase)
+      and #redCards(player) > 0
   end,
   on_use = function(self, room, effect)
     local player = effect.from
     if player == nil or player.dead then return end
-    local peace = findPeace(room)
-    if peace == nil or #redCards(player) == 0 then return end
+    if #redCards(player) == 0 then return end
     local ids = room:askToDiscard(player, {
       min_num = 1,
       max_num = 1,
@@ -55,7 +55,8 @@ skill:addEffect("active", {
       cancelable = false,
     })
     if ids == nil or #ids ~= 1 then return end
-    peace = findPeace(room)
+    if player.dead then return end
+    local peace = findPeace(room)
     if peace == nil then return end
     room:obtainCard(player, peace, true, fk.ReasonPrey, player, skill.name)
   end,

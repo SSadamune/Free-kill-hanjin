@@ -1,21 +1,19 @@
 -- EM(JIN001) 诸王敕封册
 -- 首次双亮全局记账（无持旗者也记），持旗者在 GeneralRevealed 实际发动；
 -- “赐”按持有者公开表标记保存，客户端可读取自身赐与分支可用性。
-local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
-local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local First = require "packages.qiao.pkg.qiao_generals.util.jin_first_reveal"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 
 local skill = fk.CreateSkill { name = Ci.SKILL }
 skill.qiaoImplemented = true
 
-local SHOWN_MARK = "qiao_jin001_first_double"
-local USED_MARK = "qiao_jin001_change_used"
-local CI_MARK = "@[qiao_ci]"
+local CI_MARK = Ci.MARK
 local CHANGE = "qiao__jin001_banner-change"
 
 local function lord(room)
@@ -32,8 +30,11 @@ local function lord(room)
   return nil
 end
 
-local function affiliations(general)
-  return general and Ban.affiliations(general) or {}
+local function availableKingdoms(room, name, allowed)
+  local entry = Guest.factionsOf(room, name)
+  if not entry or entry.wild then return {} end
+  -- 自由选将可能在记录里保留已禁的牌面势力；取赐、送赐都只认本局允许的势力。
+  return table.filter(entry.kingdoms, function(kingdom) return table.contains(allowed, kingdom) end)
 end
 
 local function deputyName(target)
@@ -44,52 +45,36 @@ local function deputyName(target)
   return type(name) == "string" and name or nil
 end
 
-local function ciList(holder)
-  return table.simpleClone(holder:getTableMark(skill.name))
-end
-
-local function refreshCiMark(room, holder)
-  local count = #holder:getTableMark(skill.name)
-  -- 0 会移除标记，持旗者的空列表也需要能打开。
-  local value = (count > 0 or holder:hasShownSkill(skill.name, true)) and count + 1 or 0
-  if holder:getMark(CI_MARK) ~= value then room:setPlayerMark(holder, CI_MARK, value) end
-end
-
 local function refreshFlag(self, holder)
   Flags.refresh(holder, self.name)
-  refreshCiMark(holder.room, holder)
+  Ci.refreshMark(holder.room, holder)
 end
 
 skill:addAcquireEffect(refreshFlag)
 skill:addLoseEffect(refreshFlag)
 
-local function saveCi(room, holder, list)
-  room:setPlayerMark(holder, skill.name, #list > 0 and list or 0)
-  refreshCiMark(room, holder)
-end
-
 local function drawCi(room, holder, target)
   local name = deputyName(target)
-  if name == nil or name:startsWith("blank_") or Commander.isSoldier(name) or Commander.isRetinue(name) then return end
-  local deputy = Fk.generals[name]
-  if deputy == nil then return end
-  local kinds = affiliations(deputy)
+  if name == nil or Commander.isSoldier(name) then return end
+  local allowed = room:getBanner("all_kingdoms") or {}
+  local deputyKingdoms = availableKingdoms(room, name, allowed)
+  if #deputyKingdoms == 0 then return end
   local candidates = {}
   for _, candidate in ipairs(room.general_pile or {}) do
-    local general = Fk.generals[candidate]
-    if general ~= nil and general.kingdom ~= "wild" and not Versions.is_lord(candidate)
-      and not Commander.isSoldier(candidate) and not Commander.isRetinue(candidate)
-      and not table.contains(room.disabled_generals or {}, candidate)
-      and table.find(kinds, function(k) return table.contains(affiliations(general), k) end) then
-      table.insert(candidates, candidate)
+    if not Versions.is_lord(candidate) and not Commander.isSoldier(candidate)
+      and not table.contains(room.disabled_generals or {}, candidate) then
+      local kingdoms = availableKingdoms(room, candidate, allowed)
+      if table.find(kingdoms, function(k) return table.contains(deputyKingdoms, k) end) then
+        table.insert(candidates, candidate)
+      end
     end
   end
   if #candidates == 0 then return end
   local chosen = candidates[room:random(1, #candidates)]
   table.removeOne(room.general_pile, chosen)
-  local list = ciList(holder)
+  local list = Ci.cards(holder)
   list[#list + 1] = chosen
-  saveCi(room, holder, list)
+  Ci.save(room, holder, list)
 end
 
 skill:addEffect(fk.GeneralRevealed, {
@@ -133,122 +118,106 @@ skill:addEffect(fk.Death, {
   end,
 })
 
-local function positionFish(name)
-  local general = Fk.generals[name]
-  return general and general.maxHp or nil
-end
-
-local function positionName(player, isDeputy)
-  local name = isDeputy and player.deputyGeneral or player.general
-  if name == "anjiang" or name == "" then
-    name = player:getMark(isDeputy and "__heg_deputy" or "__heg_general")
-  end
-  return name
-end
-
---- 只接受实际普通武将牌、同鱼数、非君主、未建安锁定的位置。
---- 君主牌所在位置不能变更（含暗置牌），普通副将位置仍可选。
-local function matchingPosition(room, player, fish)
-  local result = {}
-  local okWei, Wei = pcall(require, "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei")
-  for _, isDeputy in ipairs({ false, true }) do
-    local name = positionName(player, isDeputy)
-    if type(name) == "string" and name ~= "" and name ~= "anjiang"
-      and not Versions.is_lord(name) and not Commander.isSoldier(name) and not Commander.isRetinue(name)
-      and Fk.generals[name] ~= nil and positionFish(name) == fish
-      and not (okWei and Wei.isPositionRestricted and Wei.isPositionRestricted(room, player, isDeputy))
-      and not Exchange.isLordPosition(player, isDeputy) then
-      result[#result + 1] = isDeputy
-    end
-  end
-  return result
-end
-
-skill:addEffect("active", {
-  prompt = "#qiao__jin001_banner-active",
-  target_num = 0,
-  card_num = 0,
-  max_phase_use_time = 1,
-  -- 只承接赐列表提交的武将 ID，无需创建额外的技能交互组件。
-  interaction = function() end,
-  can_use = function(self, player)
-    return player ~= nil and not player.dead and player.phase == Player.Play
-      and #ciList(player) > 0 and player:hasSkill(skill.name)
+-- 先于引擎的掩埋清标记。受赠者和已失去大旗的持有者同样有自己的“赐”。
+skill:addEffect(fk.BuryVictim, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target == player and #Ci.cards(player) > 0
   end,
-  on_use = function(self, room, effect)
-    local player = effect.from
-    local chosen = effect.interaction_data
-    if not Ci.canChoose(player, chosen) then return end
-    local fish = positionFish(chosen)
-    if fish == nil then return end
-    local changePositions = matchingPosition(room, player, fish)
-    -- “提供资源”按所选赐的牌面单独阴阳鱼数显示实际效果，仍消耗同一枚赐。
-    local resource = fish <= 3
-      and "qiao__jin001_banner-resource-maxcard"
-      or "qiao__jin001_banner-resource-draw"
-    local branches = { resource }
-    if #changePositions > 0 and player:getMark(USED_MARK) == 0 then table.insert(branches, CHANGE) end
-    local branch = room:askToChoices(player, {
-      choices = branches, all_choices = { resource, CHANGE },
-      min_num = 1, max_num = 1, single = true, cancelable = true,
-      skill_name = skill.name, prompt = "#qiao__jin001_banner-branch",
-    })[1]
-    if branch == nil or not table.contains(branches, branch) or not Ci.canChoose(player, chosen) then return end
-    if branch == CHANGE then
-      local isDeputy
-      if #changePositions == 1 then
-        isDeputy = changePositions[1]
-      else
-        local choice = room:askToChoice(player, {
-          choices = { "main", "deputy" }, skill_name = skill.name,
-          prompt = "#qiao__jin001_banner-position", cancelable = true,
-        })
-        if choice == "Cancel" then return end
-        isDeputy = choice == "deputy"
-        if not table.contains(changePositions, isDeputy) then return end
-      end
-      if not Change.change(room, player, isDeputy, { num = 3, skill_name = skill.name }) then return end
-      room:setPlayerMark(player, USED_MARK, 1)
-    else
-      if fish <= 3 then
-        room:addPlayerMark(player, MarkEnum.AddMaxCardsInTurn, 3)
-      else
-        local n = math.max(0, 4 - #player:getCardIds("h"))
-        if n > 0 then player:drawCards(n, skill.name) end
-      end
-    end
-    local remaining = ciList(player)
-    table.removeOne(remaining, chosen)
-    saveCi(room, player, remaining)
-    -- 消费后解除占用，赐将牌回到剩余池。
-    if not table.contains(room.general_pile, chosen) then table.insert(room.general_pile, chosen) end
+  on_refresh = function(self, event, target, player)
+    Discard.add(player.room, Ci.cards(player))
+    Ci.save(player.room, player, {})
   end,
 })
 
-Fk:addQmlMark {
-  name = "qiao_ci",
-  how_to_show = function(_, value) return tostring(value - 1) end,
-  qml = function(_, _, holder)
-    if not holder then return nil end
-    return {
-      url = "packages/qiao/pkg/qiao_mode/qml/CiPile.qml",
-      prop = { cardNames = ciList(holder), holderId = holder.id },
-    }
-  end,
-}
+local function transferGroups(room, holder)
+  local allowed = room:getBanner("all_kingdoms") or {}
+  local groups = {}
+  for _, name in ipairs(Ci.cards(holder)) do
+    for _, kingdom in ipairs(availableKingdoms(room, name, allowed)) do
+      groups[kingdom] = groups[kingdom] or {}
+      table.insert(groups[kingdom], name)
+    end
+  end
+  return groups
+end
 
--- 和诏书一样，弹窗提交普通主动技回包。
+local function canGive(holder, source)
+  return source ~= nil and source ~= holder and source.kingdom == "jin" and not source.dead
+    and not source:isRemoved() and not holder.dead and not holder:isRemoved()
+    and holder:hasSkill(skill.name) and holder:hasShownSkill(skill.name)
+end
+
+skill:addEffect(fk.Damage, {
+  can_trigger = function(self, event, target, player, data)
+    return canGive(player, target) and #Ci.cards(player) > 0
+  end,
+  on_cost = function(self, event, target, player)
+    local groups = transferGroups(player.room, player)
+    local choices = table.filter(Ban.kingdoms, function(k) return groups[k] ~= nil end)
+    if #choices == 0 then return false end
+    local kingdom = player.room:askToChoices(player, {
+      choices = choices, min_num = 1, max_num = 1, cancelable = true,
+      skill_name = skill.name, prompt = "#qiao__jin001_banner-transfer::" .. target.id,
+    })[1]
+    if kingdom == nil or not groups[kingdom] then return false end
+    event:setCostData(self, kingdom)
+    return true
+  end,
+  on_use = function(self, event, target, player)
+    if not canGive(player, target) then return end
+    local room = player.room
+    local moved = transferGroups(room, player)[event:getCostData(self)]
+    if not moved then return end
+    local remaining = table.filter(Ci.cards(player), function(name)
+      return not table.contains(moved, name)
+    end)
+    local received = Ci.cards(target)
+    table.insertTable(received, moved)
+    Ci.save(room, player, remaining)
+    Ci.save(room, target, received)
+  end,
+})
+
+skill:addEffect(fk.EventPhaseSkipping, {
+  can_trigger = function(self, event, target, player, data)
+    return target == player and data.skipped and not player.dead and player:hasSkill(skill.name)
+      and #Ci.cards(player) > 0
+  end,
+  on_cost = function(self, event, target, player, data)
+    local chosen = player.room:askToChoices(player, {
+      -- 选一张后确认。保留阶段提示与取消按钮，也适用于只剩一枚赐时。
+      choices = Ci.cards(player), min_num = 1, max_num = 1, cancelable = true,
+      skill_name = skill.name, prompt = "#qiao__jin001_banner-prevent-skip:::" .. Util.PhaseStrMapper(data.phase),
+    })[1]
+    if not table.contains(Ci.cards(player), chosen) then return false end
+    event:setCostData(self, chosen)
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    if data.skipped and player:hasSkill(skill.name) and Ci.consume(player.room, player, event:getCostData(self)) then
+      data.skipped = false
+    end
+  end,
+})
+
+-- 旗和消费都从面板展示。
 Fk:addPostLoadFunc(function()
   Fk.skills[skill.name].visible = false
 end)
 
 Fk:loadTranslationTable {
   [skill.name] = "诸王敕封册",
-  [":" .. skill.name] = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以随机将一张符合其副将牌面势力的剩余武将牌置为“赐”。",
+  [":" .. skill.name] = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以随机将一张符合其副将牌面势力的剩余武将牌置为“赐”。"
+    .. "\n（〖赐〗是一种国战标记：出牌阶段限一次，你可以消耗一枚〖赐〗，然后变更一张与此牌单独阴阳鱼数相同的武将牌（限一次），或根据此牌单独阴阳鱼数执行效果：≤3：本回合手牌上限+3。≥4：摸牌至四张。）"
+    .. "\n其他晋势力角色造成伤害后，你可以将你一个势力的所有〖赐〗交给其。"
+    .. "\n当你即将跳过一个阶段时，你可以移去你的一枚〖赐〗并防止之。",
   [CI_MARK] = "赐",
   ["qiao__ci_consume"] = "消耗一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
+  ["#qiao__jin001_banner-transfer"] = "诸王敕封册：你可以选择一个势力，将该势力的所有“赐”交给 %dest",
+  ["#qiao__jin001_banner-prevent-skip"] = "诸王敕封册：你可以移去一枚“赐”，防止跳过%arg",
   ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
   [CHANGE] = "变更武将",
   ["qiao__jin001_banner-resource-maxcard"] = "本回合手牌上限+3",

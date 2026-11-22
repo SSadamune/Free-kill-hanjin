@@ -1,11 +1,14 @@
 -- JIN010 伤逝/扼绝、JIN016 复礼/风物的来源与最小主流程定向用例。
--- 本轮只写用例，未运行共享 runtime。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local Qianxi = require "packages.qiao.pkg.qiao_generals.util.shu019_qianxi"
+local JinDeck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
 
 local SHANGSHI = "qiao__skill_jin010_1"
+local SHANGSHI_SLASH = "#qiao__skill_jin010_1-slash"
+local SHANGSHI_DRAW = "#qiao__skill_jin010_1-draw"
 local EJUE = "qiao__skill_jin010_2"
 local FULI = "qiao__skill_jin016_1"
 
@@ -133,14 +136,15 @@ function Testqiao_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
     owner.maxHp = 4
     owner.hp = 2
   end)
+  give(room, owner, { { "qiao__jink" } })
+  give(room, target, { { "qiao__peach" }, { "qiao__peach" } })
 
+  FkTest.setNextReplies(owner, { { SHANGSHI_DRAW } })
   skill_test.withSkillRequests(room, SHANGSHI, {
-    askToSkillInvoke = function() return true end,
     askToChoice = function(self, player, params, original)
-      for _, choice in ipairs(params.choices) do
-        if tostring(choice):find("摸牌", 1, true) then return choice end
-      end
-      return params.choices[#params.choices]
+      lu.assertEquals(params.choices, { SHANGSHI_SLASH, SHANGSHI_DRAW })
+      lu.assertTrue(params.cancelable)
+      return original(self, player, params)
     end,
   }, function()
     inRoom(function()
@@ -150,6 +154,8 @@ function Testqiao_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
   end)
 
   lu.assertEquals(#owner:getCardIds("h"), 2)
+  lu.assertEquals(target.hp, target.maxHp)
+  lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 1)
 end
 
 function Testqiao_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
@@ -309,7 +315,7 @@ function Testqiao_jin_sources:testExtraSkillLossDoesNotTravelWithExchange()
   lu.assertFalse(owner:hasSkill(EXTRA))
 end
 
-function Testqiao_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
+function Testqiao_jin_sources:testShangshiRequiresHandMaterialAndDoesNotCountCancellation()
   local room = prepare("qiao_heg__jin010")
   local owner, target = p1(), p2()
   inRoom(function()
@@ -318,11 +324,12 @@ function Testqiao_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
   end)
   give(room, target, { { "qiao__peach" } })
   local hp = target.hp
+  local requests = 0
 
   skill_test.withSkillRequests(room, SHANGSHI, {
-    askToSkillInvoke = function() return true end,
-    askToChoice = function(self, player, params, original)
-      return "#qiao__skill_jin010_1-slash"
+    askToChoice = function()
+      requests = requests + 1
+      return "Cancel"
     end,
   }, function()
     inRoom(function()
@@ -331,9 +338,70 @@ function Testqiao_jin_sources:testShangshiZeroMaterialIceSlashIsExplicitUse()
     end)
   end)
 
+  lu.assertEquals(requests, 0)
+  lu.assertEquals(target.hp, hp)
+  lu.assertEquals(#owner:getCardIds("h"), 0)
+  lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 0)
+
+  local materials = give(room, owner, { { "qiao__jink" } })
+  give(room, target, { { "qiao__peach" } })
+  skill_test.withSkillRequests(room, SHANGSHI, {
+    askToChoice = function()
+      requests = requests + 1
+      return "Cancel"
+    end,
+  }, function()
+    inRoom(function()
+      Qianxi.ensureRule(room)
+      Qianxi.addRestriction(room, owner, target, Card.Black)
+      room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish })
+      Qianxi.clear(room)
+    end)
+  end)
+  lu.assertEquals(requests, 0, "唯一手牌受潜袭限制时冰杀项不可用")
+
+  skill_test.withSkillRequests(room, SHANGSHI, {
+    askToChoice = function(self, player, params, original)
+      lu.assertEquals(params.choices, { SHANGSHI_SLASH })
+      lu.assertEquals(params.all_choices, { SHANGSHI_SLASH, SHANGSHI_DRAW })
+      return original(self, player, params)
+    end,
+    askToCards = function(self, player, params, original)
+      lu.assertEquals(params.min_num, 1)
+      lu.assertTrue(params.cancelable)
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.setNextReplies(owner, { { SHANGSHI_SLASH }, "" })
+    inRoom(function() room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish }) end)
+    lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 0)
+    lu.assertEquals(target.hp, hp)
+
+    FkTest.setNextReplies(owner, { { SHANGSHI_SLASH }, FkTest.ReplyChooseCards(materials), "" })
+    inRoom(function() room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish }) end)
+    lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 1)
+    lu.assertEquals(target.hp, hp - 1)
+    lu.assertEquals(room:getCardArea(materials[1]), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_jin_sources:testShangshiCanUseTwoCardsWhenSingleSuitIsProhibited()
+  local room = prepare("qiao_heg__jin010")
+  local owner, target = p1(), p2()
+  local materials = give(room, owner, { { "qiao__jink" }, { "qiao__jink" } })
+  give(room, target, { { "qiao__peach" }, { "qiao__peach" }, { "qiao__peach" } })
+  local hp = target.hp
+  FkTest.setNextReplies(owner, { { SHANGSHI_SLASH }, FkTest.ReplyChooseCards(materials), "" })
+  inRoom(function()
+    target.phase = Player.Finish
+    JinDeck.banSuit(room, owner, Card.Spade)
+    local single = Fk:cloneCard("qiao__ice__slash")
+    single:addSubcard(materials[1])
+    lu.assertTrue(owner:prohibitUse(single))
+    room.logic:trigger(fk.EventPhaseStart, target, { phase = Player.Finish })
+  end)
   lu.assertEquals(target.hp, hp - 1)
   lu.assertEquals(#owner:getCardIds("h"), 0)
-  lu.assertEquals(owner:usedSkillTimes(SHANGSHI, Player.HistoryGame), 1)
 end
 
 function Testqiao_jin_sources:testFuliPromiseStillResolvesAfterSkillLost()

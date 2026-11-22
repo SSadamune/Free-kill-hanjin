@@ -9,6 +9,26 @@ skill.qiaoImplemented = true
 
 local USED = "qiao_em_han001_used_tricks"
 
+-- 正向是发动消耗，执行给牌即可。反向效果明文要求对方交付，须核对收牌记录。
+local function giveCard(room, from, to, cards, requireDelivery)
+  if not cards or #cards ~= 1 or not table.contains(from:getCardIds("he"), cards[1]) then
+    return false
+  end
+  local start = room.logic.current_event_id
+  room:obtainCard(to, cards, true, fk.ReasonGive, from, skill.name)
+  if not requireDelivery then return true end
+
+  local moves = room.logic:getEventsByRule(GameEvent.MoveCards, 1, function(e)
+    if e.interrupted then return false end
+    return table.find(e.data, function(move)
+      return move.from == from and move.to == to and move.toArea == Card.PlayerHand
+        and move.moveReason == fk.ReasonGive and move.skillName == skill.name
+        and table.find(move.moveInfo, function(info) return info.cardId == cards[1] end)
+    end)
+  end, start)
+  return #moves > 0
+end
+
 local function usedTrick(room, player, kingdom)
   local list = room:getTag(USED) or {}
   local entry = list[player.id]
@@ -69,15 +89,8 @@ skill:addEffect(fk.TargetConfirmed, {
         min_num = 1, max_num = 1, include_equip = true,
         skill_name = skill.name, prompt = "#qiao__han001_zhuanpeng-give", cancelable = true,
       })
-      if cards ~= nil and #cards > 0 then
-        room:obtainCard(player, cards, true, fk.ReasonGive, user, skill.name)
-      else
-        data:setNullified(player)
-      end
-    else
-      local cards = cost.cards or {}
-      if #cards ~= 1 or not table.contains(player:getCardIds("he"), cards[1]) then return end
-      room:obtainCard(user, cards, true, fk.ReasonGive, player, skill.name)
+      if not giveCard(room, user, player, cards, true) then data:setNullified(player) end
+    elseif giveCard(room, player, user, cost.cards, false) then
       data:setNullified(player)
     end
   end,

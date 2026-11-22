@@ -6,12 +6,18 @@ local H = require "packages.hegemony.util"
 local M = {}
 
 M.PILE = "qiao_em_qun010_tianbing"
+M.HONGFA = "qiao__skill_em_qun010_1"
 M.BANNER_SKILL = "qiao__em_qun010_banner"
 -- 旗第二段的视技入口：当前群势力角色可将一张“天兵”当雷【杀】使用或打出。
 M.ENTRY = "qiao__skill_em_qun010_tianbing"
 M.listeners = {}
 
---- 当前持旗且仍在场的角色。默认 hasSkill 会同时排除死亡与技能失效状态。
+function M.flagActive(player)
+  return player:isAlive() and not player:isRemoved() and player:hasSkill(M.BANNER_SKILL)
+    and (not player:hasSkill(M.HONGFA, true, true) or player:hasShownSkill(M.HONGFA))
+end
+
+--- 当前持旗且仍在场的角色。
 --- 只读技能、在场与势力状态，客户端与服务端共用。
 ---@param room Room|Client
 ---@return Player[]
@@ -19,7 +25,7 @@ function M.flagHolders(room)
   local holders = {}
   if room == nil then return holders end
   for _, player in ipairs(room.players) do
-    if not player:isRemoved() and player:hasSkill(M.BANNER_SKILL) then
+    if M.flagActive(player) then
       holders[#holders + 1] = player
     end
   end
@@ -62,7 +68,7 @@ end
 
 function M.total(room)
   local total = 0
-  for _, player in ipairs(room.players) do total = total + M.count(player) end
+  for _, player in ipairs(M.flagHolders(room)) do total = total + M.count(player) end
   return total
 end
 
@@ -101,16 +107,16 @@ function M.kingdomCount(room, kingdom)
   return H.getKingdomPlayersNum(room, false)[kingdom] or 0
 end
 
---- 大势力角色数：角色数最大且大于1的每个势力，累计其修正后角色数。
---- 天兵带来的群人数修正只加在群势力的数值上，不虚构角色对象。
+--- 按公共规则认定大势力（包含玉玺），各势力的修正人数只累计一次。
 function M.largeCount(room)
   local counts = H.getKingdomPlayersNum(room, false)
-  local max = 0
-  for _, count in pairs(counts) do max = math.max(max, count) end
-  if max < 2 then return 0 end
-  local total = 0
-  for _, count in pairs(counts) do
-    if count == max then total = total + count end
+  local seen, total = {}, 0
+  for _, player in ipairs(room:getPresentPlayers()) do
+    local kingdom = H.getKingdom(player)
+    if not seen[kingdom] and H.isBigKingdomPlayer(player) then
+      seen[kingdom] = true
+      total = total + counts[kingdom]
+    end
   end
   return total
 end

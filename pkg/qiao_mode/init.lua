@@ -5,11 +5,17 @@ local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 
+local collectionSettingHelp = {
+  generalNum = "qiao_collection_general_count_help",
+  generalTimeout = "qiao_collection_general_timeout_help",
+  timeoutAsGeneralTimeout = "qiao_collection_general_timeout_help",
+  luckTime = "qiao_collection_luck_help",
+  enableDeputy = "qiao_collection_deputy_help",
+}
+
 -- Register after all extensions are installed; qiao may load before hegemony.
 -- Do not create a second boardgame: Fk:loadPackages() iterates Fk.boardgames and
--- postLoads every entry.  A new board entry would make the same engine postLoad
--- twice, duplicating game modes and card types. The room page selection below
--- shares the registered board's engine, classes, and settings.
+-- postLoads every entry. The views below share the registered board's engine and classes.
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Qiao requires the hegemony extension")
   Mode.installRules()
@@ -18,8 +24,23 @@ Fk:addPostLoadFunc(function()
   local qiaoBoard = setmetatable({
     page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
   }, { __index = board })
+  local settings = table.clone(board.ui_settings)
+  for _, group in ipairs(settings) do
+    for _, row in ipairs(group._children) do
+      local help = collectionSettingHelp[row._settingsKey]
+      if help then
+        row.enabled = false
+        row.subTitle = help
+        -- Do not copy the operation timeout into the shared game settings
+        -- when an existing preference has timeoutAsGeneralTimeout enabled.
+        row.value = nil
+      end
+    end
+  end
+  local collectionBoard = setmetatable({ ui_settings = settings }, { __index = qiaoBoard })
   local getBoardGame = Fk.getBoardGame
   function Fk:getBoardGame(name)
+    if name == Modes.collection then return collectionBoard end
     if Modes.isHanjin(name) then return qiaoBoard end
     return getBoardGame(self, name)
   end
@@ -36,6 +57,14 @@ Fk:loadTranslationTable {
   ["#qiao_temporary_effect_ended"] = "%from 的〖%arg〗效果结束",
   ["qiao_wolves"] = "群狼环鼎",
   ["help: qiao_wolves"] = "开启历史事件与奇珍规则。",
+  ["qiao_late_seat_compensation"] = "后置位补偿",
+  ["help: qiao_late_seat_compensation"] = "选择手气卡后，7 人及以上的对局中，7 号位及之后的玩家各额外获得 1 次手气卡。",
+  ["qiao_late_seat_none"] = "无",
+  ["qiao_late_seat_luck_card"] = "手气卡",
+  ["qiao_collection_general_count_help"] = "请在「模式设置」中调整每人备选武将数。",
+  ["qiao_collection_general_timeout_help"] = "请在「模式设置」中调整选将时长。",
+  ["qiao_collection_luck_help"] = "7 人及以上对局中，7 号位起各有 1 次开局手气卡。",
+  ["qiao_collection_deputy_help"] = "大合集使用主将和副将。",
   ["qiao_mode"] = "国战平行时空",
   ["han"] = "汉",
   [Modes.collection] = "大合集",

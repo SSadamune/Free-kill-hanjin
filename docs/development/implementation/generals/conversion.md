@@ -145,9 +145,9 @@
 <a id="shu011-1"></a>
 #### 八阵（SHU011 诸葛亮）
 
-- **标识与依据**：`qiao__skill_shu011_1`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_1.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。
-- **实现与接口**：无防具时复用正式八卦阵技能；处理来源明暗置及移除，暗将通过需要闪的请求明置发动，预亮接线由模式 shu_hidden_prelight 提供。
-- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **标识与依据**：`qiao__skill_shu011_1`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_1.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。暗置处理参考[上游八阵](https://gitee.com/qsgs-fans/shzl/blob/master/pkg/fire/skills/bazhen.lua)的假技能检查。
+- **实现与接口**：持有生效的八阵且没有防具时，按来源提供正式八卦阵技能。八阵是状态技，暗置期间不可预亮，请求【闪】时由已生效的八卦阵负责判定。
+- **验证依据**：[shu_conversion.lua](../../../../tests/shu_conversion.lua) 覆盖暗置时提交预亮并被【杀】指定、明置后发动八卦阵、装备防具切换，以及重新暗置后在自己的出牌阶段走主动亮将回包。
 - **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 <a id="shu011-2"></a>
@@ -162,8 +162,8 @@
 #### 看破（SHU011 诸葛亮）
 
 - **标识与依据**：`qiao__skill_shu011_3`；[源码](../../../../pkg/qiao_generals/skills/skill_shu011_3.lua)；[标准武将表](../../../rules/standard-generals.md) SHU011。
-- **实现与接口**：黑色手牌当无懈仅开放使用；按成功抵消事件确认实际抵消者，包含闪抵消杀及非看破无懈，回合末可私看当前角色手牌。
-- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua)；[本批共享证据](verification-evidence.md#shu-standard)。
+- **实现与接口**：黑色手牌当无懈仅开放使用；按成功抵消事件确认实际抵消者，包含闪抵消杀及非看破无懈。回合末仅对其他当前回合角色发起私看询问，自己的手牌由原手牌区展示。
+- **验证依据**：[shu_effects.lua](../../../../tests/shu_effects.lua) 覆盖抵消后可私看其他角色手牌及本人回合末免询问；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收。
 
 ### 吴
@@ -271,6 +271,6 @@
 #### 伤逝（JIN010 张春华）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin010_1`；源码 [skill_jin010_1.lua](../../../../pkg/qiao_generals/skills/skill_jin010_1.lua)。规则见[张春华规范](../../../rules/generals/jin010-zhangchunhua.md)。同将扼绝见[伤害、体力与死亡](damage.md#jin010-2)。
-- **实现与接口**：任一角色结束阶段，张春华选择：1. 若其手牌数大于张春华，将任意张张春华自己的手牌当一张冰【杀】对其使用；2. 摸牌至张春华已损失的体力值。冰杀使用 `C.useVirtualCard`，以 `C.explicit({}, { names = { "qiao__ice__slash" }, min_targets = 1, max_targets = 1 })` 固定效果目标，不叠加默认攻击距离；`extraUse` 不占空闲出杀次数。两项均不可执行时不发动。
-- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖结束阶段摸至已损失体力值与零材料明确确认；9/9（2.179s）通过，见[共享验证证据](verification-evidence.md#jin-sources)。
-- **未完成与边界**：目标手牌数动态变化、无合法冰杀材料、被闪、目标死亡与客户端选项未人工验收。
+- **实现与接口**：结束阶段在同一可取消询问中展示冰【杀】和补牌两个选项，仅允许选择当前合法项。冰【杀】至少选择一张实际手牌。开放该选项前检查有无合法材料组合，选择后复核具体合成牌的限制，再以 `C.useVirtualCard` 和显式目标策略固定当前结束阶段角色。`extraUse` 不占空闲出杀次数。两项均不可执行时不发请求。
+- **验证依据**：[jin_sources.lua](../../../../tests/jin_sources.lua) 覆盖双合法项时选择补牌、零手牌、单合法项、取消选牌、一张材料实际出冰【杀】、潜袭禁用材料及两张合成后无花色的合法分支。见[共享验证证据](verification-evidence.md#jin-sources)。
+- **未完成与边界**：真人客户端选项及对局中动态状态变化待复测。
