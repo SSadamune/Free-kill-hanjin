@@ -27,6 +27,7 @@ skill:addEffect(fk.BeforeCardsMove, {
       for _, info in ipairs(move.moveInfo or {}) do
         if isTargetCard(info.cardId) then
           if move.from ~= nil and move.from ~= player
+            and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip)
             and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile)
             and player:canMoveCardIntoEquip(info.cardId, false) then
             return true
@@ -48,6 +49,7 @@ skill:addEffect(fk.BeforeCardsMove, {
       for _, info in ipairs(move.moveInfo or {}) do
         if isTargetCard(info.cardId) then
           if move.from ~= nil and move.from ~= player
+            and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip)
             and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile)
             and player:canMoveCardIntoEquip(info.cardId, false) then
             table.insert(toEquip, info)

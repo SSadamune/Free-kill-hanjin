@@ -11,7 +11,8 @@ skill.qiaoStateOnly = false
 local revealSpec = {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    return target == player and target.general == P.LORD
+    return target == player and data and data.m == P.LORD and target.general == P.LORD
+      and (event == fk.GeneralRevealed or data.qiaoAscension) and target:hasSkill(P.JIANPING)
       and target:getMark(P.MARK) == 0 and P.holder(target.room) == nil
   end,
   on_refresh = function(self, event, target, player, data)

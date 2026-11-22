@@ -544,4 +544,70 @@ function Testqiao_em_han001_liuxie:testThreatenEmperorUsableOnlyInOwnNominalTurn
   end)
 end
 
+function Testqiao_em_han001_liuxie:testZhuanpengSwordRedirectDoesNotNullifySlash()
+  local room, lord, attacker = FkTest.room, p(1), p(4)
+  inRoom(function()
+    local sword = room:printCard("qiao__chixiao_sword", Card.Spade, 3)
+    room:moveCardTo(sword, Card.PlayerEquip, lord, fk.ReasonJustMove)
+    local hp = lord.hp
+    local slash = room:printCard("qiao__slash", Card.Spade, 8)
+    room:obtainCard(attacker, slash, false, fk.ReasonJustMove)
+    skill_test.withSkillRequests(room, P.ZHUANPENG, {
+      askToCards = function() return {sword.id} end,
+    }, function() room:useCard {from = attacker, card = slash, tos = {lord}} end)
+    lu.assertTrue(table.contains(lord:getPile(P.PILE), sword.id))
+    lu.assertEquals(lord.hp, hp - 1)
+  end)
+end
+
+function Testqiao_em_han001_liuxie:testDeputyRevealCannotReissueOccupiedEdict()
+  local room, lord, holder = FkTest.room, p(1), p(2)
+  inRoom(function()
+    room:changeHero(lord, NORMAL, true, false, false, false, false)
+    room:setPlayerMark(lord, "__heg_general", NORMAL)
+    room:setPlayerMark(lord, P.MARK, 0)
+    lu.assertTrue(P.grant(room, holder))
+    lord:hideGeneral(true)
+    A.ascend(room, lord, LORD, "han", {kind = "lord"})
+    lu.assertIs(P.holder(room), holder)
+    room:killPlayer {who = holder}
+    lord:revealGeneral(true)
+    lu.assertNil(P.holder(room))
+    room:invalidateSkill(lord, P.JIANPING)
+    room.logic:trigger(fk.GeneralRevealed, lord, {m = LORD})
+    lu.assertNil(P.holder(room))
+  end)
+end
+
+function Testqiao_em_han001_liuxie:testEdictUsesPublicKingdom()
+  local room, lord, one, two = FkTest.room, p(1), p(2), p(3)
+  inRoom(function()
+    room:setPlayerMark(lord, P.MARK, 0)
+    room:changeKingdom(one, "wild")
+    room:changeKingdom(two, "wild")
+    for _, role in ipairs({"wild", H.wildKingdoms[1]}) do
+      room:setPlayerProperty(one, "role", role)
+      room:setPlayerProperty(two, "role", role == "wild" and role or H.wildKingdoms[2])
+      lu.assertFalse(P.isSameKingdom(one, two))
+      lu.assertTrue(P.isSameKingdom(one, one))
+    end
+    room:setPlayerProperty(two, "role", H.wildKingdoms[1])
+    lu.assertTrue(P.isSameKingdom(one, two))
+    room:changeKingdom(one, "unknown")
+    room:setPlayerMark(one, "__heg_kingdom", lord.kingdom)
+    lu.assertFalse(P.isSameKingdom(one, lord))
+    lu.assertTrue(P.isSameKingdom(one, one))
+  end)
+end
+
+function Testqiao_em_han001_liuxie:testTianshouIgnoresPrivatePile()
+  local room, other = FkTest.room, p(2)
+  inRoom(function()
+    local seal = room:printCard("qiao__jade_seal", Card.Club, 2)
+    other:addToPile("test_soldiers", {seal.id}, true)
+    room:moveCardTo(seal, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile)
+    lu.assertEquals(room:getCardArea(seal.id), Card.DiscardPile)
+  end)
+end
+
 return { name = "qiao_em_han001_liuxie" }
