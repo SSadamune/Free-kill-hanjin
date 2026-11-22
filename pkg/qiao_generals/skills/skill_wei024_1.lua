@@ -1,5 +1,5 @@
 -- WEI024 常令（军令）
--- 准备阶段：将一张手牌交给一名非魏势力角色，对其发起一次军令。其执行则
+-- 准备阶段：将一张手牌交给一名其他势力角色，对其发起一次军令。其执行则
 -- 自己摸一张；不执行则本回合摸牌阶段多摸三张。
 local H = require "packages.hegemony.util"
 
@@ -8,10 +8,7 @@ skill.qiaoImplemented = true
 
 local EXTRA = "qiao_wei024_extra_draw"
 
---- 目标：当前公开势力不是魏的角色。未确定势力（包括暗置武将牌）是合法目标，
---- 已公开确定为魏的角色排除；按结算时公开的势力状态判断，不读取暗将牌面势力，
---- 也不要求与持有者势力相异。自己不能成为目标，是因为“将一张手牌交给”不能把
---- 自己的牌交给自己（rulebook/terms/card-op-terms/give.md），不是旧的相异势力条件。
+--- “其他势力角色”取同势力的补集，包含尚未确定势力的其他角色。
 --- 规则依据另见 docs/rules/general-principles.md“易读描述中的‘非’”及
 --- docs/rules/generals/em-wei001-caocao.md“常令”。
 ---@param holder ServerPlayer
@@ -20,7 +17,7 @@ local EXTRA = "qiao_wei024_extra_draw"
 local function isLegalTarget(holder, target)
   return target ~= nil and target ~= holder
     and not target.dead and not target:isRemoved()
-    and target.kingdom ~= "wei"
+    and not H.compareKingdomWith(holder, target)
 end
 
 ---@param room Room
@@ -65,7 +62,7 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     local cost = event:getCostData(self) or {}
     local to, card = cost.to, cost.card
-    -- 结算前复核：施放者仍是当前准备阶段角色且常令仍可生效，目标仍为非魏，
+    -- 结算前复核：施放者仍是当前准备阶段角色且常令仍可生效，目标仍符合其他势力条件，
     -- 所选牌仍是其手牌。复核失败则不交牌、不发起军令。
     if target ~= player or player.dead or not player:hasSkill(skill.name) then return end
     if card == nil or not isLegalTarget(player, to) then return end
@@ -104,8 +101,8 @@ skill:addEffect(fk.TurnEnd, {
 
 Fk:loadTranslationTable {
   ["qiao__skill_wei024_1"] = "常令",
-  [":qiao__skill_wei024_1"] = "准备阶段，你可以将一张手牌交给一名非魏势力角色，对其发起一次“军令”。若其执行，你摸一张牌；若其不执行，你于本回合摸牌阶段多摸三张牌。",
-  ["#qiao__wei024_ask_target"] = "常令：选择一名非魏势力角色",
+  [":qiao__skill_wei024_1"] = "准备阶段，你可以将一张手牌交给一名其他势力角色，对其发起一次“军令”。若其执行，你摸一张牌；若其不执行，你于本回合摸牌阶段多摸三张牌。",
+  ["#qiao__wei024_ask_target"] = "常令：选择一名其他势力角色",
   ["#qiao__wei024_ask_card"] = "常令：选择一张手牌交给其",
 }
 

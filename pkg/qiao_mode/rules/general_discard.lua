@@ -1,4 +1,4 @@
--- 武将弃牌堆 for 客将 redraw.
+-- 武将弃牌堆：收纳变更换下的武将牌、客将重抽换下的牌及已消耗的“赐”。
 --
 -- A successfully redrawn guest leaves the game for the rest of the room's
 -- game. Every later general draw must skip it and the return-to-pile flow must
@@ -52,9 +52,9 @@ function M.add(room, names)
       table.insert(added, name)
     end
     table.insertIfNeed(room.disabled_generals, name)
-    table.removeOne(room.general_pile, name)
   end
   room:setTag(M.key, discarded)
+  M.purge(room)
   return added
 end
 

@@ -7,6 +7,8 @@ local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local H = require "packages.hegemony.util"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
 
 local LORD = "qiao_heg__em_wei001"
@@ -780,12 +782,6 @@ end
 
 function Testqiao_em_wei001_caocao:testQiceUsesAllHandOnceAsTrick()
   local room, user, target = FkTest.room, p(2), p(4)
-  local trick
-  for _, id in ipairs(Fk:getAllCardIds()) do
-    local c = Fk:getCardById(id)
-    if c:isCommonTrick() and c.trueName == "ex_nihilo" then trick = c.name break end
-  end
-  lu.assertNotNil(trick, "缺少无中生有牌型")
   local first, second
   inRoom(function()
     skill_test.installDualGenerals(room, user, {
@@ -802,11 +798,12 @@ function Testqiao_em_wei001_caocao:testQiceUsesAllHandOnceAsTrick()
   lu.assertTrue(skill:canUse(user))
   inRoom(function()
     skill.interaction = skill.interaction or {}
-    skill.interaction.data = trick
-    skill:onUse(room, { from = user, tos = {} })
+    skill.interaction.data = "qiao__iron_chain"
+    skill:onUse(room, { from = user, tos = { target } })
     skill.interaction.data = nil
   end)
-  lu.assertEquals(#user:getCardIds("h"), 2, "两张手牌转化为无中生有，只摸两张")
+  lu.assertTrue(user:isKongcheng(), "奇策消耗全部手牌")
+  lu.assertTrue(target.chained, "所选铁索连环实际结算")
 end
 
 function Testqiao_em_wei001_caocao:testDanliDrawUpToFive()
@@ -1175,6 +1172,17 @@ function Testqiao_em_wei001_caocao:testQiceTargetLimitAndFormalPool()
   end
 end
 
+-- 固定本局允许势力和三张同势力候选，避免随机禁选干扰换将用例。
+local function setWeiCandidates(room)
+  local names = { "qiao_heg__wei008", "qiao_heg__wei010", "qiao_heg__wei014" }
+  room:setBanner("all_kingdoms", { "wei", "wu", "qun", "han" })
+  room.general_pile = table.simpleClone(names)
+  room.disabled_generals = {}
+  local entries = {}
+  for _, name in ipairs(names) do entries[name] = Guest.resolve(name, { "wei" }, true) end
+  Guest.store(room, entries)
+end
+
 function Testqiao_em_wei001_caocao:testQiceDeputyChangePublicEntry()
   local room, user = FkTest.room, p(2)
   local oldDeputy, hpBefore
@@ -1182,6 +1190,7 @@ function Testqiao_em_wei001_caocao:testQiceDeputyChangePublicEntry()
     skill_test.installDualGenerals(room, user, {
       main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei",
     })
+    setWeiCandidates(room)
     oldDeputy = user.deputyGeneral
     user:hideGeneral(true)
     hpBefore = user.hp
@@ -1207,7 +1216,8 @@ function Testqiao_em_wei001_caocao:testQiceDeputyChangePublicEntry()
   lu.assertNotNil(chosen)
   lu.assertEquals(user.deputyGeneral, chosen, "新副将应明置加入")
   lu.assertEquals(user.hp, hpBefore, "变更副将不重算体力")
-  lu.assertTrue(table.contains(room.general_pile, oldDeputy), "原牌应回将池")
+  lu.assertTrue(Discard.contains(room, oldDeputy), "奇策换下的旧副将进入武将弃牌堆")
+  lu.assertFalse(table.contains(room.general_pile, oldDeputy))
   lu.assertFalse(table.contains(room.general_pile, chosen), "候选不应重复留在池中")
   -- 建安锁定位置：不发起变更、不动将池。
   local pileBefore = #room.general_pile
@@ -1223,12 +1233,7 @@ end
 
 function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
   local room, user = FkTest.room, p(2)
-  local trick
-  for _, id in ipairs(Fk:getAllCardIds()) do
-    local c = Fk:getCardById(id)
-    if c:isCommonTrick() and c.trueName == "ex_nihilo" then trick = c.name break end
-  end
-  lu.assertNotNil(trick)
+  local trick = "qiao__iron_chain"
   local oldDeputy, chosen
   inRoom(function()
     skill_test.installDualGenerals(room, user, {
@@ -1239,6 +1244,7 @@ function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
       local c = room:printCard("qiao__jink", Card.Heart, i)
       room:obtainCard(user, c, false, fk.ReasonJustMove)
     end
+    setWeiCandidates(room)
     oldDeputy = user.deputyGeneral
     user.phase = Player.Play
   end)
@@ -1256,14 +1262,15 @@ function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
     inRoom(function()
       skill.interaction = skill.interaction or {}
       skill.interaction.data = trick
-      skill:onUse(room, { from = user, tos = {} })
+      skill:onUse(room, { from = user, tos = { p(4) } })
       skill.interaction.data = nil
     end)
   end)
   lu.assertNotNil(chosen)
   lu.assertEquals(user.deputyGeneral, chosen, "奇策使用后变更副将应实际换将")
   lu.assertNotEquals(user.deputyGeneral, oldDeputy)
-  lu.assertTrue(table.contains(room.general_pile, oldDeputy), "旧副将应回将池")
+  lu.assertTrue(Discard.contains(room, oldDeputy), "奇策换下的旧副将进入武将弃牌堆")
+  lu.assertFalse(table.contains(room.general_pile, oldDeputy))
   lu.assertFalse(table.contains(room.general_pile, chosen), "新副将不应留在池中")
 end
 
@@ -1291,19 +1298,47 @@ withClientRoom = function(current, fn)
   return clients, clientRoom
 end
 
-function Testqiao_em_wei001_caocao:testClientQiceCanUse()
+function Testqiao_em_wei001_caocao:testClientQiceTargetSelection()
   local room, user = FkTest.room, p(2)
   inRoom(function()
     room:handleAddLoseSkills(user, "qiao__skill_wei020_1", nil, false, true)
     user.phase = Player.Play
   end)
   withClientRoom(room, function(clients)
-    local me = clients[2]
+    local me, target = clients[2], clients[4]
     lu.assertNil(me.room)
-    lu.assertTrue(Fk.skills["qiao__skill_wei020_1"]:canUse(me), "客户端奇策应可用")
+    local skill = Fk.skills["qiao__skill_wei020_1"]
+    local materials = table.simpleClone(me:getCardIds("h"))
+    me.player_cards[Player.Hand] = { materials[1] }
+    local handler = ReqPlayCard:new(me)
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(skill.name))
+    handler:selectSkill(skill.name, { selected = true })
+    lu.assertEquals(handler.skill_name, skill.name)
+    local choices = skill.interaction.spec.choices
+    lu.assertTrue(table.contains(choices, "qiao__iron_chain"))
+    lu.assertFalse(table.contains(choices, "qiao__savage_assault"))
+    handler:updateInteraction("qiao__iron_chain")
+    lu.assertTrue(handler:targetValidity(target.id))
+    handler:selectTarget(target.id, { selected = true })
+    lu.assertTrue(handler:feasible())
+    lu.assertFalse(skill:targetFilter(me, clients[3], { target }, {}))
+    for _, other in ipairs(clients) do
+      if other ~= me then table.insertTable(materials, other:getCardIds("h")) end
+    end
+    me.player_cards[Player.Hand] = table.slice(materials, 1, 9)
+    lu.assertEquals(me:getHandcardNum(), 8)
+    choices = skill:interaction(me).choices
+    for _, name in ipairs({ "qiao__savage_assault", "qiao__amazing_grace", "qiao__burning_camps" }) do
+      lu.assertTrue(table.contains(choices, name), name)
+      handler:updateInteraction(name)
+      lu.assertTrue(handler:feasible(), name)
+      lu.assertFalse(skill:feasible(me, { target }, {}), "固定目标不可手选其中一人")
+    end
+    handler:_finish()
+    skill.interaction.data = nil
   end)
 end
-
 
 function Testqiao_em_wei001_caocao:testQihuClientSkillButtonWithoutPlayerRoom()
   local room, user, target = FkTest.room, p(2), p(3)
@@ -1341,4 +1376,240 @@ function Testqiao_em_wei001_caocao:testQihuClientSkillButtonWithoutPlayerRoom()
     handler:_finish()
   end)
 end
+local function prepareBanner(room, user, main, deputy)
+  skill_test.installDualGenerals(room, user, { main = main, deputy = deputy, kingdom = "wei" })
+  user.phase = Player.Start
+  room:obtainCard(user, room:printCard("qiao__jink", Card.Heart, 7), false, fk.ReasonJustMove)
+end
+
+local function takeBanner(room, user, place, chosen)
+  skill_test.withSkillRequests(room, W.BANNER, {
+    askToChoice = function(_, _, params)
+      if table.contains(params.choices, "m") then return place end
+      if chosen then lu.assertTrue(table.contains(params.choices, chosen)) end
+      return chosen or params.choices[1]
+    end,
+    askToDiscard = function(self, who)
+      local id = who:getCardIds("h")[1]
+      self:throwCard({ id }, W.BANNER, who, who)
+      return { id }
+    end,
+  }, function()
+    room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testBannerRejectsRetinueAndPublicInvalidSkill()
+  local room, user, zhangliao = FkTest.room, p(2), p(3)
+  inRoom(function()
+    local tiger, tuxi = "qiao_heg__retinue_huweijun", "qiao__skill_wei004_1"
+    prepareBanner(room, user, "qiao_heg__wei005", tiger)
+    skill_test.installDualGenerals(room, zhangliao, {
+      main = "qiao_heg__wei004", deputy = "qiao_test__wei_3", kingdom = "wei",
+    })
+    room:invalidateSkill(zhangliao, tuxi, "", "test")
+    local asked = false
+    skill_test.withSkillRequests(room, W.BANNER, {
+      askToChoice = function(_, _, params)
+        lu.assertFalse(table.contains(params.choices, "d"), "虎卫军不能支付大旗代价")
+        lu.assertFalse(table.contains(params.choices, tuxi), "场上已有明置但失效的突袭")
+        asked = true
+        return params.choices[1]
+      end,
+    }, function()
+      FkTest.setNextReplies(user, { FkTest.ReplyDiscard({ user:getCardIds("h")[1] }) })
+      room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
+    end)
+    lu.assertTrue(asked)
+    lu.assertEquals(user.general, "anjiang")
+    lu.assertEquals(user.deputyGeneral, tiger)
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testBannerHidingOnlyHolderFreesLastChoice()
+  local room, user = FkTest.room, p(2)
+  inRoom(function()
+    local xiaoguo = "qiao__skill_wei016_1"
+    prepareBanner(room, user, "qiao_heg__wei016", "blank_shibing")
+    for _, id in ipairs(Fk.skill_skels[W.BANNER].qiaoPools.high) do
+      if id ~= xiaoguo then room:handleAddLoseSkills(p(3), id, nil, false, true) end
+    end
+    takeBanner(room, user, "m", xiaoguo)
+    lu.assertEquals(user.general, "anjiang")
+    lu.assertTrue(W.isTempProvided(user, xiaoguo))
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testDanliCannotRemoveBannerDeputy()
+  local room, user, source = FkTest.room, p(2), p(4)
+  inRoom(function()
+    local danli = "qiao__skill_wei044_1"
+    prepareBanner(room, user, "qiao_heg__wei005", "qiao_heg__wei006")
+    takeBanner(room, user, "d", danli)
+    lu.assertTrue(W.isPositionRestricted(room, user, true))
+    local asked = false
+    skill_test.withSkillRequests(room, danli, {
+      askToChoice = function(_, _, params)
+        lu.assertEquals(params.choices, { "1", "Cancel" })
+        asked = true
+        return "1"
+      end,
+    }, function()
+      room.logic:trigger(fk.Damaged, user, { who = user, from = source, damage = 1 })
+    end)
+    lu.assertTrue(asked)
+    lu.assertEquals(user.deputyGeneral, "anjiang")
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testLightningWithoutSourceAllowsDanliDeputyOnly()
+  local room, user = FkTest.room, p(2)
+  local danli = "qiao__skill_wei044_1"
+  inRoom(function()
+    room:handleAddLoseSkills(user, danli, nil, false, true)
+    room:setPlayerProperty(user, "maxHp", 4)
+    room:setPlayerProperty(user, "hp", 4)
+    local lightning = room:printCard("qiao__lightning", Card.Spade, 1)
+    room:obtainCard(user, lightning, false, fk.ReasonJustMove)
+    room:useCard {from = user, card = lightning, tos = {user}}
+    lu.assertEquals(room:getCardArea(lightning.id), Card.PlayerJudge)
+    local judge = room:printCard("qiao__jink", Card.Spade, 5)
+    room:moveCards {ids = {judge.id}, toArea = Card.DrawPile, drawPilePosition = 1,
+      moveReason = fk.ReasonPut}
+    local asked = 0
+    skill_test.withSkillRequests(room, danli, {
+      askToChoice = function(_, who, params)
+        lu.assertIs(who, user)
+        lu.assertEquals(params.choices, {"2", "Cancel"})
+        asked = asked + 1
+        return "2"
+      end,
+      askToDiscard = function() error("无伤害来源时不应要求弃牌") end,
+    }, function()
+      GameEvent.Phase:create(PhaseData:new {who = user, phase = Player.Judge}):exec()
+      lu.assertEquals(room:getCardArea(lightning.id), Card.DiscardPile)
+      lu.assertEquals(user.hp, 2, "闪电造成三点伤害后，胆戾回复一点")
+      lu.assertTrue(Exchange.isSoldier(user.deputyGeneral))
+      room:damage {to = user, damage = 1}
+      lu.assertEquals(asked, 1, "无来源且已无可移除的副将，不再询问")
+    end)
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testDanliDeadSourceAllowsLegalDeputy()
+  local room, user, source = FkTest.room, p(2), p(4)
+  local danli = "qiao__skill_wei044_1"
+  inRoom(function()
+    prepareBanner(room, user, "qiao_heg__wei005", "qiao_heg__wei006")
+    room:handleAddLoseSkills(user, danli, nil, false, true)
+    room:killPlayer { who = source }
+    user.hp = user.maxHp - 1
+    skill_test.withSkillRequests(room, danli, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, "2"))
+        return "2"
+      end,
+      askToDiscard = function() error("死亡的来源不应再被询问弃牌") end,
+    }, function()
+      room.logic:trigger(fk.Damaged, user, { who = user, from = source, damage = 1 })
+    end)
+    lu.assertEquals(user.hp, user.maxHp)
+    lu.assertNotEquals(user.deputyGeneral, "qiao_heg__wei006")
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testGuestChangeAndSharedQiceLimit()
+  local room, first, second = FkTest.room, p(2), p(3)
+  local qice, liubei = "qiao__skill_wei020_1", "qiao_heg__shu001"
+  inRoom(function()
+    setWeiCandidates(room)
+    local factions = Guest.resolve(liubei, room:getBanner("all_kingdoms"), true)
+    lu.assertTrue(factions.guest)
+    Guest.store(room, { [liubei] = factions })
+    table.insert(room.general_pile, liubei)
+    lu.assertTrue(table.contains(Change.candidates(room, first, true), liubei))
+    local offers = 0
+    skill_test.withSkillRequests(room, qice, {
+      askToChoice = function(_, _, params)
+        if table.contains(params.choices, "changeDeputy") then
+          offers = offers + 1
+          return offers == 1 and "Cancel" or "changeDeputy"
+        end
+        return params.choices[1]
+      end,
+    }, function()
+      for _, who in ipairs({ first, first, second }) do
+        W.addTempSkill(room, who, qice)
+        room:obtainCard(who, room:printCard("qiao__jink", Card.Club, 2), false, fk.ReasonJustMove)
+        local skill = Fk.skills[qice]
+        skill.interaction.data = "qiao__iron_chain"
+        skill:onUse(room, { from = who, tos = { p(4) } })
+        skill.interaction.data = nil
+        lu.assertTrue(who:isKongcheng(), "变更已用仍可转化锦囊")
+      end
+    end)
+    lu.assertEquals(offers, 2, "放弃保留次数；成功后全魏共用一次")
+    lu.assertTrue(#Discard.list(room) >= 1)
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testForeignChanglingMayCommandWei()
+  local room, holder = FkTest.room, p(4)
+  inRoom(function()
+    local id = "qiao__skill_wei024_1"
+    room:handleAddLoseSkills(holder, id, nil, false, true)
+    holder.phase = Player.Start
+    local asked = false
+    skill_test.withSkillRequests(room, id, {
+      askToChoosePlayers = function(_, _, params)
+        lu.assertTrue(table.contains(params.targets, p(1)), "吴势力的持有者可选魏")
+        lu.assertFalse(table.contains(params.targets, p(8)), "不能选另一吴角色")
+        lu.assertFalse(table.contains(params.targets, holder))
+        asked = true
+        return {}
+      end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, holder, PhaseData:new { who = holder, phase = Player.Start })
+    end)
+    lu.assertTrue(asked)
+  end)
+end
+
+function Testqiao_em_wei001_caocao:testXiaoguoSelfDiscardAndReplacement()
+  local room, user, target, lord = FkTest.room, p(2), p(3), p(4)
+  local id = "qiao__skill_wei016_1"
+  local han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+  inRoom(function()
+    skill_test.installDualGenerals(room, lord, {
+      main = "qiao_heg__han001", deputy = "qiao_test__han_2", kingdom = "han",
+    })
+    A.ascend(room, lord, "qiao_heg__em_han001", "han", { kind = "lord" })
+    room:handleAddLoseSkills(user, id, nil, false, true)
+    local function activate(who, equipName)
+      local card = room:printCard("qiao__jink", Card.Heart, 6)
+      room:obtainCard(user, card, false, fk.ReasonJustMove)
+      local equip = room:printCard(equipName, Card.Diamond, 5)
+      room:moveCardTo(equip.id, Card.PlayerEquip, who, fk.ReasonJustMove, "test", nil, true, who)
+      FkTest.setNextReplies(user, { FkTest.ReplyDiscard({ card.id }) })
+      who.phase = Player.Start
+      room.logic:trigger(fk.EventPhaseStart, who, PhaseData:new { who = who, phase = Player.Start })
+      return equip.id
+    end
+    local axe = activate(target, "qiao__axe")
+    lu.assertEquals(room:getCardArea(axe), Card.DiscardPile)
+    local events = room.logic:getCurrentEvent():searchEvents(GameEvent.MoveCards, 1, function(e)
+      return table.find(e.data, function(move)
+        return move.proposer == target and move.from == target and move.moveReason == fk.ReasonDiscard
+          and table.find(move.moveInfo, function(info) return info.cardId == axe end)
+      end)
+    end)
+    lu.assertEquals(#events, 1, "装备由目标自己弃置")
+    local hp, hand = lord.hp, user:getHandcardNum()
+    local sword = activate(lord, "qiao__chixiao_sword")
+    lu.assertTrue(table.contains(lord:getPile(han.PILE), sword))
+    lu.assertEquals(lord.hp, hp - 1, "赤霄剑被天授改置于诏书，实际弃装备为零")
+    lu.assertEquals(user:getHandcardNum(), hand, "造成伤害分支不摸牌")
+  end)
+end
+
 return { name = "qiao_em_wei001_caocao" }

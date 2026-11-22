@@ -107,7 +107,7 @@ end
 
 local pileActions = {
   QiaoEdict = Han.CONSUME,
-  QiaoCi = Ci.SKILL,
+  QiaoCi = Ci.CONSUME,
 }
 
 local pileActionUpdates = {
@@ -123,7 +123,7 @@ local pileActionUpdates = {
 function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
-    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
+    and (skill == Ci.CONSUME or self.player:hasSkill(skill)) and self:skillButtonValidity(skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
@@ -165,6 +165,11 @@ end
 function QiaoClient:canConsumeCi(holderId, general)
   return self:canUsePileAction(holderId, "QiaoCi")
     and Ci.canChoose(self.current_request_handler.player, general)
+end
+
+function QiaoClient:ciCardsForDisplay(holderId)
+  local holder = self:getPlayerById(holderId)
+  return holder and holder:getMark(Ci.MARK) ~= 0 and Ci.cards(holder) or false
 end
 
 function QiaoClient:handleSetBanner(data)
@@ -249,6 +254,11 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if command == "SetPlayerMark" and data[2] == Ci.MARK and isQiaoMode() then
+    -- Both live updates and the rejoin snapshot take this path. The room's
+    -- picture-mark row owns the button, so omit the default text mark.
+    return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
+  end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
     and isQiaoMode() and SkillPrelight.isStateOnly(data[2]) then
     data = { data[1], data[2] }
