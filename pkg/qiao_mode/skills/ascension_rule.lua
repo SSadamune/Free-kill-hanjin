@@ -1,4 +1,5 @@
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
+local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local H = require "packages.hegemony.util"
 
 -- 模式级升变规则。由统领规则在所有包加载完成后挂到实际 Skill 对象上，
@@ -17,6 +18,21 @@ skill:addEffect(fk.GameStart, {
 })
 
 -- 普通君主升变沿用“首个回合开始”的原有时机；一回合只询问一次。
+
+-- 四人及以下局首亮不获得先驱标记：高优先级早于上游 heg_rule 置位
+-- `_vanguard_gained`，保留 `TheFirstToShowRewarded` 记录且不影响技能主动授先驱。
+skill:addEffect(fk.GeneralRevealed, {
+  priority = 1001,
+  can_trigger = function(self, event, target, player)
+    local room = player.room
+    return target == player and not FaqRules.allows_first_show_vanguard(room)
+      and room:getTag("TheFirstToShowRewarded") == player.id
+      and player:getMark("_vanguard_gained") == 0
+  end,
+  on_trigger = function(self, event, target, player)
+    player.room:setPlayerMark(player, "_vanguard_gained", 1)
+  end,
+})
 
 -- 普通双亮奖励实际发放时记录历史资格。priority 高于上游 consume 逻辑，
 -- 先读取 pending 快照；不改 event.data。
@@ -70,6 +86,18 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_trigger = function(self, event, target, player, data)
     A.on_preparation(player.room, player)
+  end,
+})
+
+-- 10 人局第 5 人起超员转野：先于 ensure_wild_role（priority 1000）与上游 heg_rule
+-- （priority 0）修正 kingdom，使随后的 ensure_wild_role 顺带把私有 role 归一为 wild。
+skill:addEffect(fk.GeneralShown, {
+  priority = 1100,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and target.kingdom ~= "wild" and target.kingdom ~= "unknown"
+  end,
+  on_trigger = function(self, event, target, player, data)
+    FaqRules.enforce_reveal_overflow(player.room, player)
   end,
 })
 
