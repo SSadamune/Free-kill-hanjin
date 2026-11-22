@@ -1457,6 +1457,7 @@ function Testqiao_card_reuse:testPeaceSpellHandLimitUsesPublicQunCount()
     lu.assertEquals(p:getMaxCards(), p.hp + 2, "同势力人数含装备者自己")
     give(room, p, tianCard)
     local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
+    room:handleAddLoseSkills(p, Qun.HONGFA, nil, false, true)
     Qun.add(p, { tianCard.id }, "test")
     lu.assertEquals(p:getMaxCards(), p.hp + 3, "群天兵通过公共人数口径计入")
     give(room, p, oldCard)

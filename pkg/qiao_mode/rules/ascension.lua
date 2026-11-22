@@ -223,7 +223,7 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   -- 明置主将，但不触发普通 GeneralRevealed；珠联璧合与阴阳鱼在此统一判定，
   -- 避免一次升变和普通明置事件重复发放消耗型标记。
-  room.logic:trigger(fk.GeneralShown, player, { m = newMain })
+  room.logic:trigger(fk.GeneralShown, player, { m = newMain, qiaoAscension = true })
 
   local newPairMax = M.pair_max_hp(newMain, deputy, room)
   if newPairMax > oldPairMax then

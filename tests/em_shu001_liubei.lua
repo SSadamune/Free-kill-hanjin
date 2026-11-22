@@ -86,6 +86,41 @@ function Testqiao_em_shu001_liubei:testTianyiSplitsOnlyDragonPhoenixMove()
   lu.assertEquals(room:getCardArea(jink), Card.DiscardPile)
 end
 
+local function checkMixedDiscard(beiFirst)
+  local room, other = FkTest.room, p(3)
+  local bei, xie = p(beiFirst and 1 or 2), p(beiFirst and 2 or 1)
+  local tianshou = "qiao__skill_em_han001_3"
+  local dragon = give(other, "qiao__dragon_phoenix")
+  local seal = give(other, "qiao__jade_seal")
+  local jink = give(other, "qiao__jink")
+  local completed = inRoom(function()
+    room:handleAddLoseSkills(p(1), beiFirst and TIANYI or tianshou, nil, false, true)
+    room:handleAddLoseSkills(p(2), beiFirst and tianshou or TIANYI, nil, false, true)
+    local start = room.logic.current_event_id
+    room:throwCard({ dragon, seal, jink }, "test", other, other)
+    local mixed = room.logic:getEventsByRule(GameEvent.MoveCards, 1, function(e)
+      return not e.interrupted and #e.data == 3 and e.data[1].from == other
+    end, start)
+    lu.assertEquals(#mixed, 1, "三张牌应在同一批移牌中分别结算")
+    for _, move in ipairs(mixed[1].data) do
+      lu.assertIs(move.class, MoveCardsData, "拆分后每组都应保留引擎移牌类型")
+    end
+    return true
+  end)
+  lu.assertTrue(completed)
+  lu.assertTrue(table.contains(bei:getCardIds("h"), dragon))
+  lu.assertTrue(table.contains(xie:getCardIds("e"), seal))
+  lu.assertEquals(room:getCardArea(jink), Card.DiscardPile)
+end
+
+function Testqiao_em_shu001_liubei:testTianyueBeforeTianshouInMixedDiscard()
+  checkMixedDiscard(true)
+end
+
+function Testqiao_em_shu001_liubei:testTianshouBeforeTianyueInMixedDiscard()
+  checkMixedDiscard(false)
+end
+
 function Testqiao_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   local room, lord, other = FkTest.room, p(1), p(2)
   local first = give(other, "qiao__jink", Card.Heart, 2)
@@ -122,6 +157,57 @@ function Testqiao_em_shu001_liubei:testFlagGivesTwoCardsAndTemporarySkill()
   lu.assertEquals(other:getMark(mark), 0)
   inRoom(function() room:handleAddLoseSkills(lord, "-" .. ZHANGWU, nil, false, true) end)
   lu.assertEquals(lord:getMark(mark), 0)
+end
+
+function Testqiao_em_shu001_liubei:testTianyueReordersTopAndRewardsBottom()
+  local room, lord = FkTest.room, p(1)
+  for _, position in ipairs({1, -1}) do
+    local dragon = give(lord, "qiao__dragon_phoenix")
+    local before = lord:getHandcardNum()
+    inRoom(function()
+      room:handleAddLoseSkills(lord, TIANYI, nil, false, true)
+      room:moveCards {ids = {dragon}, from = lord, toArea = Card.DrawPile,
+        drawPilePosition = position, moveReason = fk.ReasonPut}
+    end)
+    lu.assertEquals(room.draw_pile[#room.draw_pile], dragon)
+    lu.assertEquals(lord:getHandcardNum(), before + 1)
+  end
+end
+
+function Testqiao_em_shu001_liubei:testTianyueLeavesPrivatePileCardsAlone()
+  local room, lord, owner = FkTest.room, p(1), p(2)
+  local dragon = give(owner, "qiao__dragon_phoenix")
+  inRoom(function()
+    room:handleAddLoseSkills(lord, TIANYI, nil, false, true)
+    owner:addToPile("test_soldiers", {dragon}, true)
+    room:moveCardTo(dragon, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile)
+  end)
+  lu.assertEquals(room:getCardArea(dragon), Card.DiscardPile)
+end
+
+function Testqiao_em_shu001_liubei:testFlagExpiresWhileInvalidAndPreservesOtherSources()
+  local room, lord = FkTest.room, p(1)
+  local granted = "qiao__skill_shu002_1"
+  for seat = 2, 3 do
+    local ally = p(seat)
+    local a, b = give(ally, "qiao__jink"), give(ally, "qiao__jink")
+    local done = inRoom(function()
+      room:handleAddLoseSkills(lord, ZHANGWU, nil, false, true)
+      room:handleAddLoseSkills(ally, FLAG, nil, false, true)
+      skill_test.withSkillRequests(room, FLAG, {
+        askToChoice = function() return granted end,
+      }, function() Fk.skills[FLAG]:onUse(room, {from = ally, cards = {a, b}}) end)
+      lu.assertTrue(ally:hasSkill(granted))
+      if seat == 3 then ally:addSkill(granted) end
+      room:invalidateSkill(ally, granted)
+      room.logic:trigger(fk.TurnEnd, ally, {})
+      if seat == 3 then lu.assertFalse(ally:hasSkill(granted)) end
+      room:validateSkill(ally, granted)
+      lu.assertEquals(ally:hasSkill(granted), seat == 3)
+      return true
+    end)
+    lu.assertTrue(done)
+  end
 end
 
 return { name = "qiao_em_shu001_liubei" }

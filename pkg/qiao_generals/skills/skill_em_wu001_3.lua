@@ -40,7 +40,7 @@ skill:addEffect(fk.BeforeCardsMove, {
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) then return false end
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.to ~= move.from and move.moveReason ~= fk.ReasonDiscard
+      if move.from == player and move.moveReason ~= fk.ReasonDiscard
         and move.proposer ~= nil and move.proposer ~= player then
         for _, info in ipairs(move.moveInfo or {}) do
           if info.fromArea == Card.PlayerEquip and isTreasure(info.cardId) then return true end
@@ -52,7 +52,7 @@ skill:addEffect(fk.BeforeCardsMove, {
   on_use = function(self, event, target, player, data)
     local ids = {}
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.to ~= move.from and move.moveReason ~= fk.ReasonDiscard
+      if move.from == player and move.moveReason ~= fk.ReasonDiscard
         and move.proposer ~= nil and move.proposer ~= player then
         for _, info in ipairs(move.moveInfo or {}) do
           if info.fromArea == Card.PlayerEquip and isTreasure(info.cardId) then
