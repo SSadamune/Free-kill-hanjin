@@ -72,6 +72,8 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 
 `tests/adaptation_display.lua` 覆盖手牌标记与选牌提示、同名牌位隔离、多条目、虚拟牌与材料牌、标记清理和可见范围，以及五种条件的具体触发提示、失败/取消不提示、无视令牌、真实用牌入口与重复处理。
 
+开局手牌由 `fk.AfterDrawInitialCards` 交给应变显示标记。汉晋手气卡复用原生 `Request`，每次实际发牌都更新对应角色的 `DrawInitialData.cards`。`tests/faq_core_rules.lua` 通过实际确认和取消请求核对重抽后的手牌及其标记入口。
+
 运行 `python scripts/test.py`，或单独运行 `python scripts/test.py --file tests/adaptation.lua`。
 
 覆盖虚拟牌与使用级条目识别、五种条件、强制独立结算、默认逐项重检（条件变为不满足及变为满足）、保留统一快照策略、策略在单次使用中固定、无视令牌延后使用、重入顺序保护、一令牌一条件、两来源令牌、目标选择取消与成功事件、助战同时竞速/只弃一张/非法回复过滤/无人助战/独立助战分别付费，以及真实使用最后一张手牌的空巢检测。测试只使用独立测试内容，不创建正式武将或装备。
