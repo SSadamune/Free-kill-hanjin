@@ -1,15 +1,15 @@
 ---
 name: pr-review
-description: Review or recheck GitHub pull requests, assess code, tests and docs, and publish or update review feedback when asked. Use for PR numbers or links, follow-up reviews after new commits, and requests for review comments or regular PR replies.
+description: 审阅或复检 GitHub PR 的代码、测试和文档，并按授权发布或更新审阅意见。适用于指定 PR 编号或链接、提交更新后的复检，以及发表审阅、回复或编辑 PR 评论。
 ---
 
-# Review a pull request
+# 审阅 GitHub PR
 
-1. **Confirm scope and authority.** Read the repository instructions. A review or recheck defaults to findings in chat. “Post the feedback” authorizes the requested comment. Draft-only requests get the complete copyable text. Editing source, pushing, formally approving or requesting changes, resolving threads, and merging use their own authorization. For a conditional merge, check the condition and which branch receives the merge.
-2. **Identify the revision.** Read the PR's repository, base branch, head SHA, description, changed files, and relevant issue, reviews, threads, or checks. Use the GitHub connector when available, then authenticated CLI or Git for missing context. Check for truncated diffs, omitted files, and binary contents. Inspect remotely first when practical. Use an existing checkout or permitted isolated checkout when execution or source context needs one. Preserve parallel work and restore temporary changes you made.
-3. **Trace the change through real entry points.** Compare intended behavior with actual inputs, callers, outputs, state changes, and failure paths. Distinguish changed behavior from pre-existing behavior and documentation claims from observable results. Verify linked specifications and quote or link the precise source when it decides a finding. When a specification conflict is material, state the concrete scenario and outcomes for the user to decide. In shared logic, check a comparable caller or branch so the proposed fix covers the intended contract.
-4. **Use evidence in proportion to the risk.** Review code, changed tests and relevant docs together. Reuse CI or prior evidence when revision, scope and environment support it. Inspect what tests actually execute and assert. Prefer targeted reproduction for a concrete gap. Reserve full reruns for requests, repository requirements, or material cross-module risk that narrower checks cannot address. Honor user limits, including stopping an in-progress run from this task when asked to skip it. Distinguish your runs, existing evidence and unresolved verification.
-5. **Report actionable findings.** Put the most consequential issues first. For each, give the trigger, failure, expected result, verified changed location and supporting evidence. Mention a narrow regression test or affected documentation when it helps the author act. Leave routine checks and unrelated merge housekeeping out unless they change the decision or the user asks. If no findings remain, state the review scope and any material verification gap.
-6. **Recheck a revision.** Read the latest head and review the delta against the previously agreed findings. Confirm the fix, related cases, regression assertions and affected docs. Distinguish resolved, still open and newly introduced issues. Re-evaluate relevant lines or conclusions if the head or base changed. A follow-up comment normally carries only actionable items still in scope.
+1. **确认范围和授权。** 阅读仓库约定。审阅和复检默认在聊天中交付意见。「把意见发到 PR」授权发布相应评论。用户只要草稿时，给出完整可复制的正文。修改源码、推送、正式批准或请求修改、解决讨论以及合并，各自按对应授权执行。有条件的合并须核对执行条件和合并方向。
+2. **确认审阅版本。** 读取仓库、目标分支、PR 头提交 SHA、描述、改动文件及相关 Issue、审阅、讨论和检查结果。优先使用可用的 GitHub 连接器，缺少上下文时用已认证的 CLI 或 Git 补查。留意截断的差分、遗漏的文件及二进制内容。远端材料足够时，先直接审阅。需要运行验证或查看完整源码时，使用现有检出目录或经许可的隔离检出。保护并行工作，并在结束时恢复本轮造成的临时改动。
+3. **沿真实入口追踪行为。** 对照预期行为核查实际输入、调用方、输出、状态变化和失败路径。区分本次变更与已有行为，也区分文档陈述与可观察的结果。核对相关规范。规范决定审阅结论时，引用准确原文或链接。遇到会影响结论的规范冲突，给出具体场景和各自的结果，由用户裁定。涉及共用逻辑时，检查一个同类调用方或分支，确认修复方向覆盖预期的公共行为。
+4. **按风险选择验证。** 一并审阅代码、改动的测试和相关文档。确认版本、范围和环境相符后，复用 CI 或历史结果。核对测试实际经过的入口及其断言。针对具体缺口优先做定向复现。用户明确要求、仓库要求，或定向验证无法覆盖实质性跨模块风险时，再跑全量。遵守用户对验证的限制，用户要求跳过时，停止本轮正在运行的对应测试。交付时区分本轮实测、沿用结果和待验证项。
+5. **交付可执行的意见。** 按影响排序。每条写明触发条件、实际问题、预期结果、已核对的改动位置和支持证据。必要时指出值得补充的定向回归或需要更新的文档。常规检查与无关的合并事务仅在影响判断或用户要求时说明。没有发现问题时，交代审阅范围和会影响判断的验证缺口。
+6. **按最新提交复检。** 读取最新头提交，对照上一轮已经确认的意见审阅增量。核对实际修复、相关场景、回归断言和受影响的文档。区分已解决、仍待处理及本轮引入的问题。头提交或目标分支变更时，重新核对相关行号和结论。后续评论通常只列范围内仍需要作者处理的事项。
 
-For an authorized publish, reply or edit, read [GitHub feedback](references/github-feedback.md). Apply repository-specific rules, terminology, publication preferences and testing constraints from the applicable project documents.
+获授权发布、回复或编辑时，读取 [GitHub 审阅意见发布指南](references/github-feedback.md)。项目特有的规则、术语、发布偏好和测试约束以仓库对应文档为准。
