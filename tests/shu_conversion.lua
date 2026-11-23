@@ -350,6 +350,29 @@ function Testqiao_shu_conversion:testWushengHeartCardDamageTriggersDrowning()
   lu.assertEquals(#p2:getCardIds("e"), 1)
 end
 
+function Testqiao_shu_conversion:testWushengCannotConsumeTheCrossbowEnablingTheSlash()
+  local me, target = p(1), p(2)
+  grant(me, WUSHENG)
+  clearCards(me)
+  setPlayPhase(me)
+  local crossbow = give(me, "qiao__crossbow", Card.Diamond, 1)
+  local otherRed = give(me, "qiao__jink", Card.Diamond, 2)
+  equip(me, crossbow)
+  local skill = Fk.skills[WUSHENG]
+  local function check(player, to)
+    lu.assertFalse(not not player:canUseTo(skill:viewAs(player, { crossbow }), to))
+    lu.assertTrue(player:canUseTo(skill:viewAs(player, { otherRed }), to))
+  end
+  inRoom(function()
+    lu.assertTrue(me:canUseTo(skill:viewAs(me, { crossbow }), target))
+    me:addCardUseHistory("slash", 4)
+    check(me, target)
+  end)
+  client_room.run(room(), function(_, clientRoom)
+    check(clientRoom:getPlayerById(me.id), clientRoom:getPlayerById(target.id))
+  end)
+end
+
 function Testqiao_shu_conversion:testPaoxiaoSecondSlashDrawsAndBypassesTimes()
   local p1, p2 = p(1), p(2)
   grant(p1, PAOXIAO)

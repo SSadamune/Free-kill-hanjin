@@ -15,6 +15,20 @@ local function canAttackJiangwei(player, target)
     and target:inMyAttackRange(player)
 end
 
+local function discardTargetCard(room, player, target)
+  if player.dead or target.dead or target:isRemoved() or target:isNude() then return end
+  -- 使用引擎的区域选择，让客户端按询问者的可见性显示手牌。
+  local id = room:askToChooseCard(player, {
+    target = target,
+    flag = "he",
+    skill_name = skill.name,
+    prompt = "#qiao__skill_shu012_1-discard::" .. target.id .. ":" .. skill.name,
+  })
+  if table.contains(target:getCardIds("he"), id) then
+    room:throwCard(id, skill.name, target, player)
+  end
+end
+
 skill:addEffect("active", {
   prompt = "#qiao__skill_shu012_1-prompt",
   min_target_num = 1,
@@ -51,38 +65,10 @@ skill:addEffect("active", {
         if use ~= nil and #use.tos == 1 and use.tos[1] == player then
           room:useCard(use)
           local damage = (use.damageDealt or {})[player] or 0
-          if damage <= 0 and not player.dead then
-            local ids = table.filter(to:getCardIds("he"), function(id)
-              return not to:prohibitDiscard(id)
-            end)
-            if #ids > 0 then
-              local id = room:askToChooseCard(player, {
-                target = to,
-                flag = { card_data = { { "弃置", ids } } },
-                skill_name = skill.name,
-                prompt = "#qiao__skill_shu012_1-discard::" .. to.id,
-              })
-              if id ~= nil and id ~= -1 and table.contains(ids, id) then
-                room:throwCard(id, skill.name, to, player)
-              end
-            end
-          end
+          if damage <= 0 then discardTargetCard(room, player, to) end
         elseif use == nil then
           -- 未出杀也属于“未因此受伤”，仍弃其一张牌。
-          local ids = table.filter(to:getCardIds("he"), function(id)
-            return not to:prohibitDiscard(id)
-          end)
-          if #ids > 0 then
-            local id = room:askToChooseCard(player, {
-              target = to,
-              flag = { card_data = { { "弃置", ids } } },
-              skill_name = skill.name,
-              prompt = "#qiao__skill_shu012_1-discard::" .. to.id,
-            })
-            if id ~= nil and id ~= -1 and table.contains(ids, id) then
-              room:throwCard(id, skill.name, to, player)
-            end
-          end
+          discardTargetCard(room, player, to)
         end
       end
     end
