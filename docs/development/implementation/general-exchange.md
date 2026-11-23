@@ -19,7 +19,7 @@
 
 ## 变更、移除与武将弃牌堆
 
-- [变更入口](../../../pkg/qiao_mode/rules/general_change.lua) 先核对实际将位、房间禁用及保护。按本局主客势力或无人继位转野前的势力选候选。旧暗将保持暗置直到移出，新将明置。普通变更保留角色体力并同步新旧技能来源。霸者授予的[奇策](generals/em-wei001.md#em-wei001-qice)和[赐](generals/em-jin001.md#em-jin001-banner)通过此入口处理换下的武将牌。[穿心](generals/shi-skills.md#qun024-1)指定翼从时复用共同的位置保护、来源同步和武将入堆。
+- [变更入口](../../../pkg/qiao_mode/rules/general_change.lua) 先核对实际将位、房间禁用及保护。按本局主客势力或无人继位转野前的势力选候选。旧暗将保持暗置直到移出，新将明置。普通变更保留角色体力并同步新旧技能来源。霸者授予的[奇策](generals/quan/em-wei001.md#em-wei001-qice)和[赐](generals/nu/em-jin001.md#em-jin001-banner)通过此入口处理换下的武将牌。[穿心](generals/shi/qun024.md#qun024-1)指定翼从时复用共同的位置保护、来源同步和武将入堆。
 - [武将弃牌堆](../../../pkg/qiao_mode/rules/general_discard.lua) 以房间 tag `qiao_general_discard_v1` 记录进堆的武将牌，同步 `disabled_generals` 并将这些牌从 `general_pile` 移出。通用移除成功且旧将已换为白板士兵时，在 `RemoveGeneral` 的归还阶段写入此堆，早于 `GeneralRemoved`。候选、回池、随机抽取与检索都会排除已入堆的牌。普通国战仍走原引擎流程。[武将牌堆规则](../../../rulebook/terms/zone-terms/wujiangpaidui.md)说明各类入堆来源。
 - [交换与移除回归](../../../tests/general_exchange.lua#L480)覆盖主副将移除、入堆时机内不可检索、再次抽取排除、禁止移除以及上游国战照常回池。技能的特殊分支由各自的真实入口验证。
 

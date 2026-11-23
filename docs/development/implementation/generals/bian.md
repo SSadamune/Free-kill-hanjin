@@ -6,4 +6,4 @@
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| EM(WU001) | 君孙权 | [嘉禾](em-wu001.md#em-wu001-1)、[敛资](em-wu001.md#em-wu001-2)、[聚宝](em-wu001.md#em-wu001-3)、[缘江烽火图](em-wu001.md#em-wu001-flag)（派生／标记）、[攻心](em-wu001.md#em-wu001-gongxin)（派生／标记） |
+| EM(WU001) | [君孙权](bian/em-wu001.md) | [嘉禾](bian/em-wu001.md#em-wu001-1)、[敛资](bian/em-wu001.md#em-wu001-2)、[聚宝](bian/em-wu001.md#em-wu001-3)、[缘江烽火图](bian/em-wu001.md#em-wu001-flag)（派生／标记）、[攻心](bian/em-wu001.md#em-wu001-gongxin)（派生／标记） |

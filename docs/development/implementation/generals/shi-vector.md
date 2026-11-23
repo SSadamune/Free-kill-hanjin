@@ -6,4 +6,4 @@
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| EM(HAN001) | 君刘协 | [初平](em-han001.md#em-han001-1)、[转蓬](em-han001.md#em-han001-2)、[天授](em-han001.md#em-han001-3)、[诏书](em-han001.md#em-han001-banner)（派生／标记） |
+| EM(HAN001) | [君刘协](shi-vector/em-han001.md) | [初平](shi-vector/em-han001.md#em-han001-1)、[转蓬](shi-vector/em-han001.md#em-han001-2)、[天授](shi-vector/em-han001.md#em-han001-3)、[诏书](shi-vector/em-han001.md#em-han001-banner)（派生／标记） |

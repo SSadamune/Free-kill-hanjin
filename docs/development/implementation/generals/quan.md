@@ -6,4 +6,4 @@
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| EM(WEI001) | 君曹操 | [建安](em-wei001.md#em-wei001-1)、[挥鞭](em-wei001.md#em-wei001-2)、[总御](em-wei001.md#em-wei001-3)、[霸者求贤状](em-wei001.md#em-wei001-banner)（派生／标记）、[常令](em-wei001.md#em-wei001-changling)（派生／标记）、[奇策](em-wei001.md#em-wei001-qice)（派生／标记）、[胆戾](em-wei001.md#em-wei001-danli)（派生／标记） |
+| EM(WEI001) | [君曹操](quan/em-wei001.md) | [建安](quan/em-wei001.md#em-wei001-1)、[挥鞭](quan/em-wei001.md#em-wei001-2)、[总御](quan/em-wei001.md#em-wei001-3)、[霸者求贤状](quan/em-wei001.md#em-wei001-banner)（派生／标记）、[常令](quan/em-wei001.md#em-wei001-changling)（派生／标记）、[奇策](quan/em-wei001.md#em-wei001-qice)（派生／标记）、[胆戾](quan/em-wei001.md#em-wei001-danli)（派生／标记） |

@@ -36,4 +36,14 @@
 
 ## 自由用牌
 
-[free_use.lua](../../../pkg/qiao_mode/rules/free_use.lua) 的 `askToUseCard` 设置 `not_passive`，使客户端自由用牌请求排除没有本次响应时机的被动牌。服务端根据出牌者、牌型、禁止和[公共目标条件](card-use-targets.md)复核回包，沿用[只能当](only-as.md)的来源校验。返回值是待执行数据，调用方执行一次。正式调用包括[牛金](generals/retinues.md#niujin)、[风物](generals/support.md#jin016-2)和[四海归平](../../../pkg/qiao_cards/skills/sihai_guiping.lua)。用例入口见各技能的主记录及[技能界面](skill-ui.md)。
+[free_use.lua](../../../pkg/qiao_mode/rules/free_use.lua) 的 `askToUseCard` 设置 `not_passive`，使客户端自由用牌请求排除没有本次响应时机的被动牌。服务端根据出牌者、牌型、禁止和[公共目标条件](card-use-targets.md)复核回包，沿用[只能当](only-as.md)的来源校验。返回值是待执行数据，调用方执行一次。正式调用包括[牛金](generals/standard/retinue-niujin.md#niujin)、[风物](generals/standard/jin016.md#jin016-2)和[四海归平](../../../pkg/qiao_cards/skills/sihai_guiping.lua)。用例入口见各技能的主记录及[技能界面](skill-ui.md)。
+
+## 配将体力
+
+[配将体力规则](../../rules/general-principles.md#配将体力贡献与武将状态)的开局与升变接线共用 [pair_hp.lua](../../../pkg/qiao_mode/rules/pair_hp.lua)。魏、晋司马懿的修正见[应期](generals/standard/wei002.md#wei002-3)。
+
+`pair_hp.lua` 在上游开局广播后将双 2.5 组合的体力上限和体力修正为 4，在已有的 `HalfMaxHpLeft` 记录两枚待领阴阳鱼。双亮时，汉晋规则在上游单枚奖励前发放两枚并清空待领记录。升变使用同一数量查询。原生用例用正式皇甫嵩与关羽，经开局广播及两次明置验证首亮不发、双亮发两枚。
+
+## 拼点入口
+
+拼点入口沿用锁定引擎的 `发起者:canPindian(对手)`。该查询同时检查双方手牌和发起方向的禁止状态。[烈刃](generals/standard/shu015.md#shu015-2)在发出询问前和实际拼点前均按同一方向检查资格。[密诏](generals/standard/han001.md#han001-2)先交牌，因此在交牌后再确定合法拼点对象。其余拼点主动技或首动作拼点的触发技在提供发动或目标时检查资格。

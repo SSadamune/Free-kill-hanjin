@@ -12,7 +12,7 @@
 | --- | --- |
 | 显式版本登记 | `pkg/qiao_mode/rules/general_versions.lua`：`Versions.register { normal, lord, loyalty }`、`lord_version`、`lord_kingdoms`、`is_lord`、`selectable` |
 | 升变通则 | `pkg/qiao_mode/rules/ascension.lua`：`pair_max_hp`、`population_blocks`、`ascend`、`flip_lord_for_death`、`death_succession`、`convert_to_wild`、`get_winner` |
-| 配将体力贡献 | `pkg/qiao_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](generals/pair-hp.md) |
+| 配将体力贡献 | `pkg/qiao_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](mode-rules.md#配将体力) |
 | 模式规则技能 | `pkg/qiao_mode/skills/ascension_rule.lua`：`fk.TurnStart` 普通升变、`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
 | 模式接线 | `pkg/qiao_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
 
@@ -22,7 +22,7 @@
 
 ## 君主版与专属效果
 
-[君刘备](generals/em-shu001.md) · [君张角](generals/em-qun010.md) · [君曹操](generals/em-wei001.md) · [君孙权](generals/em-wu001.md) · [君刘协](generals/em-han001.md) · [君司马炎](generals/em-jin001.md)
+[君刘备](generals/zhen/em-shu001.md) · [君张角](generals/shi/em-qun010.md) · [君曹操](generals/quan/em-wei001.md) · [君孙权](generals/bian/em-wu001.md) · [君刘协](generals/shi-vector/em-han001.md) · [君司马炎](generals/nu/em-jin001.md)
 
 联调时从正式普通将升变或从继位入口出发，核对旧主将的预亮、明置技能和后天来源已撤回，暗副将及独立同名来源仍保留。新君主技进入正式来源后，继续操作一条专属旗或标记的真实入口，核对持有者、可使用的角色、实体牌或标记的去向。大旗效果、派生技能和各自验证由上方逐将记录维护。
 

@@ -6,4 +6,4 @@
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
-| EM(JIN001) | 君司马炎 | [太康](em-jin001.md#em-jin001-1)、[採幸](em-jin001.md#em-jin001-2)、[鼎沸](em-jin001.md#em-jin001-3)、[诸王敕封册与赐](em-jin001.md#em-jin001-banner)（派生／标记） |
+| EM(JIN001) | [君司马炎](nu/em-jin001.md) | [太康](nu/em-jin001.md#em-jin001-1)、[採幸](nu/em-jin001.md#em-jin001-2)、[鼎沸](nu/em-jin001.md#em-jin001-3)、[诸王敕封册与赐](nu/em-jin001.md#em-jin001-banner)（派生／标记） |

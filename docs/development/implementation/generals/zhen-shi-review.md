@@ -8,7 +8,7 @@
 
 ## 实现与接口
 
-[阵包普通武将](zhen-skills.md) · [势包普通武将](shi-skills.md) · [翼从专属效果](retinues.md) · [公共技能来源](../general-exchange.md#公共武将来源职责)
+[阵包逐将索引](zhen.md#逐将检索) · [势包逐将索引](shi.md#逐将检索) · [翼从专属效果](retinues.md) · [公共技能来源](../general-exchange.md#公共武将来源职责)
 
 ### 阵法与技能来源
 
@@ -21,9 +21,9 @@
 | 上游入口 | 采用或区分的内容 |
 | --- | --- |
 | `util.lua` 的 `getFormationRelation`、`inFormationRelation`、`inSiegeRelation` | 复用座次和势力关系。队列查询返回其他成员，围攻查询区分两名围攻者及被围攻者。 |
-| `pkg/mobile_heg/skills/heyi.lua`、`pkg/formation/skills/tianfu.lua`、`pkg/formation/skills/niaoxiang.lua` | 参考阵法来源刷新、主将标签及逐目标入口。汉晋的实际效果分别见[鹤翼](zhen-skills.md#wei018-2)、[天覆](zhen-skills.md#shu012-2)、[鸟翔](zhen-skills.md#wu017-2)。 |
-| `pkg/hegemony_nos/skills/huyuan.lua`、`pkg/formation/skills/{qianhuan,shengxi,shoucheng}.lua` | 参考装备置入、目标取消、阶段和移牌事件。[护援](zhen-skills.md#wei018-1)、[千幻](zhen-skills.md#qun011-1)、[生息](zhen-skills.md#shu018b-1)、[守成](zhen-skills.md#shu018b-2)各自记录汉晋使用的条件和后续。 |
-| `pkg/mobile_heg/skills/chuanxin.lua`、`pkg/momentum/skills/{hongfa,yingyang}.lua` | 区分上游穿心的伤害后入口，参考旗来源和拼点点数修改。[穿心](shi-skills.md#qun024-1)、[弘法](em-qun010.md#em-qun010-1)及[鹰扬](shi-skills.md#wu010-2)按各自规则进入。 |
+| `pkg/mobile_heg/skills/heyi.lua`、`pkg/formation/skills/tianfu.lua`、`pkg/formation/skills/niaoxiang.lua` | 参考阵法来源刷新、主将标签及逐目标入口。汉晋的实际效果分别见[鹤翼](zhen/wei018.md#wei018-2)、[天覆](zhen/shu012.md#shu012-2)、[鸟翔](zhen/wu017.md#wu017-2)。 |
+| `pkg/hegemony_nos/skills/huyuan.lua`、`pkg/formation/skills/{qianhuan,shengxi,shoucheng}.lua` | 参考装备置入、目标取消、阶段和移牌事件。[护援](zhen/wei018.md#wei018-1)、[千幻](zhen/qun011.md#qun011-1)、[生息](zhen/shu018b.md#shu018b-1)、[守成](zhen/shu018b.md#shu018b-2)各自记录汉晋使用的条件和后续。 |
+| `pkg/mobile_heg/skills/chuanxin.lua`、`pkg/momentum/skills/{hongfa,yingyang}.lua` | 区分上游穿心的伤害后入口，参考旗来源和拼点点数修改。[穿心](shi/qun024.md#qun024-1)、[弘法](shi/em-qun010.md#em-qun010-1)及[鹰扬](shi/wu010.md#wu010-2)按各自规则进入。 |
 
 ## 验证依据
 

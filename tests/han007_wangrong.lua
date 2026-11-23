@@ -1,6 +1,6 @@
 -- HAN007 王荣：敏思、追德。默认国战套件用例（加入 tests/all.lua 后生效）。
 -- 规则依据：docs/rules/generals/han007-wangrong.md、docs/rules/general-principles.md。
--- 验收依据：docs/development/implementation/generals/support.md#han007-1、damage.md#han007-2。
+-- 验收依据：docs/development/implementation/generals/standard/han007.md#han007-1、docs/development/implementation/generals/standard/han007.md#han007-2。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 
