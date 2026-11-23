@@ -76,6 +76,28 @@ function Testqiao_wu017_jiangqin:testFormalRegistration()
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(JIANGQIN)) end)
 end
 
+function Testqiao_wu017_jiangqin:testClientPlayCardChecksShangyiTargets()
+  local room, actor = FkTest.room, p(1)
+  inRoom(function() room:setPlayerProperty(actor, "phase", Player.Play) end)
+
+  local function checkButton(expected)
+    FkTest.runInClient(function()
+      local client = Fk:currentRoom()
+      local me = client:getPlayerById(actor.id)
+      local handler = client.request_handlers.PlayCard:new(me)
+      lu.assertEquals(handler:skillButtonValidity(SHANGYI), expected)
+    end)
+  end
+
+  checkButton(true)
+  inRoom(function()
+    for _, other in ipairs(room.players) do
+      if other ~= actor then room:setPlayerMark(other, MarkEnum.PlayerRemoved .. "-turn", 1) end
+    end
+  end)
+  checkButton(false)
+end
+
 function Testqiao_wu017_jiangqin:testShangyiActiveViewsAndDiscardsOnePerBlackSuit()
   local room, player, target = FkTest.room, p(1), p(2)
   give(player, "qiao__jink", Card.Heart, 2)

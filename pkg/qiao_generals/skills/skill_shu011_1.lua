@@ -24,69 +24,6 @@ local function hasArmor(player)
   return #player:getEquipments(Card.SubtypeArmor) > 0
 end
 
-local function isJink(pattern)
-  return pattern ~= nil
-    and Exppattern:Parse(pattern):matchExp("jink|0|nosuit|none")
-end
-
---- 暗将/预亮状态：八阵仍是假技能但已可触发；明置后交给正式八卦阵技能。
-local function hiddenBazhen(player)
-  return player:isFakeSkill(Fk.skills[skill.name]) and player:hasSkill(skill.name)
-end
-
---- 直接调用正式八卦阵技能的判定/提供闪效果，以八阵为发动来源；
---- SkillEffect 在进入 on_use 前会按 main_skill 自动明置八阵。
-local function delegateToArmor(event, target, player, data)
-  local armor = Fk.skills[ARMOR_SKILL]
-  if armor ~= nil and armor.use ~= nil then
-    return armor.use(armor, event, target, player, data)
-  end
-end
-
-skill:addEffect(fk.AskForCardUse, {
-  is_delay_effect = true,
-  can_trigger = function(self, event, target, player, data)
-    return target == player and hiddenBazhen(player) and not hasArmor(player)
-      and isJink(data.pattern)
-      and not player:prohibitUse(Fk:cloneCard("qiao__jink"))
-      and (data.extraData == nil or data.extraData == {} or data.extraData.not_passive ~= true)
-  end,
-  on_cost = function(self, event, target, player, data)
-    local ok = player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu011_1-reveal_jink",
-    })
-    if not ok then return false end
-    player:revealBySkillName(skill.name)
-    -- 明置被禁止或失败时不能脱离八阵来源白得八卦阵。
-    return player:hasShownSkill(skill.name)
-  end,
-  on_use = function(self, event, target, player, data)
-    delegateToArmor(event, target, player, data)
-  end,
-})
-
-skill:addEffect(fk.AskForCardResponse, {
-  is_delay_effect = true,
-  can_trigger = function(self, event, target, player, data)
-    return target == player and hiddenBazhen(player) and not hasArmor(player)
-      and isJink(data.pattern)
-      and not player:prohibitResponse(Fk:cloneCard("qiao__jink"))
-  end,
-  on_cost = function(self, event, target, player, data)
-    local ok = player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu011_1-reveal_jink",
-    })
-    if not ok then return false end
-    player:revealBySkillName(skill.name)
-    return player:hasShownSkill(skill.name)
-  end,
-  on_use = function(self, event, target, player, data)
-    delegateToArmor(event, target, player, data)
-  end,
-})
-
 local function sync(room, player)
   if room == nil or player == nil or player.dead then return end
   if Fk.skills[ARMOR_SKILL] == nil then return end
@@ -143,7 +80,6 @@ end)
 Fk:loadTranslationTable {
   ["qiao__skill_shu011_1"] = "八阵",
   [":qiao__skill_shu011_1"] = "锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。",
-  ["#qiao__skill_shu011_1-reveal_jink"] = "八阵：明置八阵并视为装备【八卦阵】，进行判定",
 }
 
 return skill

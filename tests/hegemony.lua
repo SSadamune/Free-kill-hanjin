@@ -56,7 +56,9 @@ function Testqiao_hegemony:testRemoveDeputyPreservesMaxHp()
   local room = FkTest.room
   local me = room.players[1]
   local maxHp = me.maxHp
+  local oldDeputy = me:getMark("__heg_deputy")
   FkTest.runInRoom(function() H.removeGeneral(me, true) end)
+  lu.assertTrue(table.contains(room.general_pile, oldDeputy), "上游国战按原规则归还旧将")
   lu.assertEquals(me.deputyGeneral, "blank_shibing")
   lu.assertEquals(me:getMark("__heg_deputy"), "blank_shibing")
   lu.assertEquals(me.maxHp, maxHp)

@@ -52,7 +52,8 @@ local function otherSource(player,skill,source)
   end
   return false
 end
-local function detach(room,player,name,source)
+--- 撤回这一份派生来源。角色仍有同名来源时，保留关联技能及无效状态。
+function M.detachSource(room,player,name,source,noTrigger)
   local skill=Fk.skills[name]
   local list=player.derivative_skills[source]
   if not list or not table.contains(list,skill) then return end
@@ -60,7 +61,7 @@ local function detach(room,player,name,source)
     table.removeOne(list,skill)
     if #list==0 then player.derivative_skills[source]=nil end
   else
-    room:handleAddLoseSkills(player,"-"..name,source,false,false)
+    room:handleAddLoseSkills(player,"-"..name,source,false,noTrigger or false)
   end
 end
 function M.grant(room,generalName,skillName)
@@ -120,7 +121,7 @@ function M.sync(room)
       end
       local prior=table.simpleClone(player.derivative_skills[source] or {})
       for _,skill in ipairs(prior) do
-        if not desired[skill.name] then detach(room,player,skill.name,source) end
+        if not desired[skill.name] then M.detachSource(room,player,skill.name,source) end
       end
       for name in pairs(previous[player.id] or {}) do
         if not hidden[name] and not printedAt(player,name,true) and player:isFakeSkill(name) then

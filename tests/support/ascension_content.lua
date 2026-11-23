@@ -53,6 +53,7 @@ local G = {
   loyalty_simple = general("loyalty_simple", "wei", 5),
   wild_dual = general("wild_dual", "wild", 4),
   loyalty_dual = general("loyalty_dual", "wei", 4, { subkingdom = "jin" }),
+  jin_shu_deputy = general("jin_shu_deputy", "jin", 4, { subkingdom = "shu", total_hidden = true }),
   wild_blocked = general("wild_blocked", "wild", 4),
   loyalty_blocked = general("loyalty_blocked", "shu", 4),
 }

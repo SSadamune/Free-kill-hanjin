@@ -17,6 +17,8 @@ local KingdomSize = require "packages.qiao.pkg.qiao_mode.rules.kingdom_size"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_cards"
+local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
+local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local W = require "ui_emu.preferences"
 local M = {}
 
@@ -24,6 +26,7 @@ local M = {}
 function M.installRules()
   KingdomSize.install()
   Ascension.installFoundingCountries()
+  FaqRules.install()
 end
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
@@ -185,8 +188,15 @@ function M.create(base, name)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      if collection then
+        local settings = self.room.settings
+        settings._mode = settings._mode or {}
+        settings._mode.generalTimeout = settings._mode.generalTimeout or Selection.defaultTimeout
+      end
       RemovedTargets.installServer(self.room)
       MandatoryCards.install(self.room)
+      FaqRules.installServer(self.room)
+      SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)
       self.room:addSkill(WeiHistory.HISTORY_SKILL)
@@ -195,7 +205,6 @@ function M.create(base, name)
       self.room:addSkill(WuHistory.DISTANCE_SKILL)
       self.room:addSkill("qiao__wu_turn_effects")
       self.room:addSkill("qiao__wu_dimeng_expiry")
-      self.room:addSkill("qiao__shu_hidden_prelight")
       self.room:addSkill("#qiao_initial_prelight")
       self.room:addSkill("#qiao_minsi_display")
       self.room:addSkill("qiao__shu_lieyong_bonus")
@@ -341,6 +350,14 @@ function M.create(base, name)
     table.insert(ruleSettings, 1, W.SwitchRow {
       _settingsKey = Variants.key, title = "qiao_wolves",
       value = function(settings) return modeOf(settings)[Variants.key] == true end,
+    })
+    table.insert(ruleSettings, 2, W.ComboRow {
+      _settingsKey = FaqRules.seatLuckSetting, title = FaqRules.seatLuckSetting,
+      model = { FaqRules.seatLuckNone, FaqRules.seatLuckCard },
+      value = function(settings)
+        return modeOf(settings)[FaqRules.seatLuckSetting] == FaqRules.seatLuckCard
+          and FaqRules.seatLuckCard or FaqRules.seatLuckNone
+      end,
     })
   end
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))

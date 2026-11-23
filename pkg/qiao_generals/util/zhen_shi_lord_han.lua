@@ -1,4 +1,5 @@
 -- EM(HAN001) 君刘协的诏书公共入口。诏书是特殊标记/公开旗堆，不是实体牌。
+local H = require "packages.hegemony.util"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 
@@ -88,6 +89,7 @@ function M.grant(room, player)
   if holder ~= nil then return holder == player end
   room:setPlayerMark(player, M.MARK, 1)
   M.sync(room)
+  M.syncTricks(room)
   return true
 end
 
@@ -97,10 +99,10 @@ end
 
 function M.isSameKingdom(lord, player)
   if lord == nil or player == nil then return false end
-  local kingdom = lord.kingdom
-  if kingdom ~= "unknown" then return player.kingdom == kingdom end
-  kingdom = lord:getMark("__heg_kingdom")
-  return type(kingdom) == "string" and player.kingdom == kingdom
+  if lord == player then return true end
+  local kingdom = H.getKingdom(lord)
+  if not kingdom or kingdom == "" or kingdom == "wild" or kingdom == "hidden" then return false end
+  return H.compareKingdomWith(lord, player)
 end
 
 --- 本局不可用的常规势力集合（候选外与禁选合并）。

@@ -147,8 +147,12 @@ end
 local function settleCard(room, card)
   -- 前段：未触发过效果（本回合不是因使用进入弃牌堆）的实体，先补效果。
   if card:getMark(TRIGGERED) == 0 then
-    for _, target in ipairs(presentUndetermined(room)) do
-      doImperialOrder(room, target)
+    local targets = presentUndetermined(room)
+    room:sortByAction(targets)
+    for _, target in ipairs(targets) do
+      if isPresent(target) and target.kingdom == "unknown" then
+        doImperialOrder(room, target)
+      end
     end
   end
   -- 后段：全场势力均已确定时，本实体移出游戏，当前回合角色获得诏书。

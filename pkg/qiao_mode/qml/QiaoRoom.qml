@@ -9,6 +9,53 @@ Room {
   id: room
   property var mountDistanceLabels: ({})
   property bool guestIllustrations: false
+  property int pileActionRevision: 0
+  property int ciRevision: 0
+
+  function ciCardsForDisplay(playerId) {
+    room.ciRevision;
+    const cards = JSON.parse(Lua.ev(`json.encode(ClientInstance:ciCardsForDisplay(${playerId}))`));
+    return cards === false ? null : Array.from(cards);
+  }
+
+  Component { id: ciMark; CiMarkButton {} }
+  Component { id: ciPile; CiPile {} }
+
+  function refreshPileActions() {
+    ++pileActionRevision;
+  }
+
+  function refreshStateSkillButtons() {
+    const model = dataModel.dashboard;
+    const names = Array.from(model.fakeSkills, skill => skill.origName);
+    for (const name of names) {
+      if (name === "reveal_skill&" || Lua.ev(`ClientInstance:isStateOnlySkill(${JSON.stringify(name)})`)) {
+        model.loseSkill(name, true);
+        model.addSkill(name, false);
+      }
+    }
+  }
+
+  function refreshSkillButtonLabels() {
+    const dashboard = dataModel.dashboard;
+    const updateLabel = skill => {
+      if (skill.name.length < 4) return true;
+      const label = Lua.ev(`ClientInstance:skillButtonLabel(${JSON.stringify(skill.origName)}, ${JSON.stringify(skill.name)}, ${skill.isPrelight})`);
+      if (label === false) return false;
+      if (typeof label === "string" && label !== skill.name) skill.name = label;
+      return true;
+    };
+    const visibleSkills = Array.from(dashboard.skills).filter(updateLabel);
+    if (visibleSkills.length !== dashboard.skills.length)
+      dashboard.skills = visibleSkills;
+    for (const skill of dashboard.fakeSkills) updateLabel(skill);
+  }
+
+  Connections {
+    target: room.dataModel.dashboard
+    function onSkillsChanged() { Qt.callLater(room.refreshSkillButtonLabels); }
+    function onFakeSkillsChanged() { Qt.callLater(room.refreshSkillButtonLabels); }
+  }
 
   Column {
     id: openingCountdown
@@ -97,6 +144,16 @@ Room {
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
       bindGuestPortraits(photo);
+      const marks = photo?.picMarkArea;
+      if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
+        const button = ciMark.createObject(marks, {
+          cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
+        });
+        button.clicked.connect(() => room.showInfoPopup(ciPile, {
+          holderId: photo.playerid, name: "@[qiao_ci]",
+          cardNames: Qt.binding(() => button.cards ?? []),
+        }));
+      }
       const area = photo?.areasSealed;
       if (!area || area.children.some(child => child.objectName === "qiaoDualMountRow"))
         continue;
@@ -143,6 +200,9 @@ Room {
   }
 
   Component.onCompleted: {
+    addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
+    addCallback("QiaoRefreshStateSkillButtons", room.refreshStateSkillButtons);
+    addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {
       const duration = Number(data[0]);
       if (duration > 0) {
@@ -168,5 +228,6 @@ Room {
       }
     });
     Qt.callLater(bindPhotoExtras);
+    Qt.callLater(refreshSkillButtonLabels);
   }
 }
