@@ -8,7 +8,7 @@
 | --- | --- |
 | 房间与开局 | [模式设置、选将和后置位手气卡](mode-rules.md#房间与开局) · [势力禁选](faction-ban.md) · [客将、配将与重抽](guest-factions.md) · [配将体力](mode-rules.md#配将体力) |
 | 势力与身份 | [人数上限与首次奖励](mode-rules.md#势力与身份) · [野心家效忠](wild-allegiance.md) · [第二君主升变与继位](second-lord.md) |
-| 武将牌与技能来源 | [明暗置接线](mode-rules.md#明暗置) · [交换与后天附将技能](general-exchange.md) · [变更、移除与武将弃牌堆](general-exchange.md#变更移除与武将弃牌堆) · [统领能力与翼从效果](commander-retinue.md) |
+| 武将牌与技能来源 | [明暗置接线](mode-rules.md#明暗置) · [交换与后天附将技能](general-exchange.md) · [变更、移除与武将弃牌堆](general-exchange.md#变更移除与武将弃牌堆) · [牌类标记生命周期](general-exchange.md#牌类标记生命周期) · [统领能力与翼从效果](commander-retinue.md) |
 | 对局时序与状态 | [轮次、回合、阶段与死亡](mode-rules.md#轮次回合阶段与死亡) · [移出游戏](mode-rules.md#移出游戏) · [阵法召唤](mode-rules.md#阵法召唤) · [标记上限](mode-rules.md#标记上限) |
 | 用牌与结算 | [用牌目标](card-use-targets.md) · [额外目标](extra-targets.md) · [多次结算](card-resolution.md) · [自由用牌](mode-rules.md#自由用牌) · [拼点入口](mode-rules.md#拼点入口) · [只能当](only-as.md) · [应变](adaptation.md) · [鏖战](battle-royal.md) |
 
