@@ -38,7 +38,7 @@ function Testqiao_jin023_malong:testSkillsRegistered()
   lu.assertNotNil(Fk.skills["qiao__skill_jin023_2"])
 end
 
-function Testqiao_jin023_malong:testFengxieSwapsToHandsThenUsesSlash()
+function Testqiao_jin023_malong:testFengxieSwapsAcrossOpenSlotsThenUsesSlash()
   local me, target = p(1), p(2)
   local mine, theirs, targetJink
   inRoom(function()
@@ -64,14 +64,63 @@ function Testqiao_jin023_malong:testFengxieSwapsToHandsThenUsesSlash()
       from = me, tos = { me, target },
     })
   end)
-  lu.assertEquals(FkTest.room:getCardArea(mine), Card.PlayerHand)
-  lu.assertEquals(FkTest.room:getCardArea(theirs), Card.PlayerHand)
+  lu.assertEquals(FkTest.room:getCardArea(mine), Card.PlayerEquip)
+  lu.assertEquals(FkTest.room:getCardArea(theirs), Card.PlayerEquip)
   lu.assertIs(FkTest.room:getCardOwner(mine), target)
   lu.assertIs(FkTest.room:getCardOwner(theirs), me)
-  lu.assertEquals(#me:getCardIds("e"), 0)
-  lu.assertEquals(#target:getCardIds("e"), 0)
+  lu.assertEquals(me:getCardIds("e"), { theirs })
+  lu.assertEquals(target:getCardIds("e"), { mine })
   lu.assertEquals(FkTest.room:getCardArea(targetJink), Card.DiscardPile,
     "目标用【闪】响应，证明虚拟杀真实进入使用/响应流程")
+end
+
+function Testqiao_jin023_malong:testFengxieFitsOccupiedSlotsAndExcludesUserFromQueue()
+  local room, me, other, third = FkTest.room, p(1), p(2), p(3)
+  local name = "qiao__skill_jin023_1"
+  local sword, otherSword, armor
+  local chooseCalls, queued = 0, false
+  inRoom(function()
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    sword = room:printCard("qiao__qinggang_sword", Card.Spade, 2)
+    otherSword = room:printCard("qiao__axe", Card.Spade, 3)
+    armor = room:printCard("qiao__eight_diagram", Card.Club, 2)
+    room:moveCardIntoEquip(me, sword.id, name, false, me)
+    room:moveCardIntoEquip(me, armor.id, name, false, me)
+    room:moveCardIntoEquip(other, otherSword.id, name, false, me)
+    local formation = require("packages.hegemony.util").getFormationRelation(other)
+    lu.assertTrue(table.contains(formation, me) and table.contains(formation, third))
+    for _, target in ipairs({ other, third }) do
+      local hand = target:getCardIds("h")
+      if #hand > 0 then room:moveCardTo(hand, Card.DiscardPile, nil, fk.ReasonJustMove) end
+      FkTest.setNextReplies(target, { "" })
+    end
+  end)
+  local meHp, otherHp, thirdHp = me.hp, other.hp, third.hp
+  skill_test.withSkillRequests(room, name, {
+    askToChooseCard = function()
+      chooseCalls = chooseCalls + 1
+      return armor.id
+    end,
+    askToChoice = function()
+      queued = true
+      return "queue"
+    end,
+  }, function()
+    inRoom(function()
+      Fk.skills[name]:onUse(room, { from = me, tos = { me, other } })
+    end)
+  end)
+  lu.assertEquals(chooseCalls, 0, "同栏武器是唯一合法组合，防具无需询问")
+  lu.assertTrue(queued)
+  lu.assertIs(room:getCardOwner(sword.id), other)
+  lu.assertIs(room:getCardOwner(otherSword.id), me)
+  lu.assertIs(room:getCardOwner(armor.id), me)
+  lu.assertEquals(room:getCardArea(armor.id), Card.PlayerEquip)
+  lu.assertEquals(me.hp, meHp)
+  lu.assertTrue(other.hp < otherHp)
+  lu.assertTrue(third.hp < thirdHp)
 end
 
 function Testqiao_jin023_malong:testZhuixingAttackAndDefenseInSiege()

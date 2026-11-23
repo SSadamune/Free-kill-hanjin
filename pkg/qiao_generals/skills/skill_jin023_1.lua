@@ -1,5 +1,5 @@
 -- JIN023 马隆 · 锋械
--- 出牌阶段限一次：两名角色各一张装备先进入处理区，再分别进入对方手牌区；
+-- 出牌阶段限一次：两名角色各一张装备先进入处理区，再进入对方装备区；
 -- 若其中一名为自己，随后对另一名或其队列视为使用【杀】。
 local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
@@ -15,31 +15,54 @@ local function equipIds(player)
   return player:getCardIds("e")
 end
 
-local function hasTwoEquipped(room, player)
-  local count = 0
-  for _, p in ipairs(room:getPresentPlayers()) do
-    if not p.dead and not p:isRemoved() and #equipIds(p) > 0 then
-      count = count + 1
-    end
+local function canReceive(player, card, outgoing)
+  local function hasRoom(subtype)
+    local equips = player:getEquipments(subtype)
+    local remaining = #equips - (table.contains(equips, outgoing) and 1 or 0)
+    return #player:getAvailableEquipSlots(subtype) > remaining
   end
-  return count >= 2
+  if Fk.packages.qiao_cards.qiao_cards.isDualMount(card) then
+    return hasRoom(Card.SubtypeOffensiveRide) and hasRoom(Card.SubtypeDefensiveRide)
+  end
+  return hasRoom(card.sub_type)
 end
 
-local function chooseEquip(room, chooser, target)
-  local ids = equipIds(target)
+local function secondCandidates(a, b, idA)
+  local cardA = a:getVirtualEquip(idA) or Fk:getCardById(idA)
+  return table.filter(equipIds(b), function(idB)
+    local cardB = b:getVirtualEquip(idB) or Fk:getCardById(idB)
+    return canReceive(b, cardA, idB) and canReceive(a, cardB, idA)
+  end)
+end
+
+local function firstCandidates(a, b)
+  return table.filter(equipIds(a), function(id)
+    return #secondCandidates(a, b, id) > 0
+  end)
+end
+
+local function canExchangeWithSomeone(room, target)
+  return table.find(room:getPresentPlayers(), function(other)
+    return other ~= target and #firstCandidates(target, other) > 0
+  end) ~= nil
+end
+
+local function chooseEquip(room, chooser, target, ids)
+  if #ids == 0 then return end
   if #ids == 1 then return ids[1] end
-  return room:askToChooseCard(chooser, {
+  local id = room:askToChooseCard(chooser, {
     target = target,
-    flag = "e",
+    flag = { card_data = { { "$Equip", ids } } },
     skill_name = skill.name,
-    prompt = "#qiao__skill_jin023_1-equip::" .. target.id,
+    prompt = "#qiao__skill_jin023_1-equip::" .. target.id .. ":" .. skill.name,
   })
+  if table.contains(ids, id) then return id end
 end
 
-local function queueTargets(other)
+local function queueTargets(other, user)
   local result = { other }
   for _, p in ipairs(H.getFormationRelation(other) or {}) do
-    if p ~= other and not p.dead and not p:isRemoved() then table.insertIfNeed(result, p) end
+    if p ~= other and p ~= user and not p.dead and not p:isRemoved() then table.insertIfNeed(result, p) end
   end
   return result
 end
@@ -50,59 +73,39 @@ skill:addEffect("active", {
   card_num = 0,
   max_phase_use_time = 1,
   can_use = function(self, player)
-    return player.phase == Player.Play and not player.dead
-      and hasTwoEquipped(Fk:currentRoom(), player)
+    if player.phase ~= Player.Play or player.dead then return false end
+    local room = Fk:currentRoom()
+    return table.find(room:getPresentPlayers(), function(target)
+      return #equipIds(target) > 0 and canExchangeWithSomeone(room, target)
+    end) ~= nil
   end,
   target_filter = function(self, player, to_select, selected)
-    return #selected < 2 and to_select ~= nil and not to_select.dead
-      and not to_select:isRemoved() and #equipIds(to_select) > 0
-      and not table.contains(selected, to_select)
+    if #selected >= 2 or to_select == nil or to_select.dead or to_select:isRemoved()
+      or #equipIds(to_select) == 0 or table.contains(selected, to_select) then return false end
+    if #selected == 1 then return #firstCandidates(selected[1], to_select) > 0 end
+    return canExchangeWithSomeone(Fk:currentRoom(), to_select)
   end,
   on_use = function(self, room, effect)
     local player = effect.from
     local targets = effect.tos or {}
     if player == nil or player.dead or #targets ~= 2 then return end
     local a, b = targets[1], targets[2]
-    if a == nil or b == nil or a == b or a.dead or b.dead then return end
+    if a == nil or b == nil or a == b or a.dead or b.dead or a:isRemoved() or b:isRemoved() then return end
 
-    local idA = chooseEquip(room, player, a)
-    local idB = chooseEquip(room, player, b)
-    if idA == nil or idB == nil or idA == -1 or idB == -1 then return end
-    if not table.contains(equipIds(a), idA) or not table.contains(equipIds(b), idB) then return end
-
-    -- 两张牌先同时移至处理区；随后分别进入对方手牌区，不是互相安装。
-    room:moveCards({
-      ids = { idA },
-      from = a,
-      toArea = Card.Processing,
-      moveReason = fk.ReasonJustMove,
-      skillName = skill.name,
-      proposer = player,
-    }, {
-      ids = { idB },
-      from = b,
-      toArea = Card.Processing,
-      moveReason = fk.ReasonJustMove,
-      skillName = skill.name,
-      proposer = player,
-    })
-    -- 交换指定的两张牌：处理区后同时移入对方手牌。
-    room:moveCards({
-      ids = { idA }, to = b, toArea = Card.PlayerHand,
-      moveReason = fk.ReasonExchange, skillName = skill.name, proposer = player,
-      moveVisible = true,
-    }, {
-      ids = { idB }, to = a, toArea = Card.PlayerHand,
-      moveReason = fk.ReasonExchange, skillName = skill.name, proposer = player,
-      moveVisible = true,
-    })
+    local idA = chooseEquip(room, player, a, firstCandidates(a, b))
+    if idA == nil or not table.contains(equipIds(a), idA) then return end
+    local idB = chooseEquip(room, player, b, secondCandidates(a, b, idA))
+    if idB == nil or a.dead or b.dead or a:isRemoved() or b:isRemoved()
+      or not table.contains(equipIds(a), idA)
+      or not table.contains(secondCandidates(a, b, idA), idB) then return end
+    room:swapCards(player, { { a, { idA } }, { b, { idB } } }, skill.name, Card.PlayerEquip)
 
     local other
     if a == player then other = b elseif b == player then other = a end
     if other == nil or other.dead or other:isRemoved() then return end
 
     local targetsForSlash = { other }
-    local queue = queueTargets(other)
+    local queue = queueTargets(other, player)
     if #queue > 1 then
       local choice = room:askToChoice(player, {
         choices = { "single", "queue" },
@@ -113,7 +116,7 @@ skill:addEffect("active", {
       if choice == "queue" then targetsForSlash = queue end
     end
 
-    local policy = C.explicit({}, {
+    local policy = C.explicit({ other_roles = true }, {
       names = { SLASH },
       min_targets = 1,
       max_targets = #targetsForSlash,

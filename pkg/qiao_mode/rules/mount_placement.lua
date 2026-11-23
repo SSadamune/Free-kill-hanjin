@@ -1,6 +1,7 @@
 -- 主动置入坐骑允许替换；移动到场上或置于空栏的效果不经过这个入口。
 local M = {}
 M.REPLACE = "qiao_replace_ride"
+M.REPLACEMENT_CARD = "qiao_replacement_ride_id"
 
 local function dual(card)
   return Fk.packages.qiao_cards.qiao_cards.isDualMount(card)
