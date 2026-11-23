@@ -16,7 +16,7 @@ skill:addLoseEffect(function(self, player) Flags.refresh(player, self.name) end)
 
 skill:addEffect("atkrange", {
   correct_func = function(self, from)
-    if from == nil or not from:hasSkill(P.FLAG) then return 0 end
+    if not P.flagActive(from) then return 0 end
     return P.count(from)
   end,
 })
@@ -104,7 +104,7 @@ skill:addEffect(fk.Damaged, {
   anim_type = "defensive",
   can_trigger = function(self, event, target, player, data)
     if target ~= player or data == nil then return false end
-    if player.dead or not player:hasSkill(P.FLAG) then return false end
+    if not P.flagActive(player) then return false end
     -- 伤害渠道必须是牌：不含单纯失去体力，铁索传导沿用原伤害的牌渠道。
     if data.card == nil or data.prevented or (data.damage or 0) < 1 then return false end
     return P.count(player) > 0

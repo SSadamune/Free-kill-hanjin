@@ -1,26 +1,26 @@
 # 魏势力标准包：逐将检索与验证入口
 
-本页是魏势力标准包 15 将 25 技能与并州狼骑、虎卫军、牛金 3 张魏关联翼从的逐将检索入口，统一列出编号、运行时 ID、源码、逐技能实现详情与验证依据；技能正文只在机制页维护一份，本页不重复。规则表见[标准武将表](../../../rules/standard-generals.md)，牌面数据来源为 `assets/docs/石激桑武将列表.json`（外部资料只读），逐将裁定以 `docs/rules/generals/` 的已确认文件为准，不替代规则条文。当前完成度见[开发状态](../../status.md)。
+本页是魏势力标准包 15 将 25 技能与并州狼骑、虎卫军、牛金 3 张魏关联翼从的逐将检索入口，武将和卡面技能链接到逐将页，运行时 ID、源码和验证依据随对应条目维护。规则表见[标准武将表](../../../rules/standard-generals.md)，牌面数据来源为 `assets/docs/石激桑武将列表.json`（外部资料只读），逐将裁定以 `docs/rules/generals/` 的已确认文件为准，不替代规则条文。当前完成度见[开发状态](../../status.md)。
 
 ## 1. 逐将表
 
-| 编号 | 武将 | 技能 | 运行时 ID | 源码 | 实现详情 | 验证 |
-| --- | --- | --- | --- | --- | --- | --- |
-| WEI001 | 曹操 | 奸雄 | `qiao_heg__wei001` | [skill_wei001_1](../../../../pkg/qiao_generals/skills/skill_wei001_1.lua) | [奸雄](damage.md#wei001-1) | [wei_damage](../../../../tests/wei_damage.lua) |
-| WEI002 | 司马懿 | 狼顾、鹰视、应期 | `qiao_heg__wei002` | [skill_wei002_1](../../../../pkg/qiao_generals/skills/skill_wei002_1.lua)、[skill_wei002_2](../../../../pkg/qiao_generals/skills/skill_wei002_2.lua)、[skill_wei002_3](../../../../pkg/qiao_generals/skills/skill_wei002_3.lua) | [狼顾](damage.md#wei002-1)、[鹰视](retrial.md#wei002-2)、[应期](pair-hp.md#wei002-3) | [wei_damage](../../../../tests/wei_damage.lua)、[wei_retrial](../../../../tests/wei_retrial.lua)、[wei_pair_hp](../../../../tests/wei_pair_hp.lua) |
-| WEI003 | 夏侯惇 | 刚烈、持重 | `qiao_heg__wei003` | [skill_wei003_1](../../../../pkg/qiao_generals/skills/skill_wei003_1.lua)、[skill_wei003_2](../../../../pkg/qiao_generals/skills/skill_wei003_2.lua) | [刚烈](damage.md#wei003-1)、[持重](support.md#wei003-2) | [wei_damage](../../../../tests/wei_damage.lua)、[wei_support](../../../../tests/wei_support.lua) |
-| WEI004 | 张辽 | 突袭 | `qiao_heg__wei004` | [skill_wei004_1](../../../../pkg/qiao_generals/skills/skill_wei004_1.lua) | [突袭](support.md#wei004-1) | [wei_support](../../../../tests/wei_support.lua) |
-| WEI005 | 许褚 | 裸衣 | `qiao_heg__wei005` | [skill_wei005_1](../../../../pkg/qiao_generals/skills/skill_wei005_1.lua) | [裸衣](damage.md#wei005-1) | [wei_damage](../../../../tests/wei_damage.lua) |
-| WEI006 | 郭嘉 | 轻辎、遗计 | `qiao_heg__wei006` | [skill_wei006_1](../../../../pkg/qiao_generals/skills/skill_wei006_1.lua)、[skill_wei006_2](../../../../pkg/qiao_generals/skills/skill_wei006_2.lua) | [轻辎](support.md#wei006-1)、[遗计](damage.md#wei006-2) | [wei_phases](../../../../tests/wei_phases.lua)、[wei_damage](../../../../tests/wei_damage.lua) |
-| WEI007 | 甄姬 | 倾国、洛神 | `qiao_heg__wei007` | [skill_wei007_1](../../../../pkg/qiao_generals/skills/skill_wei007_1.lua)、[skill_wei007_2](../../../../pkg/qiao_generals/skills/skill_wei007_2.lua) | [倾国](conversion.md#wei007-1)、[洛神](retrial.md#wei007-2) | [wei_phases](../../../../tests/wei_phases.lua) |
-| WEI008 | 夏侯渊 | 神速、设变 | `qiao_heg__wei008` | [skill_wei008_1](../../../../pkg/qiao_generals/skills/skill_wei008_1.lua)、[skill_wei008_2](../../../../pkg/qiao_generals/skills/skill_wei008_2.lua) | [神速](phases.md#wei008-1)、[设变](support.md#wei008-2) | [wei_phases](../../../../tests/wei_phases.lua) |
-| WEI009 | 张郃 | 巧变 | `qiao_heg__wei009` | [skill_wei009_1](../../../../pkg/qiao_generals/skills/skill_wei009_1.lua) | [巧变](phases.md#wei009-1) | [wei_phases](../../../../tests/wei_phases.lua) |
-| WEI010 | 徐晃 | 断粮、长驱 | `qiao_heg__wei010` | [skill_wei010_1](../../../../pkg/qiao_generals/skills/skill_wei010_1.lua)、[skill_wei010_2](../../../../pkg/qiao_generals/skills/skill_wei010_2.lua) | [断粮](conversion.md#wei010-1)、[长驱](active.md#wei010-2) | [wei_phases](../../../../tests/wei_phases.lua)、[wei_active](../../../../tests/wei_active.lua) |
-| WEI011 | 曹仁 | 伪溃、励战 | `qiao_heg__wei011` | [skill_wei011_1](../../../../pkg/qiao_generals/skills/skill_wei011_1.lua)、[skill_wei011_2](../../../../pkg/qiao_generals/skills/skill_wei011_2.lua) | [伪溃](active.md#wei011-1)、[励战](support.md#wei011-2) | [wei_active](../../../../tests/wei_active.lua)、[wei_phases](../../../../tests/wei_phases.lua) |
-| WEI012 | 典韦 | 强袭 | `qiao_heg__wei012` | [skill_wei012_1](../../../../pkg/qiao_generals/skills/skill_wei012_1.lua) | [强袭](damage.md#wei012-1) | [wei_active](../../../../tests/wei_active.lua) |
-| WEI013 | 荀彧 | 驱虎、节命 | `qiao_heg__wei013` | [skill_wei013_1](../../../../pkg/qiao_generals/skills/skill_wei013_1.lua)、[skill_wei013_2](../../../../pkg/qiao_generals/skills/skill_wei013_2.lua) | [驱虎](pindian.md#wei013-1)、[节命](damage.md#wei013-2) | [wei_active](../../../../tests/wei_active.lua)、[wei_damage](../../../../tests/wei_damage.lua) |
-| WEI014 | 曹丕 | 行殇、放逐 | `qiao_heg__wei014` | [skill_wei014_1](../../../../pkg/qiao_generals/skills/skill_wei014_1.lua)、[skill_wei014_2](../../../../pkg/qiao_generals/skills/skill_wei014_2.lua) | [行殇](damage.md#wei014-1)、[放逐](support.md#wei014-2) | [wei_damage](../../../../tests/wei_damage.lua)、[wei_support](../../../../tests/wei_support.lua) |
-| WEI016 | 乐进 | 骁果 | `qiao_heg__wei016` | [skill_wei016_1](../../../../pkg/qiao_generals/skills/skill_wei016_1.lua) | [骁果](damage.md#wei016-1) | [wei_damage](../../../../tests/wei_damage.lua) |
+| 编号 | 武将 | 技能 |
+| --- | --- | --- |
+| WEI001 | [曹操](standard/wei001.md) | [奸雄](standard/wei001.md#wei001-1) |
+| WEI002 | [司马懿](standard/wei002.md) | [狼顾](standard/wei002.md#wei002-1)、[鹰视](standard/wei002.md#wei002-2)、[应期](standard/wei002.md#wei002-3) |
+| WEI003 | [夏侯惇](standard/wei003.md) | [刚烈](standard/wei003.md#wei003-1)、[持重](standard/wei003.md#wei003-2) |
+| WEI004 | [张辽](standard/wei004.md) | [突袭](standard/wei004.md#wei004-1)、[并州狼骑](standard/retinue-bingzhou-langqi.md#bingzhou-langqi)（关联翼从） |
+| WEI005 | [许褚](standard/wei005.md) | [裸衣](standard/wei005.md#wei005-1)、[虎卫军](standard/retinue-huweijun.md#huweijun)（关联翼从） |
+| WEI006 | [郭嘉](standard/wei006.md) | [轻辎](standard/wei006.md#wei006-1)、[遗计](standard/wei006.md#wei006-2) |
+| WEI007 | [甄姬](standard/wei007.md) | [倾国](standard/wei007.md#wei007-1)、[洛神](standard/wei007.md#wei007-2) |
+| WEI008 | [夏侯渊](standard/wei008.md) | [神速](standard/wei008.md#wei008-1)、[设变](standard/wei008.md#wei008-2) |
+| WEI009 | [张郃](standard/wei009.md) | [巧变](standard/wei009.md#wei009-1) |
+| WEI010 | [徐晃](standard/wei010.md) | [断粮](standard/wei010.md#wei010-1)、[长驱](standard/wei010.md#wei010-2) |
+| WEI011 | [曹仁](standard/wei011.md) | [伪溃](standard/wei011.md#wei011-1)、[励战](standard/wei011.md#wei011-2)、[牛金](standard/retinue-niujin.md#niujin)（关联翼从） |
+| WEI012 | [典韦](standard/wei012.md) | [强袭](standard/wei012.md#wei012-1)、[虎卫军](standard/retinue-huweijun.md#huweijun)（关联翼从） |
+| WEI013 | [荀彧](standard/wei013.md) | [驱虎](standard/wei013.md#wei013-1)、[节命](standard/wei013.md#wei013-2) |
+| WEI014 | [曹丕](standard/wei014.md) | [行殇](standard/wei014.md#wei014-1)、[放逐](standard/wei014.md#wei014-2) |
+| WEI016 | [乐进](standard/wei016.md) | [骁果](standard/wei016.md#wei016-1) |
 
 保留 `WEI016` 乐进及原编号缺号，不改运行时 ID。
 
@@ -28,16 +28,15 @@
 
 | 翼从 | 运行时 ID | 实现详情 | 验证 |
 | --- | --- | --- | --- |
-| 并州狼骑 | `qiao_heg__retinue_bingzhou_langqi` | [翼从专属技能](retinues.md#bingzhou-langqi)（多来源张辽／吕布，已在条目交叉注明） | [wei_retinues](../../../../tests/wei_retinues.lua) |
-| 虎卫军 | `qiao_heg__retinue_huweijun` | [翼从专属技能](retinues.md#huweijun) | [wei_retinues](../../../../tests/wei_retinues.lua) |
-| 牛金 | `qiao_heg__retinue_niujin` | [翼从专属技能](retinues.md#niujin) | [wei_retinues](../../../../tests/wei_retinues.lua) |
+| 并州狼骑 | `qiao_heg__retinue_bingzhou_langqi` | [翼从专属技能](standard/retinue-bingzhou-langqi.md#bingzhou-langqi)（多来源张辽／吕布，已在条目交叉注明） | [wei_retinues](../../../../tests/wei_retinues.lua) |
+| 虎卫军 | `qiao_heg__retinue_huweijun` | [翼从专属技能](standard/retinue-huweijun.md#huweijun) | [wei_retinues](../../../../tests/wei_retinues.lua) |
+| 牛金 | `qiao_heg__retinue_niujin` | [翼从专属技能](standard/retinue-niujin.md#niujin) | [wei_retinues](../../../../tests/wei_retinues.lua) |
 
 ## 3. 接线
 
 - [skills/](../../../../pkg/qiao_generals/skills)：25 个魏技能与 3 个翼从技能均 `qiaoImplemented = true`，骨架含 effect；`init.lua` 的加载断言会检查已实装条目确有 effect。应期只保留 `qiao__skill_wei002_3` 一份骨架，晋司马懿直接引用同一 ID，不另设薄包装；两处卡面文本统一为魏文本“☯️+2”。
 - [standard.lua](../../../../pkg/qiao_generals/data/standard.lua)：魏区 15 主称号与 25 技能原文已与 `docs/rules/standard-generals.md` 魏区及 `assets/docs/石激桑武将列表.json` 卡面核对，逐项差异为 0；其他势力数据未改。
 - [all.lua](../../../../tests/all.lua)：已追加 `wei_damage`、`wei_support`、`wei_phases`、`wei_pair_hp`、`wei_active`、`wei_retrial`、`wei_retinues` 7 个专项。
-- 本批实质修正：伪溃私看由全体展示 `room:showCards(hand, player)` 改为真实私看 `room:viewCards(player, { cards = hand, skill_name = ..., prompt = ... })`，测试记录收件角色与牌集；长驱不再使用私有 `room:getTag`，新增公开事实层（`qiao_wei_damage_targets`）与模式级 `fk.Damage` 记录器，客户端与服务端读同一公开数据；伪溃 `can_use` 要求 `player.hp >= 1`，强袭要求体力至少 1 或拥有可弃武器牌（失去体力消耗不得超过当前体力，不把有可弃武器的强袭一并限制为体力至少 1）；驱虎 `winner ~= player`（含平局／空结果）走真实视为【杀】分支；鹰视新增 `skill_wei002_2.lua`。
 - 共享模块与发布接线：
 
 | 内容 | 正式实现文件 | 接线与验证入口 |
@@ -56,28 +55,10 @@
 
 ## 4. 验证
 
-2026-11-14，DSH 工具原生检查确认以下专项全部通过；七个文件已加入默认国战套件：
-
-| 专项 | 用例数 | 核心覆盖 |
-| --- | --- | --- |
-| [wei_damage.lua](../../../../tests/wei_damage.lua) | 8 | 受伤事件与按点节命、遗计分配、裸衣持续、行殇牌区、骁果分支 |
-| [wei_support.lua](../../../../tests/wei_support.lua) | 3 | 持重数量与分配、突袭转换接线、放逐原生定向叠／平置 |
-| [wei_phases.lua](../../../../tests/wei_phases.lua) | 14 | 神速三时机、设变／巧变真实移牌、洛神一次性获得、轻辎来源与到期、倾国／断粮／励战 |
-| [wei_pair_hp.lua](../../../../tests/wei_pair_hp.lua) | 4 | 应期开局体力贡献、多势力／客将身份、升变复用 |
-| [wei_active.lua](../../../../tests/wei_active.lua) | 6 | 长驱同步标记与客户端读取、强袭、伪溃私看及真实用杀、驱虎平局真实拼点与用杀 |
-| [wei_retrial.lua](../../../../tests/wei_retrial.lua) | 2 | 鹰视真实判定与打出改判、禁止打出过滤 |
-| [wei_retinues.lua](../../../../tests/wei_retinues.lua) | 3 | 并州狼骑决斗来源／距离／次数、虎卫军他人回合移牌、牛金击杀奖励只结算一次 |
-
-最终验收命令与原生结果：
-
-- `python scripts/test.py --timeout 180`：608 项通过，0 失败，退出码 0。包含原有回归、新增魏包 40 项及正式将表新增的应期组合断言。
-- `python scripts/build_release.py`：构建 `.dev/dist/qiao.zip`，446 个文件，退出码 0。
-- Codex 核对发布包中魏区技能、三翼从、距离辅助骨架、共享工具及模式接线均与工作区一致，且不包含测试与开发脚本。
-
-各文件命令与日期见[共享验证证据](verification-evidence.md#魏区)；自动化和包内容核对不代替真实客户端点击、联网、重连及干净本体安装人工验收。
+按技能检索真实回归入口。整包测试、历史命令与当时的环境见[共享验证证据的魏区](verification-evidence.md#魏区)。当前验收及共通的人工待办见[开发状态](../../status.md#当前验收基线)。
 
 ## 5. 未完成与边界
 
 - 未逐项完成真实客户端点击、多人联网／重连和未应用开发适配的干净本体安装验收。
 - 定向用例验证主要效果及本批发现的实质问题；部分少见组合依赖既有公共机制覆盖，不宣称穷举所有边界。
-- 晋司马懿仅同步同文应期接线，其余晋技能不在魏包实装范围；应期正文见[配将体力](pair-hp.md#wei002-3)。
+- 晋司马懿仅同步同文应期接线，其余晋技能不在魏包实装范围；应期正文见[配将体力](standard/wei002.md#wei002-3)。

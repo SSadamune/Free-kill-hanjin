@@ -10,8 +10,9 @@ skill.qiaoImplemented = true
 local CARD = "qiao__dragon_phoenix"
 local GUARD = "qiao_em_shu001_tianyi_guard"
 
-local function isDragon(id)
-  local card = Fk:getCardById(id)
+local function ownedDragon(info)
+  if info.fromArea ~= Card.PlayerHand and info.fromArea ~= Card.PlayerEquip then return false end
+  local card = Fk:getCardById(info.cardId, true)
   return card ~= nil and card.name == CARD
 end
 
@@ -25,7 +26,7 @@ skill:addEffect(fk.BeforeCardsMove, {
       if move.from ~= nil and move.from ~= player
         and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile) then
         for _, info in ipairs(move.moveInfo or {}) do
-          if isDragon(info.cardId) then return true end
+          if ownedDragon(info) then return true end
         end
       end
     end
@@ -41,13 +42,13 @@ skill:addEffect(fk.BeforeCardsMove, {
         and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile) then
         local keep, taken = {}, {}
         for _, info in ipairs(move.moveInfo or {}) do
-          if isDragon(info.cardId) then table.insert(taken, info)
+          if ownedDragon(info) then table.insert(taken, info)
           else table.insert(keep, info) end
         end
         if #taken > 0 then
           move.moveInfo = keep
           if #keep == 0 then table.remove(data, index) end
-          table.insert(data, {
+          table.insert(data, MoveCardsData:new {
             from = move.from, to = player, toArea = Card.PlayerHand,
             moveReason = move.moveReason, proposer = move.proposer,
             moveVisible = false, moveInfo = taken,
@@ -59,15 +60,20 @@ skill:addEffect(fk.BeforeCardsMove, {
   end,
 })
 
+local function lostBy(move, player)
+  return move.from == player and move.moveReason ~= fk.ReasonUse
+    and not (move.to == player and (move.toArea == Card.PlayerHand or move.toArea == Card.PlayerEquip))
+end
+
 skill:addEffect(fk.AfterCardsMove, {
   global = true,
   can_trigger = function(self, event, target, player, data)
     if player == nil or player.dead or not player:hasSkill(skill.name) then return false end
     if player:getMark(GUARD) > 0 then return false end
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.moveReason ~= fk.ReasonUse then
+      if lostBy(move, player) then
         for _, info in ipairs(move.moveInfo or {}) do
-          if isDragon(info.cardId) then return true end
+          if ownedDragon(info) then return true end
         end
       end
     end
@@ -78,23 +84,20 @@ skill:addEffect(fk.AfterCardsMove, {
     local room = player.room
     room:setPlayerMark(player, GUARD, 1)
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.moveReason ~= fk.ReasonUse then
+      if lostBy(move, player) then
         for _, info in ipairs(move.moveInfo or {}) do
-          if isDragon(info.cardId) then
+          if ownedDragon(info) then
             local id = info.cardId
-            local area = room:getCardArea(id)
-            if area ~= Card.DrawPile then
-              room:showCards({ id }, player, player)
+            room:showCards({ id }, player, player)
+            if room.draw_pile[#room.draw_pile] ~= id then
               local owner = room:getCardOwner(id)
               room:moveCards {
                 ids = { id }, from = owner, toArea = Card.DrawPile,
                 drawPilePosition = -1, moveReason = fk.ReasonPut,
                 moveVisible = false,
               }
-              player:drawCards(2, skill.name)
             end
-            room:setPlayerMark(player, GUARD, 0)
-            return
+            if not player.dead then player:drawCards(2, skill.name) end
           end
         end
       end

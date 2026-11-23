@@ -8,7 +8,7 @@
 
 房间禁用由 `room_general_bans.lua` 读取原始建房设置，与君主升变和野心家效忠共用。服务端过滤统领能力来源及白板士兵转换候选，客户端从同步的来源标记读取可用能力。实际发动、转换及穿心的候选和固定变更均复用禁用检查。分包白名单在创房时已展开为逐将禁用。
 
-穿心使用 `Commander.randomRetinueCandidates` 筛除偏将及本局实质取得过的兵种。实际取得记录来自士兵转化、固定变更和独立实例授予。服务端使用房间随机源抽取候选，通过 `GameLog` 向所有客户端公布亮出的列表和选定的兵种。选择窗口使用与君曹操大旗一致的详细选项，以翼从技能为按钮并显示原文描述；确认后映射回实际抽中的翼从。
+`Commander.randomRetinueCandidates` 筛除偏将、房间禁用项及本局实质取得过的兵种。实际取得记录来自士兵转化、固定变更和独立实例授予。[穿心](generals/shi/qun024.md#qun024-1)调用这个入口，其公开候选、变更和额外获得流程在技能主记录维护。各兵种的专属接口与原文见[翼从技能索引](generals/retinues.md)。
 
 实现文件：
 
@@ -21,7 +21,7 @@
 | 独立测试内容与翼从技能 | `tests/support/qiao_content.lua` |
 | 自动化验收 | `tests/commander_retinue.lua` |
 
-正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/retinues.md#mushun)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。锦帆军、曲阿小将见[吴关联翼从](generals/retinues.md#jinfanjun)，专项 `tests/wu_damage.lua` 已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
+正式翼从专属技能与公共统领机制分开维护：穆顺、西园军见[汉关联翼从](generals/standard/retinue-mushun.md#mushun)，并州狼骑、虎卫军、牛金见[魏关联翼从](generals/retinues.md)。后者的距离状态与击杀奖励不由公共统领能力代为执行；对应专项分别为 `tests/han_retinues.lua`、`tests/wei_retinues.lua`，均已接入默认套件。锦帆军、曲阿小将见[吴关联翼从](generals/standard/retinue-jinfanjun.md#jinfanjun)，专项 `tests/wu_damage.lua` 已接入默认套件。其余翼从的专属技能完成度见[开发状态](../status.md)。
 
 ### 公共登记 API
 

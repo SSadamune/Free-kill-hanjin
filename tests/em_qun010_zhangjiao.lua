@@ -124,6 +124,8 @@ end
 function Testqiao_em_qun010_zhangjiao:testTianbingCountAndLargePowerOverlay()
   local lord = p(1)
   inRoom(function()
+    fixture.installBlankGenerals(FkTest.room, "qun")
+    FkTest.room:handleAddLoseSkills(lord, P.HONGFA, nil, false, true)
     local ids = FkTest.room:getNCards(3)
     P.add(lord, ids, P.BANNER_SKILL)
     lu.assertEquals(P.count(lord), 3)
@@ -133,21 +135,47 @@ function Testqiao_em_qun010_zhangjiao:testTianbingCountAndLargePowerOverlay()
   end)
 end
 
-function Testqiao_em_qun010_zhangjiao:testWendaoDoesNotSearchHand()
-  local me = p(1)
-  local skill = assert(Fk.skills["qiao__skill_em_qun010_3"])
-  inRoom(function()
-    FkTest.room:handleAddLoseSkills(me, skill.name, nil, false, true)
-    local red = FkTest.room:printCard("qiao__jink", Card.Heart, 2)
-    local peace = FkTest.room:printCard("qiao__peace_spell", Card.Heart, 3)
-    FkTest.room:obtainCard(me, red, false, fk.ReasonJustMove)
-    FkTest.room:obtainCard(me, peace, false, fk.ReasonJustMove)
+local function checkWendao(payment, armorArea)
+  local room, me, other = FkTest.room, p(1), p(2)
+  local skill = Fk.skills["qiao__skill_em_qun010_3"]
+  local finished = inRoom(function()
+    fixture.installBlankGenerals(room, "qun")
+    room:handleAddLoseSkills(me, skill.name, nil, false, true)
     me.phase = Player.Play
-    lu.assertFalse(skill:canUse(me), "手牌中的太平要术不是合法问道对象")
-    FkTest.room:moveCardTo(peace, Card.DiscardPile, nil, fk.ReasonJustMove,
-      "test", nil, true, me)
-    lu.assertTrue(skill:canUse(me), "弃牌堆中的太平要术是合法问道对象")
+    me.hp = 3
+    room:throwCard(me:getCardIds("he"), "test", me, me)
+    local armor = room:printCard("qiao__peace_spell", Card.Heart, 3)
+    local cost = payment == "armor" and armor or room:printCard("qiao__jink", Card.Heart, 2)
+    room:obtainCard(me, cost, false, fk.ReasonJustMove)
+    if armorArea == "other" then room:obtainCard(other, armor, false, fk.ReasonJustMove) end
+    if armorArea == "equip" then room:moveCardTo(armor, Card.PlayerEquip, me, fk.ReasonJustMove) end
+    lu.assertTrue(skill:canUse(me))
+    local use = { from = me, tos = {}, cards = {} }
+    room:useSkill(me, skill, function() skill:onUse(room, use) end, use)
+    lu.assertEquals(me:usedSkillTimes(skill.name, Player.HistoryPhase), 1)
+    lu.assertFalse(skill:canUse(me))
+    if payment == "armor" then
+      lu.assertTrue(table.contains(me:getCardIds("h"), armor.id))
+      if armorArea == "equip" then lu.assertEquals(me.hp, 2) end
+    else
+      lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+      lu.assertTrue(table.contains(other:getCardIds("h"), armor.id))
+    end
+    return true
   end)
+  lu.assertTrue(finished)
+end
+
+function Testqiao_em_qun010_zhangjiao:testWendaoPaysWithoutFindingArmor()
+  checkWendao("jink", "other")
+end
+
+function Testqiao_em_qun010_zhangjiao:testWendaoRecoversArmorUsedFromHand()
+  checkWendao("armor", "hand")
+end
+
+function Testqiao_em_qun010_zhangjiao:testWendaoPaysEquippedArmorBeforeObtainingIt()
+  checkWendao("armor", "equip")
 end
 
 function Testqiao_em_qun010_zhangjiao:testWuxinRealPileChangesAndBigKingdomTies()
@@ -155,7 +183,7 @@ function Testqiao_em_qun010_zhangjiao:testWuxinRealPileChangesAndBigKingdomTies(
  local owner=p(1)
  inRoom(function()
   fixture.installBlankGenerals(room,{"qun","qun","qun","wei","wei","wei","shu","shu"})
-  room:handleAddLoseSkills(owner,"qiao__skill_em_qun010_2",nil,false,true)
+  room:handleAddLoseSkills(owner,P.HONGFA .. "|qiao__skill_em_qun010_2",nil,false,true)
  end)
  local seen,ids={},nil
  fixture.withSkillRequests(room,"qiao__skill_em_qun010_2",{
@@ -263,18 +291,42 @@ function Testqiao_em_qun010_zhangjiao:testDamageDoesNotConsumeTianbing()
   end
 end
 
-function Testqiao_em_qun010_zhangjiao:testNonHolderUsesCrossPileTianbingAsThunderSlash()
+-- 同步发生在弘法无效期间。恢复后直接进入原用牌/响应请求，中间不靠回合开始补发入口。
+local function restoreAfterKingdomChanges(owner, count)
+  local room = FkTest.room
+  return inRoom(function()
+    fixture.installBlankGenerals(room, { "qun", "qun", "wei", "qun", "wei", "wu", "jin", "han" })
+    room:handleAddLoseSkills(owner, P.HONGFA, nil, false, true)
+    local ids = room:getNCards(count)
+    P.add(owner, ids, P.BANNER_SKILL)
+    room:invalidateSkill(owner, P.HONGFA)
+    room:changeKingdom(p(3), "qun")
+    room:changeKingdom(p(4), "wei")
+    lu.assertEquals(P.tianbingIds(room), {})
+    lu.assertEquals(P.kingdomCount(room, "qun"), 3)
+    for _, member in ipairs({ p(2), p(3) }) do
+      lu.assertNil(Fk.skills[P.ENTRY]:viewAs(member, { ids[1] }))
+      lu.assertFalse(Fk.skills[P.ENTRY]:enabledAtResponse(member, false))
+    end
+    room:validateSkill(owner, P.HONGFA)
+    lu.assertTrue(p(2):hasSkill(P.ENTRY), "原群角色应立即有入口")
+    lu.assertTrue(p(3):hasSkill(P.ENTRY), "新群角色应立即有入口")
+    lu.assertFalse(p(4):hasSkill(P.ENTRY), "已离开群势力的角色不再有入口")
+    lu.assertEquals(P.kingdomCount(room, "qun"), 3 + count)
+    return ids
+  end)
+end
+
+function Testqiao_em_qun010_zhangjiao:testNonHolderUsesTianbingImmediatelyAfterHongfaRestores()
   local room = FkTest.room
   local owner, user, target = p(1), p(2), p(3)
-  local ids = installBanner(owner, 3,
-    { "qun", "qun", "qun", "qun", "wei", "wei", "shu", "shu" })
-  lu.assertTrue(user:hasSkill(P.ENTRY), "旗授予时同势力非持旗者应获得入口")
-  local chosen = ids[2]
   inRoom(function()
     target.hp = target.maxHp
     room.current = user
     user.phase = Player.Play
   end)
+  local ids = restoreAfterKingdomChanges(owner, 3)
+  local chosen = ids[2]
   local thunder = installThunderProbe()
   local moves = installMoveProbe(chosen)
   local reply = clientUseReply(room, user, target, chosen)
@@ -299,10 +351,10 @@ function Testqiao_em_qun010_zhangjiao:testNonHolderUsesCrossPileTianbingAsThunde
   lu.assertEquals(P.count(owner), 2)
 end
 
-function Testqiao_em_qun010_zhangjiao:testNonHolderRespondsWithCrossPileTianbing()
+function Testqiao_em_qun010_zhangjiao:testNewQunMemberRespondsImmediatelyAfterHongfaRestores()
   local room = FkTest.room
-  local owner, user = p(1), p(2)
-  local ids = installBanner(owner, 2, "qun")
+  local owner, user = p(1), p(3)
+  local ids = restoreAfterKingdomChanges(owner, 2)
   local chosen = ids[1]
   local moves = installMoveProbe(chosen)
   FkTest.setNextReplies(user, {
@@ -398,6 +450,55 @@ function Testqiao_em_qun010_zhangjiao:testFlagEntryFollowsKingdomAndFlagLoss()
     end
     lu.assertNil(Fk.skills[P.ENTRY]:viewAs(other, { ids[3] }), "旗消失后不能再用旗上的牌转化")
   end)
+end
+
+function Testqiao_em_qun010_zhangjiao:testWuxinCountsLoneJadeSealHolder()
+  local room, lord, holder = FkTest.room, p(1), p(7)
+  local seen
+  inRoom(function()
+    fixture.installBlankGenerals(room, {"qun","qun","qun","wei","wei","wu","shu","jin"})
+    local wuxin = "qiao__skill_em_qun010_2"
+    room:handleAddLoseSkills(lord, P.HONGFA .. "|" .. wuxin, nil, false, true)
+    local seal = room:printCard("qiao__jade_seal", Card.Heart, 2)
+    room:moveCardTo(seal, Card.PlayerEquip, holder, fk.ReasonJustMove)
+    fixture.withSkillRequests(room, wuxin, {
+      askToSkillInvoke = function() return true end,
+      askToGuanxing = function(_, _, params)
+        seen = #params.cards
+        return {top = params.cards, bottom = {}}
+      end,
+    }, function() P.add(lord, room:getNCards(1)) end)
+  end)
+  lu.assertEquals(seen, 1)
+end
+
+function Testqiao_em_qun010_zhangjiao:testHongfaInvalidationAndLoss()
+  local room, lord, ally = FkTest.room, p(1), p(2)
+  local finished = inRoom(function()
+    fixture.installBlankGenerals(room, {"qun","qun","wei","wei","shu","wu","jin","han"})
+    room:handleAddLoseSkills(lord, P.HONGFA, nil, false, true)
+    local ids = room:getNCards(2)
+    P.add(lord, ids)
+    room:invalidateSkill(lord, P.HONGFA)
+    lu.assertEquals(P.kingdomCount(room, "qun"), 2)
+    lu.assertNil(Fk.skills[P.ENTRY]:viewAs(ally, {ids[1]}))
+    local hp = lord.hp
+    fixture.withSkillRequests(room, P.BANNER_SKILL, {
+      askToCards = function() error("弘法无效期间不能请移天兵") end,
+    }, function() room:loseHp(lord, 1) end)
+    lu.assertEquals(lord.hp, hp - 1)
+    lu.assertEquals(P.count(lord), 2)
+    room:validateSkill(lord, P.HONGFA)
+    lu.assertEquals(P.kingdomCount(room, "qun"), 4)
+    lu.assertNotNil(Fk.skills[P.ENTRY]:viewAs(ally, {ids[1]}))
+    room:handleAddLoseSkills(lord, "-" .. P.HONGFA, nil, false, true)
+    lu.assertEquals(P.kingdomCount(room, "qun"), 2)
+    lu.assertEquals(P.tianbingIds(room), {})
+    lu.assertFalse(ally:hasSkill(P.ENTRY, true))
+    for _, id in ipairs(ids) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
+    return true
+  end)
+  lu.assertTrue(finished)
 end
 
 return { name = "qiao_em_qun010_zhangjiao" }

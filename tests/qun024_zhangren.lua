@@ -149,6 +149,32 @@ function Testqiao_qun024_zhangren:testLongfeiSharesOwnInstancesWithoutRecursion(
   end)
 end
 
+function Testqiao_qun024_zhangren:testChuanxinDiscardsReplacedDeputy()
+  local room, holder, victim = FkTest.room, p(1), p(2)
+  local id = "qiao__skill_qun024_1"
+  local discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+  local old = victim.deputyGeneral
+  inRoom(function()
+    room:handleAddLoseSkills(holder, id, nil, false, true)
+    victim:hideGeneral(true)
+  end)
+  skill_test.withSkillRequests(room, id, {
+    askToSkillInvoke = function() return true end,
+    askToChoice = function(_, who, params)
+      if who == victim then return "change" end
+      return params.choices[1]
+    end,
+  }, function()
+    inRoom(function()
+      room:damage { from = holder, to = victim, damage = 1, card = Fk:cloneCard("qiao__slash") }
+    end)
+  end)
+  lu.assertTrue(C.isRetinue(victim.deputyGeneral))
+  lu.assertTrue(discard.contains(room, old))
+  room:returnToGeneralPile({ old })
+  lu.assertFalse(table.contains(room.general_pile, old))
+end
+
 function Testqiao_qun024_zhangren:testChuanxinSoldierMustUseOtherwise()
  local room=FkTest.room
  local me,victim=p(1),p(2)

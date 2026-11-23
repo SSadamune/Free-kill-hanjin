@@ -204,6 +204,7 @@ function M.ascend(room, player, newMain, kingdom, options)
   end
   if oldMain ~= nil then room:setPlayerMark(player, "qiao_previous_general", oldMain) end
 
+  player.tag.qiao_departed_kingdom = nil
   room:changeKingdom(player, kingdom)
   setPrivateRole(room, player, kingdom)
   room:sendLog {
@@ -222,7 +223,7 @@ function M.ascend(room, player, newMain, kingdom, options)
 
   -- 明置主将，但不触发普通 GeneralRevealed；珠联璧合与阴阳鱼在此统一判定，
   -- 避免一次升变和普通明置事件重复发放消耗型标记。
-  room.logic:trigger(fk.GeneralShown, player, { m = newMain })
+  room.logic:trigger(fk.GeneralShown, player, { m = newMain, qiaoAscension = true })
 
   local newPairMax = M.pair_max_hp(newMain, deputy, room)
   if newPairMax > oldPairMax then
@@ -381,6 +382,8 @@ function M.convert_to_wild(room, victim, kingdom)
         or player:getMark("__heg_kingdom") == kingdom
         or (player.dead and player.kingdom == kingdom)
       if matches then
+        -- 暗将也会随君主死亡转野，原势力只保存在服务端，供后续变更检索。
+        player.tag.qiao_departed_kingdom = kingdom
         room:setPlayerMark(player, "__heg_kingdom", "wild")
         -- Set the server-side role even while the character is hidden, so a
         -- later reveal does not enter the upstream heg_* wild-founding chooser.
@@ -411,6 +414,7 @@ function M.reset(room)
   if room == nil then return end
   room:setTag("qiao_ascension", nil)
   for _, player in ipairs(room.players) do
+    player.tag.qiao_departed_kingdom = nil
     room:setPlayerMark(player, M.TURNS_MARK, 0)
     room:setPlayerMark(player, M.WILD_ASCENDED_MARK, 0)
     room:setPlayerMark(player, M.COMPANION_MARK, 0)

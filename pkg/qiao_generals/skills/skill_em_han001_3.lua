@@ -27,6 +27,7 @@ skill:addEffect(fk.BeforeCardsMove, {
       for _, info in ipairs(move.moveInfo or {}) do
         if isTargetCard(info.cardId) then
           if move.from ~= nil and move.from ~= player
+            and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip)
             and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile)
             and player:canMoveCardIntoEquip(info.cardId, false) then
             return true
@@ -48,6 +49,7 @@ skill:addEffect(fk.BeforeCardsMove, {
       for _, info in ipairs(move.moveInfo or {}) do
         if isTargetCard(info.cardId) then
           if move.from ~= nil and move.from ~= player
+            and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip)
             and (move.toArea == Card.PlayerEquip or move.toArea == Card.DiscardPile)
             and player:canMoveCardIntoEquip(info.cardId, false) then
             table.insert(toEquip, info)
@@ -61,12 +63,11 @@ skill:addEffect(fk.BeforeCardsMove, {
         end
       end
       if #normal > 0 then
-        local copy = move:copy()
-        copy.moveInfo = normal
-        table.insert(rebuilt, copy)
+        move.moveInfo = normal
+        table.insert(rebuilt, move)
       end
       if #toEquip > 0 then
-        table.insert(rebuilt, {
+        table.insert(rebuilt, MoveCardsData:new {
           from = move.from, to = player, toArea = Card.PlayerEquip,
           moveReason = move.moveReason, proposer = move.proposer,
           skillName = skill.name, moveVisible = false, moveInfo = toEquip,
@@ -75,7 +76,7 @@ skill:addEffect(fk.BeforeCardsMove, {
         })
       end
       if #toPile > 0 then
-        table.insert(rebuilt, {
+        table.insert(rebuilt, MoveCardsData:new {
           from = player, to = player, toArea = Card.PlayerSpecial,
           specialName = P.PILE, moveReason = fk.ReasonPut,
           proposer = player, skillName = skill.name, moveVisible = true,

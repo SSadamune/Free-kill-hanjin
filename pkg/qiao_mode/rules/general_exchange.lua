@@ -552,7 +552,6 @@ local function skillPileNames(skills)
     local skeleton = Fk.skill_skels[skillName]
     if skeleton then
       addPileNames(result, skeleton.derived_piles)
-      addPileNames(result, skeleton.qiao_piles_kept_when_hidden)
       for _, effect in ipairs(skeleton.effects or {}) do
         addPileNames(result, effect.derived_piles)
       end
@@ -561,18 +560,6 @@ local function skillPileNames(skills)
     if skill then addPileNames(result, skill.derived_piles) end
   end
   return result
-end
-
--- 引擎把暗置也当作失技，不能用原生 derived_piles 登记这类牌堆。
--- 在确认该牌真正离场或失技后调用；交换仍由 transferPiles 直接移交。
-function M.discardPilesKeptWhenHidden(player, skillName)
-  local skeleton = Fk.skill_skels[skillName]
-  for _, pile in ipairs(skeleton and skeleton.qiao_piles_kept_when_hidden or {}) do
-    local ids = player:getPile(pile)
-    if #ids > 0 then
-      player.room:moveCardTo(ids, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true)
-    end
-  end
 end
 
 local function markBaseNames(markName)
@@ -1105,6 +1092,9 @@ function M.exchange(room, first, second, options)
 
   -- 4. Named private piles move with the card after the new skills are in
   -- place (never for a same-player swap).
+  local markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+  markers.transfer(a.player, b.player, aSide.general)
+  markers.transfer(b.player, a.player, bSide.general)
   transferPiles(room, a.player, b.player, aSide, samePlayer)
   transferPiles(room, b.player, a.player, bSide, samePlayer)
 

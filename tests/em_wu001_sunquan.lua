@@ -1219,4 +1219,78 @@ function Testqiao_em_wu001_sunquan:testGongxinAndFlagEntryUseSeparatePhaseCounts
   lu.assertFalse(clientButtonValid(room, wu, GONGXIN), "两技能均已达本阶段上限")
 end
 
+function Testqiao_em_wu001_sunquan:testJubaoProtectsTreasureInMixedPojunMove()
+  local room, lord, actor = FkTest.room, p(1), p(2)
+  local pearl = give(lord, P.PEARL)
+  local ordinary = give(lord, "qiao__jink")
+  local slash = give(actor, "qiao__slash")
+  local name = "qiao__skill_wu020_2"
+  local done = inRoom(function()
+    room:moveCardTo(pearl, Card.PlayerEquip, lord, fk.ReasonJustMove)
+    room:handleAddLoseSkills(actor, name, nil, false, true)
+    skill_test.withSkillRequests(room, name, {
+      askToSkillInvoke = function() return true end,
+      askToChooseCards = function() return {pearl, ordinary} end,
+    }, function() room:useCard {from = actor, card = Fk:getCardById(slash), tos = {lord}} end)
+    lu.assertTrue(table.contains(lord:getCardIds("e"), pearl))
+    lu.assertEquals(room:getCardArea(ordinary), Card.Void)
+    lu.assertEquals(room:getTag("qiao_wu020_pojun_pending")[1].ids, {ordinary})
+    room.logic:trigger(fk.TurnEnd, actor, {})
+    lu.assertTrue(table.contains(lord:getCardIds("h"), ordinary))
+    return true
+  end)
+  lu.assertTrue(done)
+end
+
+function Testqiao_em_wu001_sunquan:testJubaoProtectsAgainstHengzhengAndReturnToHand()
+  local room, lord, actor = FkTest.room, p(1), p(2)
+  local pearl = give(lord, P.PEARL)
+  local name = "qiao__skill_qun006_1"
+  local done = inRoom(function()
+    room:moveCardTo(pearl, Card.PlayerEquip, lord, fk.ReasonJustMove)
+    room:handleAddLoseSkills(actor, name, nil, false, true)
+    actor.hp, actor.phase = 1, Player.Start
+    local asked = false
+    skill_test.withSkillRequests(room, name, {
+      askToSkillInvoke = function() return true end,
+      askToChooseCard = function(_, _, params)
+        if params.target == lord then asked = true return pearl end
+        return params.target:getCardIds("hej")[1]
+      end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, actor, PhaseData:new {who = actor, phase = Player.Start})
+    end)
+    lu.assertTrue(asked)
+    lu.assertTrue(table.contains(lord:getCardIds("e"), pearl))
+    room:moveCardTo(pearl, Card.PlayerHand, lord, fk.ReasonJustMove, name, nil, true, actor)
+    lu.assertTrue(table.contains(lord:getCardIds("e"), pearl))
+    room:throwCard(pearl, name, lord, actor)
+    lu.assertEquals(room:getCardArea(pearl), Card.DiscardPile)
+    return true
+  end)
+  lu.assertTrue(done)
+end
+
+function Testqiao_em_wu001_sunquan:testInvalidJiaheSuspendsRangeAndDamageEffects()
+  local room, lord, actor = FkTest.room, p(1), p(2)
+  local fire = give(actor, P.PEARL)
+  local done = inRoom(function()
+    local base = lord:getAttackRange()
+    lord:addToPile(P.PILE, {fire}, true, P.ENTRY)
+    lu.assertEquals(lord:getAttackRange(), base + 1)
+    room:invalidateSkill(lord, P.JIAHE)
+    lu.assertEquals(lord:getAttackRange(), base)
+    room:damage {from = actor, to = lord, damage = 1, card = Fk:cloneCard("qiao__slash")}
+    lu.assertEquals(P.pending(lord), 0)
+    lu.assertEquals(P.count(lord), 1)
+    room:validateSkill(lord, P.JIAHE)
+    lu.assertEquals(lord:getAttackRange(), base + 1)
+    room:damage {from = actor, to = lord, damage = 1, card = Fk:cloneCard("qiao__slash")}
+    lu.assertEquals(P.pending(lord), 1)
+    lu.assertEquals(P.count(lord), 0)
+    return true
+  end)
+  lu.assertTrue(done)
+end
+
 return { name = "qiao_em_wu001_sunquan" }

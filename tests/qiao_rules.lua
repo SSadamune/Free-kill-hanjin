@@ -261,7 +261,15 @@ function Testqiao_rules:testOnlyCollectionDisablesOverriddenGameSettings()
   local collection = rows("qiao_heg_mode", true)
   local free = rows("qiao_free_mode", false)
   local upstream = rows("new_heg_mode", false)
-  for _, key in ipairs({ "generalNum", "generalTimeout", "timeoutAsGeneralTimeout", "luckTime", "enableDeputy" }) do
+  local overridden = { "generalNum", "generalTimeout", "luckTime", "enableDeputy" }
+  if upstream.timeoutAsGeneralTimeout then
+    table.insert(overridden, "timeoutAsGeneralTimeout")
+  else
+    lu.assertNil(collection.timeoutAsGeneralTimeout)
+    lu.assertNil(free.timeoutAsGeneralTimeout)
+  end
+  for _, key in ipairs(overridden) do
+    lu.assertNotNil(collection[key], key)
     lu.assertFalse(collection[key].enabled, key)
     lu.assertNotNil(collection[key].subTitle, key)
     lu.assertNotEquals(free[key].enabled, false, key)
@@ -270,10 +278,18 @@ function Testqiao_rules:testOnlyCollectionDisablesOverriddenGameSettings()
   lu.assertNil(collection.generalTimeout.value)
   lu.assertNotEquals(collection.enableFreeAssign.enabled, false)
   lu.assertNotEquals(collection.disableSameConvert.enabled, false)
-  lu.assertEquals(free.generalTimeout.value, 50)
+  -- Some boards leave the saved timeout to QML instead of returning a Lua value.
+  lu.assertEquals(free.generalTimeout, upstream.generalTimeout)
   local freeLinked = rows("qiao_free_mode", true)
-  lu.assertFalse(freeLinked.generalTimeout.enabled)
-  lu.assertEquals(freeLinked.generalTimeout.value, 40)
+  local upstreamLinked = rows("new_heg_mode", true)
+  lu.assertEquals(freeLinked.generalTimeout, upstreamLinked.generalTimeout)
+  if upstream.timeoutAsGeneralTimeout then
+    lu.assertEquals(free.generalTimeout.value, 50)
+    lu.assertFalse(freeLinked.generalTimeout.enabled)
+    lu.assertEquals(freeLinked.generalTimeout.value, 40)
+  else
+    lu.assertEquals(freeLinked.generalTimeout, free.generalTimeout)
+  end
 end
 
 function Testqiao_rules:testCollectionUsesModeSettingsInSelectionRequest()

@@ -32,11 +32,15 @@ function M.isWu(player)
     and player.kingdom == "wu"
 end
 
+function M.flagActive(player)
+  return M.isWu(player) and player:hasShownSkill(M.JIAHE) and player:hasSkill(M.FLAG)
+end
+
 --- 当前持旗君主：嘉禾已明置有效、缘江烽火图来源实际存在、且为吴势力。
 function M.lord(room)
   if room == nil then return nil end
   for _, p in ipairs(room:getPresentPlayers()) do
-    if M.isWu(p) and p:hasShownSkill(M.JIAHE) and p:hasSkill(M.FLAG) then
+    if M.flagActive(p) then
       return p
     end
   end

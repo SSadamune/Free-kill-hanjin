@@ -52,15 +52,17 @@ local function otherSource(player,skill,source)
   end
   return false
 end
-local function detach(room,player,name,source)
+--- 撤回这一份派生来源。角色仍有同名来源时，保留关联技能及无效状态。
+function M.detachSource(room,player,name,source,noTrigger)
   local skill=Fk.skills[name]
   local list=player.derivative_skills[source]
   if not list or not table.contains(list,skill) then return end
+  require("packages.qiao.pkg.qiao_mode.rules.marker_cards").endGrant(player, source.name, name)
   if otherSource(player,skill,source) then
     table.removeOne(list,skill)
     if #list==0 then player.derivative_skills[source]=nil end
   else
-    room:handleAddLoseSkills(player,"-"..name,source,false,false)
+    room:handleAddLoseSkills(player,"-"..name,source,false,noTrigger or false)
   end
 end
 function M.grant(room,generalName,skillName)
@@ -76,7 +78,11 @@ end
 function M.revoke(room,generalName,skillName)
   local all=data(room,false)
   if not all[generalName] then return end
-  table.removeOne(all[generalName].skills,skillName)
+  if not table.removeOne(all[generalName].skills,skillName) then return end
+  local printed = Fk.generals[generalName]:getSkillNameList(true)
+  if not table.contains(printed, skillName) then
+    require("packages.qiao.pkg.qiao_mode.rules.marker_cards").endCard(room, generalName, skillName)
+  end
   if #all[generalName].skills==0 then all[generalName]=nil end
   room:setTag(M.TAG,all)
   M.sync(room)
@@ -120,7 +126,7 @@ function M.sync(room)
       end
       local prior=table.simpleClone(player.derivative_skills[source] or {})
       for _,skill in ipairs(prior) do
-        if not desired[skill.name] then detach(room,player,skill.name,source) end
+        if not desired[skill.name] then M.detachSource(room,player,skill.name,source) end
       end
       for name in pairs(previous[player.id] or {}) do
         if not hidden[name] and not printedAt(player,name,true) and player:isFakeSkill(name) then

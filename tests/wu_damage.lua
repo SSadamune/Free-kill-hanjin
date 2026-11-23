@@ -583,27 +583,22 @@ function Testqiao_wu_damage:testBuquDrawsPlacesAndRecoversWhenNoDuplicate()
 end
 
 -- 不屈：同花色重复时移去一张，不回复体力 --------------------------------
+local markerFixture = __dofile("../../../tests/support/marker_cards.lua")
+
 function Testqiao_wu_damage:testBuquRemovesDuplicateSuitWithoutRecover()
-  local room = FkTest.room
-  grant(p(1), BUQU)
-  setHand(room, p(1), {})
-  local old = seedDrawPile(room, { { "qiao__peach", Card.Heart, 10 } })[1]
+  local room, owner = FkTest.room, p(1)
+  grant(owner, BUQU)
+  local old, new
   inRoom(function()
-    room:moveCardTo({ old }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
+    old = markerFixture.scar(room, owner, Card.Heart)
+    owner.hp = 1
+    new = markerFixture.scar(room, owner, Card.Heart, old)
   end)
-  local drawn = seedDrawPile(room, { { "qiao__jink", Card.Heart, 11 } })[1]
-  inRoom(function() p(1).hp = 1 end)
-
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ old }) })
-  inRoom(function() room:enterDying { who = p(1) } end)
-
-  lu.assertEquals(#p(1):getPile("创"), 1)
-  lu.assertTrue(table.contains(p(1):getPile("创"), old))
-  lu.assertEquals(room:getCardArea(drawn), Card.DiscardPile)
-  lu.assertEquals(p(1).hp, 1)
+  lu.assertEquals(owner:getPile("创"), { old })
+  lu.assertEquals(room:getCardArea(new), Card.DiscardPile)
+  lu.assertEquals(owner.hp, 1)
 end
 
--- 不屈：可以选择装备区的牌作为“创”
 function Testqiao_wu_damage:testBuquMayPlaceEquipmentCard()
   local room = FkTest.room
   grant(p(1), BUQU)
@@ -622,26 +617,15 @@ end
 
 -- 不屈：同花色多张由玩家选择保留哪一张，而不是固定保留最早
 function Testqiao_wu_damage:testBuquChoosesWhichDuplicateToKeep()
-  local room = FkTest.room
-  grant(p(1), BUQU)
-  setHand(room, p(1), {})
-  local old1 = seedDrawPile(room, { { "qiao__peach", Card.Heart, 13 } })[1]
-  local old2 = seedDrawPile(room, { { "qiao__jink", Card.Heart, 1 } })[1]
+  local room, owner = FkTest.room, p(1)
+  grant(owner, BUQU)
+  local old, new
   inRoom(function()
-    room:moveCardTo({ old1 }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
-    room:moveCardTo({ old2 }, Card.PlayerSpecial, p(1), fk.ReasonPut, "test", "创", true, p(1))
+    old = markerFixture.scar(room, owner, Card.Heart)
+    new = markerFixture.scar(room, owner, Card.Heart)
   end)
-  local drawn = seedDrawPile(room, { { "qiao__peach", Card.Heart, 2 } })[1]
-  inRoom(function() p(1).hp = 1 end)
-
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChooseCards({ old2 }) })
-  inRoom(function() room:enterDying { who = p(1) } end)
-
-  local pile = p(1):getPile("创")
-  lu.assertEquals(#pile, 1)
-  lu.assertTrue(table.contains(pile, old2))
-  lu.assertEquals(room:getCardArea(old1), Card.DiscardPile)
-  lu.assertEquals(room:getCardArea(drawn), Card.DiscardPile)
+  lu.assertEquals(owner:getPile("创"), { new })
+  lu.assertEquals(room:getCardArea(old), Card.DiscardPile)
 end
 
 -- 奋激：本回合真实失去所有手牌的角色摸两张，周泰失去1点体力 ------------

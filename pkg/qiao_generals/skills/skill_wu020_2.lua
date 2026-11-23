@@ -49,15 +49,17 @@ skill:addEffect(fk.TargetSpecified, {
     if #chosen == 0 then return end
     ensureRule(room)
     local turn = room.logic:getCurrentEvent():findParent(GameEvent.Turn, true)
-    local list = room:getTag("qiao_wu020_pojun_pending") or {}
-    table.insert(list, {
-      target = to.id, turn = turn and turn.id or 0, ids = chosen,
-    })
-    room:setTag("qiao_wu020_pojun_pending", list)
     room:moveCards {
       ids = chosen, from = to, toArea = Card.Void,
-      moveReason = fk.ReasonJustMove, moveVisible = false,
+      moveReason = fk.ReasonJustMove, moveVisible = false, proposer = player, skillName = skill.name,
     }
+    local removed = table.filter(chosen, function(id) return room:getCardArea(id) == Card.Void end)
+    if #removed == 0 then return end
+    local list = room:getTag("qiao_wu020_pojun_pending") or {}
+    table.insert(list, {
+      target = to.id, turn = turn and turn.id or 0, ids = removed,
+    })
+    room:setTag("qiao_wu020_pojun_pending", list)
   end,
 })
 
