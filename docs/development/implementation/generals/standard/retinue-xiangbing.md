@@ -8,7 +8,7 @@
 
 - **标识与依据**：`qiao__retinue_skill_xiangbing`；[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_xiangbing.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L3527)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L3527)的统领条目。
 
 > 锁定技，当你使用【杀】后，你视为对受到此【杀】伤害的目标角色使用一张【南蛮入侵】；当你受到火焰伤害后，你视为对所有相邻角色使用一张【杀】。
 

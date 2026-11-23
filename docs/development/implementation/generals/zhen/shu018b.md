@@ -8,7 +8,7 @@
 
 - **标识与依据** · 费祎（SHU018B，阵包），运行时 ID `qiao__skill_shu018b_1`。见[源码](../../../../../pkg/qiao_generals/skills/skill_shu018b_1.lua)和[逐将规则](../../../../rules/generals/shu018b-feiyi.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L4071)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L4071)。
 
 > 结束阶段，若你于本回合未造成过伤害，你可以摸两张牌。
 
@@ -22,7 +22,7 @@
 
 - **标识与依据** · 费祎（SHU018B，阵包），运行时 ID `qiao__skill_shu018b_2`。见[源码](../../../../../pkg/qiao_generals/skills/skill_shu018b_2.lua)和[逐将规则](../../../../rules/generals/shu018b-feiyi.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L4072)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L4072)。
 
 > 每回合每名角色限一次，与你势力相同的角色于其回合外失去手牌后，若其没有手牌，你可以令其摸两张牌，然后其弃置一张牌。
 

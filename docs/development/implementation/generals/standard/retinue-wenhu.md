@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_wenhu`，技能 ID `qiao__retinue_skill_wenhu`；源码 [retinue_skill_wenhu.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_wenhu.lua)。规则见[文鸯规范](../../../../rules/generals/jin014-wenyang.md)与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为文鸯（JIN014），限一；同一武将的冰杀统领能力另见公共统领记录。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L1790)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L1790)的统领条目。
 
 > 出牌阶段限一次，你可以弃置任意个区域的所有牌，然后视为使用目标上限为X的【决斗】（X为你以此法弃置牌的区域数）。
 

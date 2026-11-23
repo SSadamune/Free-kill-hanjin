@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_bingzhou_langqi`，技能 ID `qiao__retinue_skill_bingzhou_langqi`；源码 [retinue_skill_bingzhou_langqi.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_bingzhou_langqi.lua)，距离状态技 [retinue_skill_bingzhou_distance.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_bingzhou_distance.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从并州狼骑与[统领与翼从](../../../../rules/commander-retinue.md)。**多来源**：并州狼骑可由张辽、吕布等不同统领取得。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L2559)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L2559)的统领条目。
 
 > 出牌阶段限一次，你可以令一名其他角色视为对你使用一张【决斗】，本回合你与其距离视为1。
 

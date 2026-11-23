@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_huangjin_leishi`，技能 ID `qiao__retinue_skill_huangjin_leishi`；源码 [retinue_skill_huangjin_leishi.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_huangjin_leishi.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从黄巾雷使与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为张角（QUN010）。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L363)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L363)的统领条目。
 
 > 每回合首次有角色不因使用手牌而造成伤害时，你可以弃置一张手牌并判定，若为：黑色，此伤害+1；红色，其获得此判定牌。
 

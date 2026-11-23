@@ -8,7 +8,7 @@
 
 - **标识与依据** · 君刘备（EM(SHU001)，阵包），运行时 ID `qiao__skill_em_shu001_1`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_shu001_1.lua)和[逐将规则](../../../../rules/generals/em-shu001-liubei.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L194)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L194)。
 
 > 君主技，你拥有“六师率义旗”。
 
@@ -22,7 +22,7 @@
 
 - **标识与依据** · 君刘备（EM(SHU001)，阵包），运行时 ID `qiao__skill_em_shu001_2`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_shu001_2.lua)和[逐将规则](../../../../rules/generals/em-shu001-liubei.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L195)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L195)。
 
 > 锁定技，其他角色的【飞龙夺凤】置入场上或弃牌堆时，改为你获得之；你不因使用【飞龙夺凤】而失去此牌时，你展示之并置于牌堆底，摸两张牌。
 
@@ -36,7 +36,7 @@
 
 - **标识与依据** · 君刘备（EM(SHU001)，阵包），运行时 ID `qiao__skill_em_shu001_3`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_shu001_3.lua)和[逐将规则](../../../../rules/generals/em-shu001-liubei.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L196)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L196)。
 
 > 限定技，当你处于濒死时，你可以回复体力至2点并失去“章武”，获得“仁德”，然后你可以摸等同体力上限的牌，将手牌弃置至体力上限。
 
@@ -50,7 +50,7 @@
 
 - **标识与依据** · 君刘备（EM(SHU001)）的派生技能或专属效果，运行时 ID `qiao__skill_em_shu001_flag`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_shu001_flag.lua)和[逐将规则](../../../../rules/generals/em-shu001-liubei.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L205)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L205)。
 
 > 其他蜀势力角色的出牌阶段限一次，其可以交给你两张牌，然后于本回合获得以下一项场上没有的技能：
 > “武圣”、“咆哮”、“龙胆”

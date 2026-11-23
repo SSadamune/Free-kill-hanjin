@@ -8,7 +8,7 @@
 
 - **标识与依据**：`qiao__retinue_skill_xiliang_jingqi`；[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_xiliang_jingqi.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L2788)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L2788)的统领条目。
 
 > 结束阶段，你可以使用一张【杀】；当你使用【杀】指定攻击范围内没有你的角色为目标后，你可以令其弃置一张牌。
 

@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_quaxiaojiang`，技能 ID `qiao__retinue_skill_quaxiaojiang`；源码 [retinue_skill_quaxiaojiang.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_quaxiaojiang.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从曲阿小将与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为太史慈（WU012）。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L6251)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L6251)的统领条目。
 
 > 每回合限一次，当你使用牌后，若此牌目标与你本回合上一张使用牌的目标不完全相同，你可以对这两张牌的重合目标各造成1点伤害。
 

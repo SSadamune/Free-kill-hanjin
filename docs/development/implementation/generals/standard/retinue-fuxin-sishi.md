@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_fuxin_sishi`，技能 ID `qiao__retinue_skill_fuxin_sishi`；源码 [retinue_skill_fuxin_sishi.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_fuxin_sishi.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从腹心死士与[统领与翼从](../../../../rules/commander-retinue.md)。来源武将为司马师（JIN002）与司马懿（JIN009）。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L1503)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L1503)的统领条目。
 
 > 与你势力相同的角色回合结束时，若其有未发动的限定技，你可以摸一张牌，交给其一张牌；若其本回合发动过限定技，你可以视为对其攻击范围内的一名角色使用【杀】。
 

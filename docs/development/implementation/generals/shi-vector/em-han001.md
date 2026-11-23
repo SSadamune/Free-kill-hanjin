@@ -8,7 +8,7 @@
 
 - **标识与依据** · 君刘协（EM(HAN001)，矢包），运行时 ID `qiao__skill_em_han001_1`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_han001_1.lua)和[逐将规则](../../../../rules/generals/em-han001-liuxie.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L146)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L146)。
 
 > 君主技，此武将牌明置后，你获得游戏外的“诏书”；你因“诏书”获得的势力锦囊由你选择。
 
@@ -22,7 +22,7 @@
 
 - **标识与依据** · 君刘协（EM(HAN001)，矢包），运行时 ID `qiao__skill_em_han001_2`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_han001_2.lua)和[逐将规则](../../../../rules/generals/em-han001-liuxie.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L147)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L147)。
 
 > 当你成为伤害牌的唯一目标后，你可以交给使用者一张牌并令此牌对你无效；若你已使用过其势力锦囊，改为其需交给你一张牌，否则此牌对你无效。
 
@@ -36,7 +36,7 @@
 
 - **标识与依据** · 君刘协（EM(HAN001)，矢包），运行时 ID `qiao__skill_em_han001_3`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_han001_3.lua)和[逐将规则](../../../../rules/generals/em-han001-liuxie.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L148)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L148)。
 
 > 锁定技，其他角色的【玉玺】或【赤霄剑】置入场上或弃牌堆时，改为置入你装备区。当你从装备区失去这些牌时，改为置于“诏书”上并摸两张牌。
 
@@ -50,7 +50,7 @@
 
 - **标识与依据** · 君刘协（EM(HAN001)）的派生技能或专属效果，运行时 ID `qiao__skill_em_han001_banner`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_han001_banner.lua)和[逐将规则](../../../../rules/generals/em-han001-liuxie.md)。持有者使用独立的[消费入口](../../../../../pkg/qiao_generals/skills/skill_em_han001_consume.lua) `qiao__skill_em_han001_consume`。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L157)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L157)。
 
 > 与你势力相同的角色出牌阶段限一次，其可以将一张（若为小势力则改为至多两张）手牌置于此牌上。出牌阶段限一次，若此牌上的牌包含四种花色，你可以移去此牌上的所有牌，然后随机获得一张势力锦囊。
 

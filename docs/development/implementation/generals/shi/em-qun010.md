@@ -8,7 +8,7 @@
 
 - **标识与依据** · 君张角（EM(QUN010)，势包），运行时 ID `qiao__skill_em_qun010_1`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_qun010_1.lua)和[逐将规则](../../../../rules/generals/em-qun010-zhangjiao.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L367)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L367)。
 
 > 君主技，你拥有“黄巾天兵符”。
 
@@ -22,7 +22,7 @@
 
 - **标识与依据** · 君张角（EM(QUN010)，势包），运行时 ID `qiao__skill_em_qun010_2`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_qun010_2.lua)和[逐将规则](../../../../rules/generals/em-qun010-zhangjiao.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L368)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L368)。
 
 > 当“天兵”的数量减至0或增加后，你可以卜算X（X为大势力角色数）。
 
@@ -36,7 +36,7 @@
 
 - **标识与依据** · 君张角（EM(QUN010)，势包），运行时 ID `qiao__skill_em_qun010_3`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_qun010_3.lua)和[逐将规则](../../../../rules/generals/em-qun010-zhangjiao.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L369)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L369)。
 
 > 出牌阶段限一次，你可以弃置一张红色牌，然后获得弃牌堆或场上的【太平要术】。
 
@@ -50,7 +50,7 @@
 
 - **标识与依据** · 君张角（EM(QUN010)）的派生技能或专属效果，运行时 ID `qiao__em_qun010_banner`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_qun010_banner.lua)和[逐将规则](../../../../rules/generals/em-qun010-zhangjiao.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L378)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L378)。
 
 > 准备阶段，若没有“天兵”，你可以将牌堆顶等同群势力角色数的牌置于此牌上，称为“天兵”。有角色因技能或判断大小势力而计算角色数时，群势力角色数视为+X（X为“天兵”数）。
 

@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_xiyuanjun`，技能 ID `qiao__retinue_skill_xiyuanjun`；源码 [retinue_skill_xiyuanjun.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_xiyuanjun.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从西园军、[阶段事件](../../../../../rulebook/events/phase.md)、[展示](../../../../../rulebook/terms/card-op-terms/showCards.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L836)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L836)的统领条目。
 
 > 与你势力相同的角色出牌阶段开始时，你可以选择一名角色的一张手牌，本回合此牌对所有角色可见且其不能使用或打出之，其受到伤害后来源获得之。
 

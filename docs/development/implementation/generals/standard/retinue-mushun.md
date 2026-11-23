@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_mushun`，技能 ID `qiao__retinue_skill_mushun`；源码 [retinue_skill_mushun.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_mushun.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从穆顺、[移动事件](../../../../../rulebook/events/move-card.md)、[弃置](../../../../../rulebook/terms/card-op-terms/discard.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L638)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L638)的统领条目。
 
 > 每回合限一次，当你弃置任意角色的牌或被其他角色弃置牌后，你可以获得其中一张。若如此做，本回合你下次弃置任意角色的牌或被其他角色弃置牌后，你失去1点体力。
 

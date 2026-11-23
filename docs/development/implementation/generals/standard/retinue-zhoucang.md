@@ -8,7 +8,7 @@
 
 - **标识与依据**：`qiao__retinue_skill_zhoucang`；[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_zhoucang.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L3685)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L3685)的统领条目。
 
 > 当你使用【杀】后，你可以将此【杀】或目标角色使用的【闪】交给另一名其他角色，若其以此法获得红色牌，其可以对你攻击范围内的一名角色使用一张【杀】。
 

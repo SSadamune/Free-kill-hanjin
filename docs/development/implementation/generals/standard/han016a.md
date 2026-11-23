@@ -8,7 +8,7 @@
 
 - **标识与依据**：运行时 ID `qiao__skill_han016_1`；源码 [skill_han016_1.lua](../../../../../pkg/qiao_generals/skills/skill_han016_1.lua)。规则见[刘宠规范](../../../../rules/generals/han016a-liuchong.md)与[标准武将表](../../../../rules/standard-generals.md)。牌面编号保留 `A`，运行时仍为 `qiao_heg__han016`；同将另见[威屯](#han016a-2)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L780)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L780)。
 
 > 出牌阶段结束时，若你此阶段使用过的牌均为【杀】，或使用的最后两张牌均不为【杀】，你可以视为使用一张无距离限制的【杀】。
 
@@ -26,7 +26,7 @@
 
 - **标识与依据**：运行时 ID `qiao__skill_han016_2`；源码 [skill_han016_2.lua](../../../../../pkg/qiao_generals/skills/skill_han016_2.lua)。规则见[刘宠规范](../../../../rules/generals/han016a-liuchong.md)与[标准武将表](../../../../rules/standard-generals.md)。牌面编号保留 `A`，运行时仍为 `qiao_heg__han016`；同将另见[劲弩](#han016a-1)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L781)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L781)。
 
 > 限定技，弃牌阶段开始前，若你的手牌最多，你可以跳过此阶段，然后视为对任意名角色使用【桃园结义】和【五谷丰登】。
 

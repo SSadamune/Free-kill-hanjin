@@ -8,7 +8,7 @@
 
 - **标识与依据** · 君司马炎（EM(JIN001)，弩包），运行时 ID `qiao__skill_em_jin001_1`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_jin001_1.lua)和[逐将规则](../../../../rules/generals/em-jin001-simayan.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L170)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L170)。
 
 > 君主技，你拥有“诸王敕封册”。
 
@@ -22,7 +22,7 @@
 
 - **标识与依据** · 君司马炎（EM(JIN001)，弩包），运行时 ID `qiao__skill_em_jin001_2`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_jin001_2.lua)和[逐将规则](../../../../rules/generals/em-jin001-simayan.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L171)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L171)。
 
 > 你可以跳过出牌阶段，然后将场上一张坐骑牌或弃牌堆的【临筱玉舆】置入装备区。
 
@@ -36,7 +36,7 @@
 
 - **标识与依据** · 君司马炎（EM(JIN001)，弩包），运行时 ID `qiao__skill_em_jin001_3`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_jin001_3.lua)和[逐将规则](../../../../rules/generals/em-jin001-simayan.md)。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L172)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L172)。
 
 > 限定技，结束阶段，若晋势力角色已损失体力值之和大于其体力值之和，你可以摸两张牌，然后失去“太康”并获得“兴图”。
 
@@ -50,7 +50,7 @@
 
 - **标识与依据** · 君司马炎（EM(JIN001)）的派生技能或专属效果，运行时 ID `qiao__skill_em_jin001_banner`。见[源码](../../../../../pkg/qiao_generals/skills/skill_em_jin001_banner.lua)和[逐将规则](../../../../rules/generals/em-jin001-simayan.md)。受赠者使用独立的[消费入口](../../../../../pkg/qiao_generals/skills/skill_em_jin001_consume.lua) `qiao__skill_em_jin001_consume`。
 
-牌面原文见[石激桑资料](../../../../../assets/docs/石激桑武将列表.json#L181)。转交与防止跳过两段见[兵情篇表格 M37](../../../../../assets/docs/乔剪国战表格.xlsx)及[弩包专栏](https://www.bilibili.com/opus/1181099586803990535)，现有逐将页保留[文字记录](../../../../rules/generals/em-jin001-simayan.md#太康与诸王敕封册)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L181)。转交与防止跳过两段见[兵情篇表格 M37](../../../../../assets/docs/乔剪国战表格.xlsx)及[弩包专栏](https://www.bilibili.com/opus/1181099586803990535)，现有逐将页保留[文字记录](../../../../rules/generals/em-jin001-simayan.md#太康与诸王敕封册)。
 
 > 当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以将一张符合其副将牌面势力的剩余武将牌置为〖赐〗。
 > （〖赐〗是一种国战标记：出牌阶段限一次，你可以消耗一枚〖赐〗，然后变更一张与此牌单独阴阳鱼数相同的武将牌（限一次），或根据此牌单独阴阳鱼数执行效果：≤3：本回合手牌上限+3。≥4：摸牌至四张。）

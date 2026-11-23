@@ -8,7 +8,7 @@
 
 - **标识与依据** · 阵包翼从 `qiao_heg__retinue_bazhenbing`，运行时技能 ID `qiao__retinue_skill_bazhenbing`。见[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_bazhenbing.lua)和[统领与翼从规则](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L1976)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L1976)的统领条目。
 
 > 轮次技，一名角色的出牌阶段开始时，你可以视为使用【调虎离山】，此牌结算中其可以将【杀】当【无懈可击】使用。
 

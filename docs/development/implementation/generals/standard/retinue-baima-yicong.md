@@ -8,7 +8,7 @@
 
 - **标识与依据**：`qiao__retinue_skill_baima_yicong`；[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_baima_yicong.lua)；[标准翼从表](../../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L3019)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L3019)的统领条目。
 
 > 当你使用或打出【闪】时，你可以获得对方的一张牌。
 

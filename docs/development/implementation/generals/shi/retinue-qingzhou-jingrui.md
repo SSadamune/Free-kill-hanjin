@@ -8,7 +8,7 @@
 
 - **标识与依据** · 势包翼从 `qiao_heg__retinue_qingzhou_jingrui`，运行时技能 ID `qiao__retinue_skill_qingzhou_jingrui`。见[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_qingzhou_jingrui.lua)和[统领与翼从规则](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L3487)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L3487)的统领条目。
 
 > 出牌阶段限一次，你可以令一名手牌数最小的角色选择一项：1.弃置一张手牌；2.你对其造成1点伤害。
 

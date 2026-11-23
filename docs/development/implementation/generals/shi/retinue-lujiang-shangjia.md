@@ -8,7 +8,7 @@
 
 - **标识与依据** · 势包翼从 `qiao_heg__retinue_lujiang_shangjia`，运行时技能 ID `qiao__retinue_skill_lujiang_shangjia`。见[源码](../../../../../pkg/qiao_generals/skills/retinue_skill_lujiang_shangjia.lua)和[统领与翼从规则](../../../../rules/commander-retinue.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L6513)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L6513)的统领条目。
 
 > 出牌阶段限X次（X为拥有庐江上甲的角色数），你可以调整手牌至你装备区的牌数，若为弃牌，你此阶段使用【杀】的次数+1。
 

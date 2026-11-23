@@ -8,7 +8,7 @@
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_niujin`，技能 ID `qiao__retinue_skill_niujin`；源码 [retinue_skill_niujin.lua](../../../../../pkg/qiao_generals/skills/retinue_skill_niujin.lua)。规则见[标准武将表](../../../../rules/standard-generals.md)翼从牛金与 [docs/rules/general-principles.md](../../../../rules/general-principles.md)。
 
-牌面原文见[石激桑资料的统领条目](../../../../../assets/docs/石激桑武将列表.json#L5005)。
+牌面原文见[石激桑武将列表.json](../../../../../assets/docs/石激桑武将列表.json#L5005)的统领条目。
 
 > 与你势力相同的角色回合结束时，你可以使用每种类别至多各一张牌，你以此法杀死角色后摸三张牌。
 
