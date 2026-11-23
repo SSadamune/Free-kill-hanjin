@@ -4,11 +4,13 @@ local H = require "packages.hegemony.util"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
+local Cost = require "packages.qiao.pkg.qiao_mode.rules.commander_cost"
 local M = {}
 
 M.RULE_SKILL = "#qiao_commander_rule"
 M.ABILITY_SKILL = "qiao_commander_ability"
 M.SOURCE_MARK = "@[qiao_commander_sources]"
+M.COST_MARK = "qiao_commander_cost_skills"
 M.SOURCE_TAG = "qiao_commander_sources"
 M.PENDING_TAG = "qiao_commander_pending"
 M.CARD_SOURCE_MARK = "qiao_commander_source"
@@ -366,8 +368,10 @@ function M.refreshAvailability(room)
   if room == nil then return end
   for _, player in ipairs(room.players) do
     local list = {}
-    for _, source in ipairs(M.abilitySources(player)) do table.insert(list, source.general) end
+    local sources = M.abilitySources(player)
+    for _, source in ipairs(sources) do table.insert(list, source.general) end
     room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    M.refreshCostSkills(room, player, sources)
     local descriptions = {}
     local faction = M.factionOf(player)
     local used = M.usedLimitedRetinues(room)
@@ -384,6 +388,33 @@ function M.refreshAvailability(room)
     table.sort(descriptions, function(a, b) return a.key < b.key end)
     room:setPlayerMark(player, "qiao_commander_descriptions", #descriptions > 0 and descriptions or 0)
   end
+end
+
+function M.refreshCostSkills(room, player, sources)
+  local exclusions, projection = {}, {}
+  for _, source in ipairs(sources or M.abilitySources(player)) do
+    local costs = {}
+    for _, deputy in ipairs(M.costCandidates(player, source)) do
+      if not exclusions[deputy] then exclusions[deputy] = Cost.excludedSkills(room, player, deputy) end
+      table.insert(costs, exclusions[deputy])
+    end
+    projection[source.general] = costs
+  end
+  room:setPlayerMark(player, M.COST_MARK, next(projection) and projection or 0)
+end
+
+function M.clientHasLegalCost(player, card, check)
+  local projections = player:getMark(M.COST_MARK)
+  local costs = type(projections) == "table" and projections[card:getMark(M.CARD_SOURCE_MARK)]
+  if not costs then return check() end
+  for _, names in ipairs(costs) do
+    if Cost.checkWithout(player, names, check) then return true end
+  end
+  return false
+end
+
+function M.checkCost(player, deputy, check)
+  return Cost.checkWithout(player, Cost.excludedSkills(player.room, player, deputy), check)
 end
 
 -- Public, room-specific source data is synchronized by refreshAvailability.
@@ -547,8 +578,8 @@ function M.costCandidates(player, source)
   return result
 end
 
-function M.chooseCostPosition(player, source)
-  local candidates = M.costCandidates(player, source)
+function M.chooseCostPosition(player, source, candidates)
+  candidates = candidates or M.costCandidates(player, source)
   if #candidates == 0 then return nil end
   if #candidates == 1 then return candidates[1] end
   local answer = player.room:askToChoice(player, {

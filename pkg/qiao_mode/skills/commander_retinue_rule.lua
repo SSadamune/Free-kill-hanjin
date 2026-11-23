@@ -1,5 +1,6 @@
 local C = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local H = require "packages.hegemony.util"
+local G = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 
 -- 模式级公共规则。相关规则必须在所有包加载完成后挂到本技能的实际
 -- Skill 对象上；SkillSkeleton 的 related_skills 只是展示用的技能名表，
@@ -19,6 +20,26 @@ skill:addEffect(fk.GameStart, {
     C.refreshAvailability(room)
   end,
 })
+
+local function refreshPlayerCostSkills(room, player)
+  if C.hasAvailableMark(player) then C.refreshCostSkills(room, player) end
+end
+
+for _, event in ipairs({ fk.EventAcquireSkill, fk.EventLoseSkill }) do
+  skill:addEffect(event, {
+    global = true,
+    can_refresh = function(self, event, target, player)
+      return target == player and C.hasAvailableMark(player)
+    end,
+    on_refresh = function(self, event, target, player)
+      refreshPlayerCostSkills(player.room, player)
+    end,
+  })
+end
+
+G.addChangeListener(function(room)
+  for _, player in ipairs(room.players) do refreshPlayerCostSkills(room, player) end
+end)
 
 skill:addEffect(fk.GeneralShown, {
   global = true,

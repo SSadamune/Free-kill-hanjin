@@ -3,6 +3,7 @@ local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local BaseClient = require "ltk.client.client"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local ReqUseCard = require "ltk.core.request_type.use_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
@@ -13,6 +14,7 @@ local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local LtkUI = require "packages.freekill-core.ltk.client.util"
 local MZ = "qiao__skill_han001_2"
 
@@ -25,13 +27,45 @@ local function isQiaoMZ(request)
   return room ~= nil and Modes.inRoom(room)
 end
 
+local function checkSelectedTargets(request, targetValidity)
+  local selected = request.selected_targets
+  if #selected == 0 then return true end
+  -- 同一次用牌的所有目标必须能用同一张武将牌支付代价。按原选择顺序复核。
+  local prefix = {}
+  request.selected_targets = prefix
+  local ok, valid = pcall(function()
+    for _, id in ipairs(selected) do
+      if not targetValidity(request, id) then return false end
+      table.insert(prefix, id)
+    end
+    return true
+  end)
+  request.selected_targets = selected
+  if not ok then error(valid, 0) end
+  return valid
+end
+
+local function checkCommanderCost(request, targetValidity, check)
+  if request.skill_name == Commander.ABILITY_SKILL and Modes.inRoom(Fk:currentRoom()) then
+    local card = request:getUsingCard()
+    if card then
+      return Commander.clientHasLegalCost(request.player, card, function()
+        return checkSelectedTargets(request, targetValidity) and check()
+      end)
+    end
+  end
+  return check()
+end
+
 local function recipientRequest(base, name)
   local request = base:subclass(name)
 
   function request:targetValidity(pid)
     if RemovedTargets.inMode(self.room)
       and RemovedTargets.isRemoved(self.room:getPlayerById(pid)) then return false end
-    if not isQiaoMZ(self) then return base.targetValidity(self, pid) end
+    if not isQiaoMZ(self) then
+      return checkCommanderCost(self, base.targetValidity, function() return base.targetValidity(self, pid) end)
+    end
     local to = self.room:getPlayerById(pid)
     -- 其他合法角色保持可点击；每次点击都是替换收牌者，而非追加目标。
     return to ~= nil and not not Fk.skills[MZ]:targetFilter(
@@ -51,6 +85,8 @@ local function recipientRequest(base, name)
 end
 
 local QiaoPlayCard = recipientRequest(ReqPlayCard, "QiaoPlayCard")
+-- 锁定本体按 class.name 识别「使用牌」请求，例如禁止用牌的界面提示。
+local QiaoUseCard = recipientRequest(ReqUseCard, ReqUseCard.name)
 local QiaoActiveSkill = recipientRequest(ReqActiveSkill, "QiaoActiveSkill")
 
 --- virtual_viewas 的候选牌名可用性要按当前请求的 extra_data 复核。
@@ -102,7 +138,11 @@ function QiaoPlayCard:feasible()
   if self.skill_name and exhaustedActiveSkill(self, self.skill_name) then
     return false
   end
-  return ReqPlayCard.feasible(self)
+  return checkCommanderCost(self, ReqPlayCard.targetValidity, function() return ReqPlayCard.feasible(self) end)
+end
+
+function QiaoUseCard:feasible()
+  return checkCommanderCost(self, ReqUseCard.targetValidity, function() return ReqUseCard.feasible(self) end)
 end
 
 local pileActions = {
@@ -148,6 +188,7 @@ end
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
   self:addRequestHandler("PlayCard", QiaoPlayCard)
+  self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
 end
 
