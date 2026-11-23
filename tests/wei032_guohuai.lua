@@ -153,4 +153,27 @@ function Testqiao_wei032_guohuai:testPingYuRealSlashResponsePlaysGuohuaisJink()
   lu.assertFalse(table.contains(guohuai:getCardIds(Player.Hand), jink))
 end
 
+function Testqiao_wei032_guohuai:testJingceChecksEveryTurnAndOnlyAsksWhenEligible()
+  local room, owner, other = FkTest.room, p(1), p(2)
+  inRoom(function()
+    room:handleAddLoseSkills(owner, JINGCE, nil, false, true)
+    room.logic:trigger(fk.CardResponding, owner, { card = Fk:cloneCard("jink") })
+    owner.hp = 2
+  end)
+  local asks, hand = 0, owner:getHandcardNum()
+  skill_test.withSkillRequests(room, JINGCE, {
+    askToSkillInvoke = function() asks = asks + 1; return true end,
+  }, function()
+    local function finish()
+      inRoom(function() room.logic:trigger(fk.TurnEnd, other, TurnData:new(other, "game_rule", {})) end)
+    end
+    finish()
+    lu.assertEquals(asks, 0)
+    owner.hp = 1
+    finish()
+    lu.assertEquals(asks, 1)
+    lu.assertEquals(owner:getHandcardNum(), hand + 2)
+  end)
+end
+
 return { name = "qiao_wei032_guohuai" }

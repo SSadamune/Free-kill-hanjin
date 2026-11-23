@@ -7,6 +7,7 @@
 -- 标记写在每名角色身上（内容相同），客户端读取自己或任一角色的同一标记即可。
 -- `-turn` 后缀由引擎在回合结束时清理；TurnStart/GameStart 再显式清空。
 local M = {}
+M.LOST_HAND = "qiao_lost_last_hand-turn"
 
 M.MARK = "qiao_wu_discard_suits-turn"
 

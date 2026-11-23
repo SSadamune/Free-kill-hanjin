@@ -10,7 +10,8 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local function cardNameLength(card)
-  local name = Fk:translate(card.name)
+  if card.trueName == "slash" then return 1 end
+  local name = Fk:translate(card.name, "zh_CN")
   return utf8.len(name) or #name
 end
 

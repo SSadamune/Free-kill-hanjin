@@ -877,4 +877,49 @@ function Testqiao_wu_damage:testQuaxiaoDamagesOverlappingTargets()
   lu.assertEquals(p(3).hp, hp - 3)
 end
 
+function Testqiao_wu_damage:testFenjiRetainsHistoryBeforeAcquisitionAndAfterRefill()
+  local room, owner, to = FkTest.room, p(1), p(3)
+  local last = setHand(room, to, { { "qiao__peach", Card.Heart, 12 } })[1]
+  inRoom(function()
+    room:throwCard({ last }, "test", to, to)
+    to:drawCards(1)
+  end)
+  grant(owner, FENJI)
+  local hp = owner.hp
+  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ to }) })
+  turnEnd(room, owner)
+  lu.assertEquals(to:getHandcardNum(), 3)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
+function Testqiao_wu_damage:testDiscardMarksAskBelowAtAndAboveHandLimit()
+  local room, player = FkTest.room, p(1)
+  local H = require "packages.hegemony.util"
+  local requests = __dofile("../../../tests/support/skill_test.lua")
+  inRoom(function() room:setCurrent(player); player.phase = Player.Discard end)
+  for _, mark in ipairs({ "yinyangfish", "wild" }) do
+    local skillName = mark .. "_skill&"
+    for _, offset in ipairs({ -1, 0, 1 }) do
+      local specs = {}
+      inRoom(function() room:setPlayerMark(player, MarkEnum.AddMaxCardsInTurn, 0) end)
+      local limit = player:getMaxCards()
+      for _ = 1, limit + offset do table.insert(specs, { "qiao__jink" }) end
+      setHand(room, player, specs)
+      inRoom(function() H.addHegMark(player, mark, 1) end)
+      local count = player:getMark("@!!" .. mark)
+      local asked = 0
+      requests.withSkillRequests(room, skillName, {
+        askToSkillInvoke = function() asked = asked + 1; return asked == 2 end,
+      }, function()
+        for i = 1, 2 do
+          inRoom(function() room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Discard }) end)
+          lu.assertEquals(asked, i)
+          lu.assertEquals(player:getMark("@!!" .. mark), i == 1 and count or count - 1)
+          lu.assertEquals(player:getMaxCards(), i == 1 and limit or limit + 2)
+        end
+      end)
+    end
+  end
+end
+
 return { name = "qiao_wu_damage" }

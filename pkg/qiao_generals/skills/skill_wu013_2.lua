@@ -9,43 +9,11 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local LOST_MARK = "qiao__skill_wu013_2_lost-turn"
-
---- 本事件是否让该角色从有手牌变为空手。
----@param move MoveCardsData
----@return boolean
-local function emptiedHand(move)
-  local p = move.from
-  if p == nil or not p:isAlive() then return false end
-  if #p:getCardIds(Player.Hand) > 0 then return false end
-  for _, info in ipairs(move.moveInfo or {}) do
-    if info.fromArea == Player.Hand then return true end
-  end
-  return false
-end
-
-skill:addEffect(fk.AfterCardsMove, {
-  global = true,
-  can_refresh = function(self, event, target, player, data)
-    if player == nil or not player:hasSkill(skill.name) then return false end
-    for _, move in ipairs(data or {}) do
-      if emptiedHand(move) then return true end
-    end
-    return false
-  end,
-  on_refresh = function(self, event, target, player, data)
-    for _, move in ipairs(data or {}) do
-      local p = move.from
-      if emptiedHand(move) then
-        player.room:setPlayerMark(p, LOST_MARK, 1)
-      end
-    end
-  end,
-})
+local History = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
 
 local function candidates(player)
   return table.filter(player.room:getPresentPlayers(), function(p)
-    return p:isAlive() and not p:isRemoved() and p:getMark(LOST_MARK) > 0
+    return p:isAlive() and not p:isRemoved() and p:getMark(History.LOST_HAND) > 0
   end)
 end
 

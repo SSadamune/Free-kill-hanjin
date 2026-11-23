@@ -152,4 +152,123 @@ function Testqiao_shu021_mifuren:testCunsiSlashInsideTurnAndPeachOutsideTurn()
   lu.assertTrue(table.contains(player:getCardIds("h"), peach), "回合外使用桃后获得该桃")
 end
 
+function Testqiao_shu021_mifuren:testGuixiuIndependentWindowsInOneTurn()
+  local room, owner = FkTest.room, p(1)
+  local gains = {}
+  local skel = fk.CreateSkill { name = "#test_guixiu_repeat_windows" }
+  skel:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == owner and player == owner and (data.phase == Player.Start or data.phase == Player.Draw)
+    end,
+    on_refresh = function()
+      local hand = owner:getHandcardNum()
+      owner:hideGeneral(false)
+      owner:revealGeneral(false)
+      table.insert(gains, owner:getHandcardNum() - hand)
+    end,
+  })
+  local helper = skel:createSkill()
+  Fk.skills[helper.name] = helper
+  inRoom(function()
+    room:addSkill(helper)
+    GameEvent.Turn:create(TurnData:new(owner, "game_rule", { Player.Start, Player.Draw })):exec()
+  end)
+  lu.assertEquals(gains, { 2, 2 })
+end
+
+function Testqiao_shu021_mifuren:testGuixiuSurvivesHidingBeforeReward()
+  local room, owner = FkTest.room, p(1)
+  inRoom(function() owner:hideGeneral(false) end)
+  local skel = fk.CreateSkill { name = "#test_guixiu_hide_at_reveal" }
+  skel:addEffect(fk.GeneralShown, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == owner and player == owner and data.m == MIFUREN
+    end,
+    on_refresh = function() owner:hideGeneral(false) end,
+  })
+  local helper = skel:createSkill()
+  Fk.skills[helper.name] = helper
+  local hand = owner:getHandcardNum()
+  inRoom(function() room:addSkill(helper); owner:revealGeneral(false) end)
+  lu.assertEquals(owner.general, "anjiang")
+  lu.assertEquals(owner:getHandcardNum(), hand + 2)
+end
+
+local function revealInsideOneSkill(killBeforeExit)
+  local room, owner = FkTest.room, p(1)
+  local gained
+  local skel = fk.CreateSkill { name = "#test_guixiu_deferred_" .. tostring(killBeforeExit) }
+  skel:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_trigger = function(self, event, target, player, data)
+      return target == owner and player == owner and data.phase == Player.Start
+    end,
+    on_cost = Util.TrueFunc,
+    on_use = function()
+      local hand = owner:getHandcardNum()
+      owner:hideGeneral(false)
+      owner:revealGeneral(false)
+      owner:hideGeneral(false)
+      owner:revealGeneral(false)
+      owner:hideGeneral(false)
+      gained = owner:getHandcardNum() - hand
+      if killBeforeExit then room:killPlayer { who = owner } end
+    end,
+  })
+  local helper = skel:createSkill()
+  Fk.skills[helper.name] = helper
+  local hand = owner:getHandcardNum()
+  inRoom(function()
+    room:addSkill(helper)
+    GameEvent.Turn:create(TurnData:new(owner, "game_rule", { Player.Start })):exec()
+  end)
+  lu.assertEquals(gained, 0)
+  if killBeforeExit then
+    lu.assertTrue(owner.dead)
+    lu.assertEquals(owner:getHandcardNum(), 0)
+  else
+    lu.assertEquals(owner:getHandcardNum(), hand + 2)
+  end
+end
+
+function Testqiao_shu021_mifuren:testRepeatedRevealWithinOneWindowPaysOnce()
+  revealInsideOneSkill(false)
+end
+
+function Testqiao_shu021_mifuren:testDeathBeforeRevealWindowSkipsDraw()
+  revealInsideOneSkill(true)
+end
+
+function Testqiao_shu021_mifuren:testCombinedRevealPaysOnlyForActuallyHiddenMifuren()
+  local room, owner = FkTest.room, p(1)
+  local gains = {}
+  local skel = fk.CreateSkill { name = "#test_guixiu_combined" }
+  skel:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == owner and player == owner and data.phase == Player.Start
+    end,
+    on_refresh = function()
+      owner:hideGeneral(true)
+      local before = owner:getHandcardNum()
+      owner:revealGenerals()
+      table.insert(gains, owner:getHandcardNum() - before)
+      owner:hideGeneral(false)
+      owner:hideGeneral(true)
+      before = owner:getHandcardNum()
+      owner:revealGenerals()
+      table.insert(gains, owner:getHandcardNum() - before)
+    end,
+  })
+  local helper = skel:createSkill()
+  Fk.skills[helper.name] = helper
+  inRoom(function()
+    room:addSkill(helper)
+    GameEvent.Turn:create(TurnData:new(owner, "game_rule", { Player.Start })):exec()
+  end)
+  lu.assertEquals(gains, { 0, 2 })
+end
+
 return { name = "qiao_shu021_mifuren" }
