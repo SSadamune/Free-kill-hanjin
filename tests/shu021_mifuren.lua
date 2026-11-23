@@ -86,11 +86,13 @@ end
 
 function Testqiao_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi()
   local room, player, target = FkTest.room, p(1), p(2)
-  local companionBefore = target:getMark("CompanionEffect")
   inRoom(function()
+    require("packages.hegemony.util").addHegMark(target, "companion")
     room.current = player
     player.phase = Player.Play
   end)
+  local companionBefore = target:getMark("@!!companion")
+  local pendingBefore = target:getMark("CompanionEffect")
   skill_test.withSkillRequests(room, YONGJUE, {
     askToChoosePlayers = function(self, who, params, original)
       if params.skill_name == YONGJUE then return { target } end
@@ -108,9 +110,9 @@ function Testqiao_shu021_mifuren:testYongjueRemovesCardGrantsCompanionAndCunsi()
   local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   lu.assertNotEquals(Exchange.actualGeneral(player, false), MIFUREN,
     "勇决应移除糜夫人将牌（允许自动转翼从）")
-  -- 真实选将/明置换将可能已给出初始珠联标记；勇决只应增加本次的一枚。
-  lu.assertEquals(target:getMark("CompanionEffect"), companionBefore + 1,
-    "勇决应增加一枚珠联标记；before=" .. tostring(companionBefore))
+  lu.assertEquals(target:getMark("@!!companion"), companionBefore + 1)
+  lu.assertEquals(target:getMark("CompanionEffect"), pendingBefore)
+  lu.assertTrue(target:hasSkill("companion_skill&"))
   lu.assertTrue(target:hasSkill(CUNSI))
 end
 
