@@ -14,7 +14,7 @@
 
 君孙权、君曹操、君司马炎、君刘协的规则与来源差异见[四君主索引](../rules/README.md)，采用石激桑 JSON。“赐”的持有与整局变更次数、诏书特殊标记身份已确认。四将及相关旗／标记机制已实装，当前验收与关联依赖见下方最近验证记录；程序接入沿用当前 `qiao` 命名空间、`pkg/qiao_*` 路径及正式武将的 `qiao_heg__` 前缀。
 
-六势力阵包、势包：依石激桑来源完成24张普通武将及两张君主、57条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。规则采用实际翼从实例及士兵／武将牌的分类，修体和武库按已确认暂行口径执行。24张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例适配及武将牌后天技能来源机制已接入并通过默认回归。见[逐将索引](../rules/zhen-shi-generals.md)及[实现与验证记录](implementation/generals/zhen-shi-review.md)。各批修复和验证边界见[按批次的验证记录](#最近验证记录)。
+六势力阵包、势包：依石激桑来源完成 24 张普通武将及两张君主、57 条将牌技能的来源与结算审阅，关联翼从、旗及所授技能另列。修体和武库按已确认暂行口径执行。24 张普通武将及两张君主、三种新翼从和五条统领来源均已正式登记，并已有分批定向运行结果。标准翼从多实例与武将牌后天技能来源也已接入。见[规则索引](../rules/zhen-shi-generals.md)、[阵包实现](implementation/generals/zhen.md)、[势包实现](implementation/generals/shi.md)和[共享分批证据](implementation/generals/verification-evidence.md#阵包与势包分批验证)。
 
 2026-11-13 魏包规则确认：外部《规则向FAQ文件.docx》已转换为 Markdown 并归档到 `assets/docs/`，保留来源内容并声明不随项目维护；采用其中多势力判断基准与定向叠置／平置定义。应期确认为开局确定的配将体力贡献修正，普通交换、移除或替换不重算体力上限，升变依公共流程；骁果须实际弃置至少一张基本牌支付发动消耗。底稿同步修订叠置、复原及弃置消耗说明，逐将约定见 WEI002、WEI014、WEI016、JIN009。实现与验证结果见下方魏势力标准包记录。
 
@@ -97,7 +97,7 @@
 
 ### #29 第 6–10 项的 FAQ 核查
 
-双 2.5 配将的开局体力和双亮阴阳鱼已接到[配将体力公共流程](implementation/generals/pair-hp.md)。同时对照了已接线的机制。[禁选与替换](implementation/faction-ban.md)、[客将](implementation/guest-factions.md)、[鏖战人数及实体桃](implementation/battle-royal.md)、[移出游戏](../rules/card-deck.md#调虎离山)、[阵法召唤](../rules/zhen-shi-generals.md)、[变更与交换](implementation/general-exchange.md)、[双栏坐骑](implementation/card-deck.md#君主装备)、[应变](implementation/adaptation.md)及[用牌条件和目标](implementation/card-use-targets.md)均有项目入口。外部 FAQ 与项目明确不同的约定沿用项目版本，例如[效忠在准备阶段](../rules/wild-allegiance.md#准备阶段升变)和[置入装备的空栏要求](../rules/equipment-movement.md)。
+双 2.5 配将的开局体力和双亮阴阳鱼已接到[配将体力公共流程](implementation/generals/pair-hp.md)。同时对照了已接线的机制。[禁选与替换](implementation/faction-ban.md)、[客将](implementation/guest-factions.md)、[鏖战人数及实体桃](implementation/battle-royal.md)、[移出游戏](implementation/mode-rules.md#移出游戏)、[阵法召唤](implementation/mode-rules.md#阵法召唤)、[变更与交换](implementation/general-exchange.md)、[双栏坐骑](implementation/card-deck.md#君主装备)、[应变](implementation/adaptation.md)及[用牌条件和目标](implementation/card-use-targets.md)均有项目入口。外部 FAQ 与项目明确不同的约定沿用项目版本，例如[效忠在准备阶段](../rules/wild-allegiance.md#准备阶段升变)和[置入装备的空栏要求](../rules/equipment-movement.md)。
 
 对照[外部 FAQ](../../assets/docs/规则向FAQ文件.md)后留待处理的差异：
 

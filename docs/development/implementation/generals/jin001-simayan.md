@@ -7,18 +7,18 @@
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
 | JIN001 | 司马炎 | [垂统](support.md#jin001-1)、[兴图](conversion.md#jin001-2) |
-| JIN002 | 司马师 | [泰然](support.md#jin002-1)、[夷灭](damage.md#jin002-2) |
+| JIN002 | 司马师 | [泰然](support.md#jin002-1)、[夷灭](damage.md#jin002-2)、[腹心死士](retinues.md#fuxin-sishi)（关联翼从） |
 | JIN003 | 司马昭 | [昭然](support.md#jin003-1)、[挟征](active.md#jin003-2) |
 | JIN004 | 贾充 | [通法](support.md#jin004-1)、[悖弑](damage.md#jin004-2) |
 | JIN005 | 羊祜 | [柔克](conversion.md#jin005-1)、[顺流](damage.md#jin005-2) |
 | JIN007 | 王元姬 | [识人](support.md#jin007-1)、[恤下](support.md#jin007-2) |
 | JIN008 | 夏侯徽 | [宜室](support.md#jin008-1)、[识度](pindian.md#jin008-2) |
-| JIN009 | 司马懿 | [权变](support.md#jin009-1)、[骤霆](conversion.md#jin009-2)、[应期](pair-hp.md#wei002-3) |
+| JIN009 | 司马懿 | [权变](support.md#jin009-1)、[骤霆](conversion.md#jin009-2)、[应期](pair-hp.md#wei002-3)、[腹心死士](retinues.md#fuxin-sishi)（关联翼从） |
 | JIN010 | 张春华 | [伤逝](conversion.md#jin010-1)、[扼绝](damage.md#jin010-2) |
 | JIN011 | 张虎&乐綝 | [果毅](support.md#jin011-1) |
 | JIN012 | 羊徽瑜 | [慈威](active.md#jin012-1)、[弘训](support.md#jin012-2) |
 | JIN013 | 王濬 | [乘流](damage.md#jin013-1)、[克清](active.md#jin013-2) |
-| JIN014 | 文鸯 | [膂力](support.md#jin014-1)、[夺气](phases.md#jin014-2) |
+| JIN014 | 文鸯 | [膂力](support.md#jin014-1)、[夺气](phases.md#jin014-2)、[文虎](retinues.md#wenhu)（关联翼从） |
 | JIN015 | 石苞 | [前驱](active.md#jin015-1) |
 | JIN016 | 张华 | [复礼](support.md#jin016-1)、[风物](support.md#jin016-2) |
 
@@ -97,17 +97,9 @@
 
 ## 4. 验证
 
-2026-11-16 新增八套定向共65项通过（basic19、resources15、deck3、information2、reactive6、adaptation5、chain6、sources9）。资源及反制最终修复由 Codex 执行，其余由 DSH 执行；具体命令、时间与复用回归见[晋共享证据](verification-evidence.md#jin-standard)。最终默认831/831（158.697秒）通过；不得以本段定向结果推定客户端点击、联网／重连或干净本体安装人工验收。
+按技能检索真实回归入口。整包测试、历史命令与当时的环境见[共享验证证据的晋包最终验收](verification-evidence.md#jin-standard)。当前验收及共通的人工待办见[开发状态](../../status.md#当前验收基线)。
 
-### 司马炎既有专项与历史验证
-
-常规专项验收入口：
-
-```text
-python scripts/test.py --file tests/jin001_simayan.lua --timeout 120
-```
-
-最近一次由 DSH 直接通过同一 runtime 的 `FreeKill.exe --testfile` 执行专项（当时用户正在运行游戏，未重复同步运行环境），原记录为 `Ran 17 tests ... 17 successes, 0 failures`（原文省略运行时间）。覆盖垂统的濒死移装与各类不移动边界、兴图的应变牌事实／回合清空／两项执行／主副将与暗置来源，以及真实 `ClientPlayer` 请求处理器中装备牌／非装备牌与目标的可选性。默认全量套件通过 507/507（该批次）；安装包已构建。原始执行记录见[共享验证证据](verification-evidence.md#jin001_simayan)。
+普通司马炎的垂统、兴图分别见[垂统](support.md#jin001-1)与[兴图](conversion.md#jin001-2)。君主版的实装与回归见[弩包君司马炎](em-jin001.md)。
 
 ## 5. 未完成与边界
 

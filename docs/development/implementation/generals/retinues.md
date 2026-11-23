@@ -1,6 +1,6 @@
 # 翼从专属技能：跨势力实现与验证
 
-本页是汉、魏、蜀、吴、群、晋翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
+本页是标准包、阵包与势包已登记翼从专属技能的主记录页，采用与武将技能相同的四字段与来源顺序。统领能力与翼从效果的取得、失去、来源及生效范围，统一见[统领与翼从](../commander-retinue.md)与[规则](../../../rules/commander-retinue.md)；本页不重写这些概念与规则，只记录翼从专属技能本身，不替代规则条文。翼从按其统领所属势力排序，同势力按来源武将编号；并州狼骑有多名来源，交叉只在本页注明一次。共享命令输出见[共享验证证据](verification-evidence.md)。
 
 ## 技能索引
 
@@ -20,6 +20,9 @@
 | QUN | 黄巾雷使 | [黄巾雷使](#huangjin-leishi) |
 | JIN | 腹心死士 | [腹心死士](#fuxin-sishi) |
 | JIN | 文虎 | [文虎](#wenhu) |
+| 阵包 | 八阵兵 | [八阵兵](#bazhenbing) |
+| 势包 | 青州精锐 | [青州精锐](#qingzhou-jingrui) |
+| 势包 | 庐江上甲 | [庐江上甲](#lujiang-shangjia) |
 
 ## 技能条目
 
@@ -29,6 +32,11 @@
 #### 穆顺
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_mushun`，技能 ID `qiao__retinue_skill_mushun`；源码 [retinue_skill_mushun.lua](../../../../pkg/qiao_generals/skills/retinue_skill_mushun.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从穆顺、[移动事件](../../../../rulebook/events/move-card.md)、[弃置](../../../../rulebook/terms/card-op-terms/discard.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L638)。
+
+> 每回合限一次，当你弃置任意角色的牌或被其他角色弃置牌后，你可以获得其中一张。若如此做，本回合你下次弃置任意角色的牌或被其他角色弃置牌后，你失去1点体力。
+
 - **实现与接口**：
   - 监听真实 `fk.AfterCardsMove`：只认 `moveReason == fk.ReasonDiscard` 且目标为弃牌堆的移动；重铸、给牌等不计。
   - 分别按真实移动数据判断：`move.proposer == 穆顺` 为自己弃置任意角色的牌（含自己主动弃自己的牌）；`move.from == 穆顺` 且 `proposer` 为其他角色为被其他角色弃置。不按技能名或猜测的弃牌者判断。
@@ -42,6 +50,11 @@
 #### 西园军
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_xiyuanjun`，技能 ID `qiao__retinue_skill_xiyuanjun`；源码 [retinue_skill_xiyuanjun.lua](../../../../pkg/qiao_generals/skills/retinue_skill_xiyuanjun.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从西园军、[阶段事件](../../../../rulebook/events/phase.md)、[展示](../../../../rulebook/terms/card-op-terms/showCards.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L836)。
+
+> 与你势力相同的角色出牌阶段开始时，你可以选择一名角色的一张手牌，本回合此牌对所有角色可见且其不能使用或打出之，其受到伤害后来源获得之。
+
 - **实现与接口**：
   - `fk.EventPhaseStart` 以普通 `global + can_trigger + on_cost + on_use` 处理：触发条件是与西园军同势力的角色出牌阶段开始；当前阶段角色可以没有手牌。
   - 被选牌角色是“一名角色”，候选为全场有手牌的合法角色，不限制与西园军同势力（可选敌方，也可选当前空手的阶段角色以外的角色）。先选角色，再用 `askToChooseCard(flag="h")` 由引擎隐藏选牌；返回值用 `Card:getIdList` 规范化为单个 id，兼容 Card/ID/数组。
@@ -58,16 +71,26 @@
 #### 并州狼骑
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_bingzhou_langqi`，技能 ID `qiao__retinue_skill_bingzhou_langqi`；源码 [retinue_skill_bingzhou_langqi.lua](../../../../pkg/qiao_generals/skills/retinue_skill_bingzhou_langqi.lua)，距离状态技 [retinue_skill_bingzhou_distance.lua](../../../../pkg/qiao_generals/skills/retinue_skill_bingzhou_distance.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从并州狼骑与[统领与翼从](../../../rules/commander-retinue.md)。**多来源**：并州狼骑可由张辽、吕布等不同统领取得，本页只在此条交叉注明一次，其他机制页不再重复。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L2559)。
+
+> 出牌阶段限一次，你可以令一名其他角色视为对你使用一张【决斗】，本回合你与其距离视为1。
+
 - **实现与接口**：
   - 出牌阶段限一次，令一名其他角色视为对你使用【决斗】，本回合你与其距离视为 1。主动技不依赖骨架次数限制：active `can_use` 用 `usedSkillTimes(..., Player.HistoryPhase)` 限制每阶段一次，`on_use` 不再次拒绝已记录的本次发动（引擎在进入 `on_use` 前已记次，二次检查会吞掉本次发动）。
   - 距离关系改为双方 `@[qiao_bingzhou_pairs]` 表标记，支持多来源／多持有者；距离状态技为随包加载的独立骨架（服务端／客户端同一对象），回合末由房间级清理监听移除状态技并清标记。关系不因失去翼从技能消失。
-- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实【决斗】使用者／目标、双向距离、每阶段一次；历史 3/3，见[共享验证证据](verification-evidence.md#wei_retinues)。
+- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实【决斗】使用者／目标、双向距离、每阶段一次，见[共享验证证据](verification-evidence.md#wei_retinues)。
 - **未完成与边界**：距离状态技双方挂载／回合末移除、以及客户端距离显示需要实际运行与客户端验证；真实客户端【决斗】与距离提示未人工验收。
 
 <a id="huweijun"></a>
 #### 虎卫军
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_huweijun`，技能 ID `qiao__retinue_skill_huweijun`；源码 [retinue_skill_huweijun.lua](../../../../pkg/qiao_generals/skills/retinue_skill_huweijun.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从虎卫军与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为典韦／许褚。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L4891)。
+
+> 每回合结束时，若你本回合共计造成和受到过的伤害数大于1，你可以移动场上一张牌。
+
 - **实现与接口**：
   - `fk.TurnEnd` 为全局触发，不限于自己回合；每回合结束时，若持有者本回合共计造成和受到过的伤害数大于 1，可以移动场上一张牌。
   - 用 `logic:getActualDamageEvents` 读取实际伤害（排除被防止），`data.from == player` 与 `data.to == player` 分别累加，自己对自己的伤害计两份。满足后复用阶段组 `wei_phases.moveCardInBoard`。
@@ -79,11 +102,16 @@
 #### 牛金
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_niujin`，技能 ID `qiao__retinue_skill_niujin`；源码 [retinue_skill_niujin.lua](../../../../pkg/qiao_generals/skills/retinue_skill_niujin.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从牛金与 [docs/rules/general-principles.md](../../../rules/general-principles.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L5005)。
+
+> 与你势力相同的角色回合结束时，你可以使用每种类别至多各一张牌，你以此法杀死角色后摸三张牌。
+
 - **实现与接口**：
   - `fk.TurnEnd` 全局触发，目标为同势力角色（含自己）；同势力角色回合结束时，可使用基本／锦囊／装备每类别至多各一张牌；以此法杀死角色后摸三张牌。
   - 发动时直接进入自由用牌请求。每次用牌后按实际用牌类别缩减下一次请求的候选和提示，取消或用完三类即结束。公共入口允许武圣、血海魔王樽等需要用牌时可用的技能，排除【闪】等被动牌并复核禁止和目标。合法用牌设置 `bypass_times` 和 `extraUse`。
   - 来源写入本次 `use.extra_data`；房间级奖励监听在 `fk.Death` 中向上追溯 `GameEvent.UseCard` 的 `extra_data`，仅在本次窗口用牌击杀时摸三张，不依赖持有者之后是否仍有技能。
-- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实用【杀】击杀不同势力角色，牛金奖励恰好一次 3 张，另加标准国战击杀奖励 1 张，总手牌 4；断言技能／同势力／实际用牌后再断言击杀奖励。历史 3/3。此前 `expected 3 actual 25` 的根因与修复见[共享验证证据](verification-evidence.md#牛金奖励根因)。
+- **验证依据**：[wei_retinues.lua](../../../../tests/wei_retinues.lua) 覆盖真实用【杀】击杀不同势力角色，牛金奖励恰好一次 3 张，另加标准国战击杀奖励 1 张，总手牌 4；断言技能／同势力／实际用牌后再断言击杀奖励。此前 `expected 3 actual 25` 的根因与修复见[共享验证证据](verification-evidence.md#牛金奖励根因)。
 - **未完成与边界**：每类别用牌的真实客户端面板未人工验收；若后续改用牌流程，需复核 `extra_data` 来源追溯仍只奖励一次。
 
 ### 蜀关联翼从
@@ -92,6 +120,11 @@
 #### 周仓
 
 - **标识与依据**：`qiao__retinue_skill_zhoucang`；[源码](../../../../pkg/qiao_generals/skills/retinue_skill_zhoucang.lua)；[标准翼从表](../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L3685)。
+
+> 当你使用【杀】后，你可以将此【杀】或目标角色使用的【闪】交给另一名其他角色，若其以此法获得红色牌，其可以对你攻击范围内的一名角色使用一张【杀】。
+
 - **实现与接口**：杀后从仍可取得的本次杀或目标闪实体牌中选牌给第三人；红牌受赠者以实际手牌／转化使用杀，显式目标条件读取周仓攻击范围，选择及执行沿用同一策略，绕过通常次数且不计次。
 - **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
@@ -100,6 +133,11 @@
 #### 白马义从
 
 - **标识与依据**：`qiao__retinue_skill_baima_yicong`；[源码](../../../../pkg/qiao_generals/skills/retinue_skill_baima_yicong.lua)；[标准翼从表](../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L3019)。
+
+> 当你使用或打出【闪】时，你可以获得对方的一张牌。
+
 - **实现与接口**：CardUsing／CardResponding 两入口定位 responseToEvent.from，在使用／打出闪时获得对方一张手牌或装备；包含虚拟闪，不按响应牌当前持有者猜对方。
 - **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
@@ -108,6 +146,11 @@
 #### 西凉精骑
 
 - **标识与依据**：`qiao__retinue_skill_xiliang_jingqi`；[源码](../../../../pkg/qiao_generals/skills/retinue_skill_xiliang_jingqi.lua)；[标准翼从表](../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L2788)。
+
+> 结束阶段，你可以使用一张【杀】；当你使用【杀】指定攻击范围内没有你的角色为目标后，你可以令其弃置一张牌。
+
 - **实现与接口**：结束阶段选择实际手牌／转化杀，正确传递四种杀名、pattern、bypass_times 与 extraUse，恰执行一次；目标攻击范围内无持有者时，可令目标自行强制弃一张牌。
 - **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
@@ -116,6 +159,11 @@
 #### 象兵
 
 - **标识与依据**：`qiao__retinue_skill_xiangbing`；[源码](../../../../pkg/qiao_generals/skills/retinue_skill_xiangbing.lua)；[标准翼从表](../../../rules/standard-generals.md#翼从)与[统领与翼从](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L3527)。
+
+> 锁定技，当你使用【杀】后，你视为对受到此【杀】伤害的目标角色使用一张【南蛮入侵】；当你受到火焰伤害后，你视为对所有相邻角色使用一张【杀】。
+
 - **实现与接口**：杀后按实际伤害记录与该杀目标集合的交集，一次生成南蛮；火伤后按座次相邻且去重的集合，一次生成杀；显式目标数量等于选定集合。火伤生成的杀造成伤害后仍正常触发杀后南蛮，不添加无依据豁免。
 - **验证依据**：[shu_retinues.lua](../../../../tests/shu_retinues.lua) 七项核心流程；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：真实客户端、联网与重连未人工验收；公共统领能力及翼从来源沿用独立公共机制。
@@ -126,16 +174,26 @@
 #### 锦帆军
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_jinfanjun`，技能 ID `qiao__retinue_skill_jinfanjun`；源码 [retinue_skill_jinfanjun.lua](../../../../pkg/qiao_generals/skills/retinue_skill_jinfanjun.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从锦帆军与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为甘宁（WU002）。
+
+牌面采用[项目登记](../../../../pkg/qiao_generals/data/standard.lua)的文字。来源与共通说明见[统领与翼从](../../../rules/commander-retinue.md)。
+
+> 每回合每颜色限一次，当你弃置牌后，你可以弃置一张同颜色的牌并摸两张牌。
+
 - **实现与接口**：依据真实 `ReasonDiscard` 操作者与弃牌颜色；每回合每颜色限一次，支付同色可弃牌后摸二；技能自身支付颜色牌的第二次弃置不再触发。颜色次数用 `-turn` 标记，每种颜色各自一次。统领能力与翼从效果沿用[公共规范](../../../rules/commander-retinue.md)，不在专属技能中重写。
-- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖锦帆军真实弃牌；历史 22/22。
+- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖锦帆军真实弃牌。
 - **未完成与边界**：同回合红黑组合、复杂嵌套／改目标组合未逐项新增独立用例；客户端与联网／重连未人工验收。
 
 <a id="quaxiaojiang"></a>
 #### 曲阿小将
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_quaxiaojiang`，技能 ID `qiao__retinue_skill_quaxiaojiang`；源码 [retinue_skill_quaxiaojiang.lua](../../../../pkg/qiao_generals/skills/retinue_skill_quaxiaojiang.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从曲阿小将与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为太史慈（WU012）。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L6251)。
+
+> 每回合限一次，当你使用牌后，若此牌目标与你本回合上一张使用牌的目标不完全相同，你可以对这两张牌的重合目标各造成1点伤害。
+
 - **实现与接口**：读取服务器真实 `GameEvent.UseCard` 历史，按事件顺序取得当前使用前的上一张牌，包含同回合获得技能前的使用；不以结算完成顺序误认嵌套用牌。两次目标不完全相同时，可对重合存活目标各造成一点伤害，每回合限一次。
-- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖曲阿小将完整两次用牌及重合目标伤害；历史 22/22。
+- **验证依据**：[wu_damage.lua](../../../../tests/wu_damage.lua) 覆盖曲阿小将完整两次用牌及重合目标伤害。
 - **未完成与边界**：复杂嵌套／改目标组合未逐项新增独立用例；客户端与联网／重连未人工验收。
 
 ### 群
@@ -144,8 +202,13 @@
 #### 黄巾雷使
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_huangjin_leishi`，技能 ID `qiao__retinue_skill_huangjin_leishi`；源码 [retinue_skill_huangjin_leishi.lua](../../../../pkg/qiao_generals/skills/retinue_skill_huangjin_leishi.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从黄巾雷使与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为张角（QUN010）。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L363)。
+
+> 每回合首次有角色不因使用手牌而造成伤害时，你可以弃置一张手牌并判定，若为：黑色，此伤害+1；红色，其获得此判定牌。
+
 - **实现与接口**：模式级常驻记录器 [qun_damage_history](../../../../pkg/qiao_mode/skills/qun_damage_history.lua) 在开局安装，记录本回合第一个“不因使用手牌而造成伤害”的 `fk.DamageCaused` 时机；黄巾雷使只在该时机开放一次选择，未发动／无手牌／放弃都消耗本回合机会。记录器按真实 `DamageData` 的 `chain/parent` 与 `UseCardData:isUsingHandcard` 判断直接渠道，翼从本体不重复判断。
-- **验证依据**：已执行 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testHuangjinBlackIncreasesFirstNonHandcardDamage`、`testHuangjinRedGivesJudgeCardToSource`、`testHuangjinLateAcquisitionDoesNotReopenFirstChance`、`testHuangjinIgnoresHandcardSlashDamage`，本轮群包定向 47 项通过，见[验证记录](verification-evidence.md#qun-standard)。
+- **验证依据**：已执行 [qun_judgement.lua](../../../../tests/qun_judgement.lua) 的 `testHuangjinBlackIncreasesFirstNonHandcardDamage`、`testHuangjinRedGivesJudgeCardToSource`、`testHuangjinLateAcquisitionDoesNotReopenFirstChance`、`testHuangjinIgnoresHandcardSlashDamage`。历史批次见[验证记录](verification-evidence.md#qun-standard)。
 - **未完成与边界**：转化牌、无实体牌、铁索传导组合未穷举；客户端判定与增伤提示未人工验收。
 
 ### 晋
@@ -154,6 +217,11 @@
 #### 腹心死士
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_fuxin_sishi`，技能 ID `qiao__retinue_skill_fuxin_sishi`；源码 [retinue_skill_fuxin_sishi.lua](../../../../pkg/qiao_generals/skills/retinue_skill_fuxin_sishi.lua)。规则见[标准武将表](../../../rules/standard-generals.md)翼从腹心死士与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为司马师（JIN002）与司马懿（JIN009）。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L1503)。
+
+> 与你势力相同的角色回合结束时，若其有未发动的限定技，你可以摸一张牌，交给其一张牌；若其本回合发动过限定技，你可以视为对其攻击范围内的一名角色使用【杀】。
+
 - **实现与接口**：同势力角色回合结束时，由 [jin_resources.lua](../../../../pkg/qiao_generals/util/jin_resources.lua) 的 `hasUnusedLimitedSkill`／`limitedUsedThisTurn` 按真实限定技标签与发动历史分别检查两项，可都执行。条件一：其仍有未发动限定技时，翼从持有者摸一张，然后交给其一张自己的牌；目标就是持有者时只摸不交。条件二：其本回合发动过限定技时，可视为使用一张【杀】，目标范围按当前回合角色（`target`）的攻击范围计算，不是翼从持有者；接入 `C.explicit` 的 `in_attack_range_of` 与 `room:useCard`。统领取得、限一与翼从来源由公共规则处理，本技能不重写。
 - **验证依据**：[jin_resources.lua](../../../../tests/jin_resources.lua) 覆盖未用限定技给牌、自己为目标只摸不交、已用限定技时用当前回合角色攻击范围使用【杀】；定向 15/15（3.686s），见[共享验证证据](verification-evidence.md#jin-resources)。
 - **未完成与边界**：暗置来源、多个限定技、目标死亡、无合法【杀】目标与客户端交互未人工验收。
@@ -162,6 +230,55 @@
 #### 文虎
 
 - **标识与依据**：翼从 ID `qiao_heg__retinue_wenhu`，技能 ID `qiao__retinue_skill_wenhu`；源码 [retinue_skill_wenhu.lua](../../../../pkg/qiao_generals/skills/retinue_skill_wenhu.lua)。规则见[文鸯规范](../../../rules/generals/jin014-wenyang.md)与[统领与翼从](../../../rules/commander-retinue.md)。来源武将为文鸯（JIN014），限一；同一武将的冰杀统领能力另见公共统领记录。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L1790)。
+
+> 出牌阶段限一次，你可以弃置任意个区域的所有牌，然后视为使用目标上限为X的【决斗】（X为你以此法弃置牌的区域数）。
+
 - **实现与接口**：出牌阶段限一次，`askToChoices` 让玩家勾选手牌/装备/判定三区中任意个非空且全部可弃置的区域；选定后先固定所有选中区的原始牌，再用**一次** `throwCard` 同时弃置，避免逐区重新读取把弃牌触发技新增的牌一并收走。X 按选择时固定牌的完整选中区计算，不按牌数或装备栏数。随后以 `card_use_targets` 的 `C.askToUseVirtualCard` 使用正式 `qiao__duel`，`C.default` 只把 `max_targets` 改为 X，保留原牌其他目标条件，不放宽距离。
 - **验证依据**：[jin_chain.lua](../../../../tests/jin_chain.lua) 覆盖完整弃置手牌区+装备区（X=2）、判定区保留、决斗有 2 名目标；定向 6/6，见[共享验证证据](verification-evidence.md#jin-chain)。
 - **未完成与边界**：仅弃判定区、区域含禁弃牌、空区/部分弃置、目标上限大于可指定人数、客户端多选与联网未人工验收。
+
+### 阵包
+
+<a id="bazhenbing"></a>
+#### 八阵兵
+
+- **标识与依据** · 阵包翼从 `qiao_heg__retinue_bazhenbing`，运行时技能 ID `qiao__retinue_skill_bazhenbing`。见[源码](../../../../pkg/qiao_generals/skills/retinue_skill_bazhenbing.lua)和[统领与翼从规则](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L1976)。
+
+> 轮次技，一名角色的出牌阶段开始时，你可以视为使用【调虎离山】，此牌结算中其可以将【杀】当【无懈可击】使用。
+
+- **实现与接口** · 角色进入出牌阶段时，由持有者按当前翼从实例的轮次额度询问。使用虚拟【调虎离山】时仅在这次结算临时授予该角色将【杀】当【无懈可击】使用的权限，结算完成后收回。
+- **验证依据** · [retinue_bazhenbing.lua](../../../../tests/retinue_bazhenbing.lua#L40)。覆盖真实无懈请求、轮次和同名实例独立记账，以及结算后权限消失。
+- **未完成与边界** · 本条只记录上述覆盖。共通的人工验收范围见[开发状态](../../status.md#当前验收基线)。
+
+
+### 势包
+
+<a id="qingzhou-jingrui"></a>
+#### 青州精锐
+
+- **标识与依据** · 势包翼从 `qiao_heg__retinue_qingzhou_jingrui`，运行时技能 ID `qiao__retinue_skill_qingzhou_jingrui`。见[源码](../../../../pkg/qiao_generals/skills/retinue_skill_qingzhou_jingrui.lua)和[统领与翼从规则](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L3487)。
+
+> 出牌阶段限一次，你可以令一名手牌数最小的角色选择一项：1.弃置一张手牌；2.你对其造成1点伤害。
+
+- **实现与接口** · 出牌阶段从公开在场角色中筛出手牌数最少者。被选者可弃一张合法手牌，选择受伤时由发动者对其造成 1 点伤害。次数按实际发动的翼从实例记录。
+- **验证依据** · [zhen_shi_retinues.lua](../../../../tests/zhen_shi_retinues.lua#L125)。回归覆盖并列最少的合法候选、每实例限次和客户端可用性。
+- **未完成与边界** · 本条只记录上述覆盖。共通的人工验收范围见[开发状态](../../status.md#当前验收基线)。
+
+<a id="lujiang-shangjia"></a>
+#### 庐江上甲
+
+- **标识与依据** · 势包翼从 `qiao_heg__retinue_lujiang_shangjia`，运行时技能 ID `qiao__retinue_skill_lujiang_shangjia`。见[源码](../../../../pkg/qiao_generals/skills/retinue_skill_lujiang_shangjia.lua)和[统领与翼从规则](../../../rules/commander-retinue.md)。
+
+牌面原文见[石激桑资料的统领条目](../../../../assets/docs/石激桑武将列表.json#L6513)。
+
+> 出牌阶段限X次（X为拥有庐江上甲的角色数），你可以调整手牌至你装备区的牌数，若为弃牌，你此阶段使用【杀】的次数+1。
+
+- **实现与接口** · 出牌阶段按在场拥有该兵种的角色人数决定本实例的次数。将自身手牌数调整到装备区张数。本次实际弃牌时建立当前阶段的【杀】次数加成，兵种来源移除后仍保留已建立的加成。
+- **验证依据** · [zhen_shi_retinues.lua](../../../../tests/zhen_shi_retinues.lua#L188)。验证按角色数而非实例数，排除死亡角色，实测弃牌增次与失去实例后继续生效。
+- **未完成与边界** · 本条只记录上述覆盖。共通的人工验收范围见[开发状态](../../status.md#当前验收基线)。

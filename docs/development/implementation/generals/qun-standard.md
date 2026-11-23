@@ -1,45 +1,34 @@
 # 群势力标准包：逐将检索
 
-本页是群势力标准包的逐将入口，不重复技能正文。QUN001、002、003、004、005、007、008、010、012、013、015、016、017、018、027 共 15 将、27 条天生技能记录（马术三处同文，按一个技能计）及并州狼骑、西凉精骑、黄巾雷使三种关联翼从；不含君主版和其他编号版本。规则依据见[标准武将表](../../../rules/standard-generals.md)及 `docs/rules/generals/qun*.md`；实现与验证分别落在下列机制页。
+本页是群势力标准包的逐将入口，不重复技能正文。本包正式登记 15 张武将。马术复用同一运行时 ID，关联翼从在各自统领来源的行中标出。规则依据见[标准武将表](../../../rules/standard-generals.md)及 `docs/rules/generals/qun*.md`；实现与验证分别落在下列机制页。
 
 ## 逐将检索
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
 | QUN001 | 华佗 | [济世](damage.md#qun001-1)、[除疠](support.md#qun001-2) |
-| QUN002 | 吕布 | [无双](active.md#qun002-1)、[虓猛](active.md#qun002-2) |
+| QUN002 | 吕布 | [无双](active.md#qun002-1)、[虓猛](active.md#qun002-2)、[并州狼骑](retinues.md#bingzhou-langqi)（关联翼从） |
 | QUN003 | 貂蝉 | [离间](active.md#qun003-1)、[闭月](support.md#qun003-2) |
 | QUN004 | 袁绍 | [乱击](conversion.md#qun004-1) |
 | QUN005 | 颜良&文丑 | [双雄](conversion.md#qun005-1) |
 | QUN007 | 贾诩 | [完杀](damage.md#qun007-1)、[乱武](active.md#qun007-2)、[帷幕](active.md#qun007-3) |
 | QUN008 | 庞德 | [马术](active.md#shu006-1)、[猛撼](active.md#qun008-2) |
-| QUN010 | 张角 | [雷击](damage.md#qun010-1)、[鬼道](retrial.md#qun010-2) |
+| QUN010 | 张角 | [雷击](damage.md#qun010-1)、[鬼道](retrial.md#qun010-2)、[黄巾雷使](retinues.md#huangjin-leishi)（关联翼从） |
 | QUN012 | 蔡文姬 | [悲歌](retrial.md#qun012-1)、[断肠](damage.md#qun012-2) |
-| QUN013 | 马腾 | [马术](active.md#shu006-1)、[雄异](support.md#qun013-2) |
+| QUN013 | 马腾 | [马术](active.md#shu006-1)、[雄异](support.md#qun013-2)、[西凉精骑](retinues.md#xiliang-jingqi)（关联翼从） |
 | QUN015 | 纪灵 | [双刃](conversion.md#qun015-1) |
 | QUN016 | 田丰 | [死谏](support.md#qun016-1)、[随势](damage.md#qun016-2) |
 | QUN017 | 潘凤 | [狂斧](conversion.md#qun017-1) |
 | QUN018 | 邹氏 | [祸水](active.md#qun018-1)、[倾城](support.md#qun018-2) |
-| QUN027 | 韩遂 | [马术](active.md#shu006-1)、[骁逆](conversion.md#qun027-2) |
+| QUN027 | 韩遂 | [马术](active.md#shu006-1)、[骁逆](conversion.md#qun027-2)、[西凉精骑](retinues.md#xiliang-jingqi)（关联翼从） |
 
 QUN008、QUN013、QUN027 的马术与 SHU006 马超共用 `qiao__skill_shu006_1`，不另建正文；三处逐将链接复用[同一锚点](active.md#shu006-1)。黄巾雷使的翼从专属技能见[翼从专属技能](retinues.md#huangjin-leishi)。
 
 ## 测试入口与当前状态
 
-以下套件已执行，群包定向入口共 47 项通过；不将自动化结果扩展为客户端、联网或干净本体安装人工验收。
+按技能检索真实回归入口。整包测试、历史命令与当时的环境见[共享验证证据的群包历史验收](verification-evidence.md#qun-standard)。当前验收及共通的人工待办见[开发状态](../../status.md#当前验收基线)。
 
-| 测试文件 | 对应技能 |
-| --- | --- |
-| [qun_basic.lua](../../../../tests/qun_basic.lua) | 除疠、离间、闭月、猛撼、雷击、雄异、死谏、随势 |
-| [qun_retrial.lua](../../../../tests/qun_retrial.lua) | 鬼道 |
-| [qun_cards.lua](../../../../tests/qun_cards.lua) | 无双、虓猛、乱击、双雄、乱武、狂斧、骁逆 |
-| [qun_dying.lua](../../../../tests/qun_dying.lua) | 济世、完杀 |
-| [qun_judgement.lua](../../../../tests/qun_judgement.lua) | 帷幕、悲歌、倾城、黄巾雷使 |
-| [qun_control.lua](../../../../tests/qun_control.lua) | 双刃、祸水 |
-| [qun_duanchang.lua](../../../../tests/qun_duanchang.lua) | 断肠 |
-| [qun_standard.lua](../../../../tests/qun_standard.lua) | 上述套件的汇总入口 |
-
-命令结果及验收边界集中见[验证记录](verification-evidence.md#qun-standard)。
+群包专项统一从 [qun_standard.lua](../../../../tests/qun_standard.lua) 进入，单技能回归见各条目的证据。
 
 ## 保留的参考差异与边界
 

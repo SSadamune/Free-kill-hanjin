@@ -5,11 +5,11 @@
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
 | SHU001 | 刘备 | [仁德](conversion.md#shu001-1) |
-| SHU002 | 关羽 | [武圣](conversion.md#shu002-1) |
+| SHU002 | 关羽 | [武圣](conversion.md#shu002-1)、[周仓](retinues.md#zhoucang)（关联翼从） |
 | SHU003 | 张飞 | [咆哮](active.md#shu003-1) |
 | SHU004 | 诸葛亮 | [观星](support.md#shu004-1)、[空城](active.md#shu004-2) |
-| SHU005 | 赵云 | [龙胆](conversion.md#shu005-1)、[突阵](active.md#shu005-2) |
-| SHU006 | 马超 | [马术](active.md#shu006-1)、[铁骑](active.md#shu006-2) |
+| SHU005 | 赵云 | [龙胆](conversion.md#shu005-1)、[突阵](active.md#shu005-2)、[白马义从](retinues.md#baima-yicong)（关联翼从） |
+| SHU006 | 马超 | [马术](active.md#shu006-1)、[铁骑](active.md#shu006-2)、[西凉精骑](retinues.md#xiliang-jingqi)（关联翼从） |
 | SHU007 | 黄月英 | [集智](support.md#shu007-1)、[藏机](support.md#shu007-2) |
 | SHU008 | 黄忠 | [烈勇](active.md#shu008-1) |
 | SHU009 | 魏延 | [狂骨](damage.md#shu009-1) |
@@ -17,7 +17,7 @@
 | SHU011 | 诸葛亮 | [八阵](conversion.md#shu011-1)、[火计](conversion.md#shu011-2)、[看破](conversion.md#shu011-3) |
 | SHU013 | 刘禅 | [享乐](active.md#shu013-1)、[放权](phases.md#shu013-2) |
 | SHU014 | 孟获 | [祸首](damage.md#shu014-1)、[再起](support.md#shu014-2) |
-| SHU015 | 祝融夫人 | [巨象](support.md#shu015-1)、[烈刃](pindian.md#shu015-2) |
+| SHU015 | 祝融夫人 | [巨象](support.md#shu015-1)、[烈刃](pindian.md#shu015-2)、[象兵](retinues.md#xiangbing)（关联翼从） |
 | SHU016 | 甘夫人 | [淑慎](support.md#shu016-1)、[神智](support.md#shu016-2) |
 
 | 翼从 | 专属技能记录 |

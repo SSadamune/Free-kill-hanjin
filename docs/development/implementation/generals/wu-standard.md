@@ -4,23 +4,23 @@
 
 ## 1. 逐将表
 
-| 编号 | 武将 | 技能 | 运行时 ID | 源码 | 实现详情 | 验证 |
-| --- | --- | --- | --- | --- | --- | --- |
-| WU001 | 孙权 | 制衡 | `qiao_heg__wu001` | [skill_wu001_1](../../../../pkg/qiao_generals/skills/skill_wu001_1.lua) | [制衡](support.md#wu001-1) | [wu_support](../../../../tests/wu_support.lua) |
-| WU002 | 甘宁 | 奇袭 | `qiao_heg__wu002` | [skill_wu002_1](../../../../pkg/qiao_generals/skills/skill_wu002_1.lua) | [奇袭](conversion.md#wu002-1) | [wu_support](../../../../tests/wu_support.lua) |
-| WU003 | 吕蒙 | 克己、谋断；后天涉猎 | `qiao_heg__wu003` | [skill_wu003_1](../../../../pkg/qiao_generals/skills/skill_wu003_1.lua)、[skill_wu003_2](../../../../pkg/qiao_generals/skills/skill_wu003_2.lua)、[skill_wu003_3](../../../../pkg/qiao_generals/skills/skill_wu003_3.lua) | [克己](support.md#wu003-1)、[谋断](support.md#wu003-2)、[涉猎](support.md#wu003-3) | [wu_phases](../../../../tests/wu_phases.lua) |
-| WU004 | 黄盖 | 苦肉、诈降 | `qiao_heg__wu004` | [skill_wu004_1](../../../../pkg/qiao_generals/skills/skill_wu004_1.lua)、[skill_wu004_2](../../../../pkg/qiao_generals/skills/skill_wu004_2.lua) | [苦肉](damage.md#wu004-1)、[诈降](damage.md#wu004-2) | [wu_damage](../../../../tests/wu_damage.lua) |
-| WU005 | 周瑜 | 英姿、反间 | `qiao_heg__wu005` | [skill_wu005_1](../../../../pkg/qiao_generals/skills/skill_wu005_1.lua)、[skill_wu005_2](../../../../pkg/qiao_generals/skills/skill_wu005_2.lua) | [英姿](support.md#wu005-1)、[反间](support.md#wu005-2) | [wu_support](../../../../tests/wu_support.lua) |
-| WU006 | 大乔 | 国色、流离 | `qiao_heg__wu006` | [skill_wu006_1](../../../../pkg/qiao_generals/skills/skill_wu006_1.lua)、[skill_wu006_2](../../../../pkg/qiao_generals/skills/skill_wu006_2.lua) | [国色](conversion.md#wu006-1)、[流离](active.md#wu006-2) | [wu_phases](../../../../tests/wu_phases.lua) |
-| WU007 | 陆逊 | 谦逊、度势 | `qiao_heg__wu007` | [skill_wu007_1](../../../../pkg/qiao_generals/skills/skill_wu007_1.lua)、[skill_wu007_2](../../../../pkg/qiao_generals/skills/skill_wu007_2.lua) | [谦逊](active.md#wu007-1)、[度势](conversion.md#wu007-2) | [wu_phases](../../../../tests/wu_phases.lua) |
-| WU008 | 孙尚香 | 结姻、枭姬 | `qiao_heg__wu008` | [skill_wu008_1](../../../../pkg/qiao_generals/skills/skill_wu008_1.lua)、[skill_wu008_2](../../../../pkg/qiao_generals/skills/skill_wu008_2.lua) | [结姻](support.md#wu008-1)、[枭姬](support.md#wu008-2) | [wu_support](../../../../tests/wu_support.lua) |
-| WU009 | 孙坚 | 英魂 | `qiao_heg__wu009` | [skill_wu009_1](../../../../pkg/qiao_generals/skills/skill_wu009_1.lua) | [英魂](support.md#wu009-1) | [wu_support](../../../../tests/wu_support.lua) |
-| WU011 | 小乔 | 天香、红颜 | `qiao_heg__wu011` | [skill_wu011_1](../../../../pkg/qiao_generals/skills/skill_wu011_1.lua)、[skill_wu011_2](../../../../pkg/qiao_generals/skills/skill_wu011_2.lua) | [天香](damage.md#wu011-1)、[红颜](retrial.md#wu011-2) | [wu_damage](../../../../tests/wu_damage.lua) |
-| WU012 | 太史慈 | 天义、酣战 | `qiao_heg__wu012` | [skill_wu012_1](../../../../pkg/qiao_generals/skills/skill_wu012_1.lua)、[skill_wu012_2](../../../../pkg/qiao_generals/skills/skill_wu012_2.lua) | [天义](pindian.md#wu012-1)、[酣战](pindian.md#wu012-2) | [wu_damage](../../../../tests/wu_damage.lua) |
-| WU013 | 周泰 | 不屈、奋激 | `qiao_heg__wu013` | [skill_wu013_1](../../../../pkg/qiao_generals/skills/skill_wu013_1.lua)、[skill_wu013_2](../../../../pkg/qiao_generals/skills/skill_wu013_2.lua) | [不屈](damage.md#wu013-1)、[奋激](support.md#wu013-2) | [wu_damage](../../../../tests/wu_damage.lua) |
-| WU014 | 鲁肃 | 好施、缔盟 | `qiao_heg__wu014` | [skill_wu014_1](../../../../pkg/qiao_generals/skills/skill_wu014_1.lua)、[skill_wu014_2](../../../../pkg/qiao_generals/skills/skill_wu014_2.lua) | [好施](support.md#wu014-1)、[缔盟](support.md#wu014-2) | [wu_damage](../../../../tests/wu_damage.lua) |
-| WU015A | 张昭 | 直谏、固政 | `qiao_heg__wu015a` | [skill_wu015a_1](../../../../pkg/qiao_generals/skills/skill_wu015a_1.lua)、[skill_wu015a_2](../../../../pkg/qiao_generals/skills/skill_wu015a_2.lua) | [直谏](support.md#wu015a-1)、[固政](support.md#wu015a-2) | [wu_support](../../../../tests/wu_support.lua) |
-| WU016 | 丁奉 | 短兵、奋迅 | `qiao_heg__wu016` | [skill_wu016_1](../../../../pkg/qiao_generals/skills/skill_wu016_1.lua)、[skill_wu016_2](../../../../pkg/qiao_generals/skills/skill_wu016_2.lua) | [短兵](active.md#wu016-1)、[奋迅](active.md#wu016-2) | [wu_phases](../../../../tests/wu_phases.lua) |
+| 编号 | 武将 | 技能 |
+| --- | --- | --- |
+| WU001 | 孙权 | [制衡](support.md#wu001-1) |
+| WU002 | 甘宁 | [奇袭](conversion.md#wu002-1)、[锦帆军](retinues.md#jinfanjun)（关联翼从） |
+| WU003 | 吕蒙 | [克己](support.md#wu003-1)、[谋断](support.md#wu003-2)、[涉猎](support.md#wu003-3)（关联） |
+| WU004 | 黄盖 | [苦肉](damage.md#wu004-1)、[诈降](damage.md#wu004-2) |
+| WU005 | 周瑜 | [英姿](support.md#wu005-1)、[反间](support.md#wu005-2) |
+| WU006 | 大乔 | [国色](conversion.md#wu006-1)、[流离](active.md#wu006-2) |
+| WU007 | 陆逊 | [谦逊](active.md#wu007-1)、[度势](conversion.md#wu007-2) |
+| WU008 | 孙尚香 | [结姻](support.md#wu008-1)、[枭姬](support.md#wu008-2) |
+| WU009 | 孙坚 | [英魂](support.md#wu009-1) |
+| WU011 | 小乔 | [天香](damage.md#wu011-1)、[红颜](retrial.md#wu011-2) |
+| WU012 | 太史慈 | [天义](pindian.md#wu012-1)、[酣战](pindian.md#wu012-2)、[曲阿小将](retinues.md#quaxiaojiang)（关联翼从） |
+| WU013 | 周泰 | [不屈](damage.md#wu013-1)、[奋激](support.md#wu013-2) |
+| WU014 | 鲁肃 | [好施](support.md#wu014-1)、[缔盟](support.md#wu014-2) |
+| WU015A | 张昭 | [直谏](support.md#wu015a-1)、[固政](support.md#wu015a-2) |
+| WU016 | 丁奉 | [短兵](active.md#wu016-1)、[奋迅](active.md#wu016-2) |
 
 涉猎以 `related = true` 登记，仅通过谋断获得，不计入天生技能数。
 
@@ -46,30 +46,7 @@
 
 ## 4. 验证
 
-2026-11-14，三套专项已加入 [tests/all.lua](../../../../tests/all.lua) 默认国战套件：
-
-| 专项 | 用例数 | 核心覆盖 |
-| --- | --- | --- |
-| [wu_support.lua](../../../../tests/wu_support.lua) | 15 | 制衡、反间手装弃置及拒绝、结姻／直谏空栏与两来源、枭姬、英魂、固政多弃牌者选择、真实 ClientPlayer |
-| [wu_phases.lua](../../../../tests/wu_phases.lua) | 12 | 克己／谋断历史、涉猎、国色两分支及不可重用、流离转移／取消不付费、谦逊、度势、短兵双闪与扩目标、奋迅失技持续 |
-| [wu_damage.lua](../../../../tests/wu_damage.lua) | 22 | 伤害／失去体力、诈降累计与用杀次数、天香／红颜、天义／酣战、真实濒死不屈、好施与缔盟来源到期、两翼从 |
-
-DSH 工具原生检查结果：
-
-```text
-python scripts/check_lua.py
-退出码 0
-
-python scripts/test.py --timeout 180
-Ran 657 tests in 107.552 seconds, 657 successes, 0 failures
-退出码 0
-
-python scripts/build_release.py
-Built .dev/dist/qiao.zip
-退出码 0
-```
-
-Codex 核对安装包：包含吴区技能、两翼从、共享工具、公开历史与静态辅助；无 `tests/`、`scripts/`、`.dev/`。无需开发本体补丁提供上述效果。逐文件记录见[共享验证证据](verification-evidence.md#吴区)。
+按技能检索真实回归入口。整包测试、历史命令与当时的环境见[共享验证证据的吴区](verification-evidence.md#吴区)。当前验收及共通的人工待办见[开发状态](../../status.md#当前验收基线)。
 
 <a id="wu-standard-boundary"></a>
 

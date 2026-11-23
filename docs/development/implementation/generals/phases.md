@@ -12,6 +12,10 @@
 | SHU013 | 刘禅 | [放权](#shu013-2) |
 | JIN014 | 文鸯 | [夺气](#jin014-2) |
 
+## 相关包别条目
+
+[崩坏](shi-skills.md#qun006-benghuai) · [遄征](shi-skills.md#jin017-2) · [採幸](em-jin001.md#em-jin001-2) · [诸王敕封册与赐](em-jin001.md#em-jin001-banner)
+
 ## 技能条目
 
 ### 汉
@@ -20,6 +24,11 @@
 #### 威屯（HAN016A 刘宠）
 
 - **标识与依据**：运行时 ID `qiao__skill_han016_2`；源码 [skill_han016_2.lua](../../../../pkg/qiao_generals/skills/skill_han016_2.lua)。规则见[刘宠规范](../../../rules/generals/han016a-liuchong.md)与[标准武将表](../../../rules/standard-generals.md)。牌面编号保留 `A`，运行时仍为 `qiao_heg__han016`；同将劲弩见[转化与生成用牌](conversion.md#han016a-1)。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L781)。
+
+> 限定技，弃牌阶段开始前，若你的手牌最多，你可以跳过此阶段，然后视为对任意名角色使用【桃园结义】和【五谷丰登】。
+
 - **实现与接口**：
   - 限定技。`EventPhaseChanging` 的弃牌阶段开始前检查手牌数是否全场最多，并列最多也满足。
   - `on_cost` 先筛选候选并让发动者选定一组共同目标；`on_use` 设置 `data.skipped = true` 跳过弃牌阶段，然后依次对同一组目标使用【桃园结义】和【五谷丰登】。
@@ -33,23 +42,33 @@
 #### 神速（WEI008 夏侯渊）
 
 - **标识与依据**：运行时 ID `qiao__skill_wei008_1`；源码 [skill_wei008_1.lua](../../../../pkg/qiao_generals/skills/skill_wei008_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)魏区 WEI008。同将设变见[辅助与牌资源](support.md#wei008-2)；锁定引擎 0.5.25 与 hegemony `e8d93acd34a3`。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L4952)。
+
+> 你可以选择以下任意项：1.跳过判定阶段和摸牌阶段；2.跳过出牌阶段并弃置一张装备牌；3.跳过弃牌阶段并失去1点体力。每执行一项，你视为使用一张无距离限制的【杀】。
+
 - **实现与接口**：
   - 分别在判定／出牌／弃牌阶段开始前选择对应项，支付代价并视为使用无距离【杀】。监听 `fk.EventPhaseChanging`，不设准备阶段一次性选择；`data.skipped == false` 才可发动，判定项还要求 `canSkip(Player.Draw)`。
   - 阶段跳过使用 `ServerPlayer:canSkip(phase)`／`ServerPlayer:skip(phase)`（0.5.25 `ltk/server/serverplayer.lua`）。`canSkip` 只检查当前回合尚未跳过的阶段，`skip` 标记当前回合的该阶段；已跳过的阶段不会再次触发 `fk.EventPhaseChanging`。
   - 选项 2 的装备牌从手牌或装备区弃置；选项 3 失去体力（可触发设变）；每项独立视为使用一张【杀】。
   - 视为使用【杀】走项目公共目标策略 `card_use_targets`：`bypassDistance` 取消距离限制，`extra_data.bypass_times = true` 豁免选择时的次数检查，最终使用数据以顶层 `extraUse = true` 标记不计通常出杀次数。
-- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖神速分别在判定／出牌／弃牌阶段开始前发动、跳过对应阶段、支付对应消耗并视为使用【杀】、已跳过阶段不再消耗；历史 14/14。
+- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖神速分别在判定／出牌／弃牌阶段开始前发动、跳过对应阶段、支付对应消耗并视为使用【杀】、已跳过阶段不再消耗。
 - **未完成与边界**：客户端阶段触发确认、两步移牌选择及目标选择未人工验收。
 
 <a id="wei009-1"></a>
 #### 巧变（WEI009 张郃）
 
 - **标识与依据**：运行时 ID `qiao__skill_wei009_1`；源码 [skill_wei009_1.lua](../../../../pkg/qiao_generals/skills/skill_wei009_1.lua)。规则见[标准武将表](../../../rules/standard-generals.md)魏区 WEI009；共享工具 [wei_phases.lua](../../../../pkg/qiao_generals/util/wei_phases.lua)（公开势力预测、场上牌可移动性检查、两步式场上移牌）。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L4970)。
+
+> 你可以弃置一张牌并跳过一个阶段（准备和结束阶段除外），若为：摸牌阶段，你可以获得至多两名其他角色各一张手牌；出牌阶段，你可以移动场上的一张牌。
+
 - **实现与接口**：
   - 弃一张牌跳过阶段；摸牌阶段效果由技能拥有者选择至多两名其他角色，各随机获得其一张手牌；出牌阶段效果复用公共移牌接口。
   - 移动场上牌先由引擎公共的 `Room:askToChooseToMoveCardInBoard` 在两阶段内筛出确有可移动关系的两名角色，再用 `Room:askToMoveCardInBoard`（0.5.25 `ltk/server/room.lua` 3374 行）在其中一人装备／判定区选牌移动；请求回复为 `{ cardId = <cards 中的牌 id>, pos = cardsPosition[牌下标] }`。
   - 不读取服务端私有字段：同势力候选复用 hegemony 公共的 `HegUtil.compareExpectedKingdomWith`，他人暗置时公开势力为 `unknown`，不进入候选。
-- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖巧变真实移牌与请求级用例；历史 14/14。此前 90 秒超时的根因是测试直接比较 `ServerPlayer` 对象导致 LuaUnit 挂起，非请求 schema 或嵌套事件，见[共享验证证据](verification-evidence.md#设变巧变超时根因)。
+- **验证依据**：[wei_phases.lua](../../../../tests/wei_phases.lua) 覆盖巧变真实移牌与请求级用例。此前 90 秒超时的根因是测试直接比较 `ServerPlayer` 对象导致 LuaUnit 挂起，非请求 schema 或嵌套事件，见[共享验证证据](verification-evidence.md#设变巧变超时根因)。
 - **未完成与边界**：客户端阶段跳过确认与两步移牌选择未人工验收；摸牌阶段获得手牌为服务端随机隐藏选择，未增加客户端可见性测试。
 ### 蜀
 
@@ -57,6 +76,11 @@
 #### 放权（SHU013 刘禅）
 
 - **标识与依据**：`qiao__skill_shu013_2`；[源码](../../../../pkg/qiao_generals/skills/skill_shu013_2.lua)；[标准武将表](../../../rules/standard-generals.md) SHU013。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L3939)。
+
+> 轮次技，你可以跳过出牌阶段。若如此做，此回合结束时，你可以弃置一张手牌并选择一名其他角色，令其获得一个额外的回合。
+
 - **实现与接口**：阶段变化时每轮可跳过一次出牌阶段，建立本回合末的可选后续；模式级延时触发先选其他角色、支付一张手牌，`gainAnExtraTurn(true)` 排队，失技后仍执行。`askToDiscard` 已执行弃牌，不再重复移动。
 - **验证依据**：[shu_phases.lua](../../../../tests/shu_phases.lua) 真实跳阶段、失技、支付手牌、额外回合排队；[共享证据](verification-evidence.md#shu-standard)。
 - **未完成与边界**：客户端、联网与重连未人工验收。曾将玩家对象用深相等断言比较导致测试挂起，现改身份断言；不将该测试问题视为游戏结算故障。
@@ -67,6 +91,11 @@
 #### 夺气（JIN014 文鸯）
 
 - **标识与依据**：运行时 ID `qiao__skill_jin014_2`；源码 [skill_jin014_2.lua](../../../../pkg/qiao_generals/skills/skill_jin014_2.lua)。规则见[文鸯规范](../../../rules/generals/jin014-wenyang.md)。同将膂力见[辅助与牌资源](support.md#jin014-1)。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L1795)。
+
+> 限定技，每回合结束时，若当前回合角色没有手牌，你可以获得一个额外的回合。
+
 - **实现与接口**：限定技，全局监听 `fk.TurnEnd`，不是结束阶段；每个回合结束时按当时手牌重新检查当前回合角色是否空手，不使用此前快照。`HistoryGame` 限制整局一次。满足时询问文鸯，并以 `gainAnExtraTurn(true, skill.name)` 把额外回合加入房间正式延迟队列，由回合流程在现回合结束后执行，不手工递归调用阶段结算。当前回合角色可以是文鸯自己。短时按同名查找未发现同效果上游实现；复用引擎 `ServerPlayer:gainAnExtraTurn` 与房间 `extra_turn_list` 调度，与放权共享同一正式入口。
 - **验证依据**：[jin_basic.lua](../../../../tests/jin_basic.lua) 覆盖回合结束时空手排队额外回合并记录 `who`／`reason`；结束阶段不触发、有手牌不触发；同一局第二次回合结束不再排队。本批 `jin_basic` 套件合计 19/19。
 - **未完成与边界**：未应用开发适配的本体人工交互验收尚未执行；只验证队列与限制，未在自动测试中完整跑完额外回合的全部阶段与客户端表现。

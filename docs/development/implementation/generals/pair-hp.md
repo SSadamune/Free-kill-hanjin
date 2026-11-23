@@ -20,7 +20,11 @@
 <a id="wei002-3"></a>
 #### 应期（WEI002 司马懿；JIN009 同文共享）
 
-- **标识与依据**：
+- **标识与依据**： 此运行时 ID 对应 WEI002 司马懿、JIN009 司马懿 的同文技能。
+
+牌面原文见[石激桑资料](../../../../assets/docs/石激桑武将列表.json#L1686)。
+
+> 锁定技，若你配将为多势力或客将，☯️+2。
   - 运行时 ID：唯一规范 ID 为 `qiao__skill_wei002_3`，源码 [skill_wei002_3.lua](../../../../pkg/qiao_generals/skills/skill_wei002_3.lua)；晋 JIN009 直接引用同一 ID，不再另设骨架。两处卡面文本统一为魏文本（“☯️+2”），避免同 ID 翻译相互覆盖。晋应期在本页只记录来源，不另写正文。
   - 规则见[应期裁定](../../../rules/generals/wei002-simayi.md)、[JIN009 同文引用](../../../rules/generals/jin009-simayi.md)与[配将体力贡献通则](../../../rules/general-principles.md#配将体力贡献与武将状态)。业务文件：[pair_hp.lua](../../../../pkg/qiao_mode/rules/pair_hp.lua)、`mode.lua`、`rules/ascension.lua`、应期骨架（两版共用一份）。
 - **实现与接口**：
