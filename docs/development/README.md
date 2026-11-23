@@ -12,6 +12,7 @@
 | [汉晋规则集工作底稿](../../rulebook/README.md) | 已复制的基础条文及未来汉晋修订；日常具体条文引用入口 |
 | [实现导航](implementation/README.md) | 引擎接口、代码位置、接线及验收依据 |
 | [测试规范](testing.md) | 分层测试、夹具、失败诊断与发布验证方法 |
+| [汉晋 PR 审阅约定](pr-review-workflow.md) | 本仓库的审阅取证、验证取舍和对外回复约定，通用步骤见 [pr-review skill](../../.agents/skills/pr-review/SKILL.md) |
 | [Bug 处理工作流](bug-workflow.md) | 从描述或 GitHub Issue 开始，进行分诊、排查、修复取舍、验收与复盘 |
 | [图片与音效资源保存规范](assets.md) | 默认图片、客将附加插画、音效查找路径及资源发布验收 |
 | [客将默认插画](guest-illustrations.md) | 选将、局内头像与武将一览的显示行为及验收范围 |
