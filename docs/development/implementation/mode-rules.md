@@ -34,6 +34,8 @@
 
 [FAQ 安装入口](../../../pkg/qiao_mode/rules/faq_core_rules.lua) 包装汉晋房间的 `H.addHegMark`，由各合法来源获得阴阳鱼时都在 5 枚上限处截断。开局双亮、升变后重判和已领取状态各自走[第二君主](second-lord.md)或上游的对应时机。[FAQ 专项](../../../tests/faq_core_rules.lua#L361)验证多来源获标记和模式隔离。君主旗、诏书和“赐”见各自所属武将。
 
+标记的消耗条件、当前上游入口及待适配项见[国战标记与大旗说明](skill-ui.md#国战标记与大旗说明)。
+
 ## 自由用牌
 
 [free_use.lua](../../../pkg/qiao_mode/rules/free_use.lua) 的 `askToUseCard` 设置 `not_passive`，使客户端自由用牌请求排除没有本次响应时机的被动牌。服务端根据出牌者、牌型、禁止和[公共目标条件](card-use-targets.md)复核回包，沿用[只能当](only-as.md)的来源校验。返回值是待执行数据，调用方执行一次。正式调用包括[牛金](generals/standard/retinue-niujin.md#niujin)、[风物](generals/standard/jin016.md#jin016-2)和[四海归平](../../../pkg/qiao_cards/skills/sihai_guiping.lua)。用例入口见各技能的主记录及[技能界面](skill-ui.md)。
