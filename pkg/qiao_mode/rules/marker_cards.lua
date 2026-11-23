@@ -1,6 +1,7 @@
 -- 游戏牌标记。实例身份与游戏牌 ID 只在服务端登记；客户端仍看原有的具名牌堆。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
+M.DIRECT = "qiao__marker_direct_grant"
 local rooms = setmetatable({}, { __mode = "k" })
 local registered = {}
 local instances = setmetatable({}, { __mode = "k" })
@@ -31,15 +32,6 @@ local function grantKey(player, source, skill)
   return "grant/" .. player.id .. "/" .. source .. "/" .. skill
 end
 
-local function lostPrintedSource(player, root, exchange)
-  local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
-  for _, deputy in ipairs({ false, true }) do
-    local name = exchange.actualGeneral(player, deputy)
-    if loss.isLost(player.room, name, root) then return true end
-  end
-  return false
-end
-
 local function candidates(player, effect, root)
   local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
   local cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
@@ -55,18 +47,14 @@ local function candidates(player, effect, root)
     end
     table.sort(grants)
     for _, grant in ipairs(grants) do
-      table.insert(list, instance(player.room, grantKey(player, grant, root), grant, nil, root))
+      local label = grant == M.DIRECT and root or grant
+      table.insert(list, instance(player.room, grantKey(player, grant, root), label, nil, root))
     end
     -- 暗将预亮时，技能查询可能找到暗置的武将牌。已有直接授技且未预亮时
     -- 不能据此把角色授技所放的牌挂到暗将上。
     if general and #grants > 0 and general ~= player.general and general ~= player.deputyGeneral
       and not table.contains(player.prelighted_skills, Fk.skills[root]) then general = nil end
-    local anonymous = grantKey(player, "", root)
-    local known = instances[player.room] and instances[player.room][anonymous]
-    if table.contains(player.player_skills, Fk.skills[root])
-      and (known or (not general and #grants == 0 and not lostPrintedSource(player, root, exchange))) then
-      table.insert(list, instance(player.room, anonymous, root, nil, root))
-    end
+
   end
   if general then
     local source = instance(player.room, cardKey(general, root), general, general, root)
@@ -230,17 +218,71 @@ function M.install()
   local class = require "ltk.server.serverplayer"
   if M.installed then return end
   M.installed = true
-  local original = class.loseSkill
-  function class:loseSkill(skill, source)
+  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local addSkill, loseSkill = class.addSkill, class.loseSkill
+  local function printedOnShownCard(player, root)
+    return exchange.cardProvidesSkill(player.room, player.general, root)
+      or exchange.cardProvidesSkill(player.room, player.deputyGeneral, root)
+  end
+  local hiding = setmetatable({}, { __mode = "k" })
+  local hideGeneral = class.hideGeneral
+  function class:hideGeneral(deputy)
+    if not self.derivative_skills[Fk.skills[M.DIRECT]] then return hideGeneral(self, deputy) end
+    local previous = hiding[self]
+    hiding[self] = deputy and self.deputyGeneral or self.general
+    local ok, result = pcall(hideGeneral, self, deputy)
+    hiding[self] = previous
+    if not ok then error(result, 0) end
+    return result
+  end
+  local function withdrawingCard(player, root)
+    if hiding[player] and exchange.cardProvidesSkill(player.room, hiding[player], root) then return true end
+    -- changeHero 也先写新将名。当前变更事件保存了实际离开的将牌。
+    local event = player.room.logic:getCurrentEvent()
+    local data = event and event.data
+    if type(data) == "table" and data.from == player and type(data.results) == "table" then
+      for _, key in ipairs({ "generalChange", "deputyChange" }) do
+        local change = data.results[key]
+        if change and exchange.cardProvidesSkill(player.room, change[1], root) then return true end
+      end
+    end
+    return false
+  end
+  function class:addSkill(skill, source)
     local root = type(skill) == "string" and skill or skill.name
-    if not registered[root] or not Modes.inRoom(self.room) then return original(self, skill, source) end
-    local result = original(self, skill, source)
+    if not source and registered[root] and Modes.inRoom(self.room) and not printedOnShownCard(self, root) then
+      -- 在获得时保存角色来源；第一次发动前交换到同名武将也不会覆盖它。
+      source = M.DIRECT
+    end
+    return addSkill(self, skill, source)
+  end
+  function class:loseSkill(skill, source)
+    if not Modes.inRoom(self.room) then return loseSkill(self, skill, source) end
+    local parent = type(skill) == "string" and Fk.skills[skill] or skill
+    local root = parent.name
+    -- 引擎撤销父技能时会直接删除其整张派生表，不会逐一调用 loseSkill。
+    local children = {}
+    for _, child in ipairs(self.derivative_skills[parent] or {}) do
+      if registered[child.name] then table.insert(children, child.name) end
+    end
     local sourceName = type(source) == "table" and source.name or source
-    M.endGrant(self, sourceName, root)
-    if not sourceName and not self:hasSkill(root, true, true) then
-      local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-      for _, general in ipairs({ self.general, self.deputyGeneral }) do
-        if general and exchange.cardProvidesSkill(self.room, general, root) then M.endCard(self.room, general, root) end
+    if not source and registered[root] then
+      local direct = self.derivative_skills[Fk.skills[M.DIRECT]]
+      if direct and table.contains(direct, parent) and not withdrawingCard(self, root) then
+        source, sourceName = M.DIRECT, M.DIRECT
+        if not printedOnShownCard(self, root) and table.contains(self.player_skills, parent) then
+          loseSkill(self, skill)  -- 已永久失技的明将可能仍有引擎合并后的基础条目。
+        end
+      end
+    end
+    local result = loseSkill(self, skill, source)
+    for _, child in ipairs(children) do M.endGrant(self, root, child) end
+    if registered[root] then
+      M.endGrant(self, sourceName, root)
+      if not sourceName and not self:hasSkill(root, true, true) then
+        for _, general in ipairs({ self.general, self.deputyGeneral }) do
+          if exchange.cardProvidesSkill(self.room, general, root) then M.endCard(self.room, general, root) end
+        end
       end
     end
     return result

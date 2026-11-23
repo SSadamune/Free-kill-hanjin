@@ -211,8 +211,13 @@ local function assertZhouTaiScarsDiscarded(remove)
   local room, player = FkTest.room, FkTest.room.players[1]
   local scars
   FkTest.runInRoom(function()
-    content.setup(room, player, "qiao_heg__wu004", "qiao_heg__wu013", "wu")
+    local fixture = __dofile("../../../tests/support/skill_test.lua")
+    fixture.installBlankGenerals(room, "wu")
+    fixture.installDualGenerals(room, player, {
+      main = "qiao_heg__wu004", deputy = "qiao_heg__wu013", kingdom = "wu",
+    })
     scars = { markerFixture.scar(room, player, Card.Heart), markerFixture.scar(room, player, Card.Club) }
+    lu.assertEquals(player:getPile("创"), scars, "周泰应先用不屈生成两张创")
     remove(room, player)
   end)
   lu.assertEquals(player:getPile("创"), {})

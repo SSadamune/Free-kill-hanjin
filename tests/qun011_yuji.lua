@@ -127,4 +127,67 @@ function Testqiao_yuji:testCardAndDirectQianhuanRemainIndependent()
   lu.assertEquals(room:getCardArea(granted), Card.DiscardPile)
 end
 
+function Testqiao_yuji:testRevokingParentDiscardsOnlyItsQianhuanCards()
+  local room, owner, _, parent, printed, granted = makeTwoQianhuanSources()
+  inRoom(function()
+    room:handleAddLoseSkills(owner, parent, nil, false, true)
+    room:handleAddLoseSkills(owner, "-" .. parent, nil, false, true)
+  end)
+  lu.assertEquals(owner:getPile(PILE), { printed })
+  lu.assertEquals(room:getCardArea(granted), Card.DiscardPile)
+  lu.assertTrue(owner:hasSkill(SKILL))
+end
+
+function Testqiao_yuji:testWithdrawingDirectGrantWhileYujiIsHidden()
+  local room, owner, donor = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+  inRoom(function()
+    fixture.installDualGenerals(room, donor, {
+      main = "qiao_heg__qun011", deputy = "qiao_test__qun_2", kingdom = "qun",
+    })
+    assert(exchange.exchange(room, { player = owner, isDeputy = false }, { player = donor, isDeputy = false }))
+    owner:hideGeneral(false)
+  end)
+  lu.assertNotNil(owner.derivative_skills[Fk.skills[markers.DIRECT]])
+  inRoom(function() room:handleAddLoseSkills(owner, "-" .. SKILL, nil, false, true) end)
+  lu.assertNil(owner.derivative_skills[Fk.skills[markers.DIRECT]])
+  inRoom(function() owner:revealGeneral(false) end)
+  lu.assertTrue(owner:hasSkill(SKILL))
+end
+
+function Testqiao_yuji:testUninvokedDirectGrantSurvivesReceivingAndLosingPrintedSkill()
+  local room, owner, donor, ally = FkTest.room, FkTest.room.players[1], FkTest.room.players[2], FkTest.room.players[3]
+  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+  local general = "qiao_heg__qun011"
+  local ids = {}
+  inRoom(function()
+    fixture.installDualGenerals(room, donor, { main = general, deputy = "qiao_test__qun_2", kingdom = "qun" })
+    assert(exchange.exchange(room, { player = owner, isDeputy = false }, { player = donor, isDeputy = false }))
+    for value = 1, 3 do
+      ids[value] = room:printCard("qiao__jink", Card.Heart, value).id
+    end
+    room:obtainCard(owner, ids, false, fk.ReasonJustMove)
+  end)
+  local asked = 0
+  fixture.withSkillRequests(room, SKILL, {
+    askToChoice = function() return general end,
+    askToCards = function() asked = asked + 1; return { ids[asked] } end,
+  }, function()
+    inRoom(function() room:damage { from = room.players[5], to = ally, damage = 1 } end)
+    lu.assertEquals(owner:getPile(PILE), { ids[1], ids[2] })
+    inRoom(function() assert(loss.loseCardSkill(room, owner, false, SKILL)) end)
+    lu.assertEquals(room:getCardArea(ids[1]), Card.DiscardPile)
+    lu.assertEquals(owner:getPile(PILE), { ids[2] })
+    inRoom(function() room:damage { from = room.players[5], to = ally, damage = 1 } end)
+  end)
+  lu.assertEquals(asked, 3)
+  lu.assertEquals(owner:getPile(PILE), { ids[2], ids[3] })
+  inRoom(function() room:handleAddLoseSkills(owner, "-" .. SKILL, nil, false, true) end)
+  lu.assertFalse(owner:hasSkill(SKILL))
+  lu.assertEquals(room:getCardArea(ids[2]), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(ids[3]), Card.DiscardPile)
+end
+
 return {name="qiao_yuji"}
