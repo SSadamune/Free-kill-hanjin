@@ -38,14 +38,14 @@ skill:addEffect("active", {
           cancelable = false,
         })) or 1
       end
-      room:setPlayerMark(player, U.RANGE, add)
+      room:addPlayerMark(player, U.RANGE, add)
     end
 
     local use = C.selectVirtualCard(room, player, {
       name = "qiao__fire__slash",
       skill_name = skill.name,
       prompt = "#qiao__skill_jin022b_1-use",
-      cancelable = true,
+      cancelable = false,
     })
     if use == nil then return end
     A.addEntry(use, {

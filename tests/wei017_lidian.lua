@@ -312,4 +312,19 @@ function Testqiao_wei017_lidian:testWangxiDoesNotAskAfterLethalDamage()
   lu.assertFalse(asked)
 end
 
+function Testqiao_wei017_lidian:testWangxiSealedHand()
+  local room, me, other = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local name = "qiao__skill_wei017_2"
+  local asked = 0
+  inRoom(function()
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    room:abortPlayerArea(other, Player.HandSlot)
+  end)
+  local hand = me:getHandcardNum()
+  skill_test.withSkillRequests(room, name, { askToSkillInvoke = function() asked = asked + 1; return true end }, function()
+    inRoom(function() room:damage { from = me, to = other, damage = 1 } end)
+  end)
+  lu.assertEquals({ asked, me:getHandcardNum() - hand, other:getHandcardNum()}, { 0, 0, 0 })
+end
+
 return { name = "qiao_wei017_lidian" }

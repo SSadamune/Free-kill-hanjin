@@ -1,6 +1,7 @@
 -- WU010 孙策·魂殇的回合结束清理。
 --
 -- 回合结束时移除以本技能为来源的临时副本，保留其他独立来源。
+local sources = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local SKILL_NAME = "qiao__wu010_hunshang_cleanup"
 local SOURCE = "qiao__skill_wu010_3"
 local MARK = SOURCE .. "-cleanup-granted"
@@ -18,7 +19,9 @@ skill:addEffect(fk.TurnEnd, {
   end,
   on_refresh = function(self, event, target, player)
     local room = player.room
-    room:handleAddLoseSkills(player, "-" .. YINGHUN .. "|-" .. YINGZI, SKILL_NAME, false, true)
+    for _, name in ipairs({ YINGHUN, YINGZI }) do
+      sources.detachSource(room, player, name, Fk.skills[SKILL_NAME], true)
+    end
     room:setPlayerMark(player, MARK, 0)
   end,
 })

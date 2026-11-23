@@ -68,6 +68,7 @@ function Testqiao_jin023_malong:testFengxieSwapsAcrossOpenSlotsThenUsesSlash()
   lu.assertEquals(FkTest.room:getCardArea(theirs), Card.PlayerEquip)
   lu.assertIs(FkTest.room:getCardOwner(mine), target)
   lu.assertIs(FkTest.room:getCardOwner(theirs), me)
+  lu.assertEquals(me:usedCardTimes("slash", Player.HistoryPhase), 0)
   lu.assertEquals(me:getCardIds("e"), { theirs })
   lu.assertEquals(target:getCardIds("e"), { mine })
   lu.assertEquals(FkTest.room:getCardArea(targetJink), Card.DiscardPile,
@@ -141,6 +142,90 @@ function Testqiao_jin023_malong:testZhuixingAttackAndDefenseInSiege()
     room:damage{from=victim,to=holder,damage=1,card=Fk:cloneCard("qiao__slash")}
     lu.assertEquals(holder.hp,hp-2,"被围攻者对围攻者杀伤害+1")
   end)
+end
+
+function Testqiao_jin023_malong:testEquipSlotsAfterJubao()
+  local room, me, sun = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local count, slots
+  local feng = "qiao__skill_jin023_1"
+  inRoom(function()
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, feng, nil, false, true)
+    skill_test.installDualGenerals(room, sun, {
+      main = "qiao_heg__em_wu001", deputy = "qiao_test__wu_2", kingdom = "wu",
+    })
+    local mine = room:printCard("qiao__bronze_sparrow", Card.Spade, 3)
+    local pearl = room:printCard("qiao__luminous_pearl", Card.Diamond, 4)
+    room:moveCardIntoEquip(me, mine.id, feng, false, me)
+    room:moveCardIntoEquip(sun, pearl.id, feng, false, sun)
+    lu.assertEquals(#sun:getEquipments(Card.SubtypeTreasure), 1)
+    lu.assertFalse(Fk.skills[feng]:targetFilter(me, sun, {me }, {}))
+    Fk.skills[feng]:onUse(room, { from = me, tos = { me, sun } })
+    local ids = sun:getEquipments(Card.SubtypeTreasure)
+    lu.assertTrue(table.contains(ids, pearl.id))
+    count, slots = #ids, #sun:getAvailableEquipSlots(Card.SubtypeTreasure)
+  end)
+  lu.assertEquals(count, slots, "受聚宝保护的宝物须独占原栏位")
+end
+
+function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterEquipsLeave()
+  local room, me, other = FkTest.room, p(1), p(2)
+  local feng = "qiao__skill_jin023_1"
+  local mine, theirs, replacement
+  local occupied = false
+  local refill = fk.CreateSkill { name = "#qiao_test_fengxie_refill" }
+  refill:addEffect(fk.AfterCardsMove, {
+    global = true,
+    can_refresh = function(_, _, _, player)
+      return player == me and not occupied and mine and room:getCardArea(mine) == Card.Processing
+    end,
+    on_refresh = function()
+      occupied = true
+      room:moveCardIntoEquip(other, replacement, "test", false, other)
+    end,
+  })
+  inRoom(function()
+    room:setCurrent(me)
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, feng, nil, false, true)
+    mine = room:printCard("qiao__bronze_sparrow", Card.Spade, 3).id
+    theirs = room:printCard("qiao__luminous_pearl", Card.Diamond, 4).id
+    replacement = room:printCard("qiao__bronze_sparrow", Card.Club, 5).id
+    room:moveCardIntoEquip(me, mine, feng, false, me)
+    room:moveCardIntoEquip(other, theirs, feng, false, other)
+    room:addSkill(refill:createSkill())
+    Fk.skills[feng]:onUse(room, { from = me, tos = { me, other } })
+  end)
+  lu.assertTrue(occupied)
+  lu.assertEquals(other:getEquipments(Card.SubtypeTreasure), { replacement })
+  lu.assertEquals(me:getEquipments(Card.SubtypeTreasure), { theirs })
+  lu.assertEquals(room:getCardArea(mine), Card.DiscardPile)
+end
+
+function Testqiao_jin023_malong:testFengxieAfterOrdinarySlashLeavesCountUnchanged()
+  local room, me, target = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local name = "qiao__skill_jin023_1"
+  local before, after, used
+  inRoom(function()
+    room:setCurrent(me)
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    local a = room:printCard("qiao__qinggang_sword", Card.Spade, 2)
+    local b = room:printCard("qiao__axe", Card.Spade, 3)
+    room:moveCardIntoEquip(me, a.id, name, false, me)
+    room:moveCardIntoEquip(target, b.id, name, false, target)
+    me:addCardUseHistory("slash", 1)
+    before = me:usedCardTimes("slash", Player.HistoryPhase)
+    local hp = target.hp
+    FkTest.setNextReplies(target, { "" })
+    Fk.skills[name]:onUse(room, { from = me, tos = { me, target } })
+    used = target.hp < hp
+    after = me:usedCardTimes("slash", Player.HistoryPhase)
+  end)
+  lu.assertTrue(used)
+  lu.assertEquals(before, 1)
+  lu.assertEquals(after, before, "锋械额外用杀不改变普通出杀次数")
 end
 
 return { name = "qiao_jin023_malong" }

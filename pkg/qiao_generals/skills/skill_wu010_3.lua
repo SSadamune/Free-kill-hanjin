@@ -34,7 +34,13 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     if player.dead then return end
     ensureCleanup(room)
-    room:handleAddLoseSkills(player, YINGHUN .. "|" .. YINGZI, CLEANUP, false, true)
+    for _, name in ipairs({ YINGHUN, YINGZI }) do
+      if player:hasSkill(name, true, true) then
+        player:addSkill(name, CLEANUP)
+      else
+        room:handleAddLoseSkills(player, name, CLEANUP, false, true)
+      end
+    end
     room:setPlayerMark(player, GRANTED_MARK, 1)
   end,
 })

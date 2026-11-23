@@ -19,7 +19,7 @@ local function otherPlayer(player, data)
 end
 
 local function canDraw(player)
-  return player ~= nil and player:isAlive() and not player:isRemoved()
+  return player ~= nil and player:isAlive() and not player:isRemoved() and not player:isHandAreaSealed()
 end
 
 local function drawTogether(room, first, second)

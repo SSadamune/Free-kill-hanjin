@@ -136,4 +136,66 @@ function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
   end)
 end
 
+function Testqiao_jin022b_qianhong:testLieRongAddsAcrossPlayPhases()
+  local room, me = FkTest.room, FkTest.room.players[1]
+  local skillName = "qiao__skill_jin022b_1"
+  local limit = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+  local used, bonus = 0
+  local skeleton = fk.CreateSkill{ name = "#qiao_test_lierong_extra_play" }
+  skeleton:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == me and player == me and data.phase == Player.Play
+    end,
+    on_refresh = function()
+      local skill = Fk.skills[skillName]
+      lu.assertTrue(skill:canUse(me))
+      used = used + 1
+      skill:onUse(room, { from = me, tos = {} })
+      if used == 2 then bonus = me:getMark(limit.RANGE) end
+    end,
+  })
+  skill_test.withSkillRequests(room, skillName, { askToChoice = function() return "1" end }, function()
+    inRoom(function()
+      room:handleAddLoseSkills(me, skillName, nil, false, true)
+      room:addSkill(skeleton:createSkill())
+      GameEvent.Turn:create(TurnData:new(me, "game_rule", { Player.Play, Player.Play })):exec()
+    end)
+  end)
+  lu.assertEquals(used, 2)
+  lu.assertEquals(bonus, 2, "同回合两次增加攻击范围应累计")
+end
+
+function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
+  local room, me, target = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local name = "qiao__skill_jin022b_1"
+  local asked, canDecline, legal, range, spent, history
+  local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+  skill_test.withSkillRequests(room, name, {
+    askToUseVirtualCard = function(self, player, params, original)
+      asked = true
+      legal = player:canUseTo(Fk:cloneCard("qiao__fire__slash"), target)
+      canDecline = params.cancelable
+      FkTest.setNextReplies(me, { "" })
+      return original(self, player, params)
+    end,
+  }, function()
+    inRoom(function()
+      room:setCurrent(me)
+      me.phase = Player.Play
+      room:handleAddLoseSkills(me, name, nil, false, true)
+      local beforeHp = me.hp
+      Fk.skills[name]:onUse(room, { from = me, tos = {} })
+      spent = beforeHp - me.hp
+      range = me:getMark(U.RANGE)
+      history = #room.logic:getEventsOfScope(GameEvent.UseCard, 10, function(e)
+        return e.data.from == me and e.data.card.name == "qiao__fire__slash"
+      end, Player.HistoryGame)
+    end)
+  end)
+  lu.assertEquals({ asked, legal, spent, range }, { true, true, 1, 1 })
+  lu.assertFalse(canDecline)
+  lu.assertEquals(history, 1)
+end
+
 return { name = "qiao_jin022b_qianhong" }
