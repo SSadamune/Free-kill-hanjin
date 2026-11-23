@@ -59,10 +59,13 @@ local function chooseEquip(room, chooser, target, ids)
   if table.contains(ids, id) then return id end
 end
 
-local function queueTargets(other, user)
+local function queueTargets(room, other, user, condition)
+  local slash = Fk:cloneCard(SLASH)
   local result = { other }
   for _, p in ipairs(H.getFormationRelation(other) or {}) do
-    if p ~= other and p ~= user and not p.dead and not p:isRemoved() then table.insertIfNeed(result, p) end
+    if not p.dead and not p:isRemoved() and C.matchesCondition(room, user, slash, p, condition) then
+      table.insertIfNeed(result, p)
+    end
   end
   return result
 end
@@ -104,8 +107,9 @@ skill:addEffect("active", {
     if a == player then other = b elseif b == player then other = a end
     if other == nil or other.dead or other:isRemoved() then return end
 
+    local condition = {}
     local targetsForSlash = { other }
-    local queue = queueTargets(other, player)
+    local queue = queueTargets(room, other, player, condition)
     if #queue > 1 then
       local choice = room:askToChoice(player, {
         choices = { "single", "queue" },
@@ -116,7 +120,7 @@ skill:addEffect("active", {
       if choice == "queue" then targetsForSlash = queue end
     end
 
-    local policy = C.explicit({ other_roles = true }, {
+    local policy = C.explicit(condition, {
       names = { SLASH },
       min_targets = 1,
       max_targets = #targetsForSlash,

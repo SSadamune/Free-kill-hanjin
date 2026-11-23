@@ -512,10 +512,9 @@ end
 
 -- Candidate and validation --------------------------------------------------
 
---- Server-side candidate list under one strategy.  This deliberately runs the
---- card's own targetFilter (through the proxy) so UI, server request checks and
---- final validation share one rule.  The policy mark is pushed only for the
---- duration of the query.
+--- Query the engine under the request policy, then verify the returned targets
+--- against the effect's condition and the card's basic target requirements.
+--- The policy mark lasts only for the engine query.
 function M.candidates(room, player, card, policy, extra_data)
   if card == nil or player == nil then return {} end
   local rec = normalize(policy)
@@ -526,7 +525,12 @@ function M.candidates(room, player, card, policy, extra_data)
     end)
   end)
   if not ok or type(result) ~= "table" then return {} end
-  return result
+  return table.filter(result, function(target)
+    if rec.kind == M.KIND_EXPLICIT then
+      return M.matchesCondition(room, player, card, target, rec.condition)
+    end
+    return ExtraTargets.meetsIntrinsicTargetRequirements(player, card, target)
+  end)
 end
 
 -- Real CardSkill target selection.  The engine's target-selection UI calls
@@ -558,7 +562,7 @@ local function validateSelectionList(room, player, card, tos, extra_data, ignore
 
   for _, target in ipairs(players) do
     if not target:isAlive() or target:isRemoved() then return false, "dead-target" end
-    if not ExtraTargets.meetsIntrinsicTargetRequirements(card, target) then return false, "intrinsic-target" end
+    if not ExtraTargets.meetsIntrinsicTargetRequirements(player, card, target) then return false, "intrinsic-target" end
     if player:isProhibited(target, card) then return false, "prohibit-target" end
   end
 
