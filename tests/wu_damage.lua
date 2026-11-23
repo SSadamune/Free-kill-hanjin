@@ -892,6 +892,29 @@ function Testqiao_wu_damage:testFenjiRetainsHistoryBeforeAcquisitionAndAfterRefi
   lu.assertEquals(owner.hp, hp - 1)
 end
 
+function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeYuyuRefillsIt()
+  local room, owner, current = FkTest.room, p(1), p(2)
+  local history = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+  local zhiheng = "qiao__skill_wu001_1"
+  local last = setHand(room, current, { { "qiao__peach", Card.Heart, 3 } })[1]
+  local equip = addEquip(room, current, "qiao__linxiao_yuyu")
+  grant(current, zhiheng)
+  grant(owner, FENJI)
+  inRoom(function()
+    room:setCurrent(current)
+    current.phase = Player.Play
+    room:setPlayerMark(current, history.LOST_HAND, 0)
+    Fk.skills[zhiheng]:onUse(room, { from = current, cards = { last, equip } })
+  end)
+  local hand, hp = current:getHandcardNum(), owner.hp
+  lu.assertEquals(hand, 4)
+  lu.assertEquals(current:getMark(history.LOST_HAND), 1)
+  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ current }) })
+  turnEnd(room, current)
+  lu.assertEquals(current:getHandcardNum(), hand + 2)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
 function Testqiao_wu_damage:testDiscardMarksAskBelowAtAndAboveHandLimit()
   local room, player = FkTest.room, p(1)
   local H = require "packages.hegemony.util"

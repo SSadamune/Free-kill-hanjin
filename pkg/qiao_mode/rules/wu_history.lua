@@ -23,6 +23,27 @@ M.DISTANCE_SKILL = "qiao__wu_distance_effects"
 -- 角色自身的中性本回合状态名；不得带技能来源前缀，避免交换公共机制迁移。
 M.FENXUN_MARK = "qiao_wu_fenxun_target-turn"
 
+-- 此时同批移牌已经完成，AfterCardsMove 的补牌效果尚未开始。
+-- 一旦有角色在这里失去最后手牌，随后嵌套的摸牌或换座均不改写本回合记录。
+function M.installServer(room)
+  local logic = room.logic
+  if logic.qiaoLostHandInstalled then return end
+  logic.qiaoLostHandInstalled = true
+  local trigger = logic.trigger
+  function logic:trigger(event, target, data, ...)
+    if event == fk.AfterCardsMove then
+      for _, move in ipairs(data or {}) do
+        local from = move.from
+        if from and from:getMark(M.LOST_HAND) == 0 and from:isKongcheng()
+          and table.find(move.moveInfo, function(info) return info.fromArea == Card.PlayerHand end) then
+          room:setPlayerMark(from, M.LOST_HAND, 1)
+        end
+      end
+    end
+    return trigger(self, event, target, data, ...)
+  end
+end
+
 local function validSuit(suit)
   return suit == Card.Spade or suit == Card.Heart or suit == Card.Club or suit == Card.Diamond
 end

@@ -28,12 +28,7 @@ skill:addEffect(fk.AfterCardsMove, {
   on_refresh = function(self, event, target, player, data)
     local room = player.room
     for _, move in ipairs(data) do
-      local from = move.from
       for _, info in ipairs(move.moveInfo) do
-        if from and info.fromArea == Player.Hand and from:isKongcheng()
-          and from:getMark(H.LOST_HAND) == 0 then
-          room:setPlayerMark(from, H.LOST_HAND, 1)
-        end
         if move.toArea == Card.DiscardPile then
           local card = Fk:getCardById(info.cardId, true)
           if card then H.record(room, card.suit) end

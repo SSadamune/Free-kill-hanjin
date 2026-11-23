@@ -15,7 +15,7 @@ end
 
 skill:addEffect(fk.TurnEnd, {
   can_trigger = function(self, event, target, player)
-    return not player.dead and player:hasShownSkill(skill.name)
+    return not player.dead and player:hasSkill(skill.name)
       and getCount(player) >= player.hp
   end,
   on_cost = function(self, event, target, player)

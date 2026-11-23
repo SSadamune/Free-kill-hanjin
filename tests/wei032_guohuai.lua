@@ -176,4 +176,32 @@ function Testqiao_wei032_guohuai:testJingceChecksEveryTurnAndOnlyAsksWhenEligibl
   end)
 end
 
+function Testqiao_wei032_guohuai:testPrelightJingceAtAnotherPlayersTurnEnd()
+  local room, owner, other = FkTest.room, p(1), p(2)
+  inRoom(function()
+    skill_test.installDualGenerals(room, owner, {
+      main = "qiao_heg__wei032", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    owner:hideGeneral(false)
+    owner:prelightSkill(Fk.skills[JINGCE], true)
+    owner.hp = 2
+    room:setCurrent(other)
+    room.logic:trigger(fk.AfterCardUseDeclared, owner, { card = Fk:cloneCard("slash") })
+    room.logic:trigger(fk.CardResponding, owner, { card = Fk:cloneCard("jink") })
+  end)
+  lu.assertEquals(owner.general, "anjiang")
+  local asked, hand = 0, owner:getHandcardNum()
+  skill_test.withSkillRequests(room, JINGCE, {
+    askToSkillInvoke = function(_, _, params)
+      if params.prompt == "#qiao__skill_wei032_1-invoke" then asked = asked + 1 end
+      return true
+    end,
+  }, function()
+    inRoom(function() room.logic:trigger(fk.TurnEnd, other, TurnData:new(other, "game_rule", {})) end)
+  end)
+  lu.assertEquals(asked, 1)
+  lu.assertEquals(owner.general, "qiao_heg__wei032")
+  lu.assertEquals(owner:getHandcardNum(), hand + 2)
+end
+
 return { name = "qiao_wei032_guohuai" }
