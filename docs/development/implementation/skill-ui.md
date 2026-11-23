@@ -30,6 +30,19 @@
 
 对应专项 `em_han001_liuxie` 14/14、`em_wei001_caocao` 16/16、`em_shu001_liubei` 4/4、`em_wu001_sunquan` 16/16、`em_jin001_simayan` 7/7、`wei_phases` 16/16 通过。自动化覆盖请求参数、候选正式说明和分支文案，详细面板的实际显示与小窗口布局仍待客户端验收。
 
+## 国战标记与大旗说明
+
+先驱、阴阳鱼、珠联璧合、野心家的头像标记和操作入口读取锁定国战包的翻译。下表记录实际标记说明、操作入口的异文和适用规则。四种通用标记的汉晋独立牌面原文待核，按已确认的[国战标记规则](../../rules/player-count-and-marks.md#2-国战标记珠联璧合阴阳鱼先驱)及[规则向FAQ文件.md](../../../assets/docs/规则向FAQ文件.md#阴阳鱼标记上限数)记录。上游版本见[dependencies.lock.json](../../../dependencies.lock.json)。
+
+| 标记及说明键 | 当前标记说明 | 适用规则及入口差异 |
+| --- | --- | --- |
+| 先驱 `:@!!vanguard` | 出牌阶段，你可以弃一枚“先驱”，将手牌摸至4张，然后观看一名其他角色的一张暗置武将牌。 | 按钮省去「然后」。出牌阶段补至四张、观看其他角色的暗置武将牌，见[出牌阶段](../../../rulebook/events/phase.md#出牌阶段)。 |
+| 阴阳鱼 `:@!!yinyangfish` | 出牌阶段，你可以弃一枚“阴阳鱼”，摸一张牌；弃牌阶段开始时，你可以弃一枚“阴阳鱼”，此回合手牌上限+2。 | 按钮用「可」替代「可以」。时机见[出牌阶段](../../../rulebook/events/phase.md#出牌阶段)及[弃牌阶段](../../../rulebook/events/phase.md#弃牌阶段)，最多持有五枚见[阴阳鱼标记上限](../../rules/player-count-and-marks.md#阴阳鱼标记上限)。 |
+| 珠联璧合 `:@!!companion` | 出牌阶段，你可以弃一枚“珠联璧合”，摸两张牌；你可以弃一枚“珠联璧合”，视为使用【桃】。 | 按钮合写「你可弃一枚“珠联璧合”，视为使用【桃】或摸两张牌。」。摸牌分支限出牌阶段，当【桃】使用按[标记当牌的规则](../../rules/player-count-and-marks.md#将国战标记当牌使用)。 |
+| 野心家 `:@!!wild` | 你可以弃一枚“野心家”，执行“先驱”、“阴阳鱼”或“珠联璧合”的效果。 | 按钮用「可」替代「可以」。三种效果沿用各自的规则，野心家身份及效忠另见[野心家效忠](../../rules/wild-allegiance.md)。 |
+
+专属标记的印刷文字和入口差异见[诏书](generals/shi-vector/em-han001.md#em-han001-banner)与[赐](generals/nu/em-jin001.md#em-jin001-banner)。五面大旗的头像悬浮说明沿用旗的注册文字，完整来源列在[六师率义旗](generals/zhen/em-shu001.md#em-shu001-flag)、[黄巾天兵符](generals/shi/em-qun010.md#em-qun010-banner)、[缘江烽火图](generals/bian/em-wu001.md#em-wu001-flag)、[霸者求贤状](generals/quan/em-wei001.md#em-wei001-banner)和[诸王敕封册](generals/nu/em-jin001.md#em-jin001-banner)。
+
 ## 诏书牌堆入口
 
 诏书公开牌堆使用原生 QML 标记注册，`EdictPile.qml` 扩展原生 `ViewPile`。持有者在同一个弹窗里操作「获得势力锦囊」，其他玩家、旁观和回放只查看牌。按钮仅在当前普通出牌请求允许发动时可点击，提交走原有主动技的客户端确认和服务端回包。技能隐藏独立的右下角按钮。旧录像的原牌堆名保留中文翻译。
