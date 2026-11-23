@@ -11,7 +11,7 @@
 - [规则集工作底稿](rulebook/README.md)与[项目设计、裁定](docs/rules/README.md)
 - [开发状态与待办](docs/development/status.md)及[实现导航](docs/development/implementation/README.md)
 
-标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md) · [群](docs/development/implementation/generals/qun-standard.md) · [晋](docs/development/implementation/generals/jin001-simayan.md)。另见[阵、势包实现与验证](docs/development/implementation/generals/zhen-shi-review.md)。具体技能与验证范围以对应文档为准。
+标准包逐将入口：[汉](docs/development/implementation/generals/han-standard.md) · [魏](docs/development/implementation/generals/wei-standard.md) · [蜀](docs/development/implementation/generals/shu-standard.md) · [吴](docs/development/implementation/generals/wu-standard.md) · [群](docs/development/implementation/generals/qun-standard.md) · [晋](docs/development/implementation/generals/jin-standard.md)。另见[阵、势包实现与验证](docs/development/implementation/generals/zhen-shi-review.md)。具体技能与验证范围以对应文档为准。
 
 ## 准备开发环境
 

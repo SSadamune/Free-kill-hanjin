@@ -42,6 +42,7 @@
 - [HAN008 伏皇后结算约定](generals/han008-fuhuanghou.md)：求援仅调整牌效果的结算先后。
 - [HAN016A 刘宠结算约定](generals/han016a-liuchong.md)：劲弩排除阶段内零用牌、威屯先选同一组目标。
 - [HAN017 刘繇结算约定](generals/han017-liuyao.md)：戡难按每名角色限次；逆拒每次没赢摸牌，点数增益累计且封顶 13。
+- [HAN018 蹇硕结算约定](generals/han018-jianshuo.md)记录集兵在同一回合多次发动后的逐次判定。
 - [JIN001 司马炎结算约定](generals/jin001-simayan.md)：垂统的濒死装备移动与兴图的回合用牌检查、选项及转化用桃。
 - [WEI002 司马懿结算约定](generals/wei002-simayi.md)：应期的配将体力贡献、开局判定及多势力／客将依据。
 - [WEI014 曹丕结算约定](generals/wei014-caopi.md)：放逐的定向叠置／平置。
