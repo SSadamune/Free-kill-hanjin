@@ -4,10 +4,9 @@
 
 ## 武将与翼从
 
-- [标准包](generals/standard.md) · [汉势力](generals/han-standard.md) · [魏势力](generals/wei-standard.md) · [蜀势力](generals/shu-standard.md) · [吴势力](generals/wu-standard.md) · [群势力](generals/qun-standard.md) · [晋势力](generals/jin001-simayan.md)
-- [阵包](generals/zhen.md) · [势包](generals/shi.md)
-- [权包](generals/quan.md) · [变包](generals/bian.md) · [矢包](generals/shi-vector.md) · [弩包](generals/nu.md) 检索已正式接入的君主版，其余武将的状态见各包入口。
-- [翼从专属技能](generals/retinues.md)可按兵种进入，包含标准包 14 种、阵包八阵兵、势包青州精锐与庐江上甲。各武将索引另给出实际关联的翼从。
+- **标准包**　[汉势力](generals/han-standard.md) · [魏势力](generals/wei-standard.md) · [蜀势力](generals/shu-standard.md) · [吴势力](generals/wu-standard.md) · [群势力](generals/qun-standard.md) · [晋势力](generals/jin001-simayan.md)
+- **君临天下**　[阵包](generals/zhen.md) · [势包](generals/shi.md) · [变包](generals/bian.md) · [权包](generals/quan.md) · [矢包](generals/shi-vector.md) · [弩包](generals/nu.md) · [发包](generals/fa.md)
+- [翼从专属技能](generals/retinues.md)
 
 ## 基础机制
 
@@ -39,7 +38,7 @@
 
 ## 分类与检索约定
 
-1. **新增或调整武将。** 以真实卡面包别和正式登记为准，在所属包增加「编号｜武将｜技能」行。标准包按汉、魏、蜀、吴、群、晋，势力内按编号。技能按卡面顺序链接，君主版列在其正式内容包。关联、派生技能及专属旗、标记在卡面技能之后加链接，并注明关系。共用程序加载包、开发批次和测试不改变内容归属。尚在规则审阅的包链接到规则资料并注明未登记的范围。
+1. **新增或调整武将。** 首页按武将所属内容包组织。标准包按汉、魏、蜀、吴、群、晋列出势力，君临天下按阵、势、变、权、矢、弩、发列出同级子包。首页只列分组和链接，实装或审阅状态写在相应子页。共用程序加载包、开发批次和测试不改变内容归属。在所属子页按编号增加「编号｜武将｜技能」行。技能按卡面顺序链接，关联、派生技能及专属旗、标记列在卡面技能之后并注明关系。
 2. **选择唯一主记录。** 技能可保留在主要机制页，相关武将及机制入口共同链接。同文共享技能在主条目注明相关武将、运行时 ID 及独立来源，已有锚点继续复用。确有两套独立机制和测试时，分记录只承载该侧细节并回链主记录。普通技能锚点用牌面编号与技能序号，例如 `#han001-1`、`#han016a-1`，运行时 ID 写实际值。君主版使用 `#em-wei001-1` 这类锚点，翼从用稳定兵种名。
 3. **新增公共机制、卡牌或客户端接线。** 先查对应职责组及已有记录。公共模块记录入口、调用双方、数据、时机与正式加载。具体技能写本身如何调用、复核和处理特殊分支。客户端、卡牌内容及加载进入各自分类。部分接入或尚未验证时具体写出对应路径。
 4. **每批稳定后同步。** 更新主记录、受影响索引和[开发状态](../status.md)。历史命令、原验证环境和批次结果集中在[共享验证证据](generals/verification-evidence.md)。移动内容后修复入站链接或保留锚点。用一次实际检索复核武将条目和公共机制。规则确认、正式接入、自动化和人工验收分别记录。
