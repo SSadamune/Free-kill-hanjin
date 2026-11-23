@@ -88,7 +88,7 @@ end
 local QiaoClient = BaseClient:subclass("QiaoClient")
 
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
---- 辅助/额外发动、ViewAs 与牌使用由 M.appliesTo 排除，其他模式由 M.exhausted 排除。
+--- 辅助／额外发动与无次数声明的转化由 M.appliesTo 排除，其他模式由 M.exhausted 排除。
 local function exhaustedActiveSkill(request, name)
   return ActiveSkillLimits.exhausted(Fk.skills[name], request.player, Fk:currentRoom())
 end

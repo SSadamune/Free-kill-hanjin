@@ -2,10 +2,13 @@
 -- 数据片段尚未合入中央将池；这里按正式技能 id 和独立数据片段验证。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin"
 
 local SANCHEN = "qiao__skill_jin006_1"
+local POZHU = "qiao__skill_jin006_2"
 local WUKU = "qiao__skill_jin006_3"
 local HISTORY = "#qiao_zhen_shi_jin_history"
 
@@ -105,8 +108,7 @@ function Testqiao_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
   inRoom(function()
     FkTest.room:addSkill(Fk.skills[HISTORY])
     FkTest.room.logic:trigger(fk.AfterCardUseDeclared, me, { card = Fk:cloneCard("slash") })
-    lu.assertEquals(U.lastUse(me), "slash")
-    lu.assertEquals(U.history(me)[1], "slash")
+    lu.assertEquals(U.lastUse(me), "qiao__slash")
 
     FkTest.room:handleAddLoseSkills(me, WUKU, nil, false, true)
     local treasure = FkTest.room:printCard("qiao__bronze_sparrow", Card.Spade, 1)
@@ -114,7 +116,7 @@ function Testqiao_jin006_duyu:testWuKuUsesPublicHistoryAndResponseBoundary()
     local skill = Fk.skills[WUKU]
     local card = skill:viewAs(me, { treasure.id })
     lu.assertNotNil(card)
-    lu.assertEquals(card.name, "slash")
+    lu.assertEquals(card.name, "qiao__slash")
     lu.assertTrue(skill:enabledAtResponse(me, false), "需要“使用”闪/无懈的窗口可转化")
     lu.assertFalse(skill:enabledAtResponse(me, true), "纯打出窗口不提供")
   end)
@@ -132,13 +134,103 @@ function Testqiao_jin006_duyu:testWuKuReadsRealUseDeclaredAndStillAllowsResponse
       from = me, tos = { target }, card = Fk:getCardById(slash),
     }
     FkTest.room:handleAddLoseSkills(me, WUKU, nil, false, true)
-    lu.assertEquals(U.lastUse(me), "slash", "真实使用后公开历史应记录上一张牌")
+    lu.assertEquals(U.lastUse(me), "qiao__slash", "真实使用后公开历史应记录上一张牌")
     local skill = Fk.skills[WUKU]
     local card = skill:viewAs(me, { treasure })
     lu.assertNotNil(card)
-    lu.assertEquals(card.name, "slash")
+    lu.assertEquals(card.name, "qiao__slash")
     lu.assertTrue(skill:enabledAtResponse(me, false), "需要使用的响应窗口仍可转化")
     lu.assertFalse(skill:enabledAtResponse(me, true), "纯打出窗口不提供")
+  end)
+end
+
+function Testqiao_jin006_duyu:testPozhuSelectsMaterialAndRealCardTargetBeforeCounting()
+  local room, me, target = FkTest.room, p(1), p(2)
+  local material = give(me, "qiao__jink", Card.Heart, 2)
+  local shown = give(target, "qiao__jink", Card.Spade, 2)
+  inRoom(function()
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, POZHU, nil, false, true)
+    lu.assertFalse(Fk.skills[POZHU]:enabledAtPlay(me))
+    U.restoreSanChen(me)
+  end)
+  local reply
+  client_room.run(room, function(clients)
+    local handler = ClientInstance.request_handlers.PlayCard:new(clients[1])
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(POZHU))
+    handler:selectSkill(POZHU, { selected = true })
+    lu.assertTrue(handler:cardValidity(material))
+    handler:selectCard(material, { selected = true })
+    lu.assertFalse(handler:feasible())
+    handler:doCancelButton()
+    lu.assertEquals(me:usedSkillTimes(POZHU, Player.HistoryPhase), 0)
+    handler:selectSkill(POZHU, { selected = true })
+    handler:selectCard(material, { selected = true })
+    lu.assertFalse(handler:targetValidity(me.id))
+    lu.assertTrue(handler:targetValidity(target.id))
+    handler:update("Photo", target.id, "click", { selected = true })
+    lu.assertTrue(handler:feasible())
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function() handler:doOKButton(); handler:_finish() end)
+    ClientInstance.notifyUI = notify
+    if not ok then error(err, 0) end
+  end)
+  lu.assertNotNil(reply)
+  FkTest.setNextReplies(me, { shown })
+  local hp = target.hp
+  inRoom(function()
+    room:handleUseCardReply(me, reply)
+    lu.assertFalse(Fk.skills[POZHU]:enabledAtPlay(me))
+    room:handleUseCardReply(me, reply)
+  end)
+  lu.assertEquals(room:getCardArea(material), Card.DiscardPile)
+  lu.assertEquals(target.hp, hp - 1)
+  lu.assertEquals(me:usedSkillTimes(POZHU, Player.HistoryPhase), 1)
+end
+
+function Testqiao_jin006_duyu:testWuKuUsesActualCardKindAndClearsAllPlayersHistory()
+  local room, me, target = FkTest.room, p(1), p(2)
+  local treasure = give(me, "qiao__bronze_sparrow", Card.Heart, 3)
+  local slash = give(me, "qiao__slash", Card.Heart, 4)
+  local skill = Fk.skills[WUKU]
+  inRoom(function()
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, WUKU, nil, false, true)
+    local weapon = room:printCard("qiao__qinggang_sword", Card.Spade, 2)
+    room:moveCardIntoEquip(target, weapon.id, "test", true, target)
+    room:useCard { from = me, tos = { target }, card = Fk:cloneCard("qiao__drowning") }
+    lu.assertEquals(skill:viewAs(me, { treasure }).name, "qiao__drowning")
+
+    local peach = Fk:cloneCard("qiao__peach")
+    peach:addSubcard(slash)
+    me.hp = me.maxHp - 1
+    room:useCard { from = me, tos = { me }, card = peach }
+    lu.assertEquals(skill:viewAs(me, { treasure }).name, "qiao__peach")
+
+    local fire = Fk:cloneCard("qiao__fire__slash")
+    A.setCardEntries(fire, { { id = "test1", condition = "kongchao", effect = "draw" } })
+    local use = { card = fire, from = me, tos = { target } }
+    A.addEntry(use, { id = "test2", condition = "fujia", effect = "damage" })
+    room.logic:trigger(fk.AfterCardUseDeclared, me, use)
+    local converted = skill:viewAs(me, { treasure })
+    lu.assertEquals(converted.name, "qiao__fire__slash")
+    lu.assertFalse(A.isAdaptationCard(converted))
+    lu.assertFalse(skill:enabledAtNullification(me))
+
+    local guozhan = Fk:cloneCard("qiao__guozhan__nullification")
+    room.logic:trigger(fk.AfterCardUseDeclared, me, { card = guozhan })
+    lu.assertEquals(skill:viewAs(me, { treasure }).name, guozhan.name)
+    lu.assertTrue(skill:enabledAtNullification(me))
+
+    GameEvent.Turn:create(TurnData:new(target, "game_rule", { Player.Finish })):exec()
+    lu.assertNil(U.lastUse(me))
+    lu.assertNil(skill:viewAs(me, { treasure }))
   end)
 end
 

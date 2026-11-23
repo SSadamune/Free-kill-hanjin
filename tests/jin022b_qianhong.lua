@@ -40,7 +40,6 @@ end
 function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
   local first, second, third = p(1), p(2), p(3)
   inRoom(function()
-    FkTest.room:addSkill(Fk.skills[U.RANGE_SKILL])
     FkTest.room:setPlayerMark(first, U.RANGE, 1)
     lu.assertEquals(first:getAttackRange(), 2)
     lu.assertTrue(first:inMyAttackRange(third), "距离2应在+X后的攻击范围内")
@@ -52,6 +51,53 @@ function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
     FkTest.room:setPlayerMark(first, U.RANGE, 0)
     lu.assertEquals(first:getAttackRange(), 1)
   end)
+end
+
+function Testqiao_jin022b_qianhong:testLieRongRangeAndZeroLostHpUseRealRequest()
+  local room, me, adjacent, farther = FkTest.room, p(1), p(2), p(3)
+  local name = "qiao__skill_jin022b_1"
+  local healAfterCost = false
+  local watcher = fk.CreateSkill { name = "#qiao_test_lierong_recover" }
+  watcher:addEffect(fk.HpLost, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return healAfterCost and target == me and player == me and data.skillName == name
+    end,
+    on_refresh = function()
+      room:recover { who = me, num = 1 }
+    end,
+  })
+  inRoom(function()
+    room:addSkill(watcher:createSkill())
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    for _, target in ipairs({ adjacent, farther }) do
+      local hand = target:getCardIds("h")
+      if #hand > 0 then room:moveCardTo(hand, Card.DiscardPile, nil, fk.ReasonJustMove) end
+    end
+  end)
+  local function useOn(target)
+    FkTest.setNextReplies(me, { {
+      card = { skill = "virtual_viewas", subcards = {} },
+      targets = { target.id }, interaction_data = "qiao__fire__slash",
+    } })
+    FkTest.setNextReplies(target, { "" })
+    inRoom(function() Fk.skills[name]:onUse(room, { from = me }) end)
+  end
+  local fartherHp, adjacentHp = farther.hp, adjacent.hp
+  useOn(farther)
+  lu.assertEquals(me:getMark(U.RANGE), 1)
+  lu.assertEquals(farther.hp, fartherHp - 1)
+  inRoom(function()
+    room:setPlayerMark(me, U.RANGE, 0)
+    me.hp = me.maxHp
+  end)
+  healAfterCost = true
+  useOn(adjacent)
+  lu.assertEquals(me.hp, me.maxHp)
+  lu.assertEquals(me:getMark(U.RANGE), 0)
+  lu.assertEquals(adjacent.hp, adjacentHp - 1)
 end
 
 function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()

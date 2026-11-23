@@ -10,11 +10,6 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local function ensureRangeRule(room)
-  local rule = Fk.skills[U.RANGE_SKILL]
-  if rule ~= nil and not room:hasSkill(U.RANGE_SKILL) then room:addSkill(rule) end
-end
-
 skill:addEffect("active", {
   prompt = "#qiao__skill_jin022b_1-prompt",
   target_num = 0,
@@ -31,23 +26,20 @@ skill:addEffect("active", {
     if player.dead then return end
 
     local lost = math.max(0, player.maxHp - player.hp)
-    if lost < 1 then return end
-    local choices = {}
-    for value = 1, lost do table.insert(choices, tostring(value)) end
-    local picked
-    if #choices == 1 then
-      picked = choices[1]
-    else
-      picked = room:askToChoice(player, {
-        choices = choices,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin022b_1-range:::" .. lost,
-        cancelable = false,
-      })
+    if lost > 0 then
+      local add = 1
+      if lost > 1 then
+        local choices = {}
+        for value = 1, lost do table.insert(choices, tostring(value)) end
+        add = tonumber(room:askToChoice(player, {
+          choices = choices,
+          skill_name = skill.name,
+          prompt = "#qiao__skill_jin022b_1-range:::" .. lost,
+          cancelable = false,
+        })) or 1
+      end
+      room:setPlayerMark(player, U.RANGE, add)
     end
-    local add = tonumber(picked) or 0
-    ensureRangeRule(room)
-    room:setPlayerMark(player, U.RANGE, add)
 
     local use = C.selectVirtualCard(room, player, {
       name = "qiao__fire__slash",
