@@ -126,7 +126,7 @@ local function selectUniqueTarget(request, skill, user)
 end
 
 local function withoutAutoTarget(data)
-  if not data or not data.autoTarget then return data end
+  if type(data) ~= "table" or not data.autoTarget then return data end
   data = table.simpleClone(data)
   data.autoTarget = false
   return data
