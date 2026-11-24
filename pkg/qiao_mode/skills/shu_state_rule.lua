@@ -72,38 +72,35 @@ skill:addEffect(fk.TurnEnd, {
   end,
   on_trigger = function(self, event, target, player, data)
     local room = player.room
-      room:setPlayerMark(player, FQ, 0)
-      if not table.find(player:getCardIds("h"), function(id)
-        return not player:prohibitDiscard(id)
-      end) then return end
-      local candidates = {}
-      for _, p in ipairs(room:getPresentPlayers()) do
-        if p ~= player and not p:isRemoved() then table.insert(candidates, p) end
-      end
-      -- 先选目标（可取消）；支付弃牌后不得再取消选人吞费用。
-      local targets = room:askToChoosePlayers(player, {
-        min_num = 1,
-        max_num = 1,
-        targets = candidates,
-        prompt = "#qiao__skill_shu013_2-choose",
-        skill_name = "qiao__skill_shu013_2",
-        cancelable = true,
-      })
-      local to = targets and targets[1]
-      if to ~= nil and not to.dead and #player:getCardIds("h") > 0 then
-        local to_discard = room:askToDiscard(player, {
-          min_num = 1,
-          max_num = 1,
-          include_equip = false,
-          skill_name = "qiao__skill_shu013_2",
-          prompt = "#qiao__skill_shu013_2-discard",
-          cancelable = false,
-        })
-        if to_discard and #to_discard > 0 then
-          -- 此回合结束后才执行，必须排队而不是立刻嵌套。
-          to:gainAnExtraTurn(true, "qiao__skill_shu013_2")
-        end
-      end
+    room:setPlayerMark(player, FQ, 0)
+    if not table.find(player:getCardIds("h"), function(id)
+      return not player:prohibitDiscard(id)
+    end) then return end
+    local candidates = table.filter(room:getPresentPlayers(), function(p)
+      return p ~= player and not p:isRemoved()
+    end)
+    if #candidates == 0 then return end
+
+    local skillName = "qiao__skill_shu013_2"
+    local targets, cards = room:askToChooseCardsAndPlayers(player, {
+      min_num = 1,
+      max_num = 1,
+      min_card_num = 1,
+      max_card_num = 1,
+      targets = candidates,
+      pattern = ".|.|.|hand",
+      will_throw = true,
+      prompt = "#qiao__skill_shu013_2-pay",
+      skill_name = skillName,
+      cancelable = true,
+    })
+    if #targets ~= 1 or #cards ~= 1 then return end
+    local to, id = targets[1], cards[1]
+    if not table.contains(candidates, to) or to.dead or to:isRemoved()
+      or not table.contains(player:getCardIds("h"), id) or player:prohibitDiscard(id) then return end
+    room:throwCard(cards, skillName, player, player)
+    -- 此回合结束后才执行，必须排队而不是立刻嵌套。
+    to:gainAnExtraTurn(true, skillName)
   end,
 })
 

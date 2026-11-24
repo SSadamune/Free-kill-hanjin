@@ -636,7 +636,7 @@ function Testqiao_wu_damage:testFenjiUsesRealEmptyHandHistory()
   local hp = p(1).hp
 
   inRoom(function() room:throwCard({ victim }, "test", p(3), p(3)) end)
-  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChoosePlayer({ p(3) }) })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(3) }) })
   turnEnd(room, p(1))
 
   lu.assertEquals(#p(3):getCardIds(Player.Hand), 2)
@@ -870,7 +870,7 @@ function Testqiao_wu_damage:testFenjiRetainsHistoryBeforeAcquisitionAndAfterRefi
   end)
   grant(owner, FENJI)
   local hp = owner.hp
-  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ to }) })
+  FkTest.setNextReplies(owner, { FkTest.ReplyChoosePlayer({ to }) })
   turnEnd(room, owner)
   lu.assertEquals(to:getHandcardNum(), 3)
   lu.assertEquals(owner.hp, hp - 1)
@@ -893,7 +893,7 @@ function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeYuyuRefillsIt()
   local hand, hp = current:getHandcardNum(), owner.hp
   lu.assertEquals(hand, 4)
   lu.assertEquals(current:getMark(history.LOST_HAND), 1)
-  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ current }) })
+  FkTest.setNextReplies(owner, { FkTest.ReplyChoosePlayer({ current }) })
   turnEnd(room, current)
   lu.assertEquals(current:getHandcardNum(), hand + 2)
   lu.assertEquals(owner.hp, hp - 1)

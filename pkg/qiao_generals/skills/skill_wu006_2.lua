@@ -52,8 +52,9 @@ skill:addAuxActiveSkill(SELECT, {
     return #selected == 0 and allows(self._extra_data, id, targets[1])
   end,
   target_filter = function(self, player, to_select, selected, cards)
-    if #selected > 0 or #cards ~= 1 then return false end
-    return allows(self._extra_data, cards[1], to_select)
+    if #selected > 0 then return false end
+    if #cards == 1 then return allows(self._extra_data, cards[1], to_select) end
+    return self._extra_data ~= nil and table.contains(self._extra_data.targets, to_select.id)
   end,
 })
 
@@ -67,17 +68,20 @@ skill:addEffect(fk.TargetConfirming, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    local targetsByCard = {}
+    local targetsByCard, targetIds = {}, {}
     for _, id in ipairs(discardableCards(player)) do
       local targets = candidates(player, data, { id })
-      if #targets > 0 then targetsByCard[tostring(id)] = table.map(targets, Util.IdMapper) end
+      if #targets > 0 then
+        targetsByCard[tostring(id)] = table.map(targets, Util.IdMapper)
+        for _, to in ipairs(targets) do table.insertIfNeed(targetIds, to.id) end
+      end
     end
     if next(targetsByCard) == nil then return false end
     local ok, ret = room:askToUseActiveSkill(player, {
       skill_name = SELECT,
       prompt = "#qiao__skill_wu006_2-invoke",
       cancelable = true,
-      extra_data = { skillName = skill.name, targetsByCard = targetsByCard },
+      extra_data = { skillName = skill.name, targetsByCard = targetsByCard, targets = targetIds },
     })
     if not ok or not ret or #ret.cards ~= 1 or #ret.targets ~= 1 then return false end
     local cardId, to = ret.cards[1], ret.targets[1]

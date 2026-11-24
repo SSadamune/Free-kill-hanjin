@@ -6,7 +6,7 @@ local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local XURONG = "qiao_heg__qun081"
 local PIAOLU = "qiao__skill_qun081_1"
 local SHAJUE = "qiao__skill_qun081_2"
-local SIDE_SELF = "qiao__skill_qun081_1-self"
+local SELECT = "#qiao__skill_qun081_1_select"
 
 local ZHEN_SHI = require "packages.qiao.pkg.qiao_generals.data.zhen_shi"
 
@@ -99,24 +99,18 @@ function Testqiao_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
     room:setBanner("RoundCount", 1)
   end)
 
-  skill_test.withSkillRequests(room, PIAOLU, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == PIAOLU then return true end
+  local client_room = __dofile("../../../tests/support/client_room.lua")
+  skill_test.withSkillRequests(room, SELECT, {
+    askToUseActiveSkill = function(self, who, params, original)
+      local reply = client_room.confirmSelection(room, who, params, { mount }, { target }, function(handler)
+        lu.assertEquals(handler.selected_targets, { target.id })
+        lu.assertEquals(handler.pendings, {})
+        lu.assertFalse(handler:feasible())
+        lu.assertTrue(handler:cardValidity(mount))
+        lu.assertTrue(handler:cardValidity(treasure))
+      end)
+      FkTest.setNextReplies(who, { reply })
       return original(self, who, params)
-    end,
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name ~= PIAOLU then return original(self, who, params) end
-      lu.assertTrue(table.contains(params.targets, target))
-      return { target }
-    end,
-    askToChoice = function(self, who, params, original)
-      if params.skill_name ~= PIAOLU then return original(self, who, params) end
-      return SIDE_SELF
-    end,
-    askToChooseCard = function(self, who, params, original)
-      if params.skill_name ~= PIAOLU then return original(self, who, params) end
-      lu.assertIs(params.target, player)
-      return mount
     end,
   }, function()
     inRoom(function()

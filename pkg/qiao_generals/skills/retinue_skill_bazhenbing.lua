@@ -51,10 +51,6 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     local instance = R.currentForEvent(self, event)
     if instance ~= nil and not canTriggerInstance(instance, room) then return false end
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_bazhenbing-invoke::" .. target.id,
-    }) then return false end
     -- 正常选择 1-2 名其他角色；不强制把出牌阶段角色作为目标。
     local use = C.selectVirtualCard(room, player, {
       name = LURE,
@@ -90,7 +86,6 @@ skill:addEffect(fk.EventPhaseStart, {
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_bazhenbing"] = "八阵兵",
   [":qiao__retinue_skill_bazhenbing"] = "轮次技，一名角色的出牌阶段开始时，你可以视为使用【调虎离山】，此牌结算中其可以将【杀】当【无懈可击】使用。",
-  ["#qiao__retinue_skill_bazhenbing-invoke"] = "八阵兵：是否视为使用【调虎离山】？",
   ["#qiao__retinue_skill_bazhenbing-target"] = "八阵兵：选择一至两名其他角色",
 }
 

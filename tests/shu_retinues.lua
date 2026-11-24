@@ -123,8 +123,10 @@ function Testqiao_shu_retinues:testZhoucangRedSlashLetsThirdPlayerUseOwnSlashInZ
   FkTest.setNextReplies(p8, { "__cancel" })
 
   skill_test.withSkillRequests(room(), ZHOUCANG, {
-    askToChooseCards = function() return { red } end,
-    askToChoosePlayers = function() return { p3 } end,
+    askToChooseCardsAndPlayers = function(_, _, params)
+      lu.assertItemsEquals(params.expand_pile, { red, component })
+      return { p3 }, { red }, true
+    end,
   }, function()
     inRoom(function()
       local slash = Fk:cloneCard("qiao__slash")
@@ -167,7 +169,7 @@ function Testqiao_shu_retinues:testXiliangFinishPhaseReallyUsesSlashWithoutNorma
   FkTest.setNextReplies(p2, { "__cancel" })
 
   skill_test.withSkillRequests(room(), XILIANG, {
-    askToSkillInvoke = function() return true end,
+    askToSkillInvoke = function() error("西凉精骑应在用杀请求中确认") end,
   }, function()
     inRoom(function()
       room().logic:trigger(fk.EventPhaseStart, p1,

@@ -72,15 +72,7 @@ skill:addEffect(fk.TargetSpecified, {
       data:setDisresponsive(to)
       return
     end
-    if not room:askToSkillInvoke(to, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu006_2-discard:::" .. suit,
-    }) then
-      data:setDisresponsive(to)
-      return
-    end
-    to:showCards(to:getCardIds("h"), player)
-    local discarded = room:askToDiscard(to, {
+    local cards = room:askToDiscard(to, {
       min_num = #matches,
       max_num = #matches,
       include_equip = false,
@@ -88,10 +80,17 @@ skill:addEffect(fk.TargetSpecified, {
       pattern = ".|.|" .. suit,
       prompt = "#qiao__skill_shu006_2-discard:::" .. suit,
       cancelable = true,
+      skip = true,
     })
-    if discarded == nil or #discarded < #matches then
+    if not cards or #cards ~= #matches or not table.every(matches, function(id)
+      return table.contains(cards, id) and table.contains(to:getCardIds("h"), id)
+        and not to:prohibitDiscard(id)
+    end) then
       data:setDisresponsive(to)
+      return
     end
+    to:showCards(to:getCardIds("h"), player)
+    room:throwCard(cards, skill.name, to, to)
   end,
 })
 

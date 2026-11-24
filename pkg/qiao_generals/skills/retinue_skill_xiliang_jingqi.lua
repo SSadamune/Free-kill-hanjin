@@ -16,7 +16,7 @@ end
 Fk:loadTranslationTable {
   ["qiao__retinue_skill_xiliang_jingqi"] = "西凉精骑",
   [":qiao__retinue_skill_xiliang_jingqi"] = "结束阶段，你可以使用一张【杀】；当你使用【杀】指定攻击范围内没有你的角色为目标后，你可以令其弃置一张牌。",
-  ["#qiao__retinue_skill_xiliang_jingqi-use"] = "西凉精骑：是否使用一张【杀】？",
+  ["#qiao__retinue_skill_xiliang_jingqi-use"] = "西凉精骑：选择一张【杀】及其目标",
   ["#qiao__retinue_skill_xiliang_jingqi-discard"] = "西凉精骑：令%src弃置一张牌",
 }
 
@@ -27,20 +27,20 @@ skill:addEffect(fk.EventPhaseStart, {
     return target == player and player:hasSkill(skill.name) and player.phase == Player.Finish
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_xiliang_jingqi-use",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local use = C.askToUseCard(player.room, player, {
       names = { "qiao__slash", "qiao__fire__slash", "qiao__thunder__slash", "qiao__ice__slash" },
       pattern = "slash",
       skill_name = skill.name,
+      prompt = "#qiao__retinue_skill_xiliang_jingqi-use",
       cancelable = true,
+      extra_data = { qiao_trigger_use = true },
     })
-    if use == nil or use.card == nil then return end
-    C.useCard(player.room, player, use)
+    if use == nil or use.card == nil then return false end
+    event:setCostData(self, { use = use })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    C.useCard(player.room, player, event:getCostData(self).use)
   end,
 })
 

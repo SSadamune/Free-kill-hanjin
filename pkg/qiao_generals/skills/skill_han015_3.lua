@@ -21,18 +21,12 @@ skill:addEffect(fk.EventPhaseStart, {
       and data ~= nil and data.phase == Player.Finish and revealedCount(player.room) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han015_3-invoke:::" .. revealedCount(player.room),
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local room = player.room
     local x = revealedCount(room)
     local targets = table.filter(room:getPresentPlayers(), function(p)
       return p:isAlive() and not p:isRemoved()
     end)
-    if #targets == 0 or x <= 0 then return end
+    if #targets == 0 or x <= 0 then return false end
     local max = math.min(x, #targets)
     local chosen = room:askToChoosePlayers(player, {
       min_num = 1,
@@ -40,9 +34,19 @@ skill:addEffect(fk.EventPhaseStart, {
       targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__skill_han015_3-target:::" .. max,
-      cancelable = false,
+      cancelable = true,
     })
-    for _, to in ipairs(chosen or {}) do
+    if not chosen or #chosen == 0 or #chosen > max then return false end
+    local seen = {}
+    for _, to in ipairs(chosen) do
+      if seen[to] or not table.contains(targets, to) then return false end
+      seen[to] = true
+    end
+    event:setCostData(self, { tos = chosen })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    for _, to in ipairs(event:getCostData(self).tos) do
       if to:isAlive() and not to:isRemoved() then
         local need = to.maxHp - #to:getCardIds(Player.Hand)
         if need > 0 then to:drawCards(need, skill.name) end
@@ -54,7 +58,6 @@ skill:addEffect(fk.EventPhaseStart, {
 Fk:loadTranslationTable {
   ["qiao__skill_han015_3"] = "修体",
   [":qiao__skill_han015_3"] = "副将技，结束阶段，你可以令至多X名角色摸牌至体力上限（X为本回合明置的武将牌数）。",
-  ["#qiao__skill_han015_3-invoke"] = "修体：本回合明置了 %arg 张武将牌，可以令至多 %arg 名角色摸牌至体力上限",
   ["#qiao__skill_han015_3-target"] = "修体：选择至多 %arg 名角色",
 }
 

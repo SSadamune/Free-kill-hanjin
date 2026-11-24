@@ -98,16 +98,24 @@ function Testqiao_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
   local ownerSlash = give(owner, "qiao__slash", Card.Heart, 3)
 
   skill_test.withSkillRequests(room, HUYI, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == HUYI then return true end
-      return original(self, who, params)
-    end,
+    askToSkillInvoke = function() error("虎翼应在用杀请求中确认") end,
     askToUseCard = function(self, who, params, original)
       lu.assertIs(who, owner)
-      return {
-        from = owner, tos = { victim },
-        card = Fk:getCardById(ownerSlash), extra_data = {},
-      }
+      local client_room = __dofile("../../../tests/support/client_room.lua")
+      client_room.run(room, function(clients)
+        local board = Fk:getBoardGame(room:getSettings("gameMode"))
+        local client = board.client_klass:new(ClientInstance.client)
+        local handler = client.request_handlers.AskForUseCard:new(clients[owner.seat], {
+          params.skill_name, params.pattern, params.prompt, params.cancelable, params.extra_data,
+        })
+        handler:setup()
+        lu.assertEquals(handler.selected_card.id, ownerSlash)
+        lu.assertEquals(handler.selected_targets, { victim.id })
+        lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
+        handler:_finish()
+      end)
+      FkTest.setNextReplies(who, { FkTest.ReplyCard(Fk:getCardById(ownerSlash), { victim }) })
+      return original(self, who, params)
     end,
   }, function()
     inRoom(function()

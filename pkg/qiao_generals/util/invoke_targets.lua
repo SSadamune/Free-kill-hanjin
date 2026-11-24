@@ -1,16 +1,11 @@
 local M = {}
 
--- A cancellable target request is the invocation. If there is only one
--- legal target, use the same prompt to confirm it without a redundant click.
+-- The target request is the invocation. The client preselects a sole target.
 function M.ask(room, player, params)
   local targets = params.targets
   if #targets == 0 then return {} end
   if #targets == 1 and params.min_num == 1 then
-    if room:askToSkillInvoke(player, {
-      skill_name = params.skill_name,
-      prompt = params.invoke_prompt or params.prompt,
-    }) then return targets end
-    return {}
+    params.prompt = params.invoke_prompt or params.prompt
   end
   params.cancelable = true
   local selected = room:askToChoosePlayers(player, params) or {}

@@ -137,7 +137,7 @@ function Testqiao_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
   local ride = give(p1, "qiao__chitu", Card.Heart, 5)
   equip(p1, ride)
 
-  FkTest.setNextReplies(p1, { "1" })
+  FkTest.setNextReplies(p1, { FkTest.ReplyChooseCards({ sword }) })
   inRoom(function() room():throwCard({ sword }, "test", p1, p1) end)
   lu.assertEquals(room():getCardArea(sword), Card.PlayerEquip)
 

@@ -1,6 +1,7 @@
 -- JIN022B 牵弘：烈戎攻击范围持续、勤边最远目标静态验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
 local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin"
 
@@ -51,6 +52,73 @@ function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
     FkTest.room:setPlayerMark(first, U.RANGE, 0)
     lu.assertEquals(first:getAttackRange(), 1)
   end)
+end
+
+function Testqiao_jin022b_qianhong:testQinBianConfirmsThroughTheSameCardAndTargetRequest()
+  local room, player, target = FkTest.room, p(1), p(2)
+  local name = "qiao__skill_jin022b_2"
+  local CardUse = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+  inRoom(function()
+    room:setCurrent(player)
+    player.phase = Player.Finish
+    room:handleAddLoseSkills(player, name, nil, false, true)
+  end)
+
+  local hand = player:getCardIds(Player.Hand)
+  local chosen = hand[1]
+  lu.assertTrue(#hand > 1)
+  local confirmed, selections, use = false, 0
+  local askActive, getPresentPlayers, useCard = room.askToUseActiveSkill, room.getPresentPlayers, CardUse.useCard
+  room.getPresentPlayers = function() return { player, target } end
+  CardUse.useCard = function(_, _, selectedUse) use = selectedUse end
+  function room:askToUseActiveSkill(who, params)
+    if params.extra_data and params.extra_data.skillName == name then
+      selections = selections + 1
+      lu.assertEquals(params.skill_name, "ex__choose_skill")
+      local reply = client_room.confirmSelection(room, who, params, { chosen }, { target }, function(handler)
+        lu.assertEquals(handler.selected_targets, { target.id })
+        lu.assertEquals(handler.scene:getAllItems("Photo")[target.id].selected, true)
+        if confirmed then
+          lu.assertEquals(handler.pendings, { chosen })
+          lu.assertTrue(handler.scene:getAllItems("CardItem")[chosen].selected)
+          lu.assertTrue(handler:feasible())
+          lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
+        else
+          lu.assertEquals(handler.pendings, {})
+          lu.assertFalse(handler:feasible())
+          lu.assertFalse(handler.scene:getAllItems("Button").OK.enabled)
+          lu.assertFalse(handler:update("Button", "OK", "click", {}))
+        end
+        handler:update("Photo", target.id, "click", { selected = false, autoTarget = true })
+        lu.assertEquals(handler.selected_targets, {})
+        lu.assertFalse(handler:feasible())
+      end)
+      FkTest.setNextReplies(who, { confirmed and reply or "" })
+    end
+    return askActive(self, who, params)
+  end
+  local ok, err = pcall(function()
+    local function finish()
+      inRoom(function()
+        room.logic:trigger(fk.EventPhaseStart, player, PhaseData:new(player, Player.Finish))
+      end)
+    end
+    finish()
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryTurn), 0)
+    lu.assertNil(use)
+    confirmed = true
+    inRoom(function()
+      room:throwCard(table.filter(hand, function(id) return id ~= chosen end), "test", player, player)
+    end)
+    finish()
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryTurn), 1)
+    lu.assertEquals(use.tos[1].id, target.id)
+    lu.assertEquals(use.card.name, "qiao__chasing_near")
+    lu.assertEquals(use.card.subcards, { chosen })
+    lu.assertEquals(selections, 2)
+  end)
+  room.askToUseActiveSkill, room.getPresentPlayers, CardUse.useCard = askActive, getPresentPlayers, useCard
+  if not ok then error(err, 0) end
 end
 
 function Testqiao_jin022b_qianhong:testLieRongRangeAndZeroLostHpUseRealRequest()

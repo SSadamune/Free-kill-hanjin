@@ -41,20 +41,17 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    local tos = room:askToChoosePlayers(player, {
+    local tos, cards = room:askToChooseCardsAndPlayers(player, {
       targets = legalTargets(room, player),
-      min_num = 1, max_num = 1, skill_name = skill.name,
-      prompt = "#qiao__wei024_ask_target", cancelable = true,
+      min_num = 1, max_num = 1, min_card_num = 1, max_card_num = 1,
+      pattern = ".|.|.|hand", skill_name = skill.name,
+      prompt = "#qiao__wei024_ask", cancelable = true,
     })
-    if tos == nil or #tos == 0 then return false end
+    if not tos or #tos ~= 1 or not cards or #cards ~= 1 then return false end
     local to = tos[1]
     -- 触发、选人与提交共用同一目标判断。
     if not isLegalTarget(player, to) then return false end
-    local cards = room:askToCards(player, {
-      min_num = 1, max_num = 1, include_equip = false,
-      skill_name = skill.name, prompt = "#qiao__wei024_ask_card", cancelable = true,
-    })
-    if cards == nil or #cards == 0 then return false end
+    if not table.contains(player:getCardIds(Player.Hand), cards[1]) then return false end
     event:setCostData(self, { to = to, card = cards[1] })
     return true
   end,
@@ -102,8 +99,7 @@ skill:addEffect(fk.TurnEnd, {
 Fk:loadTranslationTable {
   ["qiao__skill_wei024_1"] = "常令",
   [":qiao__skill_wei024_1"] = "准备阶段，你可以将一张手牌交给一名其他势力角色，对其发起一次“军令”。若其执行，你摸一张牌；若其不执行，你于本回合摸牌阶段多摸三张牌。",
-  ["#qiao__wei024_ask_target"] = "常令：选择一名其他势力角色",
-  ["#qiao__wei024_ask_card"] = "常令：选择一张手牌交给其",
+  ["#qiao__wei024_ask"] = "常令：选择一张手牌和一名其他势力角色",
 }
 
 return skill

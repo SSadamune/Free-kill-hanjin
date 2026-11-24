@@ -1,4 +1,6 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 Testqiao_adaptation = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
@@ -119,13 +121,26 @@ function Testqiao_adaptation:testAcceptedTargetChangeTriggersExactlyOnce()
     global = true, can_refresh = function(self, event, target, player) return target == player end,
     on_refresh = function() events = events + 1 end,
   })
-  local original = room.askToChoosePlayers
-  room.askToChoosePlayers = function() return {data.tos[1]} end
-  FkTest.runInRoom(function()
-    room:addSkill(skel:createSkill())
-    A.prepare(room, data); A.resolve(room, data); A.resolve(room, data)
+  local target = data.tos[1]
+  local asked = 0
+  skill_test.withSkillRequests(room, "choose_players_skill", {
+    askToUseActiveSkill = function(self, player, params, original)
+      lu.assertEquals(params.extra_data.skillName, "#qiao_adaptation_rule")
+      asked = asked + 1
+      local reply = client_room.confirmSelection(room, player, params, {}, { target }, function(handler)
+        lu.assertEquals(handler.selected_targets, { target.id })
+        lu.assertTrue(handler:feasible())
+      end)
+      FkTest.setNextReplies(player, { reply })
+      return original(self, player, params)
+    end,
+  }, function()
+    FkTest.runInRoom(function()
+      room:addSkill(skel:createSkill())
+      A.prepare(room, data); A.resolve(room, data); A.resolve(room, data)
+    end)
   end)
-  room.askToChoosePlayers = original
+  lu.assertEquals(asked, 1)
   lu.assertEquals(A.getResult(data).triggered_count, 1)
   lu.assertEquals(events, 1)
   lu.assertEquals(#data.tos, 0)

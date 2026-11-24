@@ -21,24 +21,16 @@ skill:addEffect(fk.EventPhaseStart, {
   on_cost = function(self, event, target, player, data)
     local room = player.room
     local candidates = U.farthestInRange(player)
-    local to, id
-    if #candidates == 1 then
-      to = candidates[1]
-      id = room:askToCards(player, {
-        min_num = 1, max_num = 1, cancelable = true,
-        skill_name = skill.name, prompt = "#qiao__skill_jin022b_2-invoke",
-      })[1]
-    else
-      local targets, cards = room:askToChooseCardsAndPlayers(player, {
-        targets = candidates,
-        min_card_num = 1, max_card_num = 1,
-        min_num = 1, max_num = 1,
-        pattern = ".|.|.|hand",
-        skill_name = skill.name, prompt = "#qiao__skill_jin022b_2-invoke",
-        cancelable = true,
-      })
-      to, id = targets and targets[1], cards and cards[1]
-    end
+    local targets, cards = room:askToChooseCardsAndPlayers(player, {
+      targets = candidates,
+      min_card_num = 1, max_card_num = 1,
+      min_num = 1, max_num = 1,
+      pattern = ".|.|.|hand",
+      skill_name = skill.name, prompt = "#qiao__skill_jin022b_2-invoke",
+      cancelable = true,
+    })
+    if not targets or #targets ~= 1 or not cards or #cards ~= 1 then return false end
+    local to, id = targets[1], cards[1]
     if not table.contains(candidates, to) or not table.contains(player:getCardIds("h"), id) then
       return false
     end

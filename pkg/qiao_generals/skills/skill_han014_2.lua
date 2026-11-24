@@ -35,30 +35,28 @@ skill:addEffect(fk.CardUseFinished, {
       and victimFor(player, data) ~= nil
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han014_2-invoke",
-    })
-  end,
-  on_use = function(self, event, target, player, data)
     local victim = victimFor(player, data)
-    if victim == nil then return end
+    if victim == nil then return false end
     local room = player.room
     local use = C.askToUseCard(room, player, {
       names = { SLASH },
       skill_name = skill.name,
       prompt = "#qiao__skill_han014_2-slash::" .. victim.id,
       cancelable = true,
+      extra_data = { qiao_trigger_use = true, exclusive_targets = { victim.id } },
     })
-    if use == nil or #use.tos ~= 1 or use.tos[1] ~= victim then return end
-    room:useCard(use)
+    if use == nil or #use.tos ~= 1 or use.tos[1] ~= victim then return false end
+    event:setCostData(self, { use = use })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    C.useCard(player.room, player, event:getCostData(self).use)
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__skill_han014_2"] = "虎翼",
   [":qiao__skill_han014_2"] = "阵法技，每回合限一次，与你处于同一围攻关系的围攻角色对被围攻角色使用【杀】后，另一名围攻角色可以对被围攻角色使用一张【杀】。",
-  ["#qiao__skill_han014_2-invoke"] = "虎翼：你可以对同一被围攻角色使用一张【杀】",
   ["#qiao__skill_han014_2-slash"] = "虎翼：对被围攻角色 %dest 使用一张【杀】",
 }
 

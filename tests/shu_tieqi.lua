@@ -65,7 +65,7 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
     end,
     askToDiscard = function(self, player, params, original)
       if params.skill_name == TIEQI then
-        room():throwCard({ heart1, heart2 }, TIEQI, player, player)
+        lu.assertTrue(params.skip)
         return { heart1, heart2 }
       end
       return original(self, player, params)

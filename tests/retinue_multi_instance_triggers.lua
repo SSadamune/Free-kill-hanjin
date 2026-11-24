@@ -59,18 +59,22 @@ function Testqiao_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
     player.phase = Player.Play
   end)
 
-  local asked, selected = 0, 0
+  local selected = 0
   local choices = 0
-  skill_test.withSkillRequests(FkTest.room, XIYUAN, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == XIYUAN then asked = asked + 1; return true end
-      return original(self, who, params)
-    end,
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name ~= XIYUAN then return original(self, who, params) end
+  FkTest.setRoomBreakpoint(player, "AskForUseActiveSkill", function(data)
+    if data[1] == "choose_players_skill" and data[4].skillName == XIYUAN then
+      lu.assertTrue(data[3])
+      lu.assertEquals(data[4].targets, { target.id })
       selected = selected + 1
-      return { target }
-    end,
+    end
+    return false
+  end)
+  FkTest.setNextReplies(player, {
+    FkTest.ReplyChoosePlayer({ target }),
+    FkTest.ReplyChoosePlayer({ target }),
+  })
+  skill_test.withSkillRequests(FkTest.room, XIYUAN, {
+    askToSkillInvoke = function() error("西园军应在选人请求中确认发动") end,
     askToChooseCard = function(self, who, params, original)
       if params.skill_name ~= XIYUAN then return original(self, who, params) end
       choices = choices + 1
@@ -82,8 +86,7 @@ function Testqiao_retinue_multi_instance:testTwoSharedXiyuanInstancesAskTwice()
     end)
   end)
 
-  lu.assertEquals(asked, 2, "两份同名共享实例应各自发起一次选择")
-  lu.assertEquals(selected, 0, "唯一目标应跳过选人")
+  lu.assertEquals(selected, 2, "两份同名共享实例应各自确认一次唯一目标")
   lu.assertEquals(choices, 2, "两份实例应各自完成一次选牌成本")
 end
 

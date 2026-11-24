@@ -201,13 +201,11 @@ function Testqiao_han015_luzhi:testXiutiDistinctRevealedCardsAndDrawToMaxHp()
 
   local xiutiInvoked = 0
   skill_test.withSkillRequests(room, XIUTI, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == XIUTI then xiutiInvoked = xiutiInvoked + 1; return true end
-      return original(self, who, params)
-    end,
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name == XIUTI then return { player, p(2) } end
-      return original(self, who, params)
+    askToChoosePlayers = function(_, _, params)
+      xiutiInvoked = xiutiInvoked + 1
+      lu.assertEquals(params.max_num, 2)
+      lu.assertTrue(params.cancelable)
+      return { player, p(2) }
     end,
   }, function()
     inRoom(function()

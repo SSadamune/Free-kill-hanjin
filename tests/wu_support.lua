@@ -361,7 +361,9 @@ function Testqiao_wu_support:testGuzhengGivesOneAndTakesUpToThree()
     request = data
     return false
   end)
-  FkTest.setNextReplies(p1, { "1", ids[1], { ids[2], ids[3], ids[4] } })
+  FkTest.setNextReplies(p1, {
+    FkTest.ReplyChoosePlayer({ p2 }), ids[1], { ids[2], ids[3], ids[4] },
+  })
   inRoom(function() room():throwCard(ids, "test", p2, p2) end)
 
   lu.assertNotNil(request)

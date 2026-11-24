@@ -40,17 +40,25 @@ local function discardTargets(room, equipped)
   end)
 end
 
+local function canPlace(to, id)
+  return to:isAlive() and not to:isRemoved() and Fk:getCardById(id).type == Card.TypeEquip
+    and to:canMoveCardIntoEquip(id, false)
+end
+
 skill:addAuxActiveSkill(AUX, {
   include_equip = true,
   min_card_num = 1,
   max_card_num = 1,
-  card_filter = function(self, player, to_select, selected)
-    return #selected == 0 and Fk:getCardById(to_select).type == Card.TypeEquip
+  card_filter = function(self, player, id, selected, targets)
+    if #selected > 0 then return false end
+    if targets and targets[1] then return canPlace(targets[1], id) end
+    return table.find(Fk:currentRoom():getPresentPlayers(), function(p) return canPlace(p, id) end) ~= nil
   end,
   target_num = 1,
   target_filter = function(self, player, to_select, selected, selected_cards)
-    return #selected == 0 and #selected_cards == 1
-      and to_select:canMoveCardIntoEquip(selected_cards[1], false)
+    if #selected > 0 then return false end
+    if selected_cards[1] then return canPlace(to_select, selected_cards[1]) end
+    return table.find(player:getCardIds("he"), function(id) return canPlace(to_select, id) end) ~= nil
   end,
 })
 
@@ -69,7 +77,8 @@ skill:addEffect(fk.EventPhaseStart, {
       prompt = "#qiao__skill_wei018_1-place",
       cancelable = true,
     })
-    if success and dat ~= nil then
+    if success and dat and #dat.targets == 1 and #dat.cards == 1
+      and table.contains(player:getCardIds("he"), dat.cards[1]) and canPlace(dat.targets[1], dat.cards[1]) then
       event:setCostData(self, { tos = dat.targets, cards = dat.cards })
       return true
     end

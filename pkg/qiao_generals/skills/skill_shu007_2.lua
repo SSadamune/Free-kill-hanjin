@@ -57,27 +57,18 @@ skill:addEffect(fk.BeforeCardsMove, {
     local room = player.room
     local list = candidates(player, data)
     if #list == 0 then return false end
-    local chosen = list[1].id
-    if #list == 1 then
-      if not room:askToSkillInvoke(player, {
-        skill_name = skill.name,
-        prompt = "#qiao__skill_shu007_2-invoke",
-      }) then return false end
-    else
-      local ids = table.map(list, function(entry) return entry.id end)
-      local picked = room:askToCards(player, {
-        min_num = 1,
-        max_num = 1,
-        include_equip = true,
-        pattern = tostring(Exppattern { id = ids }),
-        skill_name = skill.name,
-        prompt = "#qiao__skill_shu007_2-card",
-        cancelable = true,
-      })
-      if picked == nil or picked[1] == nil then return false end
-      chosen = picked[1]
-    end
-    if not table.find(list, function(entry) return entry.id == chosen end) then return false end
+    local ids = table.map(list, function(entry) return entry.id end)
+    local picked = room:askToCards(player, {
+      min_num = 1,
+      max_num = 1,
+      include_equip = true,
+      pattern = tostring(Exppattern { id = ids }),
+      skill_name = skill.name,
+      prompt = "#qiao__skill_shu007_2-card",
+      cancelable = true,
+    })
+    if not picked or #picked ~= 1 or not table.contains(ids, picked[1]) then return false end
+    local chosen = picked[1]
     event:setCostData(self, { card = chosen })
     return true
   end,
@@ -102,7 +93,6 @@ skill:addEffect(fk.BeforeCardsMove, {
 Fk:loadTranslationTable {
   ["qiao__skill_shu007_2"] = "藏机",
   [":qiao__skill_shu007_2"] = "每回合限一次，当你因弃置而失去装备区的牌时，你可以防止其中一张非坐骑牌的移动。",
-  ["#qiao__skill_shu007_2-invoke"] = "藏机：防止一张非坐骑装备牌的弃置移动",
   ["#qiao__skill_shu007_2-card"] = "藏机：选择一张非坐骑装备牌",
 }
 

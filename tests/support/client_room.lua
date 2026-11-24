@@ -66,18 +66,22 @@ function M.confirmSelection(room, player, params, ids, targets, inspect)
     local ok, err = pcall(function()
       handler:setup()
       if inspect then inspect(handler) end
-      lu.assertFalse(handler:feasible())
       for _, id in ipairs(ids) do
-        lu.assertTrue(handler:cardValidity(id))
-        handler:selectCard(id, { selected = true })
+        if not table.contains(handler.pendings, id) then
+          lu.assertTrue(handler:cardValidity(id))
+          handler:update("CardItem", id, "click", { selected = true })
+        end
       end
-      lu.assertEquals(handler.selected_targets, {})
       for _, target in ipairs(targets or {}) do
-        lu.assertTrue(handler:targetValidity(target.id))
-        handler:selectTarget(target.id, { selected = true })
+        if not table.contains(handler.selected_targets, target.id) then
+          lu.assertTrue(handler:targetValidity(target.id))
+          handler:update("Photo", target.id, "click", { selected = true })
+        end
       end
+      lu.assertEquals(handler.pendings, ids)
+      lu.assertEquals(handler.selected_targets, table.map(targets or {}, Util.IdMapper))
       lu.assertTrue(handler:feasible())
-      handler:doOKButton()
+      handler:update("Button", "OK", "click", {})
       handler:_finish()
     end)
     skill._extra_data, ClientInstance.notifyUI = previous, notify

@@ -322,7 +322,7 @@ function Testqiao_han001:testFixtureClearsHiddenSkillsBeforeInstallingKnownGener
   lu.assertEquals(p1():getMark("__heg_wild"), 0)
   local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
   for _, id in ipairs(ids) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
@@ -349,7 +349,7 @@ function Testqiao_han001:testTM02ExactlyTwoHandCards()
   local room = FkTest.room
   local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(#p1():getCardIds("h"), 2)
   for _, id in ipairs(ids) do
@@ -362,7 +362,7 @@ function Testqiao_han001:testTM03OneHandCardAndEquipment()
   local hand = setHand(room, p1(), { { "qiao__slash" } })
   local equip = addEquip(room, p1(), "jueying")
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(hand), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(room:getCardArea(hand[1]), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(equip), Card.PlayerEquip)
@@ -411,7 +411,7 @@ function Testqiao_han001:testTM06AllSlashCategoriesTriggerButOtherCardsDoNot()
   for _, name in ipairs({ "qiao__slash", "qiao__fire__slash", "qiao__thunder__slash" }) do
     local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
     setHand(room, p3(), { { "qiao__slash" } })
-    FkTest.setNextReplies(p1(), { "1", "" })
+    FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
     useSlash(room, p3(), p1(), name)
     count = count + 1
     lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), count)
@@ -430,7 +430,7 @@ function Testqiao_han001:testTM07EachTargetEventOnceAndNoTurnLimit()
   local room = FkTest.room
   local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p2(), {})
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   FkTest.setNextReplies(p2(), { "" })
   inRoom(function()
     room:useCard {
@@ -443,7 +443,7 @@ function Testqiao_han001:testTM07EachTargetEventOnceAndNoTurnLimit()
 
   ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 2)
 end
@@ -476,7 +476,7 @@ function Testqiao_han001:testTM08bCancelledAfterTriggerKeepsResult()
   })
   local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
   lu.assertEquals(#p1():getCardIds("h"), 2)
@@ -489,7 +489,7 @@ function Testqiao_han001:testTM09DrawHappensBeforeResponse()
   putOnDrawPile(room, jink)
   setHand(room, p3(), { { "qiao__slash" } })
   FkTest.setNextReplies(p1(), {
-    "1",
+    FkTest.ReplyDiscard(ids),
     FkTest.ReplyCard(jink),
   })
   local hp = p1().hp
@@ -523,7 +523,7 @@ function Testqiao_han001:testTM10ExtraSettlementDoesNotRepeatTargetEvent()
   })
   local ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertEquals(confirmed, 1)
   lu.assertEquals(p1():usedSkillTimes(TM, Player.HistoryGame), 1)
@@ -543,7 +543,7 @@ function Testqiao_han001:testTM11ShortDiscardAndZeroDiscard()
   })
   local equip = addEquip(room, p1(), "jueying")
   setHand(room, p3(), { { "qiao__slash" } })
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard({ ids[3] }), "" })
   useSlash(room, p3(), p1())
   inRoom(function() p1().hp = p1().maxHp end)
   lu.assertEquals(room:getCardArea(ids[3]), Card.DiscardPile)
@@ -563,7 +563,7 @@ function Testqiao_han001:testTM11ShortDiscardAndZeroDiscard()
   ids = setHand(room, p1(), { { "qiao__slash" }, { "qiao__jink" } })
   setHand(room, p3(), { { "qiao__slash" } })
   inRoom(function() p1().hp = p1().maxHp end)
-  FkTest.setNextReplies(p1(), { "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   for _, id in ipairs(ids) do lu.assertEquals(room:getCardArea(id), Card.DiscardPile) end
   lu.assertFalse(p1().dead)
@@ -1512,12 +1512,11 @@ function Testqiao_han001:testHG01bHiddenTianmingRevealsBeforeDiscardChain()
       end,
     } },
   })
-  -- 1: on_cost invoke; 2: doCost's extra invoke for a prelighted fake skill;
-  -- "" : normal slash response after 天命.
+  -- 确认弃牌即发动，只有随后响应【杀】的回包，无需再次确认暗将明置。
   lu.assertEquals(p1().general, "anjiang")
   lu.assertEquals(p1().kingdom, "unknown")
   lu.assertTrue(p1():hasSkill(TM))
-  FkTest.setNextReplies(p1(), { "1", "1", "" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyDiscard(ids), "" })
   useSlash(room, p3(), p1())
   lu.assertNotNil(atDiscard)
   lu.assertEquals(atDiscard.general, "qiao_heg__han001")
@@ -1568,8 +1567,7 @@ function Testqiao_han001:testHG03MizhaoSlashTriggersTianmingOnce()
   FkTest.setNextReplies(p2(), { FkTest.ReplyChooseCards({ ids[1] }) })
   FkTest.setNextReplies(p3(), {
     FkTest.ReplyChooseCards({ ccards[1] }),
-    "1",
-    FkTest.ReplyChooseCards({ ccards[2], ccards[3] }),
+    FkTest.ReplyDiscard({ ccards[2], ccards[3] }),
     "",
   })
   activateSecret(room, p1(), p2(), { ids[1], ids[2] })

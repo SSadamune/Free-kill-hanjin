@@ -1,6 +1,7 @@
 -- 蜀势力阶段与濒死：观星、空城、涅槃、放权。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local GUANXING = "qiao__skill_shu004_1"
 local KONGCHENG = "qiao__skill_shu004_2"
@@ -142,11 +143,16 @@ function Testqiao_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
   lu.assertTrue(data.skipped)
   lu.assertEquals(p1:getMark("qiao__skill_shu013_2_turn-turn"), 1)
   revoke(p1, FANGQUAN)
-  skill_test.withSkillRequests(room(), FANGQUAN, {
-    askToChoosePlayers = function() return { p2 } end,
-    askToDiscard = function(self, who, params)
-      room():throwCard({hand}, FANGQUAN, who, who)
-      return {hand}
+  skill_test.withSkillRequests(room(), "ex__choose_skill", {
+    askToUseActiveSkill = function(self, who, params, original)
+      lu.assertEquals(params.extra_data.skillName, FANGQUAN)
+      local reply = client_room.confirmSelection(self, who, params, { hand }, { p2 }, function(handler)
+        lu.assertEquals(handler.pendings, { hand })
+        lu.assertEquals(handler.selected_targets, {})
+        lu.assertFalse(handler:feasible())
+      end)
+      FkTest.setNextReplies(who, { reply })
+      return original(self, who, params)
     end,
   }, function()
     inRoom(function() room().logic:trigger(fk.TurnEnd, p1, TurnData:new(p1, "game_rule", {Player.Start})) end)
@@ -155,6 +161,20 @@ function Testqiao_shu_phases:testFangquanSkipsPlayAndPaysForExtraTurn()
   lu.assertEquals(#room().extra_turn_list, 1)
   lu.assertIs(room().extra_turn_list[1].who, p2)
   room().extra_turn_list = {} -- 清理已验收的待执行回合，避免夹具结束时启动正常回合。
+end
+
+function Testqiao_shu_phases:testFangquanCancelsWithoutPaying()
+  local p1 = p(1)
+  clearCards(p1)
+  local hand = give(p1, "qiao__jink", Card.Heart, 3)
+  inRoom(function()
+    room():setPlayerMark(p1, "qiao__skill_shu013_2_turn-turn", 1)
+    FkTest.setNextReplies(p1, { "__cancel" })
+    room().logic:trigger(fk.TurnEnd, p1, TurnData:new(p1, "game_rule", { Player.Start }))
+  end)
+  lu.assertEquals(p1:getCardIds("h"), { hand })
+  lu.assertEquals(#room().extra_turn_list, 0)
+  lu.assertEquals(p1:getMark("qiao__skill_shu013_2_turn-turn"), 0)
 end
 
 return { name = "qiao_shu_phases" }
