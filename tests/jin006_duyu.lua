@@ -144,10 +144,20 @@ function Testqiao_jin006_duyu:testWuKuReadsRealUseDeclaredAndStillAllowsResponse
   end)
 end
 
-function Testqiao_jin006_duyu:testPozhuSelectsMaterialAndRealCardTargetBeforeCounting()
+local function checkPozhuUse(withNullification)
   local room, me, target = FkTest.room, p(1), p(2)
+  inRoom(function()
+    for _, player in ipairs(room.players) do
+      player:throwAllCards("h")
+    end
+  end)
   local material = give(me, "qiao__jink", Card.Heart, 2)
+  local nullification
+  if withNullification then
+    nullification = give(me, "qiao__nullification", Card.Club, 12)
+  end
   local shown = give(target, "qiao__jink", Card.Spade, 2)
+  give(target, "qiao__jink", Card.Heart, 8)
   inRoom(function()
     room.current = me
     me.phase = Player.Play
@@ -181,16 +191,43 @@ function Testqiao_jin006_duyu:testPozhuSelectsMaterialAndRealCardTargetBeforeCou
     if not ok then error(err, 0) end
   end)
   lu.assertNotNil(reply)
-  FkTest.setNextReplies(me, { shown })
+  -- 收到对应请求时再答复，避免无懈询问取走用于展示手牌的 ID。
+  local requests = {}
+  FkTest.setRoomBreakpoint(me, "AskForUseCard", function(data)
+    if data[1] == "nullification" then
+      table.insert(requests, "nullification")
+      FkTest.setNextReplies(me, { "" })
+    end
+    return false
+  end)
+  FkTest.setRoomBreakpoint(me, "AskForCardChosen", function(data)
+    if data[1] == target and data[2] == "h" then
+      table.insert(requests, "show")
+      FkTest.setNextReplies(me, { shown })
+    end
+    return false
+  end)
   local hp = target.hp
   inRoom(function()
     room:handleUseCardReply(me, reply)
     lu.assertFalse(Fk.skills[POZHU]:enabledAtPlay(me))
     room:handleUseCardReply(me, reply)
   end)
+  lu.assertEquals(requests, withNullification and { "nullification", "show" } or { "show" })
   lu.assertEquals(room:getCardArea(material), Card.DiscardPile)
   lu.assertEquals(target.hp, hp - 1)
   lu.assertEquals(me:usedSkillTimes(POZHU, Player.HistoryPhase), 1)
+  if withNullification then
+    lu.assertTrue(table.contains(me:getCardIds("h"), nullification))
+  end
+end
+
+function Testqiao_jin006_duyu:testPozhuWithoutNullification()
+  checkPozhuUse(false)
+end
+
+function Testqiao_jin006_duyu:testPozhuDeclinesNullificationBeforeChoosingShownCard()
+  checkPozhuUse(true)
 end
 
 function Testqiao_jin006_duyu:testWuKuUsesActualCardKindAndClearsAllPlayersHistory()
