@@ -15,11 +15,10 @@ local skill = fk.CreateSkill {
   name = "qiao__skill_jin005_1",
 }
 skill.qiaoImplemented = true
+skill.qiaoCanPrelight = false
 
 local CHANGED_KEY = "qiao_jin005_1_changed"
 local FOLLOW_LISTENER = "#qiao__skill_jin005_1_follow"
-local OPT_CHAIN = "#qiao__skill_jin005_1-chain"
-local OPT_RESET = "#qiao__skill_jin005_1-reset"
 
 local followListener
 
@@ -72,19 +71,7 @@ local function ensureFollowListener(room)
         local room = player.room
         local chosen = event:getCostData(self).tos
         for _, p in ipairs(chosen or {}) do
-          if p.dead or p:isRemoved() then goto continue end
-          local choice = room:askToChoice(player, {
-            choices = { OPT_CHAIN, OPT_RESET },
-            skill_name = skill.name,
-            prompt = "#qiao__skill_jin005_1-chain::" .. p.id,
-            cancelable = false,
-          })
-          if choice == OPT_CHAIN then
-            if not p.chained then p:setChainState(true) end
-          elseif choice == OPT_RESET then
-            if p.chained then p:setChainState(false) end
-          end
-          ::continue::
+          if not p.dead and not p:isRemoved() then p:setChainState(not p.chained) end
         end
       end,
     })
@@ -94,23 +81,32 @@ local function ensureFollowListener(room)
   if not room:hasSkill(FOLLOW_LISTENER) then room:addSkill(followListener) end
 end
 
+local function roukeOwner(user)
+  local candidates = user.room:getPresentPlayers()
+  user.room:sortByAction(candidates)
+  return table.find(candidates, function(owner)
+    return owner:hasShownSkill(skill.name) and B.sameKingdom(user, owner)
+  end)
+end
+
 skill:addEffect(fk.PreCardUse, {
   anim_type = "offensive",
-  -- 使用者可能是同势力的其他角色，必须作为全局触发再由 can_trigger 筛选。
+  -- 引擎将回调的 player 作为发动者，故由当前实际使用者进入触发流程。
   global = true,
   can_trigger = function(self, event, target, player, data)
-    if target == nil or target.dead or player.dead then return false end
-    if not player:hasSkill(skill.name) then return false end
-    if data == nil or data.card == nil or data.from ~= target then return false end
+    if target == nil or target ~= player or player.dead or player:isRemoved() then return false end
+    if data == nil or data.card == nil or data.from ~= player then return false end
     if not J.isSlash(data.card) or data.card.name == J.ICE_SLASH then return false end
-    if not B.sameKingdom(target, player) then return false end
-    return J.isFirstSlashUseThisTurn(target)
+    return J.isFirstSlashUseThisTurn(player) and roukeOwner(player) ~= nil
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local owner = roukeOwner(player)
+    if not owner or not player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_jin005_1-invoke::" .. target.id,
-    })
+      prompt = "#qiao__skill_jin005_1-invoke",
+    }) then return false end
+    event:setCostData(self, { owner = owner.id })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     -- 再次确认实际发生改牌；已经冰杀时不重复改成同一牌名，也不取得后续。
@@ -118,7 +114,7 @@ skill:addEffect(fk.PreCardUse, {
     data:changeCard(J.ICE_SLASH, nil, nil, skill.name)
     if data.card.name == J.ICE_SLASH then
       -- 记录实际来源；后续监听器只让该来源获得本次改牌的“然后”。
-      data[CHANGED_KEY] = player.id
+      data[CHANGED_KEY] = event:getCostData(self).owner
       ensureFollowListener(player.room)
     end
   end,
@@ -127,12 +123,9 @@ skill:addEffect(fk.PreCardUse, {
 Fk:loadTranslationTable {
   ["qiao__skill_jin005_1"] = "柔克",
   [":qiao__skill_jin005_1"] = "与你势力相同的角色每回合使用首张【杀】可以改为冰【杀】，然后若此牌未造成伤害，你可以令至多两名角色横置或重置。你的手牌上限+X（X为横置角色数）。",
-  ["#qiao__skill_jin005_1-invoke"] = "柔克：是否将由 %dest 使用的首张【杀】改为冰【杀】",
+  ["#qiao__skill_jin005_1-invoke"] = "柔克：是否将你本回合使用的首张【杀】改为冰【杀】",
   ["#qiao__skill_jin005_1-follow"] = "柔克：此牌未造成伤害，你可以令至多两名角色横置或重置",
   ["#qiao__skill_jin005_1-targets"] = "柔克：选择至多两名角色",
-  ["#qiao__skill_jin005_1-chain"] = "柔克：选择 %dest 的横置状态",
-  [OPT_CHAIN] = "横置",
-  [OPT_RESET] = "重置",
 }
 
 return skill

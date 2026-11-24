@@ -5,9 +5,8 @@
 -- 改为弃置），随后本次使用获得一个无视条件令牌。令牌属于本次使用，只让一个
 -- 尚未满足的条目成立，不把整张牌的所有条目视为成功，也不等待某个条目触发。
 --
--- 这是跨角色触发：事件目标是实际使用者，技能持有者是贾充。真正发动仍走
--- 引擎 TriggerSkill 的 on_cost/on_use 与 room:useSkill；贾充的明置来源、技能
--- 次数和 SkillEffect 流程由引擎处理，不手写亮牌。
+-- 由实际用牌并支付的角色发动。贾充自己发动可按原生流程明置，其他角色只能
+-- 为已经公开的技能来源支付。
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 
@@ -22,6 +21,16 @@ local function canPay(user, owner)
   return user ~= nil and not user.dead and table.find(user:getCardIds("he"), function(id)
     return user ~= owner or not user:prohibitDiscard(id)
   end) ~= nil
+end
+
+local function tongfaOwner(user)
+  if user:hasSkill(skill.name) and canPay(user, user) then return user end
+  local candidates = user.room:getPresentPlayers()
+  user.room:sortByAction(candidates)
+  return table.find(candidates, function(owner)
+    return owner ~= user and owner:hasShownSkill(skill.name)
+      and B.sameKingdom(user, owner) and canPay(user, owner)
+  end)
 end
 
 --- 由实际使用者支付一张自己的牌：自己是贾充时弃置，否则交给贾充。
@@ -55,20 +64,15 @@ end
 skill:addEffect(fk.AfterCardUseDeclared, {
   global = true,
   can_trigger = function(self, event, target, player, data)
-    return target ~= nil and target == data.from
-      and not player.dead and player:hasSkill(skill.name)
-      and not target.dead and B.sameKingdom(target, player)
+    return target == player and target == data.from
+      and not player.dead and not player:isRemoved()
       and A.isAdaptationCard(data.card, data)
       and not (data.extra_data or {})[PAID]
-      and canPay(target, player)
+      and tongfaOwner(player) ~= nil
   end,
   on_cost = function(self, event, target, player, data)
-    local room = player.room
-    if not pay(room, target, player) then
-      return false
-    end
-    event:setCostData(self, { paid = true })
-    return true
+    local owner = tongfaOwner(player)
+    return owner ~= nil and pay(player.room, player, owner)
   end,
   on_use = function(self, event, target, player, data)
     data.extra_data = data.extra_data or {}

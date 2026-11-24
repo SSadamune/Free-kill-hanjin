@@ -8,8 +8,6 @@ local SHUNLIU = "qiao__skill_jin005_2"
 local KEQING = "qiao__skill_jin013_2"
 local WENHU = "qiao__retinue_skill_wenhu"
 
-local OPT_CHAIN = "#qiao__skill_jin005_1-chain"
-local OPT_RESET = "#qiao__skill_jin005_1-reset"
 local OPT_HAND = "#qiao__retinue_skill_wenhu-hand"
 local OPT_EQUIP = "#qiao__retinue_skill_wenhu-equip"
 
@@ -93,7 +91,13 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
     p(3):setChainState(true)
   end)
 
-  local usedCard
+  local usedCard, actor
+  addProbe(room, "#qiao_jin_chain_rouke_actor", fk.SkillEffect, {
+    can_refresh = function(self, event, target, player, data)
+      return target == player and data.skill.name == ROUKE
+    end,
+    on_refresh = function(self, event, target, player, data) actor = data.who end,
+  })
   addProbe(room, "#qiao_jin_chain_rouke_probe", fk.CardUseFinished, {
     can_refresh = function(self, event, target, player, data)
       return target == p(2) and data.card ~= nil
@@ -103,13 +107,9 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
     end,
   })
 
-  -- 羊祜：改牌；不造成伤害后的后续；选择 p2 横置、p3 重置。
-  FkTest.setNextReplies(p(1), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p(2), p(3) }),
-    { OPT_CHAIN },
-    { OPT_RESET },
-  })
+  FkTest.setNextReplies(p(2), { "1" })
+  -- 羊祜只为后续选择目标，p2 横置、p3 重置直接按其当前状态处理。
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2), p(3) }) })
   -- p3 以闪响应冰杀，使此牌不造成伤害。
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
@@ -139,6 +139,8 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   lu.assertTrue(fired)
 
   lu.assertEquals(usedCard, "qiao__ice__slash")
+  lu.assertIs(actor, p(2))
+  lu.assertFalse(require("packages.qiao.pkg.qiao_mode.rules.skill_prelight").canPrelight(ROUKE))
   lu.assertTrue(p(2).chained)
   lu.assertFalse(p(3).chained)
   -- p2 是当前唯一横置角色；只有柔克持有者羊祜的手牌上限增加。
@@ -181,11 +183,8 @@ function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
     end,
   })
 
-  FkTest.setNextReplies(p(1), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p(2) }),
-    { OPT_CHAIN },
-  })
+  FkTest.setNextReplies(p(2), { "1" })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
   local fired = false
