@@ -12,7 +12,7 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 -- TargetSpecified 承载响应数量修正；暗置时阵法仍不生效。
-skill.qiaoStateOnly = true
+skill.qiaoCanPrelight = false
 
 skill:addEffect(fk.TargetSpecified, {
   anim_type = "offensive",

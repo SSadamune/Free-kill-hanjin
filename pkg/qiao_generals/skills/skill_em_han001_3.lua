@@ -9,7 +9,7 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 -- 移牌替换及后续摸牌有明确的结算时机。
-skill.qiaoStateOnly = false
+skill.qiaoCanPrelight = true
 
 local CARDS = { ["qiao__jade_seal"] = true, ["qiao__chixiao_sword"] = true }
 local GUARD = "qiao_em_han001_tianshou_guard"

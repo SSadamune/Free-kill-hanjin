@@ -9,6 +9,8 @@ local skill = fk.CreateSkill {
   name = "qiao__skill_shu011_3",
 }
 skill.qiaoImplemented = true
+-- 回合末的刷新回调会询问是否观看手牌，暗置时可先预亮。
+skill.qiaoCanPrelight = true
 
 local CANCELLED = "qiao__skill_shu011_3-cancelled-turn"
 

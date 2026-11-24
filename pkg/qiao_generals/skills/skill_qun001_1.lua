@@ -10,6 +10,8 @@ local skill = fk.CreateSkill {
   name = "qiao__skill_qun001_1",
 }
 skill.qiaoImplemented = true
+-- CardUsing 只记录已经用济世转化的桃，不提供独立的发动机会。
+skill.qiaoCanPrelight = false
 
 --- 一张仍然属于该角色且为红色的实体牌。客户端与服务器共用同一校验。
 ---@param player ServerPlayer|ClientPlayer

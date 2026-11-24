@@ -16,5 +16,5 @@ local skill = fk.CreateSkill {
 }
 
 skill.qiaoImplemented = true
-skill.qiaoStateOnly = true
+skill.qiaoCanPrelight = false
 return skill

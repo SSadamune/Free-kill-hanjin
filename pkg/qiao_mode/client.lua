@@ -276,8 +276,8 @@ function QiaoClient:virtualCardPicture(name)
   return name
 end
 
-function QiaoClient:isStateOnlySkill(skillName)
-  return SkillPrelight.isStateOnly(skillName)
+function QiaoClient:canPrelightSkill(skillName)
+  return SkillPrelight.canPrelight(skillName)
 end
 
 function QiaoClient:skillButtonLabel(skillName, label, prelight)
@@ -301,15 +301,21 @@ function QiaoClient:notifyUI(command, data)
     return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
   end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
-    and isQiaoMode() and SkillPrelight.isStateOnly(data[2]) then
+    and isQiaoMode() and not SkillPrelight.canPrelight(data[2]) then
+    if command == "AddSkill" then
+      local skill = Fk.skills[data[2]]
+      if skill:isInstanceOf(ActiveSkill) or skill:isInstanceOf(ViewAsSkill) then
+        -- Rejoin sends the hidden skill straight to the UI. Restore the same
+        -- request-handler skill list that Client:addSkill fills during play.
+        local player = self:getPlayerById(data[1])
+        table.insertIfNeed(player.player_skills, skill)
+      end
+    end
     data = { data[1], data[2] }
   end
   if command == "SetPlayerMark" and data[2] == Retinues.PUBLIC_MARK and isQiaoMode() then
     return
   end
-  -- The native rejoin snapshot may emit fake-skill notifications for active skills.
-  if command == "AddSkill" and data[3] and data[2] == "qiao__skill_han007_1"
-    and isQiaoMode() then return end
   if command == "Ltk.SkillInvoked" and isQiaoMode() then
     data = stripRichText(data)
   end
@@ -322,7 +328,7 @@ function QiaoClient:notifyUI(command, data)
   end
   BaseClient.notifyUI(self, command, data)
   if command == "ChangeSelf" and isQiaoMode() then
-    BaseClient.notifyUI(self, "QiaoRefreshStateSkillButtons", {})
+    BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})
