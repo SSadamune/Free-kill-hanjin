@@ -99,13 +99,20 @@ function Testqiao_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
   lu.assertFalse(table.contains(ally:getCardIds("h"), spare))
 end
 
-function Testqiao_wu020_xusheng:testYichengCanUseDrawnEquipment()
+local function checkYichengUsesEquipment(fromOx)
   local room, ally, source = FkTest.room, p(2), p(3)
   local equip
   inRoom(function()
     room.current = source
     equip = room:printCard("qiao__qinggang_sword", Card.Spade, 6)
-    room:moveCardTo(equip, Card.DrawPile)
+    if fromOx then
+      local ox = room:printCard("qiao__wooden_ox", Card.Diamond, 5)
+      room:moveCardTo(ox, Card.PlayerEquip, ally, fk.ReasonJustMove, "test")
+      ally:addToPile("$sa_carriage", equip.id, false, "test")
+      room:moveCardTo(room:printCard("qiao__slash", Card.Club, 7), Card.DrawPile)
+    else
+      room:moveCardTo(equip, Card.DrawPile)
+    end
     FkTest.setRoomBreakpoint(ally, "AskForChoices", function(data)
       if data[5] == YICHENG then
         lu.assertEquals(data[1], { DELAY, USE_EQUIP })
@@ -122,6 +129,14 @@ function Testqiao_wu020_xusheng:testYichengCanUseDrawnEquipment()
   lu.assertEquals(room:getCardArea(equip.id), Card.PlayerEquip)
   lu.assertIs(room:getCardOwner(equip.id), ally)
   lu.assertEquals(#(room:getTag("qiao_wu020_yicheng_pending") or {}), 0)
+end
+
+function Testqiao_wu020_xusheng:testYichengCanUseDrawnEquipment()
+  checkYichengUsesEquipment(false)
+end
+
+function Testqiao_wu020_xusheng:testYichengCanUseOnlyEquipmentUnderWoodenOx()
+  checkYichengUsesEquipment(true)
 end
 
 function Testqiao_wu020_xusheng:testPojunDoesNotAskAgainstUndeterminedTarget()

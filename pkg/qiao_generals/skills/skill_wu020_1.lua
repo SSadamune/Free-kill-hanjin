@@ -52,7 +52,7 @@ skill:addEffect(fk.TargetConfirmed, {
     if to == nil or to.dead or to:isRemoved() then return end
     to:drawCards(1, skill.name)
     if to.dead then return end
-    local hasEquip = table.find(to:getCardIds("h"), function(id)
+    local hasEquip = table.find(to:getHandlyIds(), function(id)
       local card = Fk:getCardById(id)
       return card.type == Card.TypeEquip and to:canUse(card, { bypass_times = true })
     end)
