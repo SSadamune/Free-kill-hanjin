@@ -1,5 +1,4 @@
 -- JIN005 柔克/顺流、JIN013 克清、JIN014 文虎（翼从）：真实主流程定向用例。
--- 本文件尚未加入 tests/all.lua；由负责测试接线的批次在测试槽中运行并登记。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 
@@ -70,7 +69,7 @@ end
 
 -- 柔克：首张杀实际改为冰杀；未造成伤害后，至多两名角色横置/重置；手牌上限读取
 -- 当前横置总数。
-function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
+local function checkRoukeConversion(cardName, accepts)
   local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
@@ -84,7 +83,7 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local slash = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 7 } })[1]
+  local slash = giveHand(room, p(2), { { cardName, Card.Heart, 7 } })[1]
   local jink = giveHand(room, p(3), { { "qiao__jink", Card.Spade, 3 } })[1]
   inRoom(function()
     p(2):setChainState(false)
@@ -107,9 +106,6 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
     end,
   })
 
-  FkTest.setNextReplies(p(2), { "1" })
-  -- 羊祜只为后续选择目标，p2 横置、p3 重置直接按其当前状态处理。
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2), p(3) }) })
   -- p3 以闪响应冰杀，使此牌不造成伤害。
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
@@ -128,26 +124,53 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
         tos = { p(3) },
         card = Fk:getCardById(slash),
       }
+      data.phase_end = true
     end,
   })
   local playProbe = playSkel:createSkill()
   Fk.skills[playSkel.name] = playProbe
-  inRoom(function()
-    room:addSkill(playProbe)
-    GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+  local asked
+  skill_test.withSkillRequests(room, ROUKE, {
+    askToSkillInvoke = function(self, who)
+      asked = who
+      return accepts
+    end,
+    askToChoosePlayers = function(self, who)
+      if who == p(1) then return { p(2), p(3) } end
+      return {}
+    end,
+  }, function()
+    inRoom(function()
+      room:addSkill(playProbe)
+      GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+    end)
   end)
   lu.assertTrue(fired)
+  lu.assertIs(asked, p(2))
+  lu.assertFalse(table.contains(p(2):getCardIds("h"), slash))
 
-  lu.assertEquals(usedCard, "qiao__ice__slash")
-  lu.assertIs(actor, p(2))
+  lu.assertEquals(usedCard, accepts and "qiao__ice__slash" or cardName)
+  lu.assertEquals(actor and actor.id, accepts and p(2).id or nil)
   lu.assertFalse(require("packages.qiao.pkg.qiao_mode.rules.skill_prelight").canPrelight(ROUKE))
-  lu.assertTrue(p(2).chained)
-  lu.assertFalse(p(3).chained)
-  -- p2 是当前唯一横置角色；只有柔克持有者羊祜的手牌上限增加。
+  lu.assertEquals(p(2).chained, accepts)
+  lu.assertEquals(p(3).chained, not accepts)
+  -- 场上恰有一个横置角色；只有柔克持有者羊祜的手牌上限增加。
   inRoom(function()
     lu.assertEquals(p(1):getMaxCards(), math.max(p(1).hp, 0) + 1)
     lu.assertEquals(p(2):getMaxCards(), math.max(p(2).hp, 0))
   end)
+end
+
+function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
+  checkRoukeConversion("qiao__slash", true)
+end
+
+function Testqiao_jin_chain:testRoukeChangesFirstIceSlashAndFollowsUp()
+  checkRoukeConversion("qiao__ice__slash", true)
+end
+
+function Testqiao_jin_chain:testRoukeDeclinedOnFirstIceSlashDoesNotFollowUp()
+  checkRoukeConversion("qiao__ice__slash", false)
 end
 
 -- 柔克：改牌后、本次用牌结束前失去技能，已建立的“然后”仍按实际改牌来源处理。
@@ -201,6 +224,7 @@ function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
         tos = { p(3) },
         card = Fk:getCardById(slash),
       }
+      data.phase_end = true
     end,
   })
   local playProbe = playSkel:createSkill()

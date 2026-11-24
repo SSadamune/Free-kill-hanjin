@@ -96,7 +96,7 @@ skill:addEffect(fk.PreCardUse, {
   can_trigger = function(self, event, target, player, data)
     if target == nil or target ~= player or player.dead or player:isRemoved() then return false end
     if data == nil or data.card == nil or data.from ~= player then return false end
-    if not J.isSlash(data.card) or data.card.name == J.ICE_SLASH then return false end
+    if not J.isSlash(data.card) then return false end
     return J.isFirstSlashUseThisTurn(player) and roukeOwner(player) ~= nil
   end,
   on_cost = function(self, event, target, player, data)
@@ -109,8 +109,8 @@ skill:addEffect(fk.PreCardUse, {
     return true
   end,
   on_use = function(self, event, target, player, data)
-    -- 再次确认实际发生改牌；已经冰杀时不重复改成同一牌名，也不取得后续。
-    if data.card == nil or data.card.name == J.ICE_SLASH then return end
+    -- 即使属性相同也执行改牌，记录本次使用确实经由柔克。
+    if not J.isSlash(data.card) then return end
     data:changeCard(J.ICE_SLASH, nil, nil, skill.name)
     if data.card.name == J.ICE_SLASH then
       -- 记录实际来源；后续监听器只让该来源获得本次改牌的“然后”。
