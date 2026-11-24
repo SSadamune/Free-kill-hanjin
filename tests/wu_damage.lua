@@ -877,4 +877,122 @@ function Testqiao_wu_damage:testQuaxiaoDamagesOverlappingTargets()
   lu.assertEquals(p(3).hp, hp - 3)
 end
 
+function Testqiao_wu_damage:testFenjiRetainsHistoryBeforeAcquisitionAndAfterRefill()
+  local room, owner, to = FkTest.room, p(1), p(3)
+  local last = setHand(room, to, { { "qiao__peach", Card.Heart, 12 } })[1]
+  inRoom(function()
+    room:throwCard({ last }, "test", to, to)
+    to:drawCards(1)
+  end)
+  grant(owner, FENJI)
+  local hp = owner.hp
+  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ to }) })
+  turnEnd(room, owner)
+  lu.assertEquals(to:getHandcardNum(), 3)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
+function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeYuyuRefillsIt()
+  local room, owner, current = FkTest.room, p(1), p(2)
+  local history = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+  local zhiheng = "qiao__skill_wu001_1"
+  local last = setHand(room, current, { { "qiao__peach", Card.Heart, 3 } })[1]
+  local equip = addEquip(room, current, "qiao__linxiao_yuyu")
+  grant(current, zhiheng)
+  grant(owner, FENJI)
+  inRoom(function()
+    room:setCurrent(current)
+    current.phase = Player.Play
+    room:setPlayerMark(current, history.LOST_HAND, 0)
+    Fk.skills[zhiheng]:onUse(room, { from = current, cards = { last, equip } })
+  end)
+  local hand, hp = current:getHandcardNum(), owner.hp
+  lu.assertEquals(hand, 4)
+  lu.assertEquals(current:getMark(history.LOST_HAND), 1)
+  FkTest.setNextReplies(owner, { "1", FkTest.ReplyChoosePlayer({ current }) })
+  turnEnd(room, current)
+  lu.assertEquals(current:getHandcardNum(), hand + 2)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
+function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeZhoujunGift()
+  local room, owner, current = FkTest.room, p(1), p(2)
+  local donor = p(3)
+  local history = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+  local huyuan, zhoujun = "qiao__skill_wei018_1", "qiao__zhoujun_lingbingyin_skill"
+  local seal = setHand(room, current, { { "qiao__zhoujun_lingbingyin" } })[1]
+  local gift = setHand(room, donor, { { "qiao__jink" } })[1]
+  grant(current, huyuan)
+  grant(owner, FENJI)
+  local order = {}
+  skill_test.withSkillRequests(room, huyuan, {
+    askToSkillInvoke = function()
+      table.insert(order, huyuan)
+      return false
+    end,
+    askToChoosePlayers = function()
+      table.insert(order, huyuan)
+      return {}
+    end,
+  }, function()
+    skill_test.withSkillRequests(room, zhoujun, {
+      askToCards = function(_, who)
+        if who ~= donor then return {} end
+        table.insert(order, zhoujun)
+        return { gift }
+      end,
+    }, function()
+      inRoom(function()
+        room:setCurrent(current)
+        current.phase = Player.Finish
+        room:setPlayerMark(current, history.LOST_HAND, 0)
+        room:setPlayerMark(donor, history.LOST_HAND, 0)
+        FkTest.setNextReplies(current, { FkTest.ReplyUseSkill("#" .. huyuan .. "_active", { current }, { seal }) })
+        room.logic:trigger(fk.EventPhaseStart, current, { phase = Player.Finish })
+      end)
+    end)
+  end)
+  lu.assertEquals(room:getCardArea(seal), Card.PlayerEquip)
+  lu.assertEquals(order, { huyuan, zhoujun })
+  lu.assertEquals(current:getCardIds("h"), { gift })
+  lu.assertEquals(current:getMark(history.LOST_HAND), 1)
+  lu.assertEquals(donor:getMark(history.LOST_HAND), 1)
+
+  local hp = owner.hp
+  FkTest.setNextReplies(owner, { FkTest.ReplyChoosePlayer({ current }) })
+  turnEnd(room, current)
+  lu.assertEquals(current:getHandcardNum(), 3)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
+function Testqiao_wu_damage:testDiscardMarksAskBelowAtAndAboveHandLimit()
+  local room, player = FkTest.room, p(1)
+  local H = require "packages.hegemony.util"
+  local requests = __dofile("../../../tests/support/skill_test.lua")
+  inRoom(function() room:setCurrent(player); player.phase = Player.Discard end)
+  for _, mark in ipairs({ "yinyangfish", "wild" }) do
+    local skillName = mark .. "_skill&"
+    for _, offset in ipairs({ -1, 0, 1 }) do
+      local specs = {}
+      inRoom(function() room:setPlayerMark(player, MarkEnum.AddMaxCardsInTurn, 0) end)
+      local limit = player:getMaxCards()
+      for _ = 1, limit + offset do table.insert(specs, { "qiao__jink" }) end
+      setHand(room, player, specs)
+      inRoom(function() H.addHegMark(player, mark, 1) end)
+      local count = player:getMark("@!!" .. mark)
+      local asked = 0
+      requests.withSkillRequests(room, skillName, {
+        askToSkillInvoke = function() asked = asked + 1; return asked == 2 end,
+      }, function()
+        for i = 1, 2 do
+          inRoom(function() room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Discard }) end)
+          lu.assertEquals(asked, i)
+          lu.assertEquals(player:getMark("@!!" .. mark), i == 1 and count or count - 1)
+          lu.assertEquals(player:getMaxCards(), i == 1 and limit or limit + 2)
+        end
+      end)
+    end
+  end
+end
+
 return { name = "qiao_wu_damage" }

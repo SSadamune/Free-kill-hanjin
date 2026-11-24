@@ -1,10 +1,71 @@
 -- 州郡领兵印：进入装备区后按装备者当前的大／小势力类别逐人询问同类别角色
 -- 是否交一张自己的手牌或装备；准备阶段可建立本回合摸牌/出杀/手牌上限修正。
 -- 准备阶段的修正由独立房间触发器保留，失去装备后仍持续到本回合结束。
+local Heg = require "packages.hegemony.util"
+
 local skill = fk.CreateSkill {
   name = "qiao__zhoujun_lingbingyin_skill",
   attached_equip = "qiao__zhoujun_lingbingyin",
 }
+
+local function enteringSeal(player, moves)
+  local room = player.room
+  for _, move in ipairs(moves) do
+    if move.to == player and move.toArea == Card.PlayerEquip then
+      for _, info in ipairs(move.moveInfo) do
+        local id = info.cardId
+        if (move.from ~= player or info.fromArea ~= Card.PlayerEquip)
+          and room:getCardArea(id) == Card.PlayerEquip and room:getCardOwner(id) == player then
+          local equipped = player:getVirtualEquip(id) or Fk:getCardById(id)
+          if equipped.name == skill.attached_equip then return true end
+        end
+      end
+    end
+  end
+  return false
+end
+
+local function giftCandidates(player)
+  local same
+  if Heg.isBigKingdomPlayer(player) then
+    same = Heg.isBigKingdomPlayer
+  elseif Heg.isSmallKingdomPlayer(player) then
+    same = Heg.isSmallKingdomPlayer
+  else
+    return {}
+  end
+  return table.filter(player.room:getPresentPlayers(), function(other)
+    return other ~= player and #other:getCardIds("he") > 0 and same(other)
+  end)
+end
+
+-- 置入装备区后2。同优先级下引擎先处理该角色的武将技能，再处理其装备技能。
+skill:addEffect(fk.AfterCardsMove, {
+  mute = true,
+  can_trigger = function(self, event, target, player, data)
+    return not player.dead and player:hasSkill(skill.name)
+      and enteringSeal(player, data) and #giftCandidates(player) > 0
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local candidates = giftCandidates(player)
+    room:sortByAction(candidates)
+    for _, other in ipairs(candidates) do
+      if player.dead then break end
+      if not other.dead and not other:isRemoved() and #other:getCardIds("he") > 0 then
+        local card = room:askToCards(other, {
+          min_num = 1, max_num = 1, include_equip = true, cancelable = true,
+          skill_name = skill.name,
+          prompt = "#qiao__zhoujun-give::" .. player.id,
+        })[1]
+        if card ~= nil and table.contains(other:getCardIds("he"), card) then
+          room:obtainCard(player, card, false, fk.ReasonGive)
+        end
+      end
+    end
+  end,
+})
 
 local DRAW = "qiao_zhoujun_draw"
 local SLASH = "qiao_zhoujun_slash"

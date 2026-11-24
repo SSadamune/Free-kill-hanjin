@@ -269,12 +269,28 @@ function M.install()
   installYinyangCap()
 end
 
+-- 沿用国战标记原有的询问、支付、优先级和收益，只在汉晋房间放宽弃牌阶段的门槛。
+local function installDiscardMark(name, mark)
+  for _, effect in ipairs(Fk.skills[name]:getSkeleton().effects) do
+    if effect.event == fk.EventPhaseStart then
+      local upstream = effect.triggerable
+      effect.triggerable = function(self, event, target, player, data)
+        if not Modes.inRoom(player.room) then return upstream(self, event, target, player, data) end
+        return target == player and player.phase == Player.Discard
+          and player:hasSkill(name) and player:getMark(mark) > 0
+      end
+    end
+  end
+end
+
 function M.installServer(room)
   if room == nil or not Modes.inRoom(room) then return end
   if M._serverInstalled then return end
   M._serverInstalled = true
   installRevealOverflowGuard()
   installSeatLuckCard()
+  installDiscardMark("yinyangfish_skill&", "@!!yinyangfish")
+  installDiscardMark("wild_skill&", "@!!wild")
 end
 
 return M

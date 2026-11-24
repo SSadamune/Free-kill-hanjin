@@ -78,36 +78,6 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
-skill:addEffect(fk.CardUseFinished, {
-  global = true,
-  can_trigger = function(self, event, target, player, data)
-    return target == player and not player.dead and player:hasSkill(skill.name)
-      and data.card ~= nil and data.card.trueName == "slash"
-      and (data.extra_data or {})[MARK] == true
-      and J.dealtDamage(data)
-  end,
-  on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
-    data.extra_data[MARK] = nil
-    local room = player.room
-    local receiver = room.current
-    if receiver == nil or receiver.dead then return end
-
-    -- “获得此杀并摸一张牌”是“并”：只取得仍在处理区、本次使用仍可获得的实体
-    -- 材料；完全没有材料时两个操作都不能执行。纯虚拟牌不创建实体材料。
-    local ids = room:getSubcardsByRule(data.card, { Card.Processing })
-    if #ids == 0 then return end
-    local card = Fk:cloneCard(data.card.name, data.card.suit, data.card.number)
-    card:addSubcards(ids)
-    room:obtainCard(receiver, card, true, fk.ReasonJustMove, player, skill.name)
-    if receiver.dead then return end
-    for _, id in ipairs(ids) do
-      if room:getCardOwner(id) ~= receiver then return end
-    end
-    receiver:drawCards(1, skill.name)
-  end,
-})
-
 Fk:loadTranslationTable {
   ["qiao__skill_jin015_1"] = "前驱",
   ["#qiao__skill_jin015_1-invoke"] = "前驱：你可以使用一张无距离限制的【杀】",

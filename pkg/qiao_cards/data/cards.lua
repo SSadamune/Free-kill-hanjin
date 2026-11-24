@@ -5,35 +5,6 @@
 -- types that are not reused. `derived` types are replacement materials and the
 -- seven faction tricks; they are never part of the 162-slot default draw pile.
 local M = {}
-local Heg = require "packages.hegemony.util"
-
---- 州郡领兵印进入装备区后，按装备者的大／小势力类别逐个询问同类别角色交牌。
-local function zhoujunEnter(room, player)
-  local big = Heg.isBigKingdomPlayer(player)
-  local small = Heg.isSmallKingdomPlayer(player)
-  if not big and not small then return end
-  local same = big and Heg.isBigKingdomPlayer or Heg.isSmallKingdomPlayer
-  local candidates = {}
-  for _, other in ipairs(room:getPresentPlayers()) do
-    if other ~= player and not other:isRemoved() and same(other)
-      and #other:getCardIds("he") > 0 then
-      table.insert(candidates, other)
-    end
-  end
-  room:sortByAction(candidates)
-  for _, other in ipairs(candidates) do
-    if not other.dead and not other:isRemoved() and #other:getCardIds("he") > 0 then
-      local card = room:askToCards(other, {
-        min_num = 1, max_num = 1, include_equip = true, cancelable = true,
-        skill_name = "qiao__zhoujun_lingbingyin_skill",
-        prompt = "#qiao__zhoujun-give::" .. player.id,
-      })[1]
-      if card ~= nil and table.contains(other:getCardIds("he"), card) then
-        room:obtainCard(player, card, false, fk.ReasonGive)
-      end
-    end
-  end
-end
 
 M.types = {
   -- Basic cards -----------------------------------------------------------
@@ -238,11 +209,7 @@ M.types = {
     end },
   { id = "qiao__zhoujun_lingbingyin", display = "州郡领兵印", type = "equip",
     subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
-    equip_skill = "qiao__zhoujun_lingbingyin_skill", inert = false,
-    on_install = function(self, room, player)
-      Treasure.onInstall(self, room, player)
-      zhoujunEnter(room, player)
-    end },
+    equip_skill = "qiao__zhoujun_lingbingyin_skill", inert = false },
   { id = "qiao__xuehai_mowangzun", display = "血海魔王樽", type = "equip",
     subtype = Card.SubtypeTreasure, skill = "default_equip_skill",
     equip_skill = "qiao__xuehai_mowangzun_skill", inert = false },

@@ -240,4 +240,30 @@ function Testqiao_jin_adaptation:testQianquUsesRealSlashAndRewardsCurrentTurn()
   lu.assertEquals(#turnPlayer:getCardIds("h"), 2)
 end
 
+function Testqiao_jin_adaptation:testQianquFinishesAfterDuanchang()
+  local room = prepare("qiao_heg__jin015")
+  local source, receiver, victim = p1(), p2(), p3()
+  inRoom(function()
+    skill_test.installDualGenerals(room, victim, {
+      main = "qiao_heg__qun012", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 1,
+    })
+  end)
+  local slash = setHand(room, source, { { "qiao__slash" } })[1]
+  FkTest.setNextReplies(source, { "1", FkTest.ReplyCard(Fk:getCardById(slash), { victim }) })
+  local before = receiver:getHandcardNum()
+  skill_test.withSkillRequests(room, "qiao__skill_qun012_2", {
+    askToChoice = function() return "qiao_heg__jin015" end,
+  }, function()
+    inRoom(function()
+      room:setCurrent(receiver)
+      receiver.phase = Player.Start
+      room.logic:trigger(fk.EventPhaseStart, receiver, { phase = Player.Start })
+    end)
+  end)
+  lu.assertTrue(victim.dead)
+  lu.assertFalse(source:hasSkill(QIANQU))
+  lu.assertTrue(table.contains(receiver:getCardIds("h"), slash))
+  lu.assertEquals(receiver:getHandcardNum(), before + 2)
+end
+
 return { name = "qiao_jin_adaptation" }
