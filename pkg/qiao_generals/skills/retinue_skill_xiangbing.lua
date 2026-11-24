@@ -74,7 +74,7 @@ skill:addEffect(fk.DamageFinished, {
       end
     end
     if #tos == 0 then return end
-    C.useVirtualCard(room, player, "qiao__slash", nil, tos, skill.name, true, nil,
+    C.useVirtualCard(room, player, "qiao__slash", nil, tos, skill.name, nil, nil,
       C.explicit({ other_roles = true },
         { names = { "qiao__slash" }, min_targets = #tos, max_targets = #tos }))
   end,

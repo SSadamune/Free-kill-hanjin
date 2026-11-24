@@ -49,7 +49,7 @@ end
 --- 赢时除拼点对手外的至多一名额外目标。候选由显式策略计算，与正式用牌
 --- 校验共用同一条件；拼点对手已固定包含，不能重复选择。
 local function extraCandidates(player, opponent)
-  local all = C.candidates(player.room, player, Fk:cloneCard(SLASH), slashPolicy(2), {})
+  local all = C.effectCandidates(player.room, player, Fk:cloneCard(SLASH), slashPolicy(2))
   return table.filter(all, function(target)
     return target ~= opponent and target:isAlive() and not target:isRemoved()
   end)
@@ -75,7 +75,7 @@ local function useWinSlash(room, player, opponent)
     end
   end
   -- 使用接口只选择并校验，随后由公共 useVirtualCard 执行一次使用。
-  C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, true, {}, slashPolicy(2))
+  C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, nil, nil, slashPolicy(2))
 end
 
 --- 已建立效果（限制 + 转换权限）的独立入口。见 qun_shuangren_state.lua：

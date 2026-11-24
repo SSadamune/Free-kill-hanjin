@@ -76,7 +76,7 @@ skill:addEffect("active", {
     if player.dead or target.dead or target:isRemoved() then return end
     if hasJink then
       room:setPlayerMark(player, H.WEIKUI_DISTANCE_MARK, target.id)
-      C.useVirtualCard(room, player, "qiao__slash", nil, { target }, skill.name, true, nil,
+      C.useVirtualCard(room, player, "qiao__slash", nil, { target }, skill.name, nil, nil,
         C.explicit({ other_roles = true }, { names = { "qiao__slash" } }))
     elseif id and table.contains(target:getCardIds(Player.Hand), id) and not target:prohibitDiscard(id) then
       room:throwCard({ id }, skill.name, target, player)

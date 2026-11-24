@@ -57,8 +57,7 @@ local function nearestPolicy(player, minDistance)
 end
 
 local function candidates(player, policy)
-  return C.candidates(player.room, player, Fk:cloneCard(SLASH), policy,
-    { bypass_times = true })
+  return C.effectCandidates(player.room, player, Fk:cloneCard(SLASH), policy)
 end
 
 local function loseHp(room, player)
@@ -89,7 +88,6 @@ local function resolveOne(room, to)
     skill_name = skill.name,
     prompt = "#qiao__skill_qun007_2-use",
     cancelable = true,
-    extra_data = { bypass_times = true },
   })
   if use == nil or use.card == nil or #use.tos ~= 1
     or not table.contains(legalNearest, use.tos[1]) then
@@ -118,10 +116,6 @@ local function resolveOne(room, to)
     end
   end
 
-  use.extraUse = true
-  use.extra_data = use.extra_data or {}
-  use.extra_data.bypass_times = true
-  use.extra_data.extraUse = true
   if C.useCard(room, to, use, normalPolicy) == nil then
     loseHp(room, to)
   end

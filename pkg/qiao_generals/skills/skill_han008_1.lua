@@ -84,7 +84,7 @@ skill:addEffect(fk.EventPhaseStart, {
         cancelable = false,
       })
       if choice == OPTION_YES then
-        C.useVirtualCard(room, target, "qiao__slash", nil, { player }, skill.name, true,
+        C.useVirtualCard(room, target, "qiao__slash", nil, { player }, skill.name, nil,
           nil, C.explicit({ other_roles = true }, { names = { "qiao__slash" } }))
       end
     end

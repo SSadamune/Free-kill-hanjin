@@ -160,7 +160,7 @@ skill:addEffect("active", {
       min_targets = 1,
       max_targets = #targetsForSlash,
     })
-    C.useVirtualCard(room, player, SLASH, nil, targetsForSlash, skill.name, true, { bypass_times = true }, policy)
+    C.useVirtualCard(room, player, SLASH, nil, targetsForSlash, skill.name, nil, nil, policy)
   end,
 })
 

@@ -59,13 +59,9 @@ skill:addEffect("active", {
           skill_name = skill.name,
           prompt = "#qiao__skill_jin016_2-use:" .. target.id,
           cancelable = true,
-          extra_data = { bypass_times = true, extraUse = true },
+          extra_data = { extraUse = true },
         })
         if use ~= nil and use.card ~= nil then
-          use.extra_data = use.extra_data or {}
-          use.extra_data.bypass_times = true
-          use.extra_data.extraUse = true
-          use.extraUse = true
           room:useCard(use)
         end
       end

@@ -95,12 +95,8 @@ end
 
 local function use(player, card, targets)
   inRoom(function()
-    room():useCard(UseCardData:new {
-      from = player,
-      tos = targets or {},
-      card = card,
-      extra_data = {},
-    })
+    if not card:isVirtual() then support.playCard(room(), player, card, targets)
+    else room():useCard { from = player, tos = targets or {}, card = card } end
   end)
 end
 
@@ -291,6 +287,66 @@ function Testqiao_shu_conversion:testRendeRealSlashDoesNotSpendNormalQuota()
   use(p1, Fk:getCardById(slash), { p2 })
   lu.assertEquals(p1:usedCardTimes("slash", Player.HistoryPhase), 1)
   lu.assertEquals(p2.hp, 18)
+end
+
+function Testqiao_shu_conversion:testPlayCardDirectAndWushengSlashKeepOrdinaryLimit()
+  local player, target = p(1), p(1).next
+  grant(player, WUSHENG)
+  clearCards(player)
+  clearCards(target)
+  inRoom(function() target.maxHp = 10; target.hp = 10 end)
+  setPlayPhase(player)
+  local first = give(player, "qiao__slash", Card.Spade, 5)
+  local second = give(player, "qiao__slash", Card.Spade, 6)
+  local red = give(player, "qiao__jink", Card.Heart, 2)
+  local board = Fk:getBoardGame(room():getSettings("gameMode"))
+  local client = board.client_klass:new(ClientInstance.client)
+
+  local function play(card, convert)
+    local reply
+    client_room.run(room(), function(clients)
+      local handler = client.request_handlers.PlayCard:new(clients[player.seat])
+      handler:setup()
+      if convert then
+        lu.assertTrue(handler:skillButtonValidity(WUSHENG))
+        handler:selectSkill(WUSHENG, { selected = true })
+      end
+      lu.assertTrue(handler:cardValidity(card))
+      handler:selectCard(card, { selected = true })
+      lu.assertTrue(handler:targetValidity(target.id))
+      handler:selectTarget(target.id, { selected = true })
+      lu.assertTrue(handler:feasible())
+      local ui = ClientInstance.client._ui
+      local notify = ui.cb
+      ui.cb = function(command, data)
+        if command == "ReplyToServer" then reply = data end
+      end
+      handler.change = {}
+      local ok, err = pcall(handler.doOKButton, handler)
+      ui.cb = notify
+      if not ok then error(err, 0) end
+      handler:_finish()
+    end)
+    lu.assertNotNil(reply)
+    FkTest.setNextReplies(target, { "" })
+    inRoom(function()
+      local selected = room():handleUseCardReply(player, reply)
+      if selected then room():useCard(selected) end
+    end)
+    lu.assertEquals(player:usedCardTimes("slash", Player.HistoryPhase), 1)
+    client_room.run(room(), function(clients)
+      local nextPlay = client.request_handlers.PlayCard:new(clients[player.seat])
+      nextPlay:setup()
+      lu.assertFalse(nextPlay:cardValidity(second))
+      lu.assertFalse(nextPlay:skillButtonValidity(WUSHENG))
+      nextPlay:_finish()
+    end)
+  end
+
+  play(first, false)
+  inRoom(function() player:setCardUseHistory("slash", 0, Player.HistoryPhase) end)
+  play(red, true)
+  lu.assertEquals(target.hp, 8)
 end
 
 function Testqiao_shu_conversion:testWushengViewAsAndDiamondIgnoresDistance()

@@ -14,6 +14,7 @@
 local M = {}
 
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
+local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
 
 M.RULE_SKILL = "#qiao_use_targets_rule"
 M.POLICY_MARK = "@[qiao_use_target_policy]"
@@ -533,6 +534,16 @@ function M.candidates(room, player, card, policy, extra_data)
   end)
 end
 
+function M.effectCandidates(room, player, card, policy, extra_data)
+  if card.trueName == "slash" then extra_data = SlashUseTiming.effectTargetData(extra_data) end
+  return M.candidates(room, player, card, policy, extra_data)
+end
+
+function M.canEffectUseTo(player, card, target, extra_data)
+  if card.trueName == "slash" then extra_data = SlashUseTiming.effectTargetData(extra_data) end
+  return player:canUseTo(card, target, extra_data)
+end
+
 -- Real CardSkill target selection.  The engine's target-selection UI calls
 -- CardSkill:targetFilter, which is *not* always Util.CardTargetFilter (for
 -- example 联军盛宴 forbids selecting yourself as the first target even though
@@ -860,6 +871,7 @@ function M.askToUseCard(room, player, params)
   M.pop(room, player, rec)
   if not ok then error(use, 0) end
   if use == nil then return nil end
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   -- Forward the free-use marker independently: opts.not_passive is consumed only
   -- by validateUse's passive branch, so validateTargets keeps resolving extra
@@ -900,6 +912,7 @@ function M.selectVirtualCard(room, player, params)
   M.pop(room, player, rec)
   if not ok then error(use, 0) end
   if use == nil or use.card == nil then return nil end
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   if not M.validateUse(room, player, use, rec, params.context,
     { require_trusted = true, stage = "selection" }) then
@@ -935,6 +948,7 @@ function M.useVirtualCard(room, player, card_name, subcards, tos, skillName, ext
     extraUse = extra,
     extra_data = extra_data and table.simpleClone(extra_data) or {},
   }
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   local ok = M.validateUse(room, player, use, rec, context,
     { require_trusted = true, stage = "selection" })
@@ -950,6 +964,7 @@ end
 --- Use an already constructed UseCardData-like table under a strategy.
 function M.useCard(room, player, use, policy, context)
   local rec = M.push(room, player, { use.card.name }, policy or M.default(), context)
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   local ok = M.validateUse(room, player, use, rec, context,
     { require_trusted = true, stage = "selection" })

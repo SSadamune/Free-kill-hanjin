@@ -20,6 +20,8 @@
 
 ### 执行入口与次数
 
+- 汉晋房间由 `slash_use_timing.lua` 按用牌入口识别普通出杀。普通 `PlayCard` 回包只标记直接交给引擎的实体牌或视为牌。用牌过程中的其他【杀】默认不占普通次数，公共请求和目标复核也不受该限制。该次【杀】仍产生真实用牌事件。咆哮、诸葛连弩和应变等原有的牌面效果继续按各自规则处理。依据见[用牌次数](../../../rulebook/topics/card-usable-conditions.md)。
+- 技能在发动前需要预览结算中的【杀】目标时，服务端用 `C.effectCandidates` 查询，两端均可用 `C.canEffectUseTo` 检查单个目标。这些接口提供效果用牌的次数语义，目标距离、范围及独立禁止仍用相应规则。
 - `askToUseCard` 返回已选择并复核的使用数据，由调用者执行一次。请求的 `names/card_name/name` 是策略白名单，转发给 `Room:askToUseCard` 前必须由公共入口派生引擎 `pattern`（同名转化取 `trueName`，如杀派生 `slash`）；不能只删 `names` 后把 nil `pattern` 交给请求层/AI。
 - `explicit` policy 可带 `fixed_targets`（玩家或 ID 列表）。`C.askToUseCard` 在返回前按固定目标复核；目标数量或身份不符即返回 nil，调用方仍需执行一次。固定目标不替代原有牌面目标/禁止检查。
 - 真实请求选择/AI 约束使用锁定引擎的 `extra_data.exclusive_targets`（`Card:getAvailableTargets` 按 ID 过滤）；挑衅同时设置该字段和 `fixed_targets`，前者约束选择端，后者保留服务端复核。

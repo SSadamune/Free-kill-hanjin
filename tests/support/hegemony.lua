@@ -79,5 +79,12 @@ end
 function M.initRoom() return M.createRoom() end
 function M.initQiaoRoom() return M.createRoom { mode = "qiao_heg_mode", realSelection = true } end
 
+--- 按正常 PlayCard 回包使用实体牌。用于区分空闲出牌与效果直接用牌。
+function M.playCard(room, player, card, targets)
+  local use = room:handleUseCardReply(player, { card = card.id, targets = table.map(targets or {}, Util.IdMapper) })
+  if use then room:useCard(use) end
+  return use
+end
+
 M.clearRoom = FkTest.clearRoom
 return M

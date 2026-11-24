@@ -169,12 +169,13 @@ end
 function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
   local room, me, target = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   local name = "qiao__skill_jin022b_1"
-  local asked, canDecline, legal, range, spent, history
+  local asked, canDecline, legal, range, spent, history, slashCount
   local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+  local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
   skill_test.withSkillRequests(room, name, {
     askToUseVirtualCard = function(self, player, params, original)
       asked = true
-      legal = player:canUseTo(Fk:cloneCard("qiao__fire__slash"), target)
+      legal = C.canEffectUseTo(player, Fk:cloneCard("qiao__fire__slash"), target)
       canDecline = params.cancelable
       FkTest.setNextReplies(me, { "" })
       return original(self, player, params)
@@ -184,6 +185,10 @@ function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
       room:setCurrent(me)
       me.phase = Player.Play
       room:handleAddLoseSkills(me, name, nil, false, true)
+      local first = room:printCard("qiao__slash", Card.Spade, 6)
+      room:obtainCard(me, first)
+      FkTest.setNextReplies(target, { "" })
+      support.playCard(room, me, first, { target })
       local beforeHp = me.hp
       Fk.skills[name]:onUse(room, { from = me, tos = {} })
       spent = beforeHp - me.hp
@@ -191,11 +196,13 @@ function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
       history = #room.logic:getEventsOfScope(GameEvent.UseCard, 10, function(e)
         return e.data.from == me and e.data.card.name == "qiao__fire__slash"
       end, Player.HistoryGame)
+      slashCount = me:usedCardTimes("slash", Player.HistoryPhase)
     end)
   end)
   lu.assertEquals({ asked, legal, spent, range }, { true, true, 1, 1 })
   lu.assertFalse(canDecline)
   lu.assertEquals(history, 1)
+  lu.assertEquals(slashCount, 1)
 end
 
 return { name = "qiao_jin022b_qianhong" }

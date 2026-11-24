@@ -2,8 +2,8 @@
 --
 -- 规则基线：docs/rules/standard-generals.md 翼从牛金、docs/rules/general-principles.md。
 -- 同势力角色回合结束时，牛金持有者可以使用基本/锦囊/装备每类至多一张。
--- 自由用牌窗口同时提供尚未使用的所有类别，取消即结束。效果内用牌 bypass_times=true + extraUse=true（不占
--- 通常出杀次数），禁止与目标条件照常。来源记录在本次 UseCard.extra_data，
+-- 自由用牌窗口同时提供尚未使用的所有类别，取消即结束。用【杀】按公共效果用牌规则判定次数，
+-- 禁止与目标条件照常。来源记录在本次 UseCard.extra_data，
 -- Death 时向上追溯本次用牌，避免实体牌复用污染；奖励由房间级延迟监听执行，
 -- 不绑定持有者之后是否仍有技能。
 local H = require "packages.hegemony.util"
@@ -71,7 +71,7 @@ local function askForCard(player, remaining)
     skill_name = skill.name,
     prompt = "#qiao__retinue_skill_niujin-use:::" .. table.concat(labels, "、"),
     cancelable = true,
-    extra_data = { bypass_times = true, extraUse = true },
+    extra_data = { extraUse = true },
   })
 end
 
@@ -98,10 +98,7 @@ skill:addEffect(fk.TurnEnd, {
     while use and player:isAlive() and not player:isRemoved() do
       local category = use.card:getTypeString()
       if not table.contains(remaining, category) then break end
-      -- 顶层 extraUse 才让引擎不计通常出杀次数。
-      use.extraUse = true
       use.extra_data = use.extra_data or {}
-      use.extra_data.bypass_times = true
       use.extra_data[SOURCE_KEY] = player.id
       room:useCard(use)
       table.removeOne(remaining, category)
