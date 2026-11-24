@@ -3,7 +3,6 @@
 -- 使用伤害牌指定目标后，选择其中一名目标，弃置自己或该目标一张坐骑/宝物，
 -- 然后只令此牌对该目标伤害+1。加伤绑定本次 UseCardData 与所选目标，
 -- 不改整张牌的全目标伤害。
-local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_adaptation"
 
 local skill = fk.CreateSkill {
@@ -14,8 +13,7 @@ skill.qiaoImplemented = true
 local USED = "qiao_qun081_1_used"
 local TARGET = "qiao_qun081_1_target"
 local DONE = "qiao_qun081_1_done"
-local SIDE_SELF = "qiao__skill_qun081_1-self"
-local SIDE_TARGET = "qiao__skill_qun081_1-target"
+local SELECT = "#qiao__skill_qun081_1_select"
 
 ---@param player ServerPlayer
 ---@return integer[]
@@ -40,6 +38,25 @@ local function eligibleTargets(player, use)
   end)
 end
 
+local function allows(extra, id, to)
+  local targets = extra and extra.targetsByCard[tostring(id)]
+  return targets ~= nil and (to == nil or table.contains(targets, to.id))
+end
+
+skill:addAuxActiveSkill(SELECT, {
+  card_num = 1,
+  target_num = 1,
+  expand_pile = function(self) return self._extra_data and self._extra_data.otherEquips or {} end,
+  card_filter = function(self, player, id, selected, targets)
+    return #selected == 0 and allows(self._extra_data, id, targets[1])
+  end,
+  target_filter = function(self, player, to, selected, cards)
+    if #selected > 0 then return false end
+    if #cards > 0 then return allows(self._extra_data, cards[1], to) end
+    return self._extra_data ~= nil and table.contains(self._extra_data.targets, to.id)
+  end,
+})
+
 skill:addEffect(fk.TargetSpecified, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
@@ -53,38 +70,35 @@ skill:addEffect(fk.TargetSpecified, {
     use[USED] = true
     local targets = eligibleTargets(player, use)
     if #targets == 0 then return false end
-    local chosen = Invoke.ask(room, player, {
-      min_num = 1,
-      max_num = 1,
-      targets = targets,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun081_1-target",
-      invoke_prompt = "#qiao__skill_qun081_1-invoke",
-    })
-    local to = chosen and chosen[1]
-    if to == nil or to.dead or to:isRemoved() then return false end
-
-    local mine, theirs = eligibleEquipments(player), eligibleEquipments(to)
-    if #mine == 0 and #theirs == 0 then return false end
-    local fromSelf = #mine > 0
-    if #mine > 0 and #theirs > 0 then
-      fromSelf = room:askToChoice(player, {
-        choices = { SIDE_SELF, SIDE_TARGET },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_qun081_1-side",
-        cancelable = false,
-      }) == SIDE_SELF
+    local targetIds = table.map(targets, Util.IdMapper)
+    local targetsByCard, otherEquips = {}, {}
+    for _, id in ipairs(eligibleEquipments(player)) do
+      targetsByCard[tostring(id)] = targetIds
     end
-    local ids = fromSelf and mine or theirs
-    local owner = fromSelf and player or to
-    if #ids == 0 then return false end
-    local id = room:askToChooseCard(player, {
-      target = owner,
-      flag = { card_data = { { "$Equip", ids } } },
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun081_1-card::" .. owner.id,
+    for _, to in ipairs(targets) do
+      if to ~= player then
+        for _, id in ipairs(eligibleEquipments(to)) do
+          targetsByCard[tostring(id)] = { to.id }
+          table.insert(otherEquips, id)
+        end
+      end
+    end
+    local ok, ret = room:askToUseActiveSkill(player, {
+      skill_name = SELECT,
+      prompt = "#qiao__skill_qun081_1-invoke",
+      cancelable = true,
+      extra_data = {
+        skillName = skill.name, targets = targetIds,
+        targetsByCard = targetsByCard, otherEquips = otherEquips,
+      },
     })
-    if id == nil or id == -1 or not table.contains(ids, id) then return false end
+    if not ok or not ret or #ret.targets ~= 1 or #ret.cards ~= 1 then return false end
+    local to, id = ret.targets[1], ret.cards[1]
+    if not table.contains(eligibleTargets(player, use), to) then return false end
+    local owner = room:getCardOwner(id)
+    if (owner ~= player and owner ~= to) or not table.contains(eligibleEquipments(owner), id) then
+      return false
+    end
     event:setCostData(self, { to = to, owner = owner, card = id })
     return true
   end,
@@ -120,12 +134,7 @@ skill:addEffect(fk.DamageCaused, {
 Fk:loadTranslationTable {
   ["qiao__skill_qun081_1"] = "剽戮",
   [":qiao__skill_qun081_1"] = "当你使用伤害牌指定目标后，你可以选择一个目标并弃置你或其一张坐骑或宝物牌，然后令此牌对其伤害+1。",
-  ["#qiao__skill_qun081_1-invoke"] = "剽戮：你可以弃置一张坐骑或宝物牌，令此牌对一名目标伤害+1",
-  ["#qiao__skill_qun081_1-target"] = "剽戮：选择此牌的一名目标",
-  ["#qiao__skill_qun081_1-side"] = "剽戮：选择弃置你或该目标的一张坐骑/宝物牌",
-  ["#qiao__skill_qun081_1-card"] = "剽戮：选择 %dest 的一张坐骑或宝物牌",
-  [SIDE_SELF] = "弃置你的一张坐骑或宝物牌",
-  [SIDE_TARGET] = "弃置该目标的一张坐骑或宝物牌",
+  ["#qiao__skill_qun081_1-invoke"] = "剽戮：选择此牌的一名目标，并选择你或其一张坐骑或宝物弃置",
 }
 
 return skill

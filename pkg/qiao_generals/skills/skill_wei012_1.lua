@@ -20,6 +20,13 @@ local function weaponIds(player)
   end)
 end
 
+local function costOptions(player)
+  local options = {}
+  if #weaponIds(player) > 0 then table.insert(options, OPT_DISCARD) end
+  if player.hp >= 1 then table.insert(options, OPT_HP) end
+  return options
+end
+
 local function eligible(player)
   local used = player:getTableMark(USED)
   local room = Fk:currentRoom()
@@ -36,6 +43,12 @@ skill:addEffect("active", {
   -- 客户端会把可选的装备牌展开到手牌区，看起来像装备被虚拟移入手中。
   card_num = 0,
   target_num = 1,
+  interaction = function(self, player)
+    return UI.ComboBox { choices = costOptions(player), all_choices = { OPT_DISCARD, OPT_HP } }
+  end,
+  feasible = function(self, player, selected)
+    return #selected == 1 and table.contains(costOptions(player), self.interaction.data)
+  end,
   target_filter = function(self, player, to_select, selected)
     return #selected == 0 and to_select ~= player
       and to_select:isAlive() and not to_select:isRemoved()
@@ -55,15 +68,8 @@ skill:addEffect("active", {
     if player == nil or target == nil or player.dead or target.dead or target:isRemoved() then return end
 
     local weapons = weaponIds(player)
-    local choice = OPT_HP
-    if #weapons > 0 then
-      choice = room:askToChoice(player, {
-        choices = { OPT_DISCARD, OPT_HP },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wei012_1-cost",
-        cancelable = false,
-      })
-    end
+    local choice = effect.interaction_data
+    if not table.contains(costOptions(player), choice) then return end
 
     if choice == OPT_DISCARD then
       local cards = room:askToDiscard(player, {
@@ -99,7 +105,6 @@ Fk:loadTranslationTable {
   ["qiao__skill_wei012_1"] = "强袭",
   [":qiao__skill_wei012_1"] = "出牌阶段每名角色限一次，你可以选择一名攻击范围内的角色，弃置一张武器牌或失去1点体力，然后对其造成1点伤害。",
   ["#qiao__skill_wei012_1-prompt"] = "强袭：选择一名攻击范围内的角色",
-  ["#qiao__skill_wei012_1-cost"] = "强袭：弃置一张武器牌或失去1点体力",
   ["#qiao__skill_wei012_1-weapon"] = "强袭：弃置一张武器牌",
   [OPT_DISCARD] = "弃置武器牌",
   [OPT_HP] = "失去1点体力",

@@ -9,8 +9,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_shu013_2"] = "放权",
   [":qiao__skill_shu013_2"] = "轮次技，你可以跳过出牌阶段。若如此做，此回合结束时，你可以弃置一张手牌并选择一名其他角色，令其获得一个额外的回合。",
   ["#qiao__skill_shu013_2-invoke"] = "放权：是否跳过出牌阶段？",
-  ["#qiao__skill_shu013_2-discard"] = "放权：弃置一张手牌，令一名其他角色获得额外回合",
-  ["#qiao__skill_shu013_2-choose"] = "放权：选择获得额外回合的角色",
+  ["#qiao__skill_shu013_2-pay"] = "放权：选择一张手牌弃置，并选择一名其他角色获得额外回合",
 }
 
 skill:addEffect(fk.EventPhaseChanging, {

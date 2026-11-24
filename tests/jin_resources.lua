@@ -311,7 +311,7 @@ function Testqiao_jin_resources:testYishiGivesOneThenGainsOne()
   local beforeProposer = #proposer:getCardIds("h")
 
   FkTest.setNextReplies(p, {
-    "1",
+    FkTest.ReplyChoosePlayer({ proposer }),
     cards[1],
     cards[2],
   })

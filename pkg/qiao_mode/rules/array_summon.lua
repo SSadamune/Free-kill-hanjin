@@ -115,16 +115,8 @@ local function respond(room, target, player, kind)
   return H.compareKingdomWith(target, player)
 end
 
-function M.resolve(room, player)
-  local choices = M.choices(room, player)
-  if #choices == 0 then return end
-  local kind = choices[1]
-  if #choices > 1 then
-    local labels = table.map(choices, function(value) return "qiao_array_" .. value end)
-    local choice = room:askToChoice(player, {choices = labels, skill_name = M.skill, prompt = "#qiao_array_choose", detailed = true})
-    if not table.contains(labels, choice) then return end
-    kind = choice:sub(#"qiao_array_" + 1)
-  end
+function M.resolve(room, player, kind)
+  if not table.contains(M.choices(room, player), kind) then return end
   local asked = {}
   for _, step in ipairs(directions) do
     while canRecruit(room, player) do

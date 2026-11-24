@@ -6,7 +6,7 @@ local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local skill = fk.CreateSkill { name = P.JIANPING }
 skill.qiaoImplemented = true
 -- 诏书授予仍有武将牌明置后的时机，刷新回调用于同次明置的同步。
-skill.qiaoStateOnly = false
+skill.qiaoCanPrelight = true
 
 local revealSpec = {
   global = true,

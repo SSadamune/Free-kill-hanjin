@@ -9,6 +9,7 @@
 -- 要求其暗置。明置后技能被武将替换也不影响本次使用。
 --
 -- 记录与回合末结算是首次发动时建立的房间级延迟效果，不依赖张让当前技能。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han004_1",
 }
@@ -170,15 +171,13 @@ settle = function(room, player)
   if player.general ~= "anjiang" then table.insert(choices, "m") end
   if player.deputyGeneral ~= "anjiang" then table.insert(choices, "d") end
   if #choices == 0 then return end
-  local choice = choices[1]
-  if #choices > 1 then
-    choice = room:askToChoice(player, {
-      choices = choices,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han004_1-hide",
-      cancelable = false,
-    })
-  end
+  local choice = Selection.askOption(room, player, {
+    choices = choices,
+    all_choices = { "m", "d" },
+    skill_name = skill.name,
+    prompt = "#qiao__skill_han004_1-hide",
+    cancelable = false,
+  })
   if choice == "d" then player:hideGeneral(true) else player:hideGeneral(false) end
 end
 

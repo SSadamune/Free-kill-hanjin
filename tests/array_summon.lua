@@ -32,6 +32,13 @@ local function hide(room, seat, kingdom, main, deputy)
   return player
 end
 
+local function arrayReply(room, owner, kind)
+  local reply = FkTest.ReplyUseSkill(A.skill, {}, {})
+  kind = kind or A.choices(room, owner)[1]
+  if kind then reply.interaction_data = "qiao_array_" .. kind end
+  return reply
+end
+
 local function play(room, owner, answer, reply)
   local asked = {}
   fixture.withSkillRequests(room, A.skill, {
@@ -42,12 +49,12 @@ local function play(room, owner, answer, reply)
       return choice
     end,
   }, function()
-    room:handleUseCardReply(owner, reply or FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
+    room:handleUseCardReply(owner, reply or arrayReply(room, owner), nil)
   end)
   return asked
 end
 
-function Testqiao_array_summon:testClientConfirmAndFormationChainInBothDirections()
+function Testqiao_array_summon:testClientOptionButtonAndFormationChainInBothDirections()
   FkTest.runInRoom(function()
     local room, owner = prepare("wei018", "wei")
     hide(room, 2, "wei")
@@ -66,6 +73,10 @@ function Testqiao_array_summon:testClientConfirmAndFormationChainInBothDirection
       lu.assertTrue(handler:skillButtonValidity(A.skill))
       handler:selectSkill(A.skill, {selected = true})
       lu.assertEquals(handler.skill_name, A.skill)
+      local spec = handler.scene:getAllItems("Interaction")["1"].spec
+      lu.assertTrue(spec.direct_send)
+      lu.assertEquals(spec.options, { "qiao_array_formation" })
+      lu.assertEquals(spec.all_options, { "qiao_array_formation", "qiao_array_siege" })
       lu.assertFalse(handler:targetValidity(players[2].id))
       for _, id in ipairs(me:getCardIds("h")) do lu.assertFalse(handler:cardValidity(id)) end
       lu.assertTrue(handler:feasible())
@@ -73,7 +84,10 @@ function Testqiao_array_summon:testClientConfirmAndFormationChainInBothDirection
       ClientInstance.notifyUI = function(_, command, payload)
         if command == "ReplyToServer" then reply = payload end
       end
-      local ok, err = pcall(function() handler:doOKButton() end)
+      local ok, err = pcall(function()
+        handler:update("Interaction", "1", "finish", "qiao_array_formation")
+        handler:doOKButton()
+      end)
       ClientInstance.notifyUI = notify
       handler:_finish()
       assert(ok, err)
@@ -109,7 +123,7 @@ function Testqiao_array_summon:testSiegeBothDirectionsAndIndependentHuyi()
       end)
       FkTest.setNextReplies(who, {{"revealMain:::qiao_test__han_1"}})
     end
-    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
+    room:handleUseCardReply(owner, arrayReply(room, owner, "siege"), nil)
     lu.assertEquals(asked, {3, 7})
     lu.assertTrue(H.inSiegeRelation(owner, room.players[3], room.players[2]))
     lu.assertTrue(H.inSiegeRelation(owner, room.players[7], room.players[8]))
@@ -136,16 +150,11 @@ function Testqiao_array_summon:testSharedUseForTwoArraysAndNewPlayPhase()
     local room, owner = prepare("jin023", "jin", "qiao_heg__qun024")
     hide(room, 3, "jin")
     hide(room, 8, "jin")
-    local asked = play(room, owner, function(who)
-      if who == owner then return "qiao_array_siege" end
-      return "Cancel"
-    end)
+    local asked = play(room, owner, nil, arrayReply(room, owner, "siege"))
     lu.assertEquals(asked, {3})
     lu.assertEquals(play(room, owner), {})
     owner:setSkillUseHistory("", 0, Player.HistoryPhase)
-    lu.assertEquals(play(room, owner, function(who)
-      return who == owner and "qiao_array_formation" or "Cancel"
-    end), {8})
+    lu.assertEquals(play(room, owner, nil, arrayReply(room, owner, "formation")), {8})
   end)
 end
 
@@ -227,7 +236,7 @@ function Testqiao_array_summon:testCancelledRevealRequestsLeaveBothGeneralsHidde
       -- 先点可见的取消选项，再走原生请求未收到有效选择的取消分支。
       FkTest.setNextReplies(who, who == second and {{"Cancel"}} or {{}})
     end
-    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
+    room:handleUseCardReply(owner, arrayReply(room, owner), nil)
     lu.assertEquals(observed, {2, 8})
     lu.assertEquals(last.kingdom, "unknown")
     lu.assertEquals(second.general, "anjiang")
@@ -261,7 +270,7 @@ function Testqiao_array_summon:testTenPlayerRoomStopsAsSoonAsFourthAllyReveals()
       end)
       FkTest.setNextReplies(who, {{"revealAll"}})
     end
-    room:handleUseCardReply(owner, FkTest.ReplyUseSkill(A.skill, {}, {}), nil)
+    room:handleUseCardReply(owner, arrayReply(room, owner), nil)
     lu.assertEquals(asked, {2})
     lu.assertEquals(first.kingdom, "wei")
     lu.assertEquals(other.kingdom, "unknown", "第四人亮将后，另一侧不再询问")

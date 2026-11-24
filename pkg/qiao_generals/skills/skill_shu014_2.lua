@@ -1,3 +1,5 @@
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu014_2",
 }
@@ -47,19 +49,21 @@ skill:addEffect(fk.EventPhaseEnd, {
     local room = player.room
     for _, p in ipairs(event:getCostData(self).tos or {}) do
       if p:isAlive() then
-        local choices = { "#qiao__skill_shu014_2-draw" }
+        local draw = "#qiao__skill_shu014_2-draw"
+        local recover = "#qiao__skill_shu014_2-recover:" .. player.id
+        local choices = { draw }
         local canRecover = player:isAlive() and player.hp < player.maxHp
-        if canRecover then
-          table.insert(choices, "#qiao__skill_shu014_2-recover:" .. player.id)
-        end
-        local choice = room:askToChoice(p, {
+        if canRecover then table.insert(choices, recover) end
+        local choice = Selection.askOption(room, p, {
           choices = choices,
+          all_choices = { draw, recover },
           skill_name = skill.name,
           prompt = "#qiao__skill_shu014_2-choice",
+          cancelable = false,
         })
-        if choice == "#qiao__skill_shu014_2-draw" then
+        if choice == draw then
           p:drawCards(1, skill.name)
-        elseif canRecover then
+        elseif choice == recover and canRecover then
           room:recover {
             who = player,
             num = 1,

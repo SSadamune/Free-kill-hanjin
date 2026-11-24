@@ -5,6 +5,7 @@
 -- 当使用【杀】指定手牌数不大于你、或体力值不小于你的目标后，你令此【杀】
 -- 不能被其响应，或对其伤害+1（由你任选一项，不绑定满足的条件）。
 -- 多目标【杀】逐目标分别选择；伤害加成只作用于该目标本次【杀】的伤害。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu008_1",
   tags = { Skill.Compulsory },
@@ -36,7 +37,7 @@ skill:addEffect(fk.TargetSpecified, {
   on_cost = function(self, event, target, player, data)
     local room = player.room
     local to = data.to
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = { OPT_DISRESPONSIVE, OPT_DAMAGE },
       skill_name = skill.name,
       prompt = "#qiao__skill_shu008_1-choice:" .. to.id,

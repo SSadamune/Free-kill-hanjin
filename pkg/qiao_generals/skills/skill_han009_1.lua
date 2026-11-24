@@ -9,6 +9,8 @@
 -- 被选中的目标；其他目标抵消不触发。反弃由房间级延迟监听处理，不依赖
 -- 伏完是否仍有谋溃。
 local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_han009_1",
 }
@@ -93,15 +95,15 @@ skill:addEffect(fk.TargetSpecified, {
 
     local options = { OPTION_DRAW }
     if #to:getCardIds("he") > 0 then table.insert(options, OPTION_DISCARD) end
-    local picked = room:askToChoices(player, {
-      choices = options,
-      min_num = 1,
-      max_num = #options,
+    local available, all, sets = Selection.optionSets({ OPTION_DRAW, OPTION_DISCARD }, options, 2)
+    local choice = Selection.askOption(room, player, {
+      choices = available,
+      all_choices = all,
       skill_name = skill.name,
       prompt = "#qiao__skill_han009_1-options",
-      cancelable = false,
     })
-    if picked == nil or #picked == 0 then return false end
+    local picked = sets[choice]
+    if picked == nil then return false end
 
     -- extra_data 会在目标事件结束时被 AimData 的旧值覆盖，故把本次发动
     -- 与反弃绑定记录挂在 UseCardData 自身字段上。

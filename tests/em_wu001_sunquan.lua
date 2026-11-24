@@ -365,10 +365,10 @@ function Testqiao_em_wu001_sunquan:testPrepareGrantsGongxinAtThreeFenghuo()
     preparePhase(wu)
   end)
   lu.assertEquals(asks, 1, "吴势力角色自己的准备阶段应询问一次")
-  lu.assertEquals(#asked.choices, 3, "三张烽火时逐档累积为英姿、好施、攻心")
+  lu.assertEquals(#asked.choices, 4, "三张烽火时可选英姿、好施、攻心和取消")
   lu.assertEquals(asked.max_num, 1, "不足五张时只能选一个技能")
   lu.assertTrue(asked.detailed, "授技多选应在确认前显示技能说明")
-  for _, skillName in ipairs(asked.choices) do
+  for _, skillName in ipairs({ P.YINGZI, P.HAOSHI, GONGXIN }) do
     lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
       "授技选项应有正式技能说明：" .. skillName)
   end
@@ -461,16 +461,16 @@ function Testqiao_em_wu001_sunquan:testFiveFenghuoTwoSkillsKeepIndependentSource
     askToChoices = function(self, who, params, original)
       if params.skill_name ~= P.FLAG then return original(self, who, params) end
       asked = params
-      return { P.YINGZI, GONGXIN }
+      return { "qiao_option_pair:::" .. P.YINGZI .. ":" .. GONGXIN }
     end,
   }, function()
     preparePhase(wu)
   end)
-  lu.assertEquals(asked.max_num, 2, "达到五张烽火时可多选一个不同技能")
+  lu.assertTrue(asked.single, "一次点击选择一个技能或一对技能")
   lu.assertEquals(asked.prompt, "#qiao__skill_em_wu001_flag-grant:::5:2")
-  lu.assertEquals(#asked.choices, 4, "五张烽火时四项技能均可选")
+  lu.assertEquals(#asked.choices, 11, "四个单项、六个可选组合及取消")
   lu.assertTrue(asked.detailed, "授技多选应在确认前显示技能说明")
-  for _, skillName in ipairs(asked.choices) do
+  for _, skillName in ipairs({ P.YINGZI, P.HAOSHI, GONGXIN }) do
     lu.assertNotEquals(Fk:translate(":" .. skillName), ":" .. skillName,
       "授技选项应有正式技能说明：" .. skillName)
   end

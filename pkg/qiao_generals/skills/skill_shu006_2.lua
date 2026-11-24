@@ -1,17 +1,20 @@
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu006_2",
 }
 skill.qiaoImplemented = true
 
 local POS = "qiao__skill_shu006_2_positions-turn"
+local MAIN = "#qiao__skill_shu006_2-main"
+local DEPUTY = "#qiao__skill_shu006_2-deputy"
 
 Fk:loadTranslationTable {
   ["qiao__skill_shu006_2"] = "铁骑",
   [":qiao__skill_shu006_2"] = "当你使用【杀】指定一个目标后，你可以令其一张武将牌本回合非锁定技失效，然后你判定，除非其展示手牌并弃置结果花色的所有牌，否则其不能响应此【杀】。",
-  ["#qiao__skill_shu006_2-invoke"] = "铁骑：是否令目标一张武将牌的非锁定技本回合失效并判定？",
-  ["#qiao__skill_shu006_2-ask"] = "铁骑：选择目标一张武将牌（不展示身份）",
-  ["#qiao__skill_shu006_2-main"] = "主将",
-  ["#qiao__skill_shu006_2-deputy"] = "副将",
+  ["#qiao__skill_shu006_2-ask"] = "铁骑：选择 %dest 的一张武将牌，令其非锁定技失效并判定",
+  [MAIN] = "主将",
+  [DEPUTY] = "副将",
   ["#qiao__skill_shu006_2-discard"] = "铁骑：展示并弃置判定花色的所有手牌，否则不能响应此【杀】",
 }
 
@@ -29,28 +32,25 @@ skill:addEffect(fk.TargetSpecified, {
       and data.card.trueName == "slash" and data.to ~= nil and data.to ~= player
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local to = data.to
+    local choices = {}
+    if positionGeneral(to, "main") then table.insert(choices, MAIN) end
+    if positionGeneral(to, "deputy") then table.insert(choices, DEPUTY) end
+    local choice = Selection.askOption(player.room, player, {
+      choices = choices,
+      all_choices = { MAIN, DEPUTY },
       skill_name = skill.name,
-      prompt = "#qiao__skill_shu006_2-invoke",
+      prompt = "#qiao__skill_shu006_2-ask::" .. to.id,
     })
+    if choice == nil then return false end
+    event:setCostData(self, choice == MAIN and "main" or "deputy")
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     local to = data.to
-    local positions = {}
-    if positionGeneral(to, "main") ~= nil then table.insert(positions, "main") end
-    if positionGeneral(to, "deputy") ~= nil then table.insert(positions, "deputy") end
-    if #positions > 0 then
-      local choices = {}
-      for _, pos in ipairs(positions) do
-        table.insert(choices, pos == "main" and "#qiao__skill_shu006_2-main" or "#qiao__skill_shu006_2-deputy")
-      end
-      local choice = room:askToChoice(player, {
-        choices = choices,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_shu006_2-ask::" .. to.id,
-      })
-      local selected = (choice == "#qiao__skill_shu006_2-main") and "main" or "deputy"
+    local selected = event:getCostData(self)
+    if positionGeneral(to, selected) then
       local old = to:getTableMark(POS)
       if type(old) ~= "table" then old = {} end
       if not table.contains(old, selected) then table.insert(old, selected) end
@@ -72,15 +72,7 @@ skill:addEffect(fk.TargetSpecified, {
       data:setDisresponsive(to)
       return
     end
-    if not room:askToSkillInvoke(to, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu006_2-discard:::" .. suit,
-    }) then
-      data:setDisresponsive(to)
-      return
-    end
-    to:showCards(to:getCardIds("h"), player)
-    local discarded = room:askToDiscard(to, {
+    local cards = room:askToDiscard(to, {
       min_num = #matches,
       max_num = #matches,
       include_equip = false,
@@ -88,10 +80,17 @@ skill:addEffect(fk.TargetSpecified, {
       pattern = ".|.|" .. suit,
       prompt = "#qiao__skill_shu006_2-discard:::" .. suit,
       cancelable = true,
+      skip = true,
     })
-    if discarded == nil or #discarded < #matches then
+    if not cards or #cards ~= #matches or not table.every(matches, function(id)
+      return table.contains(cards, id) and table.contains(to:getCardIds("h"), id)
+        and not to:prohibitDiscard(id)
+    end) then
       data:setDisresponsive(to)
+      return
     end
+    to:showCards(to:getCardIds("h"), player)
+    room:throwCard(cards, skill.name, to, to)
   end,
 })
 

@@ -118,11 +118,13 @@ function Testqiao_card_resolution:testFireAttackShowsOnlyHandCardAndKeepsDiscard
   local room = FkTest.room
   local from, to = room.players[1], room.players[2]
   local showRequests, discardRequests, shown = 0, 0
+  local client_room = __dofile("../../../tests/support/client_room.lua")
   FkTest.runInRoom(function()
-    room:throwCard(to:getCardIds("h"), "test", to, to)
+    for _, who in ipairs({ from, to }) do room:throwCard(who:getCardIds("h"), "test", who, who) end
     local only = room:printCard("qiao__jink", Card.Heart, 2)
     room:obtainCard(to, only)
-    room:obtainCard(from, room:printCard("qiao__jink", Card.Heart, 3))
+    local matching = room:printCard("qiao__jink", Card.Heart, 3)
+    room:obtainCard(from, matching)
     local ask, show = room.askToUseActiveSkill, room.showCards
     function room:askToUseActiveSkill(player, params)
       if params.skill_name == "choose_cards_skill" and params.extra_data.skillName == "fire_attack_skill" then
@@ -130,6 +132,11 @@ function Testqiao_card_resolution:testFireAttackShowsOnlyHandCardAndKeepsDiscard
       elseif params.skill_name == "discard_skill" and params.extra_data.skillName == "fire_attack_skill" then
         discardRequests = discardRequests + 1
         lu.assertTrue(params.cancelable)
+        client_room.confirmSelection(room, player, params, { matching.id }, {}, function(handler)
+          lu.assertEquals(handler.pendings, { matching.id })
+          lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
+        end)
+        FkTest.setNextReplies(player, { "__cancel" })
       end
       return ask(self, player, params)
     end

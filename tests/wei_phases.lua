@@ -724,7 +724,7 @@ end
 local function grantGodSpeed(room, target, equip)
   local original = room.askToChooseCard
   room.askToChooseCard = function() return equip end
-  FkTest.setNextReplies(p1(), { "1" })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ target }) })
   triggerPhase(room, p1(), Player.Start)
   room.askToChooseCard = original
 end

@@ -362,7 +362,7 @@ function Testqiao_jin_basic:testLvliDrawToCurrentHp()
   local room = prepare("qiao_heg__jin014")
   local p = p1()
   inRoom(function() p.hp = 3 end)
-  FkTest.setNextReplies(p, { "1", { LVLI_DRAW } })
+  FkTest.setNextReplies(p, { { LVLI_DRAW } })
 
   dealDamage(room, p, p2())
 
@@ -375,7 +375,7 @@ function Testqiao_jin_basic:testLvliDiscardAllHandAndRecoverToCount()
   local p = p1()
   setHand(room, p, { { "slash" }, { "jink" } })
   inRoom(function() p.hp = 1 end)
-  FkTest.setNextReplies(p, { "1", { LVLI_RECOVER } })
+  FkTest.setNextReplies(p, { { LVLI_RECOVER } })
 
   dealDamage(room, p, p2())
 
@@ -395,6 +395,7 @@ function Testqiao_jin_basic:testLvliSecondOptionAvailabilityAndNoHpReduction()
     askToChoice = function(self, player, params, original)
       if player == p and params.skill_name == LVLI then
         seen = table.simpleClone(params.choices)
+        lu.assertEquals(params.all_choices, { LVLI_DRAW, LVLI_RECOVER })
         return LVLI_RECOVER
       end
       return original(self, player, params)
@@ -409,7 +410,7 @@ function Testqiao_jin_basic:testLvliSecondOptionAvailabilityAndNoHpReduction()
   lu.assertEquals(p.hp, 3) -- 弃置2张后回复至2，不把较高的体力降为2
 end
 
-function Testqiao_jin_basic:testLvliDrawOptionHiddenWhenHandNotBelowHp()
+function Testqiao_jin_basic:testLvliDrawOptionDisabledWhenHandNotBelowHp()
   local room = prepare("qiao_heg__jin014")
   local p = p1()
   setHand(room, p, { { "slash" }, { "jink" } })
@@ -420,6 +421,7 @@ function Testqiao_jin_basic:testLvliDrawOptionHiddenWhenHandNotBelowHp()
     askToChoice = function(self, player, params, original)
       if player == p and params.skill_name == LVLI then
         seen = table.simpleClone(params.choices)
+        lu.assertEquals(params.all_choices, { LVLI_DRAW, LVLI_RECOVER })
         return LVLI_RECOVER
       end
       return original(self, player, params)
@@ -450,7 +452,7 @@ function Testqiao_jin_basic:testLvliResolvesInDamageBeforeDamaged()
     end,
   })
   inRoom(function() room:addSkill(skel:createSkill()) end)
-  FkTest.setNextReplies(p, { "1", { LVLI_DRAW } })
+  FkTest.setNextReplies(p, { { LVLI_DRAW } })
 
   dealDamage(room, p, p2())
 

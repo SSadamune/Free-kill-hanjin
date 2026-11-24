@@ -2,6 +2,7 @@
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill { name = Ci.CONSUME, tags = { Skill.Permanent } }
 skill.qiaoImplemented = true
@@ -57,11 +58,10 @@ skill:addEffect("active", {
       or "qiao__jin001_banner-resource-draw"
     local branches = { resource }
     if #changePositions > 0 and player:getMark(USED_MARK) == 0 then table.insert(branches, CHANGE) end
-    local branch = room:askToChoices(player, {
+    local branch = Selection.askOption(room, player, {
       choices = branches, all_choices = { resource, CHANGE },
-      min_num = 1, max_num = 1, single = true, cancelable = true,
       skill_name = Ci.SKILL, prompt = "#qiao__jin001_banner-branch",
-    })[1]
+    })
     if branch == nil or not table.contains(branches, branch) or not Ci.canChoose(player, chosen) then return end
     if branch == CHANGE then
       local isDeputy

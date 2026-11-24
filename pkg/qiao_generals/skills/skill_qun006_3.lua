@@ -2,6 +2,8 @@
 --
 -- 锁定技：结束阶段，若自己的体力值不为最小（并列最小不触发），选择一至两项：
 -- 失去1点体力、减1点体力上限；选择两项时执行一个额外摸牌阶段。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_qun006_3",
   tags = { Skill.Compulsory },
@@ -28,14 +30,15 @@ skill:addEffect(fk.EventPhaseStart, {
       and data ~= nil and data.phase == Player.Finish and notMinimumHp(player)
   end,
   on_cost = function(self, event, target, player, data)
-    local picked = player.room:askToChoices(player, {
-      choices = { LOSE_HP, LOSE_MAX },
-      min_num = 1,
-      max_num = 2,
+    local options = { LOSE_HP, LOSE_MAX }
+    local choices, _, sets = Selection.optionSets(options, options, 2)
+    local choice = Selection.askOption(player.room, player, {
+      choices = choices,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun006_3-choice",
       cancelable = false,
     })
+    local picked = sets[choice]
     if picked == nil or #picked == 0 then return false end
     event:setCostData(self, { picked = picked })
     return true

@@ -10,6 +10,7 @@
 -- 定位、跨势力显式许可和首次成功即止的循环。房间 tag 仅服务端使用，不参与
 -- 客户端可用性判定；来源位置一律以公开的已明置状态校验。
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local M = {}
 
 M.RESCUE_TAG = "qiao_qun_jishi_rescue_v1"
@@ -155,22 +156,21 @@ function M.legalPositions(room, player, source)
   return result
 end
 
-local function askPosition(room, candidate, positions)
+local function askPosition(room, candidate, positions, owner)
+  local main = "#qiao__skill_qun001_1-main"
+  local deputy = "#qiao__skill_qun001_1-deputy"
   local labels, byLabel = {}, {}
   for _, position in ipairs(positions) do
-    local label = position.isDeputy
-      and "#qiao__skill_qun001_1-deputy" or "#qiao__skill_qun001_1-main"
+    local label = position.isDeputy and deputy or main
     labels[#labels + 1] = label
     byLabel[label] = position
   end
-  if #labels == 1 then return positions[1] end
-  local picked = room:askToChoice(candidate, {
+  local picked = Selection.askOption(room, candidate, {
     choices = labels,
+    all_choices = { main, deputy },
     skill_name = M.JISHI_SKILL,
-    prompt = "#qiao__skill_qun001_1-choose-position",
-    cancelable = true,
+    prompt = "#qiao__skill_qun001_1-exchange::" .. owner.id,
   })
-  if picked == nil or picked == "" or picked == "Cancel" then return nil end
   return byLabel[picked]
 end
 
@@ -218,23 +218,12 @@ function M.exchangeRescue(room, dying, entry)
     if candidate ~= owner and not candidate.dead and not candidate:isRemoved()
       and heg().compareKingdomWith(candidate, owner, true) then
       local positions = M.legalPositions(room, candidate, source)
-      if #positions > 0 then
-        -- 第一项为 no：任何未主动选择 yes 的超时/非法回复都按不交换处理。
-        local wants = room:askToChoice(candidate, {
-          choices = { "no", "yes" },
-          skill_name = M.JISHI_SKILL,
-          prompt = "#qiao__skill_qun001_1-exchange::" .. owner.id,
-          cancelable = true,
-        })
-        if wants == "yes" then
-          local position = askPosition(room, candidate, positions)
-          -- 选择/询问后再次按记录的位置与将名校验来源仍是同一张华佗。
-          local options = { cross_kingdom = true }
-          if position ~= nil and E.validate(room, source, position, options)
-            and E.exchange(room, source, position, options) then
-            return true
-          end
-        end
+      local position = askPosition(room, candidate, positions, owner)
+      -- 选择/询问后再次按记录的位置与将名校验来源仍是同一张华佗。
+      local options = { cross_kingdom = true }
+      if position ~= nil and E.validate(room, source, position, options)
+        and E.exchange(room, source, position, options) then
+        return true
       end
     end
   end

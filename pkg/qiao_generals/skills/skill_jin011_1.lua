@@ -5,6 +5,8 @@
 -- 每名目标各自选择“弃置其装备区一张牌”或“获得其一张手牌”；两项均有人
 -- 选过时，发动者才可对其中一名目标造成1点伤害。选牌操作者始终是发动者，
 -- 目标自己的选择只决定分支。牌数必须与目标数相等，不能以弃零牌发动。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin011_1",
 }
@@ -62,15 +64,13 @@ local function resolveTarget(room, player, to)
   if #handIds > 0 then table.insert(choices, OPTION_HAND) end
   if #choices == 0 then return false, false end
 
-  local option = choices[1]
-  if #choices > 1 then
-    option = room:askToChoice(to, {
-      choices = choices,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin011_1-branch:" .. player.id,
-      cancelable = false,
-    })
-  end
+  local option = Selection.askOption(room, to, {
+    choices = choices,
+    all_choices = { OPTION_EQUIP, OPTION_HAND },
+    skill_name = skill.name,
+    prompt = "#qiao__skill_jin011_1-branch:" .. player.id,
+    cancelable = false,
+  })
   local choseEquip = option == OPTION_EQUIP
   local choseHand = option == OPTION_HAND
 

@@ -9,6 +9,7 @@ local First = require "packages.qiao.pkg.qiao_generals.util.jin_first_reveal"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill { name = Ci.SKILL }
 skill.qiaoImplemented = true
@@ -156,10 +157,10 @@ skill:addEffect(fk.Damage, {
     local groups = transferGroups(player.room, player)
     local choices = table.filter(Ban.kingdoms, function(k) return groups[k] ~= nil end)
     if #choices == 0 then return false end
-    local kingdom = player.room:askToChoices(player, {
-      choices = choices, min_num = 1, max_num = 1, cancelable = true,
+    local kingdom = Selection.askOption(player.room, player, {
+      choices = choices, all_choices = Ban.kingdoms,
       skill_name = skill.name, prompt = "#qiao__jin001_banner-transfer::" .. target.id,
-    })[1]
+    })
     if kingdom == nil or not groups[kingdom] then return false end
     event:setCostData(self, kingdom)
     return true
@@ -185,11 +186,10 @@ skill:addEffect(fk.EventPhaseSkipping, {
       and #Ci.cards(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    local chosen = player.room:askToChoices(player, {
-      -- 选一张后确认。保留阶段提示与取消按钮，也适用于只剩一枚赐时。
-      choices = Ci.cards(player), min_num = 1, max_num = 1, cancelable = true,
+    local chosen = Selection.askOption(player.room, player, {
+      choices = Ci.cards(player),
       skill_name = skill.name, prompt = "#qiao__jin001_banner-prevent-skip:::" .. Util.PhaseStrMapper(data.phase),
-    })[1]
+    })
     if not table.contains(Ci.cards(player), chosen) then return false end
     event:setCostData(self, chosen)
     return true

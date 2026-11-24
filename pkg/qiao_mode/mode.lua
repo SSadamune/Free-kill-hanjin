@@ -21,6 +21,7 @@ local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skil
 local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_cards"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
+local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local W = require "ui_emu.preferences"
 local M = {}
 
@@ -197,6 +198,7 @@ function M.create(base, name)
         settings._mode.generalTimeout = settings._mode.generalTimeout or Selection.defaultTimeout
       end
       RemovedTargets.installServer(self.room)
+      TriggerSelection.install(self.room)
       MandatoryCards.install(self.room)
       FaqRules.installServer(self.room)
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)

@@ -6,6 +6,7 @@ local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local CardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
   name = W.BANNER,
@@ -93,12 +94,12 @@ local function hideCandidates(room, target)
 end
 
 local function chooseCandidate(room, target, list)
-  if #list == 1 then return list[1] end
-  local choice = room:askToChoice(target, {
-    choices = { "m", "d" },
+  local choices = table.map(list, function(candidate) return candidate.isDeputy and "d" or "m" end)
+  local choice = Selection.askOption(room, target, {
+    choices = choices,
+    all_choices = { "m", "d" },
     skill_name = skill.name,
     prompt = "#qiao__em_wei001_banner-position",
-    cancelable = false,
   })
   for _, candidate in ipairs(list) do
     if (choice == "m" and not candidate.isDeputy) or (choice == "d" and candidate.isDeputy) then

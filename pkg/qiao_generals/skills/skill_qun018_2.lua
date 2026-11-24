@@ -23,6 +23,7 @@ end
 
 skill:addEffect("active", {
   anim_type = "control",
+  card_num = 0,
   target_num = 1,
   prompt = "#qiao__skill_qun018_2-prompt",
   target_filter = function(self, player, to_select, selected)

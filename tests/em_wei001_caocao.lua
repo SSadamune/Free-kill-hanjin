@@ -629,8 +629,8 @@ function Testqiao_em_wei001_caocao:testBannerExtraTurnExpiresThenThirdNeedsPubli
         return { id }
       end,
       askToChoice = function(self, who, params, original)
+        if params.prompt == "#qiao__em_wei001_banner-position" then return params.choices[1] end
         if onChoice ~= nil then onChoice(params) end
-        if table.contains(params.choices, "m") then return "m" end
         lu.assertTrue(table.contains(params.choices, FIRST),
           "授技候选应包含突袭：" .. table.concat(params.choices, ","))
         return FIRST
@@ -762,14 +762,7 @@ function Testqiao_em_wei001_caocao:testChangelingCommandBothBranches()
   local executed = true
   H.askToCommand = function() return executed, {} end
   skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei024_1" then return { target } end
-      return original(self, who, params)
-    end,
-    askToCards = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei024_1" then return { card.id } end
-      return original(self, who, params)
-    end,
+    askToChooseCardsAndPlayers = function() return { target }, { card.id }, true end,
   }, function()
     inRoom(function()
       room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
@@ -825,7 +818,7 @@ function Testqiao_em_wei001_caocao:testDanliDrawUpToFive()
   local before = #user:getCardIds("h")
   skill_test.withSkillRequests(room, "qiao__skill_wei044_1", {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei044_1" then return "1" end
+      if params.skill_name == "qiao__skill_wei044_1" then return "qiao__wei044_draw" end
       return original(self, who, params)
     end,
   }, function()
@@ -863,7 +856,7 @@ function Testqiao_em_wei001_caocao:testDanliRemoveDeputyRecoverAndSourceDiscard(
   end
   skill_test.withSkillRequests(room, "qiao__skill_wei044_1", {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei044_1" then return "2" end
+      if params.skill_name == "qiao__skill_wei044_1" then return "qiao__wei044_remove" end
       return original(self, who, params)
     end,
   }, function()
@@ -892,14 +885,7 @@ function Testqiao_em_wei001_caocao:testChangelingNotExecutedAddsDrawPhaseCards()
   local originalCommand = H.askToCommand
   H.askToCommand = function() return false, {} end
   skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei024_1" then return { target } end
-      return original(self, who, params)
-    end,
-    askToCards = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei024_1" then return { card.id } end
-      return original(self, who, params)
-    end,
+    askToChooseCardsAndPlayers = function() return { target }, { card.id }, true end,
   }, function()
     inRoom(function()
       room.logic:trigger(fk.EventPhaseStart, user, PhaseData:new { who = user, phase = Player.Start })
@@ -915,7 +901,7 @@ end
 -- 包含公开势力未确定者并排除已公开魏者。注册沿用 handleAddLoseSkills。
 function Testqiao_em_wei001_caocao:testChangelingNonHolderAndTargetFilter()
   local room, holder, nonholder, unknown = FkTest.room, p(2), p(4), p(5)
-  local card, targetCalls, cardCalls, commandCalls = nil, 0, 0, 0
+  local card, selectionCalls, commandCalls = nil, 0, 0
   local queriedTargets
   inRoom(function()
     skill_test.installDualGenerals(room, holder, {
@@ -946,8 +932,7 @@ function Testqiao_em_wei001_caocao:testChangelingNonHolderAndTargetFilter()
       end,
     }, function()
       skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-        askToChoosePlayers = function() targetCalls = targetCalls + 1; return {} end,
-        askToCards = function() cardCalls = cardCalls + 1; return {} end,
+        askToChooseCardsAndPlayers = function() selectionCalls = selectionCalls + 1; return {}, {}, false end,
       }, function()
         inRoom(function()
           room.logic:trigger(fk.EventPhaseStart, nonholder,
@@ -955,8 +940,7 @@ function Testqiao_em_wei001_caocao:testChangelingNonHolderAndTargetFilter()
         end)
       end)
     end)
-    lu.assertEquals(targetCalls, 0, "非持有者不应进入常令选人")
-    lu.assertEquals(cardCalls, 0, "非持有者不应进入常令选牌")
+    lu.assertEquals(selectionCalls, 0, "非持有者不应进入常令选择")
     lu.assertEquals(commandCalls, 0, "非持有者不应发起军令")
     lu.assertFalse(table.contains(nonholder:getCardIds("h"), card.id),
       "非持有者不应取得常令的牌")
@@ -981,18 +965,9 @@ function Testqiao_em_wei001_caocao:testChangelingNonHolderAndTargetFilter()
       end,
     }, function()
       skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-        askToChoosePlayers = function(self, who, params, original)
-          if params.skill_name ~= "qiao__skill_wei024_1" then
-            return original(self, who, params)
-          end
+        askToChooseCardsAndPlayers = function(_, _, params)
           queriedTargets = table.simpleClone(params.targets)
-          return { unknown }
-        end,
-        askToCards = function(self, who, params, original)
-          if params.skill_name ~= "qiao__skill_wei024_1" then
-            return original(self, who, params)
-          end
-          return { card.id }
+          return { unknown }, { card.id }, true
         end,
       }, function()
         inRoom(function()
@@ -1075,18 +1050,7 @@ function Testqiao_em_wei001_caocao:testChangelingBannerSameEventThenExpiry()
         end,
       }, function()
         skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-          askToChoosePlayers = function(self, who, params, original)
-            if params.skill_name ~= "qiao__skill_wei024_1" then
-              return original(self, who, params)
-            end
-            return { target }
-          end,
-          askToCards = function(self, who, params, original)
-            if params.skill_name ~= "qiao__skill_wei024_1" then
-              return original(self, who, params)
-            end
-            return { giveCard.id }
-          end,
+          askToChooseCardsAndPlayers = function() return { target }, { giveCard.id }, true end,
         }, function()
           inRoom(function()
             room.logic:trigger(fk.EventPhaseStart, user,
@@ -1124,8 +1088,7 @@ function Testqiao_em_wei001_caocao:testChangelingBannerSameEventThenExpiry()
       end,
     }, function()
       skill_test.withSkillRequests(room, "qiao__skill_wei024_1", {
-        askToChoosePlayers = function() error("到期后的常令不应再选人") end,
-        askToCards = function() error("到期后的常令不应再选牌") end,
+        askToChooseCardsAndPlayers = function() error("到期后的常令不应再询问") end,
       }, function()
         inRoom(function()
           room.logic:trigger(fk.EventPhaseStart, user,
@@ -1198,12 +1161,9 @@ function Testqiao_em_wei001_caocao:testQiceDeputyChangePublicEntry()
   end)
   local chosen
   skill_test.withSkillRequests(room, "qiao__skill_wei020_1", {
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei020_1" then
-        chosen = params.choices[1]
-        return chosen
-      end
-      return original(self, who, params)
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
     end,
   }, function()
     inRoom(function()
@@ -1250,13 +1210,10 @@ function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
   end)
   local skill = Fk.skills["qiao__skill_wei020_1"]
   skill_test.withSkillRequests(room, "qiao__skill_wei020_1", {
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei020_1" then
-        if table.contains(params.choices, "changeDeputy") then return "changeDeputy" end
-        chosen = params.choices[1]
-        return chosen
-      end
-      return original(self, who, params)
+    askToChoice = function() return "changeDeputy" end,
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
     end,
   }, function()
     inRoom(function()
@@ -1450,9 +1407,9 @@ function Testqiao_em_wei001_caocao:testDanliCannotRemoveBannerDeputy()
     local asked = false
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, _, params)
-        lu.assertEquals(params.choices, { "1", "Cancel" })
+        lu.assertEquals(params.choices, { "qiao__wei044_draw" })
         asked = true
-        return "1"
+        return "qiao__wei044_draw"
       end,
     }, function()
       room.logic:trigger(fk.Damaged, user, { who = user, from = source, damage = 1 })
@@ -1480,9 +1437,9 @@ function Testqiao_em_wei001_caocao:testLightningWithoutSourceAllowsDanliDeputyOn
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, who, params)
         lu.assertIs(who, user)
-        lu.assertEquals(params.choices, {"2", "Cancel"})
+        lu.assertEquals(params.choices, { "qiao__wei044_remove" })
         asked = asked + 1
-        return "2"
+        return "qiao__wei044_remove"
       end,
       askToDiscard = function() error("无伤害来源时不应要求弃牌") end,
     }, function()
@@ -1506,8 +1463,8 @@ function Testqiao_em_wei001_caocao:testDanliDeadSourceAllowsLegalDeputy()
     user.hp = user.maxHp - 1
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, _, params)
-        lu.assertTrue(table.contains(params.choices, "2"))
-        return "2"
+        lu.assertTrue(table.contains(params.choices, "qiao__wei044_remove"))
+        return "qiao__wei044_remove"
       end,
       askToDiscard = function() error("死亡的来源不应再被询问弃牌") end,
     }, function()
@@ -1537,6 +1494,9 @@ function Testqiao_em_wei001_caocao:testGuestChangeAndSharedQiceLimit()
         end
         return params.choices[1]
       end,
+      askToCustomDialog = function(_, _, params)
+        return { general = params.component.prop.candidates[1] }
+      end,
     }, function()
       for _, who in ipairs({ first, first, second }) do
         W.addTempSkill(room, who, qice)
@@ -1561,12 +1521,12 @@ function Testqiao_em_wei001_caocao:testForeignChanglingMayCommandWei()
     holder.phase = Player.Start
     local asked = false
     skill_test.withSkillRequests(room, id, {
-      askToChoosePlayers = function(_, _, params)
+      askToChooseCardsAndPlayers = function(_, _, params)
         lu.assertTrue(table.contains(params.targets, p(1)), "吴势力的持有者可选魏")
         lu.assertFalse(table.contains(params.targets, p(8)), "不能选另一吴角色")
         lu.assertFalse(table.contains(params.targets, holder))
         asked = true
-        return {}
+        return {}, {}, false
       end,
     }, function()
       room.logic:trigger(fk.EventPhaseStart, holder, PhaseData:new { who = holder, phase = Player.Start })

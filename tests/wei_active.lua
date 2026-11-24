@@ -55,9 +55,11 @@ local function equip(player, name, suit, number)
   return id
 end
 
-local function activate(player, name, targets)
+local function activate(player, name, targets, option)
   inRoom(function()
-    room():handleUseCardReply(player, FkTest.ReplyUseSkill(name, targets, {}))
+    local reply = FkTest.ReplyUseSkill(name, targets, {})
+    reply.interaction_data = option
+    room():handleUseCardReply(player, reply)
   end)
 end
 
@@ -146,7 +148,7 @@ function Testqiao_wei_active:testQiangxiPaysHpAndDamagesOncePerTargetPerPhase()
   setPlayPhase(p1)
   inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp end)
   local before = p2.hp
-  activate(p1, QIANGXI, { p2 })
+  activate(p1, QIANGXI, { p2 }, "#qiao__skill_wei012_1-hp")
   lu.assertEquals(p1.hp, p1.maxHp - 1)
   lu.assertEquals(p2.hp, before - 1)
   lu.assertTrue(table.contains(p1:getTableMark("qiao__skill_wei012_1-targets-phase"), p2.id))
@@ -172,8 +174,8 @@ function Testqiao_wei_active:testQiangxiDiscardHandWeaponPaysOnce()
     end
     return originalMove(self, ...)
   end
-  FkTest.setNextReplies(p1, { { QIANGXI_OPT_DISCARD }, FkTest.ReplyDiscard({ first }) })
-  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }) end)
+  FkTest.setNextReplies(p1, { FkTest.ReplyDiscard({ first }) })
+  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }, QIANGXI_OPT_DISCARD) end)
   room().moveCards = originalMove
   assert(ok, err)
 
@@ -233,8 +235,8 @@ function Testqiao_wei_active:testQiangxiDiscardEquippedWeaponPaysOnce()
     end
     return originalMove(self, ...)
   end
-  FkTest.setNextReplies(p1, { { QIANGXI_OPT_DISCARD }, FkTest.ReplyDiscard({ equipped }) })
-  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }) end)
+  FkTest.setNextReplies(p1, { FkTest.ReplyDiscard({ equipped }) })
+  local ok, err = pcall(function() activate(p1, QIANGXI, { p2 }, QIANGXI_OPT_DISCARD) end)
   room().moveCards = originalMove
   assert(ok, err)
 

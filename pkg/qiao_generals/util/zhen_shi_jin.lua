@@ -7,7 +7,7 @@ local U = {}
 U.SANCHEN_TARGETS = "qiao_jin006_1_targets"
 U.SANCHEN_PHASE = "qiao_jin006_1_phase"
 U.LAST_USE = "qiao_jin006_3_last-turn"
-U.RANGE = "qiao_jin022b_range"
+U.RANGE = "@qiao_jin022b_range"
 U.RANGE_SKILL = "qiao__skill_jin022b_range"
 U.CHEN_SKILL = "qiao__skill_jin006_1"
 

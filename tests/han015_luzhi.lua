@@ -127,12 +127,13 @@ function Testqiao_han015_luzhi:testBeikouOncePerCharacterOnReveal()
   clearCards(target)
   local invoked = 0
   skill_test.withSkillRequests(room, BEIKOU, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == BEIKOU then invoked = invoked + 1; return true end
-      return original(self, who, params)
-    end,
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == BEIKOU then return DRAW end
+    askToSkillInvoke = function() error("备寇应直接询问选项") end,
+    askToChoices = function(self, who, params, original)
+      invoked = invoked + 1
+      lu.assertEquals(params.choices, { DRAW, "Cancel" })
+      lu.assertEquals(params.all_choices, { DRAW, "qiao__skill_han015_2-discard", "Cancel" })
+      lu.assertTrue(params.single)
+      FkTest.setNextReplies(who, { { DRAW } })
       return original(self, who, params)
     end,
   }, function()
@@ -201,13 +202,11 @@ function Testqiao_han015_luzhi:testXiutiDistinctRevealedCardsAndDrawToMaxHp()
 
   local xiutiInvoked = 0
   skill_test.withSkillRequests(room, XIUTI, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == XIUTI then xiutiInvoked = xiutiInvoked + 1; return true end
-      return original(self, who, params)
-    end,
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name == XIUTI then return { player, p(2) } end
-      return original(self, who, params)
+    askToChoosePlayers = function(_, _, params)
+      xiutiInvoked = xiutiInvoked + 1
+      lu.assertEquals(params.max_num, 2)
+      lu.assertTrue(params.cancelable)
+      return { player, p(2) }
     end,
   }, function()
     inRoom(function()

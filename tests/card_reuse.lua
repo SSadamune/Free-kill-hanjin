@@ -631,14 +631,21 @@ function Testqiao_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
     lu.assertTrue(p:hasSkill("qiao__bronze_sparrow_skill"))
     give(room, p, physical)
     give(room, p, extra) -- ensure 空巢 is false
-    -- 铜雀：先确认发动，再选择本次无视的条目；两次询问都按新交互回复。
-    FkTest.setNextReplies(p, {
-      "1",
-      { "qiao__bronze_sparrow_option:::1:qiao_condition_kongchao" },
-    })
     FkTest.setNextReplies(t, { "" })
     data = UseCardData:new { from = p, tos = { t }, card = slash, extra_data = {} }
-    room:useCard(data)
+    local askChoice = room.askToChoice
+    local asked = 0
+    skill_test.withSkillRequests(room, "qiao__bronze_sparrow_skill", {
+      askToChoice = function(self, who, params)
+        asked = asked + 1
+        lu.assertEquals(params.choices, {
+          "qiao__bronze_sparrow_option:1::qiao_adaptation_draw:qiao_condition_kongchao",
+        })
+        FkTest.setNextReplies(p, { { params.choices[1] } })
+        return askChoice(self, who, params)
+      end,
+    }, function() room:useCard(data) end)
+    lu.assertEquals(asked, 1)
     -- 同一回合第二次使用应变牌时不再提供铜雀。
     lu.assertEquals(p:usedSkillTimes("qiao__bronze_sparrow_skill", Player.HistoryTurn), 1)
   end)
@@ -657,7 +664,7 @@ function Testqiao_card_reuse:testBronzeSparrowCancelKeepsTheTurnUse()
   first:addSubcard(firstCard.id)
   local second = Fk:cloneCard("qiao__slash")
   second:addSubcard(secondPhysical.id)
-  A.setCardEntries(first, { { id = "cancel_probe", condition = "kongchao", effect = "draw" } })
+  A.setCardEntries(first, { { id = "cancel_probe", condition = "canqu", effect = "draw" } })
   A.setCardEntries(second, { { id = "later_probe", condition = "kongchao", effect = "draw" } })
   local laterData
   FkTest.runInRoom(function()
@@ -666,21 +673,74 @@ function Testqiao_card_reuse:testBronzeSparrowCancelKeepsTheTurnUse()
     give(room, p, firstCard)
     give(room, p, secondPhysical)
     give(room, p, card("qiao__peach", Card.Heart, 4))
-    FkTest.setNextReplies(p, { "n" }) -- 取消发动
+    room:setPlayerProperty(p, "hp", 1)
+    FkTest.setNextReplies(p, { { "Cancel" } })
     FkTest.setNextReplies(t, { "" })
     local firstData = UseCardData:new { from = p, tos = { t }, card = first, extra_data = {} }
-    room:useCard(firstData)
+    local askChoice = room.askToChoice
+    local asked = 0
+    skill_test.withSkillRequests(room, "qiao__bronze_sparrow_skill", {
+      askToChoice = function(self, who, params)
+        asked = asked + 1
+        lu.assertEquals(params.choices, {
+          "qiao__bronze_sparrow_option_satisfied:1::qiao_adaptation_draw:qiao_condition_canqu",
+        })
+        return askChoice(self, who, params)
+      end,
+    }, function() room:useCard(firstData) end)
+    lu.assertEquals(asked, 1)
     lu.assertNil(A.getResult(firstData).entries[1].ignored_by)
+    lu.assertTrue(A.hasEffect(firstData, "draw"))
     -- 之后的应变牌仍可发动铜雀，说明次数没有被取消消耗。
     FkTest.setNextReplies(p, {
-      "1",
-      { "qiao__bronze_sparrow_option:::1:qiao_condition_kongchao" },
+      { "qiao__bronze_sparrow_option:1::qiao_adaptation_draw:qiao_condition_kongchao" },
     })
     FkTest.setNextReplies(t, { "" })
     laterData = UseCardData:new { from = p, tos = { t }, card = second, extra_data = {} }
     room:useCard(laterData)
   end)
   lu.assertEquals(A.getResult(laterData).entries[1].ignored_by, "qiao__bronze_sparrow_skill")
+end
+
+function Testqiao_card_reuse:testBronzeSparrowShowsSatisfactionWhenAsked()
+  local room = FkTest.room
+  local source, keep, remove = room.players[1], room.players[2], room.players[3]
+  local bronze = card("qiao__bronze_sparrow")
+  local savage = Fk:cloneCard("qiao__savage_assault")
+  A.setCardEntries(savage, {
+    { id = "draw_first", condition = "canqu", effect = "draw" },
+    { id = "then_remove", condition = "fujia", effect = "remove_target" },
+  })
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, source, bronze)
+    use(room, source, { source }, bronze)
+    give(room, keep, room:printCard("qiao__jink", Card.Club, 2))
+    room:setPlayerProperty(source, "hp", 1)
+    local used = UseCardData:new {
+      from = source, tos = { keep, remove }, card = savage, nullifiedTargets = { keep, remove },
+    }
+    local askChoice = room.askToChoice
+    local asked = 0
+    skill_test.withSkillRequests(room, "qiao__bronze_sparrow_skill", {
+      askToChoice = function(self, who, params)
+        asked = asked + 1
+        lu.assertEquals(params.choices, {
+          "qiao__bronze_sparrow_option_satisfied:1::qiao_adaptation_draw:qiao_condition_canqu",
+          "qiao__bronze_sparrow_option:2::qiao_adaptation_remove_target:qiao_condition_fujia",
+        })
+        FkTest.setNextReplies(source, { { "Cancel" }, FkTest.ReplyChoosePlayer({ remove }) })
+        return askChoice(self, who, params)
+      end,
+    }, function() room:useCard(used) end)
+    local entries = A.getResult(used).entries
+    lu.assertEquals(asked, 1)
+    lu.assertTrue(entries[1].triggered)
+    lu.assertTrue(entries[2].triggered)
+    lu.assertNil(entries[2].ignored_by)
+    lu.assertEquals(table.map(used.tos, Util.IdMapper), { keep.id })
+    lu.assertEquals(source:usedSkillTimes("qiao__bronze_sparrow_skill", Player.HistoryTurn), 0)
+  end)
 end
 
 function Testqiao_card_reuse:testAxeUnequipRemovesSkill()

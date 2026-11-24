@@ -7,6 +7,7 @@
 --
 -- 「其可以」的发动、选项和受益者均由死亡角色选择；本技能不硬编码只限他人。
 local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local skill = fk.CreateSkill {
   name = "qiao__skill_han011_2",
 }
@@ -76,11 +77,13 @@ skill:addEffect(fk.Death, {
     if to == nil or to == target or not to:isAlive() or to:isRemoved() then return false end
     if not sameKingdom(player, to) then return false end
 
-    local choice = room:askToChoice(target, {
-      choices = { OPT_CARDS, OPT_DRAW },
+    local choices = { OPT_DRAW }
+    if #target:getCardIds("he") > 0 then table.insert(choices, 1, OPT_CARDS) end
+    local choice = Selection.askOption(room, target, {
+      choices = choices,
+      all_choices = { OPT_CARDS, OPT_DRAW },
       skill_name = skill.name,
       prompt = "#qiao__skill_han011_2-choice",
-      cancelable = true,
     })
     if choice ~= OPT_CARDS and choice ~= OPT_DRAW then return false end
     event:setCostData(self, { choice = choice, to = to })

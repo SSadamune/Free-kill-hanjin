@@ -21,6 +21,7 @@ end
 
 skill:addEffect("active", {
   prompt = "#qiao__skill_wei013_1-prompt",
+  card_num = 0,
   target_num = 1,
   max_phase_use_time = 1,
   target_filter = function(self, player, to_select, selected)

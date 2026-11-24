@@ -163,8 +163,9 @@ function Testqiao_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
   skill_test.withSkillRequests(room, BENG, {
     askToChoices = function(self, who, params, original)
       if params.skill_name ~= BENG then return original(self, who, params) end
+      lu.assertTrue(params.single)
       picked = { LOSE_HP, LOSE_MAX }
-      return picked
+      return { "qiao_option_pair:::" .. LOSE_HP .. ":" .. LOSE_MAX }
     end,
   }, function()
     inRoom(function()

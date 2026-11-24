@@ -8,6 +8,7 @@ local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
+local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
@@ -16,16 +17,6 @@ local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local LtkUI = require "packages.freekill-core.ltk.client.util"
-local MZ = "qiao__skill_han001_2"
-
---- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
---- The shared board client also serves every upstream room, so all other modes
---- and skills must keep the original request class behavior.
-local function isQiaoMZ(request)
-  if request.skill_name ~= MZ then return false end
-  local room = request.room or Fk:currentRoom()
-  return room ~= nil and Modes.inRoom(room)
-end
 
 local function checkSelectedTargets(request, targetValidity)
   local selected = request.selected_targets
@@ -57,24 +48,45 @@ local function checkCommanderCost(request, targetValidity, check)
   return check()
 end
 
-local function recipientRequest(base, name)
+local function activeSelectionSkill(request)
+  if not Modes.inRoom(request.room) or request.sub_selection_flag
+    or not TriggerSelection.applies(request.skill_name, request.extra_data) then return end
+  local skill = Fk.skills[request.skill_name]
+  if skill:isInstanceOf(ActiveSkill) then return skill end
+end
+
+local function canReplaceTarget(request)
+  local skill = activeSelectionSkill(request)
+  return skill ~= nil and skill:getMaxTargetNum(request.player) == 1
+end
+
+local function skillTargetRequest(base, name)
   local request = base:subclass(name)
 
   function request:targetValidity(pid)
     if RemovedTargets.inMode(self.room)
       and RemovedTargets.isRemoved(self.room:getPlayerById(pid)) then return false end
-    if not isQiaoMZ(self) then
-      return checkCommanderCost(self, base.targetValidity, function() return base.targetValidity(self, pid) end)
+    if self.selected_targets and #self.selected_targets > 0 and canReplaceTarget(self) then
+      -- 目标上限为一时，以替换后的空列表判断候选，保留技能原有的目标筛选。
+      local previous = self.selected_targets
+      self.selected_targets = {}
+      local ok, valid = pcall(base.targetValidity, self, pid)
+      self.selected_targets = previous
+      if not ok then error(valid, 0) end
+      return valid
     end
-    local to = self.room:getPlayerById(pid)
-    -- 其他合法角色保持可点击；每次点击都是替换收牌者，而非追加目标。
-    return to ~= nil and not not Fk.skills[MZ]:targetFilter(
-      self.player, to, {}, self.pendings, nil, self.extra_data)
+    return checkCommanderCost(self, base.targetValidity, function() return base.targetValidity(self, pid) end)
+  end
+
+  function request:selectCard(cid, data)
+    local skill = activeSelectionSkill(self)
+    if data.selected and skill and skill:getMaxCardNum(self.player) == 0 then return end
+    return base.selectCard(self, cid, data)
   end
 
   function request:selectTarget(pid, data)
-    if isQiaoMZ(self) and data.selected then
-      if not self:targetValidity(pid) then return end
+    if data.selected and canReplaceTarget(self) then
+      if table.contains(self.selected_targets, pid) or not self:targetValidity(pid) then return end
       self.selected_targets = {}
       self.scene:unselectAllTargets()
     end
@@ -84,10 +96,130 @@ local function recipientRequest(base, name)
   return request
 end
 
-local QiaoPlayCard = recipientRequest(ReqPlayCard, "QiaoPlayCard")
+local QiaoPlayCard = skillTargetRequest(ReqPlayCard, "QiaoPlayCard")
 -- 锁定本体按 class.name 识别「使用牌」请求，例如禁止用牌的界面提示。
-local QiaoUseCard = recipientRequest(ReqUseCard, ReqUseCard.name)
-local QiaoActiveSkill = recipientRequest(ReqActiveSkill, "QiaoActiveSkill")
+local QiaoUseCard = skillTargetRequest(ReqUseCard, ReqUseCard.name)
+local QiaoActiveSkill = skillTargetRequest(ReqActiveSkill, "QiaoActiveSkill")
+
+local function usesTriggerSelection(request)
+  return Modes.inRoom(request.room) and not request.sub_selection_flag
+    and TriggerSelection.applies(request.skill_name, request.extra_data, request.cancelable)
+end
+
+local function uniqueItem(items, valid)
+  local found
+  for id, item in pairs(items) do
+    if item.enabled and valid(id) then
+      if found ~= nil then return nil end
+      found = id
+    end
+  end
+  return found
+end
+
+local function selectUniqueTarget(request, skill, user)
+  if #request.selected_targets ~= 0 or skill:getMinTargetNum(user) ~= 1 then return false end
+  local id = uniqueItem(request.scene:getAllItems("Photo"), function(id) return request:targetValidity(id) end)
+  if id == nil then return false end
+  request:selectTarget(id, { selected = true })
+  return true
+end
+
+local function withoutAutoTarget(data)
+  if not data or not data.autoTarget then return data end
+  data = table.simpleClone(data)
+  data.autoTarget = false
+  return data
+end
+
+function QiaoActiveSkill:selectUniqueCandidates()
+  local skill = Fk.skills[self.skill_name]
+  local function selectCard()
+    if #self.pendings ~= 0 or skill:getMinCardNum(self.player) ~= 1 then return end
+    local id = uniqueItem(self.scene:getAllItems("CardItem"), function(id) return self:cardValidity(id) end)
+    if id ~= nil then
+      self:selectCard(id, { selected = true })
+      self:initiateTargets()
+      return true
+    end
+  end
+
+  local cardSelected = selectCard()
+  local card = self:getUsingCard()
+  local user = self.player
+  if card and self.extra_data and self.extra_data.fix_user then
+    user = self.room:getPlayerById(self.extra_data.fix_user) or user
+  end
+  local targetSkill = card and card:getSkill(user) or skill
+  if selectUniqueTarget(self, targetSkill, user) then
+    selectCard()
+    return true
+  end
+  return cardSelected
+end
+
+function QiaoActiveSkill:refreshAfterUniqueSelection()
+  -- Refresh only after an actual automatic selection. View-as interactions
+  -- send incremental UI data, so a redundant refresh can discard new entries.
+  if self:selectUniqueCandidates() then
+    self:refreshInteraction()
+    self:updateButtons()
+    self:updatePrompt()
+  end
+end
+
+function QiaoActiveSkill:setup(ignoreInteraction, data)
+  if not usesTriggerSelection(self) then return ReqActiveSkill.setup(self, ignoreInteraction, data) end
+  ReqActiveSkill.setup(self, ignoreInteraction)
+  self:refreshAfterUniqueSelection()
+end
+
+function QiaoActiveSkill:update(elemType, id, action, data)
+  if not usesTriggerSelection(self) then return ReqActiveSkill.update(self, elemType, id, action, data) end
+  if elemType == "Button" and id == "OK" and not self:feasible() then return false end
+  local result = ReqActiveSkill.update(self, elemType, id, action, withoutAutoTarget(data))
+  if elemType == "Interaction" or ((elemType == "CardItem" or elemType == "Photo") and data.selected) then
+    self:refreshAfterUniqueSelection()
+  end
+  return result
+end
+
+local function usesTriggerCard(request)
+  return Modes.inRoom(request.room) and request.extra_data and request.extra_data.qiao_trigger_use
+end
+
+function QiaoUseCard:selectTriggerTarget()
+  local card = self:getUsingCard()
+  if card then
+    selectUniqueTarget(self, card:getSkill(self.player), self.player)
+    self:updateButtons()
+    self:updatePrompt()
+  end
+end
+
+function QiaoUseCard:setup()
+  ReqUseCard.setup(self)
+  if not usesTriggerCard(self) then return end
+  for _, item in pairs(self.scene:getAllItems("SkillButton")) do
+    if item.enabled then return end
+  end
+  local id = uniqueItem(self.scene:getAllItems("CardItem"), function(id) return self:cardValidity(id) end)
+  if id ~= nil and #(Fk:getCardById(id).special_skills or {}) == 0 then
+    self:selectCard(id, { selected = true })
+    self:initiateTargets()
+    self:selectTriggerTarget()
+  end
+end
+
+function QiaoUseCard:update(elemType, id, action, data)
+  if not usesTriggerCard(self) or self.sub_selection_flag then
+    return ReqUseCard.update(self, elemType, id, action, data)
+  end
+  if elemType == "Button" and id == "OK" and not self:feasible() then return false end
+  local result = ReqUseCard.update(self, elemType, id, action, withoutAutoTarget(data))
+  if elemType == "CardItem" and data.selected and not self.sub_selection_flag then self:selectTriggerTarget() end
+  return result
+end
 
 --- virtual_viewas 的候选牌名可用性要按当前请求的 extra_data 复核。
 --- 上游刷新只调用 canUseOrResponseInCurrent(card)，正常出杀后再由仁德等
@@ -276,8 +408,8 @@ function QiaoClient:virtualCardPicture(name)
   return name
 end
 
-function QiaoClient:isStateOnlySkill(skillName)
-  return SkillPrelight.isStateOnly(skillName)
+function QiaoClient:canPrelightSkill(skillName)
+  return SkillPrelight.canPrelight(skillName)
 end
 
 function QiaoClient:skillButtonLabel(skillName, label, prelight)
@@ -301,15 +433,21 @@ function QiaoClient:notifyUI(command, data)
     return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
   end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
-    and isQiaoMode() and SkillPrelight.isStateOnly(data[2]) then
+    and isQiaoMode() and not SkillPrelight.canPrelight(data[2]) then
+    if command == "AddSkill" then
+      local skill = Fk.skills[data[2]]
+      if skill:isInstanceOf(ActiveSkill) or skill:isInstanceOf(ViewAsSkill) then
+        -- Rejoin sends the hidden skill straight to the UI. Restore the same
+        -- request-handler skill list that Client:addSkill fills during play.
+        local player = self:getPlayerById(data[1])
+        table.insertIfNeed(player.player_skills, skill)
+      end
+    end
     data = { data[1], data[2] }
   end
   if command == "SetPlayerMark" and data[2] == Retinues.PUBLIC_MARK and isQiaoMode() then
     return
   end
-  -- The native rejoin snapshot may emit fake-skill notifications for active skills.
-  if command == "AddSkill" and data[3] and data[2] == "qiao__skill_han007_1"
-    and isQiaoMode() then return end
   if command == "Ltk.SkillInvoked" and isQiaoMode() then
     data = stripRichText(data)
   end
@@ -322,7 +460,7 @@ function QiaoClient:notifyUI(command, data)
   end
   BaseClient.notifyUI(self, command, data)
   if command == "ChangeSelf" and isQiaoMode() then
-    BaseClient.notifyUI(self, "QiaoRefreshStateSkillButtons", {})
+    BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})

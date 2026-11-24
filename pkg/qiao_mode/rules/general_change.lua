@@ -10,6 +10,7 @@ local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
 local function kingdomOf(player)
   local kingdom = player:getMark("__heg_kingdom")
@@ -55,39 +56,71 @@ function M.candidates(room, player, isDeputy)
   return result
 end
 
+local function chooseCandidate(room, player, isDeputy, shown, options)
+  local guestIllustrations = Guest.replacementEnabled(room)
+  local guestFactions, commanderDetails = {}, {}
+  for _, name in ipairs(shown) do
+    if guestIllustrations and Guest.isGuest(room, name) then
+      guestFactions[name] = Guest.guestKingdoms(name)
+    end
+    local spec = Commander.commanders[name]
+    if spec then
+      local retinues = table.filter(spec.retinues, function(id) return Commander.retinueAllowed(room, id) end)
+      local text = Commander.describeSource(name, retinues)
+      if Commander.limitedAbilityUsed(room, name) then
+        text = text .. Fk:translate("qiao_change_general-commander-used")
+      end
+      commanderDetails[name] = text
+    end
+  end
+  local partner = positionName(player, not isDeputy)
+  local reply = room:askToCustomDialog(player, {
+    skill_name = options.skill_name or "change_general",
+    component = {
+      url = "packages/qiao/pkg/qiao_mode/qml/GeneralChangeBox.qml",
+      prop = {
+        candidates = shown,
+        prompt = options.prompt or "#qiao_change_general-choose",
+        guestIllustrations = guestIllustrations,
+        guestFactions = guestFactions,
+        commanderDetails = commanderDetails,
+        partner = Fk.generals[partner] and partner or "",
+        isDeputy = isDeputy,
+      },
+    },
+  })
+  if type(reply) == "table" and type(reply.general) == "string" and table.contains(shown, reply.general) then
+    return reply.general
+  end
+end
+
 --- 变更一个武将位置。@return boolean, string?
 function M.change(room, player, isDeputy, options)
   options = options or {}
+  isDeputy = isDeputy == true
   if player == nil or player.dead or player:isRemoved() then return false end
   -- 先于候选、选将询问及任何离牌状态清理拒绝；君主牌所在位置不可变更。
-  if Exchange.isLordPosition(player, isDeputy == true) then return false, "restricted_lord" end
-  if Wei.isPositionRestricted(room, player, isDeputy == true) then
+  if Exchange.isLordPosition(player, isDeputy) then return false, "restricted_lord" end
+  if Wei.isPositionRestricted(room, player, isDeputy) then
     return false, "restricted"
   end
-  local pool = M.candidates(room, player, isDeputy == true)
+  local pool = M.candidates(room, player, isDeputy)
   if #pool == 0 then return false, "no_candidate" end
   local num = math.min(options.num or 3, #pool)
   local shown = room:tableRandomPick(pool, num)
-  local chosen
-  if #shown == 1 then
-    chosen = shown[1]
-  else
-    chosen = room:askToChoice(player, {
-      choices = shown,
-      skill_name = options.skill_name or "change_general",
-      prompt = options.prompt or "#qiao_change_general-choose",
-      cancelable = true,
-    })
+  if #shown == 0 then return false, "no_candidate" end
+  local oldName = positionName(player, isDeputy)
+  local chosen = chooseCandidate(room, player, isDeputy, shown, options)
+  if chosen == nil then return false, "cancel" end
+  if player.dead or player:isRemoved() or positionName(player, isDeputy) ~= oldName
+    or not table.contains(M.candidates(room, player, isDeputy), chosen) then
+    return false, "invalid_candidate"
   end
-  if chosen == nil or chosen == "Cancel" or not table.contains(shown, chosen) then
-    return false, "cancel"
-  end
-  local oldName = positionName(player, isDeputy == true)
   if oldName ~= nil and oldName ~= "" then
-    CardState.clearLeavingCardState(player, oldName, isDeputy == true)
+    CardState.clearLeavingCardState(player, oldName, isDeputy)
   end
-  local ok = room:changeHero(player, chosen, false, isDeputy == true, true, false, false)
-  local newName = positionName(player, isDeputy == true)
+  local ok = room:changeHero(player, chosen, false, isDeputy, true, false, false)
+  local newName = positionName(player, isDeputy)
   if ok == false or newName ~= chosen then return false, "change_failed" end
   room:setPlayerMark(player, isDeputy and "__heg_deputy" or "__heg_general", chosen)
   if oldName and oldName ~= "" and not Exchange.isSoldier(oldName) then
@@ -104,6 +137,9 @@ end
 
 Fk:loadTranslationTable {
   ["#qiao_change_general-choose"] = "变更武将：选择一名同势力武将",
+  ["qiao_change_general-commander"] = "统领能力",
+  ["qiao_change_general-commander-used"] = "此限一统领能力本局已使用。",
+  ["qiao_change_general-companion"] = "与保留的武将牌珠联璧合",
 }
 
 return M

@@ -4,6 +4,7 @@
 -- 出牌阶段开始时发动：本阶段自己的手牌对所有角色持续可见（之后获得的手牌也
 -- 可见）；每种花色首次失去最后的手牌后，可摸一张或弃其他角色一张牌。阶段事实
 -- 与可见按 -phase 标记清理；同花色已失去事实不因重新获得而重开。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 
 local skill = fk.CreateSkill {
@@ -106,14 +107,13 @@ skill:addEffect(fk.AfterCardsMove, {
       end)
       local choices = { OPT_DRAW }
       if #others > 0 then table.insert(choices, OPT_DISCARD) end
-      local choice = choices[1]
-      if #choices > 1 then
-        choice = room:askToChoice(player, {
-          choices = choices,
-          skill_name = skill.name,
-          prompt = "#qiao__skill_jin003_1-choice",
-        })
-      end
+      local choice = Selection.askOption(room, player, {
+        choices = choices,
+        all_choices = { OPT_DRAW, OPT_DISCARD },
+        skill_name = skill.name,
+        prompt = "#qiao__skill_jin003_1-choice",
+        cancelable = false,
+      })
       if choice == OPT_DRAW then
         player:drawCards(1, skill.name)
       else

@@ -137,7 +137,7 @@ function Testqiao_shu_effects:testCangjiCancelsOnlyOwnEquipDiscardOnce()
   local ride = give(p1, "qiao__chitu", Card.Heart, 5)
   equip(p1, ride)
 
-  FkTest.setNextReplies(p1, { "1" })
+  FkTest.setNextReplies(p1, { FkTest.ReplyChooseCards({ sword }) })
   inRoom(function() room():throwCard({ sword }, "test", p1, p1) end)
   lu.assertEquals(room():getCardArea(sword), Card.PlayerEquip)
 
@@ -397,8 +397,11 @@ function Testqiao_shu_effects:testKuangguStillResolvesAfterKillingTarget()
   local oldPeach = room().askToPeach
   room().askToPeach = function() return nil end
   skill_test.withSkillRequests(room(), KUANGGU, {
-    askToSkillInvoke = function() invoked = invoked + 1; return true end,
-    askToChoice = function() return "#qiao__skill_shu009_1-draw" end,
+    askToSkillInvoke = function() error("狂骨应直接询问选项") end,
+    askToChoice = function()
+      invoked = invoked + 1
+      return "#qiao__skill_shu009_1-draw"
+    end,
   }, function()
     inRoom(function() room():damage {from = from, to = victim, damage = 1, skillName = "test"} end)
   end)

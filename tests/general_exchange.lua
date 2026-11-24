@@ -3,6 +3,7 @@ local content = __dofile("../../../tests/support/general_exchange_content.lua")
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local H = require "packages.hegemony.util"
 
@@ -28,6 +29,70 @@ Testgeneral_exchange = {
     support.clearRoom()
   end,
 }
+
+function Testgeneral_exchange:testGeneralChangeAsksEvenForTheOnlyCandidate()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  local candidate, partner = "qiao_heg__shu002", "qiao_heg__wei004"
+  FkTest.runInRoom(function()
+    content.setup(room, player, partner, G.deputy.name, "wei")
+    room:setPlayerMark(player, "__heg_kingdom", "wei")
+    room:setBanner("all_kingdoms", { "wei" })
+    Guest.store(room, {})
+    room.settings[Guest.settingKey] = true
+    room.disabled_generals = {}
+    room.general_pile = { candidate }
+    local requests = 0
+    FkTest.setRoomBreakpoint(player, "CustomDialog", function(data)
+      local props = data.component.prop
+      lu.assertStrContains(data.component.url, "GeneralChangeBox.qml")
+      lu.assertEquals(props.candidates, { candidate })
+      lu.assertTrue(props.guestIllustrations)
+      lu.assertEquals(props.guestFactions[candidate], Guest.guestKingdoms(candidate))
+      lu.assertStrContains(props.commanderDetails[candidate], "【酒】")
+      lu.assertEquals(props.partner, partner)
+      lu.assertTrue(props.isDeputy)
+      requests = requests + 1
+      return false
+    end)
+    FkTest.setNextReplies(player, { "__cancel", { general = partner }, { general = candidate } })
+    for _ = 1, 2 do
+      local ok, reason = Change.changeDeputy(room, player)
+      lu.assertFalse(ok)
+      lu.assertEquals(reason, "cancel")
+      lu.assertEquals(player.deputyGeneral, G.deputy.name)
+      lu.assertEquals(room.general_pile, { candidate })
+    end
+    lu.assertEquals({ Change.changeDeputy(room, player) }, { true, candidate })
+    lu.assertEquals(requests, 3)
+    lu.assertEquals(player.deputyGeneral, candidate)
+    lu.assertTrue(Discard.contains(room, G.deputy.name))
+  end)
+end
+
+function Testgeneral_exchange:testGeneralChangeSuppliesEveryOfferWithOrdinaryCardMode()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  local candidates = { "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei008", "qiao_heg__wei010" }
+  FkTest.runInRoom(function()
+    content.setup(room, player, G.wei_a.name, G.deputy.name, "wei")
+    room:setPlayerMark(player, "__heg_kingdom", "wei")
+    room:setBanner("all_kingdoms", { "wei" })
+    Guest.store(room, {})
+    room.settings[Guest.settingKey] = false
+    room.disabled_generals = {}
+    room.general_pile = table.simpleClone(candidates)
+    local asked
+    FkTest.setRoomBreakpoint(player, "CustomDialog", function(data)
+      asked = data.component.prop
+      return false
+    end)
+    FkTest.setNextReplies(player, { "__cancel" })
+    lu.assertFalse(Change.change(room, player, false, { num = #candidates }))
+    lu.assertItemsEquals(asked.candidates, candidates)
+    lu.assertFalse(asked.guestIllustrations)
+    lu.assertEquals(asked.guestFactions, {})
+    lu.assertFalse(asked.isDeputy)
+  end)
+end
 
 function Testgeneral_exchange:testSamePlayerMainDeputySwapKeepsRevealHistoryAndHp()
   local room, p = FkTest.room, FkTest.room.players[1]

@@ -10,6 +10,8 @@ local skill = fk.CreateSkill {
   name = "qiao__skill_qun001_1",
 }
 skill.qiaoImplemented = true
+-- CardUsing 只记录已经用济世转化的桃，不提供独立的发动机会。
+skill.qiaoCanPrelight = false
 
 --- 一张仍然属于该角色且为红色的实体牌。客户端与服务器共用同一校验。
 ---@param player ServerPlayer|ClientPlayer
@@ -116,8 +118,7 @@ skill:addEffect(fk.CardUsing, {
 
 Fk:loadTranslationTable {
   ["#qiao__skill_qun001_1"] = "济世：将一张红色牌当【桃】对濒死角色使用",
-  ["#qiao__skill_qun001_1-exchange"] = "济世：是否用你的一张武将牌交换 %dest 的华佗？",
-  ["#qiao__skill_qun001_1-choose-position"] = "济世：选择用哪一张明置武将牌交换此华佗",
+  ["#qiao__skill_qun001_1-exchange"] = "济世：你可以选择一张明置武将牌，交换 %dest 的华佗",
   ["#qiao__skill_qun001_1-main"] = "主将",
   ["#qiao__skill_qun001_1-deputy"] = "副将",
 }

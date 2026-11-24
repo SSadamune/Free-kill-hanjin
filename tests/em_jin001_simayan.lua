@@ -134,7 +134,7 @@ function Testqiao_em_jin001_simayan:testTransferCannotChooseBannedKingdomAfterFr
   end)
   local function give(reply)
     skill_test.withSkillRequests(room, BANNER, { askToChoices = function(_, _, params)
-      lu.assertItemsEquals(params.choices, { "jin", "wei" })
+      lu.assertItemsEquals(params.choices, { "jin", "wei", "Cancel" })
       return { reply }
     end }, function()
       inRoom(function() room:damage { from = source, to = p(5), damage = 1 } end)
@@ -165,7 +165,7 @@ function Testqiao_em_jin001_simayan:testDamageTransfersAllCiOfChosenKingdom()
   FkTest.setRoomBreakpoint(lord, "AskForChoices", function(data)
     if data[5] == BANNER then
       asks = asks + 1
-      lu.assertItemsEquals(data[1], { "wei", "wu", "han" })
+      lu.assertItemsEquals(data[1], { "wei", "wu", "han", "Cancel" })
       lu.assertTrue(data[4], "只有一个势力也应可以放弃")
       lu.assertStrContains(data[6], tostring(source.id))
     end
@@ -202,7 +202,7 @@ function Testqiao_em_jin001_simayan:testTransferCanDeclineAndOnlyOtherJinDamageQ
   skill_test.withSkillRequests(room, BANNER, {
     askToChoices = function(_, who, params)
       lu.assertIs(who, lord)
-      lu.assertEquals(params.choices, { "jin" })
+      lu.assertEquals(params.choices, { "jin", "Cancel" })
       lu.assertTrue(params.cancelable)
       asks = asks + 1
       return {}
@@ -289,7 +289,7 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
     askToChoices = function(_, _, params)
       lu.assertTrue(params.single)
       lu.assertFalse(params.detailed == true)
-      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE })
+      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE, "Cancel" })
       return { resourceChoice(params) }
     end,
   }, function()
@@ -342,8 +342,7 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     end
     local resource = resourceChoice(params)
     if resource ~= nil then return resource end
-    chosen = params.choices[1]
-    return chosen
+    return params.choices[1]
   end
   -- 通过真实首次双亮生成赐，确保该将牌已从剩余池占用。
   skill_test.withSkillRequests(room, BANNER, {
@@ -369,7 +368,10 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     Guest.store(room, factions)
   end)
   skill_test.withSkillRequests(room, BANNER, {
-    askToChoice = handler,
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
+    end,
     askToChoices = function(_, _, params)
       lu.assertTrue(table.contains(params.choices, CHANGE))
       return { CHANGE }
@@ -400,7 +402,7 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     askToChoices = function(_, _, params)
       branches = table.simpleClone(params.choices)
       lu.assertFalse(params.detailed == true)
-      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE })
+      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE, "Cancel" })
       return { resourceChoice(params) }
     end,
   }, function()
@@ -467,11 +469,11 @@ function Testqiao_em_jin001_simayan:testCiPreventsOwnSkippedDrawPhase()
   local hand, asks = #lord:getCardIds("h"), 0
   FkTest.setRoomBreakpoint(lord, "AskForChoices", function(data)
     if data[5] == BANNER then
-      lu.assertEquals(data[1], { kept, spent })
+      lu.assertEquals(data[1], { kept, spent, "Cancel" })
       lu.assertEquals(data[3], { 1, 1 })
       lu.assertTrue(data[4])
       lu.assertStrContains(data[6], "phase_draw")
-      lu.assertFalse(data[8], "此请求需显示阶段标题和取消按钮")
+      lu.assertTrue(data[8], "点选赐时直接提交")
       asks = asks + 1
     end
     return false
@@ -768,7 +770,6 @@ local function useTransferredCiAfter(changeLord)
   end)
   local asks = 0
   skill_test.withSkillRequests(room, BANNER, {
-    askToChoice = function() error("consume should not ask which Ci to choose") end,
     askToChoices = function(_, _, params)
       asks = asks + 1
       lu.assertTrue(params.single)
@@ -838,12 +839,13 @@ function Testqiao_em_jin001_simayan:testTransferredCiChangesDeputyAfterLordDeath
     room.current, recipient.phase = recipient, Player.Play
     skill_test.withSkillRequests(room, BANNER, {
       askToChoices = function(_, _, params)
+        if params.prompt == "#qiao__jin001_banner-position" then return { "deputy" } end
         lu.assertTrue(table.contains(params.choices, CHANGE), "转野后仍可用赐换将")
         return {CHANGE}
       end,
-      askToChoice = function(_, _, params)
-        lu.assertTrue(table.contains(params.choices, "deputy"))
-        return "deputy"
+      askToCustomDialog = function(_, _, params)
+        lu.assertEquals(params.component.prop.candidates, { jin })
+        return { general = jin }
       end,
     }, function()
       local reply = FkTest.ReplyUseSkill(CONSUME, {}, {})

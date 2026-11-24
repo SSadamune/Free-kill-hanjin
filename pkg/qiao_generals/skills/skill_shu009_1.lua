@@ -5,6 +5,8 @@
 -- 若选择项与本回合上次不同，你本回合使用【杀】的次数+1。
 -- 每次伤害事件只发动一次（不按伤害点数逐点触发）。首次发动没有“上次”，
 -- 不增加次数；次数加成写入回合标记，由公共回合效果读取，失去狂骨后仍保留。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu009_1",
 }
@@ -39,20 +41,15 @@ skill:addEffect(fk.DamageFinished, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_shu009_1-invoke",
-    }) then
-      return false
-    end
     local choices = { OPT_DRAW }
     if player.hp < player.maxHp then table.insert(choices, OPT_RECOVER) end
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
+      all_choices = { OPT_DRAW, OPT_RECOVER },
       skill_name = skill.name,
       prompt = "#qiao__skill_shu009_1-choice",
-      cancelable = false,
     })
+    if choice == nil then return false end
     event:setCostData(self, { choice = choice })
     return true
   end,
@@ -83,7 +80,6 @@ skill:addEffect(fk.DamageFinished, {
 Fk:loadTranslationTable {
   ["qiao__skill_shu009_1"] = "狂骨",
   [":qiao__skill_shu009_1"] = "当你对距离1以内的角色造成伤害后，你可以选择摸一张牌或回复1点体力，若选择项与本回合上次不同，你本回合使用【杀】的次数+1。",
-  ["#qiao__skill_shu009_1-invoke"] = "狂骨：摸一张牌或回复1点体力",
   ["#qiao__skill_shu009_1-choice"] = "狂骨：选择摸牌或回复",
   [OPT_DRAW] = "摸一张牌",
   [OPT_RECOVER] = "回复1点体力",

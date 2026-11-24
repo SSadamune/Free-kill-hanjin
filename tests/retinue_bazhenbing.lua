@@ -44,10 +44,7 @@ function Testqiao_retinue_bazhenbing:testTargetsOtherAndTemporaryViewAsCleansUp(
       origin = "granted" })
   end)
   skill_test.withSkillRequests(room, BAZHEN, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == BAZHEN then return true end
-      return original(self, who, params)
-    end,
+    askToSkillInvoke = function() error("八阵兵应在选目标时确认") end,
     askToUseVirtualCard = function(self, who, params, original)
       if params.skill_name ~= BAZHEN then return original(self, who, params) end
       local card = Fk:cloneCard(LURE)
@@ -75,10 +72,7 @@ function Testqiao_retinue_bazhenbing:testSameNameInstancesHaveIndependentRoundLe
   local turns = { a, b }
   local index = 0
   skill_test.withSkillRequests(room, BAZHEN, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == BAZHEN then return true end
-      return original(self, who, params)
-    end,
+    askToSkillInvoke = function() error("八阵兵应在选目标时确认") end,
     askToUseVirtualCard = function(self, who, params, original)
       if params.skill_name ~= BAZHEN then return original(self, who, params) end
       index = index + 1
@@ -120,10 +114,7 @@ function Testqiao_retinue_bazhenbing:testRealNullificationRequestUsesSlashAsNull
     end
   end
   skill_test.withSkillRequests(room, BAZHEN, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == BAZHEN then return true end
-      return original(self, who, params)
-    end,
+    askToSkillInvoke = function() error("八阵兵应在选目标时确认") end,
     askToUseVirtualCard = function(self, who, params, original)
       if params.skill_name ~= BAZHEN then return original(self, who, params) end
       local card = Fk:cloneCard(LURE)

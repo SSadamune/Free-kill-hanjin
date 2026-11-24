@@ -5,6 +5,7 @@ local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
@@ -52,14 +53,14 @@ function Testmode_rules:testStateSkillsCannotPrelightButMixedSkillsCan()
   local player = room.players[1]
   local hongyan, mashu = "qiao__skill_wu011_2", "qiao__skill_shu006_1"
   local paoxiao = "qiao__skill_shu003_1"
-  lu.assertTrue(SkillPrelight.isStateOnly(hongyan))
-  lu.assertTrue(SkillPrelight.isStateOnly(mashu))
-  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_wu017_2"))
-  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_jin023_2"))
-  lu.assertTrue(SkillPrelight.isStateOnly("qiao__skill_wei002_3"))
-  lu.assertFalse(SkillPrelight.isStateOnly("qiao__skill_em_han001_1"))
-  lu.assertFalse(SkillPrelight.isStateOnly("qiao__skill_em_han001_3"))
-  lu.assertFalse(SkillPrelight.isStateOnly(paoxiao))
+  lu.assertFalse(SkillPrelight.canPrelight(hongyan))
+  lu.assertFalse(SkillPrelight.canPrelight(mashu))
+  lu.assertFalse(SkillPrelight.canPrelight("qiao__skill_wu017_2"))
+  lu.assertFalse(SkillPrelight.canPrelight("qiao__skill_jin023_2"))
+  lu.assertFalse(SkillPrelight.canPrelight("qiao__skill_wei002_3"))
+  lu.assertTrue(SkillPrelight.canPrelight("qiao__skill_em_han001_1"))
+  lu.assertTrue(SkillPrelight.canPrelight("qiao__skill_em_han001_3"))
+  lu.assertTrue(SkillPrelight.canPrelight(paoxiao))
 
   FkTest.runInRoom(function()
     skill_test.installBlankGenerals(room, "shu")
@@ -87,7 +88,79 @@ function Testmode_rules:testStateSkillsCannotPrelightButMixedSkillsCan()
   lu.assertEquals(notices[1], { "AddSkill", { player.id, hongyan } })
   lu.assertEquals(notices[3], { "AddSkill", { player.id, paoxiao, true } })
   lu.assertEquals(notices[5], { "LoseSkill", { player.id, hongyan } })
-  lu.assertEquals(notices[8], { "QiaoRefreshStateSkillButtons", {} })
+  lu.assertEquals(notices[8], { "QiaoRefreshPrelightButtons", {} })
+end
+
+function Testmode_rules:testActiveAndPrelightButtonsFromHiddenSkillNotifications()
+  local room = FkTest.room
+  local serverPlayer = room.players[1]
+  local sanchen = "qiao__skill_jin006_1"
+  local minsi = "qiao__skill_han007_1"
+  local wusheng = "qiao__skill_shu002_1"
+  local shangyi = "qiao__skill_wu017_1"
+  local kanpo = "qiao__skill_shu011_3"
+  FkTest.runInRoom(function()
+    skill_test.installBlankGenerals(room, "jin")
+    skill_test.installDualGenerals(room, serverPlayer, {
+      main = "qiao_heg__jin006", deputy = "qiao_test__jin_2", kingdom = "jin",
+    })
+    serverPlayer:hideGeneral(false)
+    room:setCurrent(serverPlayer)
+    serverPlayer.phase = Player.Play
+    lu.assertTrue(serverPlayer:isFakeSkill(sanchen))
+    room.callbacks.prelight(room, serverPlayer.id, { "", "prelight", sanchen, "true" })
+    lu.assertFalse(table.contains(serverPlayer.prelighted_skills, Fk.skills[sanchen]))
+  end)
+
+  client_room.run(room, function(clients)
+    local player = clients[1]
+    player._fake_skills = table.simpleClone(player._fake_skills)
+    player._manually_fake_skills = table.simpleClone(player._manually_fake_skills)
+    local buttons = {}
+    local board = Fk:getBoardGame("qiao_heg_mode")
+    local client = board.client_klass:new({
+      notifyUI = function(_, command, data)
+        if command ~= "AddSkill" or data[1] ~= player.id then return end
+        local entry = buttons[data[2]] or {}
+        entry[data[3] and "prelight" or "regular"] = true
+        buttons[data[2]] = entry
+      end,
+    })
+    client.players = clients
+    for _, name in ipairs({
+      sanchen, "qiao__skill_jin017_2", "qiao__skill_han005_1", "qiao__skill_han004_1",
+      "qiao__skill_qun001_1", "qiao__skill_shu001_1", minsi, wusheng, shangyi, kanpo,
+    }) do
+      client:addSkill({ player.id, name, true })
+      lu.assertTrue(buttons[name].regular, name)
+      lu.assertEquals(buttons[name].prelight == true, name == wusheng or name == shangyi or name == kanpo, name)
+    end
+
+    -- A room summary restores dark skills separately from the request handler's
+    -- skill list. Rebuild the same client-side state, then send the real snapshot.
+    player.player_skills = {}
+    player._manually_fake_skills = { Fk.skills[sanchen], Fk.skills[minsi], Fk.skills[wusheng] }
+    player.prelighted_skills = {}
+    buttons = {}
+    local previousClient = ClientInstance
+    ClientInstance = client
+    local ok, err = pcall(player.sendDataToUI, player)
+    ClientInstance = previousClient
+    if not ok then error(err, 0) end
+    lu.assertEquals(buttons[sanchen], { regular = true })
+    lu.assertEquals(buttons[minsi], { regular = true })
+    lu.assertTrue(buttons[wusheng].prelight)
+
+    local handler = client.request_handlers.PlayCard:new(player)
+    handler:setup()
+    local button = handler.scene:getAllItems("SkillButton")[sanchen]
+    lu.assertNotNil(button, "重连后技能对应的请求按钮须重新登记")
+    lu.assertTrue(handler:skillButtonValidity(sanchen))
+    handler:selectSkill(sanchen, { selected = true })
+    lu.assertEquals(handler.skill_name, sanchen)
+    lu.assertTrue(handler:targetValidity(clients[2].id))
+    handler:_finish()
+  end)
 end
 
 function Testmode_rules:testOneGlobalWindowAfterAllHandsAreDealt()

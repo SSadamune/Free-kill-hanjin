@@ -63,9 +63,11 @@ function Testqiao_han019_jiping:testLieyiHealsThenPreventsLaterDamage()
   local second = give(player, "qiao__slash", Card.Heart, 3)
   inRoom(function() room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1) end)
   skill_test.withSkillRequests(room, LIEYI, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == LIEYI then return true end
-      return original(self, who, params)
+    askToSkillInvoke = function() error("烈医应直接询问回复量") end,
+    askToChoice = function(_, _, params)
+      lu.assertEquals(params.choices, { "qiao__skill_han019_1-heal1" })
+      lu.assertEquals(params.all_choices, { "qiao__skill_han019_1-heal1", "qiao__skill_han019_1-heal2" })
+      return params.choices[1]
     end,
   }, function()
     inRoom(function()
@@ -106,10 +108,7 @@ local function lieyiHealChoice(choice, expectedHp)
     room.current = player; player.phase = Player.Play; room:setBanner("RoundCount", 1)
   end)
   skill_test.withSkillRequests(room, LIEYI, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == LIEYI then return true end
-      return original(self, who, params)
-    end,
+    askToSkillInvoke = function() error("烈医应直接询问回复量") end,
     askToChoice = function(self, who, params, original)
       if params.skill_name == LIEYI then return choice end
       return original(self, who, params)

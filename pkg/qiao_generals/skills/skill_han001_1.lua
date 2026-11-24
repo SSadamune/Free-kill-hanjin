@@ -40,7 +40,7 @@ skill:addEffect(fk.TargetConfirmed, {
     local legal = discardableHand(player)
     local count = math.min(2, #legal)
     local chosen
-    if #legal == count then
+    if count == 0 then
       if not room:askToSkillInvoke(player, {
         skill_name = skill.name,
         prompt = "#qiao__skill_han001_1-invoke",
@@ -101,7 +101,7 @@ skill:addTest(function(room, me)
   lu.assertTrue(#hand >= 2)
   local user = room.players[2]
   FkTest.setNextReplies(me, {
-    #hand == 2 and "1" or FkTest.ReplyDiscard({ hand[1], hand[2] }),
+    FkTest.ReplyDiscard({ hand[1], hand[2] }),
     "",
   })
   FkTest.runInRoom(function()

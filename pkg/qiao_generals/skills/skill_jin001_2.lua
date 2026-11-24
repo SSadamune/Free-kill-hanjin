@@ -6,6 +6,8 @@
 -- 的应变条目或 Triggered 成功事件当作条件。条件事实由全局监听记录，因此
 -- 暗置、尚未获得技能或后来才获得技能都不抹去本回合已经发生的用牌。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin001_2",
 }
@@ -126,13 +128,14 @@ skill:addEffect(fk.TurnEnd, {
     table.insert(choices, OPTION_DRAW)
     -- Single player-facing request: options plus Cancel. Cancelling returns false
     -- before SkillEffect, so no draw/use, no reveal and no skill-use history.
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
+      all_choices = { OPTION_EQUIP, OPTION_DRAW },
       skill_name = skill.name,
       prompt = "#qiao__skill_jin001_2-choice",
       cancelable = true,
     })
-    if choice == nil or choice == "" or choice == "Cancel" then return false end
+    if choice == nil then return false end
     event:setCostData(self, { choice = choice })
     return true
   end,

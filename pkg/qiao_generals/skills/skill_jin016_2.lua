@@ -29,6 +29,7 @@ end
 skill:addEffect("active", {
   anim_type = "support",
   prompt = "#qiao__skill_jin016_2-prompt",
+  card_num = 0,
   max_phase_use_time = 1,
   min_target_num = 1,
   max_target_num = 3,
