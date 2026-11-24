@@ -96,7 +96,6 @@ skill:addEffect("cardskill", {
     if #subTargets > 1 then prompt = nil end
     local extra_data = {
       must_targets = table.map(subTargets, Util.IdMapper),
-      bypass_times = true,
     }
     local use = room:askToUseCard(to, {
       skill_name = "slash",
@@ -107,7 +106,6 @@ skill:addEffect("cardskill", {
       event_data = effect,
     })
     if use then
-      use.extraUse = true
       room:useCard(use)
     else
       giveOneWeapon()

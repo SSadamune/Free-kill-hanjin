@@ -6,8 +6,7 @@ local U = {}
 
 U.SANCHEN_TARGETS = "qiao_jin006_1_targets"
 U.SANCHEN_PHASE = "qiao_jin006_1_phase"
-U.LAST_USE = "qiao_jin006_3_last"
-U.HISTORY = "qiao_jin006_3_history"
+U.LAST_USE = "qiao_jin006_3_last-turn"
 U.RANGE = "qiao_jin022b_range"
 U.RANGE_SKILL = "qiao__skill_jin022b_range"
 U.CHEN_SKILL = "qiao__skill_jin006_1"
@@ -34,8 +33,6 @@ end
 function U.resetTurn(player)
   player.room:setPlayerMark(player, U.SANCHEN_TARGETS, {})
   player.room:setPlayerMark(player, U.SANCHEN_PHASE, { uses = 0, restored = 0 })
-  player.room:setPlayerMark(player, U.LAST_USE, 0)
-  player.room:setPlayerMark(player, U.HISTORY, {})
 end
 
 function U.resetPhase(player)
@@ -73,27 +70,17 @@ function U.restoreSanChen(player)
   player.room:setPlayerMark(player, U.SANCHEN_PHASE, state)
 end
 
-function U.setLastUse(player, name)
-  player.room:setPlayerMark(player, U.LAST_USE, name or 0)
-end
-
-function U.recordUse(player, name)
-  if type(name) ~= "string" or name == "" then return end
-  local history = player:getMark(U.HISTORY)
-  if type(history) ~= "table" then history = {} else history = table.simpleClone(history) end
-  table.insert(history, name)
-  player.room:setPlayerMark(player, U.HISTORY, history)
+function U.recordUse(player, card)
+  -- 保留用牌本身的牌名。引擎的 trueName 会合并属性杀和两种无懈。
+  local name = card.name
+  local hanjinName = name == "heg__nullification" and "qiao__guozhan__nullification" or "qiao__" .. name
+  if Fk.all_card_types[hanjinName] then name = hanjinName end
   player.room:setPlayerMark(player, U.LAST_USE, name)
-end
-
-function U.history(player)
-  local history = player:getMark(U.HISTORY)
-  return type(history) == "table" and table.simpleClone(history) or {}
 end
 
 function U.lastUse(player)
   local value = player:getMark(U.LAST_USE)
-  return type(value) == "string" and value ~= "" and value or nil
+  return type(value) == "string" and Fk.all_card_types[value] and value or nil
 end
 
 function U.isBasicOrNormalTrick(card)

@@ -110,7 +110,7 @@ skill:addEffect(fk.TurnEnd, {
     local to = (event:getCostData(self) or {}).to
     if to == nil or player.dead or to.dead or to:isRemoved() then return end
     -- 显式条件：目标须在当前回合角色的攻击范围内，而不是翼从持有者。
-    C.useVirtualCard(player.room, player, SLASH, nil, { to }, skill.name, true, nil,
+    C.useVirtualCard(player.room, player, SLASH, nil, { to }, skill.name, nil, nil,
       C.explicit({ in_attack_range_of = target.id, other_roles = true },
         { names = { SLASH } }))
   end,

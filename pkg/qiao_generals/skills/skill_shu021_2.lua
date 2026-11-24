@@ -48,7 +48,7 @@ skill:addEffect("active", {
     if player.dead then return end
     local after = Exchange.actualGeneral(player, isDeputy)
     if after == before then return end
-    room:addPlayerMark(target, "CompanionEffect", 1)
+    H.addHegMark(target, "companion")
     room:handleAddLoseSkills(target, CUNSI, skill.name, false, true)
   end,
 })

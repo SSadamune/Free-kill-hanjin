@@ -15,6 +15,7 @@
 -- 装备、AOE）与合法转化牌的原有目标规则；不在这里另写一套目标算法。
 local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
 
 local M = {}
 
@@ -72,6 +73,9 @@ function M.askToUseCard(player, params)
   ask.extra_data.not_passive = true
   local use = player.room:askToUseCard(player, ask)
   if use == nil or use.card == nil then return nil end
+  if ask.extra_data.extraUse ~= nil then use.extraUse = ask.extra_data.extraUse end
+  SlashUseTiming.applyEffectUse(use)
+  if use.card.trueName == "slash" then ask.extra_data = SlashUseTiming.effectTargetData(ask.extra_data) end
   local ok = M.validate(player.room, player, use, ask.pattern, ask.extra_data)
   if not ok then return nil end
   return use

@@ -541,6 +541,8 @@ function Testqiao_em_jin001_simayan:testCaixingMultipleMountsOpensClientCardChoo
   local room, lord, other = FkTest.room, p(1), p(2)
   local field, discarded, oldOffensive, oldDefensive
   inRoom(function()
+    room.current = lord
+    lord.hp = lord.maxHp - 1
     field = room:printCard("qiao__chitu", Card.Heart, 5)
     discarded = room:printCard("qiao__linxiao_yuyu", Card.Spade, 5)
     oldOffensive = room:printCard("qiao__chitu", Card.Club, 5)
@@ -551,6 +553,7 @@ function Testqiao_em_jin001_simayan:testCaixingMultipleMountsOpensClientCardChoo
     room:moveCardTo(discarded.id, Card.DiscardPile, nil, fk.ReasonJustMove, CAIXING)
   end)
 
+  local handBefore = lord:getHandcardNum()
   local wire
   FkTest.setRoomBreakpoint(lord, "AskForCardChosen", function(data)
     wire = cbor.encode(data)
@@ -588,6 +591,23 @@ function Testqiao_em_jin001_simayan:testCaixingMultipleMountsOpensClientCardChoo
   lu.assertIs(room:getCardOwner(field.id), other)
   lu.assertEquals(room:getCardArea(oldOffensive.id), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(oldDefensive.id), Card.DiscardPile)
+  lu.assertEquals(lord.hp, lord.maxHp, "採幸置入临筱玉舆并替换两张坐骑时只回复一次")
+  lu.assertEquals(lord:getHandcardNum(), handBefore)
+
+  inRoom(function() lord.hp = lord.maxHp - 1 end)
+  local nextPhase = { phase = Player.Play, skipped = false }
+  skill_test.withSkillRequests(room, CAIXING, {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function() room.logic:trigger(fk.EventPhaseChanging, lord, nextPhase) end)
+  end)
+  lu.assertTrue(nextPhase.skipped)
+  lu.assertEquals(room:getCardArea(discarded.id), Card.DiscardPile)
+  lu.assertIs(room:getCardOwner(field.id), lord)
+  lu.assertEquals(room:getCardArea(field.id), Card.PlayerEquip)
+  lu.assertEquals(lord.hp, lord.maxHp, "採幸以单栏坐骑替换临筱玉舆也回复")
+  lu.assertEquals(lord:getHandcardNum(), handBefore)
+  lu.assertEquals(Fk:translate("qiao__dual_mount_rule"), "坐骑替换")
 end
 
 function Testqiao_em_jin001_simayan:testResourceCiAndCaixingAndDingfei()

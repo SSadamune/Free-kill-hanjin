@@ -104,8 +104,8 @@ skill:addEffect(fk.EventPhaseStart, {
       local need = lostHp(player) - #player:getCardIds("h")
       if need > 0 then player:drawCards(need, skill.name) end
     elseif canSlash(player, target) and validMaterials(player, cost.cards) then
-      C.useVirtualCard(player.room, player, ICE, cost.cards, { target }, skill.name, true,
-        { bypass_times = true }, C.explicit({}, { names = { ICE }, min_targets = 1, max_targets = 1 }))
+      C.useVirtualCard(player.room, player, ICE, cost.cards, { target }, skill.name, nil,
+        nil, C.explicit({}, { names = { ICE }, min_targets = 1, max_targets = 1 }))
     end
   end,
 })

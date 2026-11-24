@@ -44,17 +44,19 @@ helper:addEffect(fk.TurnEnd, {
   priority = 0,
   can_trigger = function(self, event, target, player, data)
     if target ~= player then return false end
-    local x = player:getMark(X_MARK)
-    return x > 0 and damageThisTurn(player) < x
+    local thresholds = player:getTableMark(X_MARK)
+    if #thresholds == 0 then return false end
+    local damage = damageThisTurn(player)
+    return table.find(thresholds, function(x) return damage < x end) ~= nil
   end,
   on_cost = Util.TrueFunc,
-  on_use = function(self, event, target, player, data)
+  on_use = function(self, event, target, player)
     local room = player.room
-    local x = player:getMark(X_MARK)
-    local damage = damageThisTurn(player)
+    local thresholds = player:getTableMark(X_MARK)
     room:setPlayerMark(player, X_MARK, 0)
-    if damage < x and not player.dead then
-      room:loseHp(player, 1, skill.name)
+    for _, threshold in ipairs(thresholds) do
+      if player.dead then break end
+      if damageThisTurn(player) < threshold then room:loseHp(player, 1, skill.name) end
     end
   end,
 })
@@ -91,7 +93,7 @@ skill:addEffect(fk.DrawNCards, {
     local room = player.room
     ensureHelper(room)
     local x = sameKingdomCount(player)
-    room:setPlayerMark(player, X_MARK, x)
+    room:addTableMark(player, X_MARK, x)
     data.n = data.n + x
   end,
 })

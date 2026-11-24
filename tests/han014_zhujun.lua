@@ -121,4 +121,19 @@ function Testqiao_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
   lu.assertEquals(FkTest.room:getCardArea(ownerSlash), Card.DiscardPile)
 end
 
+function Testqiao_han014_zhujun:testElementalSlashCountsAsOneCharacter()
+  local room, owner, victim = FkTest.room, p(1), p(2)
+  local first = give(owner, "qiao__fire__slash", Card.Heart, 3)
+  local second = give(owner, "qiao__thunder__slash", Card.Spade, 7)
+  local hp = victim.hp
+  inRoom(function()
+    room.current = owner
+    owner.phase = Player.Play
+    room:useCard { from = owner, tos = { victim }, card = Fk:getCardById(first) }
+    lu.assertEquals(victim.hp, hp - 2)
+    room:useCard { from = owner, tos = { victim }, card = Fk:getCardById(second), extraUse = true }
+  end)
+  lu.assertEquals(victim.hp, hp - 3)
+end
+
 return { name = "qiao_han014_zhujun" }

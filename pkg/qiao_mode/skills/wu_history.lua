@@ -22,19 +22,16 @@ skill:addEffect(fk.AfterCardUseDeclared, {
 skill:addEffect(fk.AfterCardsMove, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    if player == nil then return false end
-    for _, move in ipairs(data or {}) do
-      if move.toArea == Card.DiscardPile then return true end
-    end
-    return false
+    -- 移牌事件无单一目标；每批移牌只由一名座次代表记录一次。
+    return player.seat == 1 and data ~= nil
   end,
   on_refresh = function(self, event, target, player, data)
     local room = player.room
-    for _, move in ipairs(data or {}) do
-      if move.toArea == Card.DiscardPile then
-        for _, info in ipairs(move.moveInfo or {}) do
+    for _, move in ipairs(data) do
+      for _, info in ipairs(move.moveInfo) do
+        if move.toArea == Card.DiscardPile then
           local card = Fk:getCardById(info.cardId, true)
-          if card ~= nil then H.record(room, card.suit) end
+          if card then H.record(room, card.suit) end
         end
       end
     end

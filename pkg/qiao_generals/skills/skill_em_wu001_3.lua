@@ -14,12 +14,6 @@ local function isPearl(id)
   return card ~= nil and card.name == P.PEARL
 end
 
-local function isTreasure(id)
-  local card = Fk:getCardById(id, true)
-  return card ~= nil and card.type == Card.TypeEquip
-    and card.sub_type == Card.SubtypeTreasure
-end
-
 local function equippedPearlIds(player)
   return table.filter(player:getEquipments(Card.SubtypeTreasure), isPearl)
 end
@@ -40,10 +34,9 @@ skill:addEffect(fk.BeforeCardsMove, {
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) then return false end
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.moveReason ~= fk.ReasonDiscard
-        and move.proposer ~= nil and move.proposer ~= player then
+      if move.from == player and move.moveReason ~= fk.ReasonDiscard then
         for _, info in ipairs(move.moveInfo or {}) do
-          if info.fromArea == Card.PlayerEquip and isTreasure(info.cardId) then return true end
+          if info.fromArea == Card.PlayerEquip and P.isProtectedTreasure(player, move.proposer, info.cardId) then return true end
         end
       end
     end
@@ -52,10 +45,9 @@ skill:addEffect(fk.BeforeCardsMove, {
   on_use = function(self, event, target, player, data)
     local ids = {}
     for _, move in ipairs(data or {}) do
-      if move.from == player and move.moveReason ~= fk.ReasonDiscard
-        and move.proposer ~= nil and move.proposer ~= player then
+      if move.from == player and move.moveReason ~= fk.ReasonDiscard then
         for _, info in ipairs(move.moveInfo or {}) do
-          if info.fromArea == Card.PlayerEquip and isTreasure(info.cardId) then
+          if info.fromArea == Card.PlayerEquip and P.isProtectedTreasure(player, move.proposer, info.cardId) then
             table.insert(ids, info.cardId)
           end
         end

@@ -82,13 +82,14 @@ end
 function Testqiao_card_resolution:testRepeatVisitsAllTargetsWithoutRepeatingAimEvents()
   local room = FkTest.room
   local p, a, b = room.players[1], room.players[2], room.players[3]
-  local c = Fk:cloneCard("qiao__slash")
-  local counts, effects, uses = probe(room, "targets", c.name, 1)
+  local counts, effects, uses = probe(room, "targets", "qiao__slash", 1)
   local ahp, bhp = a.hp, b.hp
   FkTest.runInRoom(function()
     FkTest.setNextReplies(a, { "", "" })
     FkTest.setNextReplies(b, { "", "" })
-    room:useCard { from = p, tos = { a, b }, card = c }
+    local card = room:printCard("qiao__slash")
+    room:obtainCard(p, card)
+    support.playCard(room, p, card, { a, b })
   end)
   assertSingleUse(counts, 2, 4)
   lu.assertEquals(a.hp, ahp - 2)

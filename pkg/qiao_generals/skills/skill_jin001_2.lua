@@ -20,8 +20,9 @@ local function useTargetPolicy()
   return require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 end
 
-local function canHeal(target, peach)
-  return require("packages.qiao.pkg.qiao_mode.rules.extra_targets").meetsIntrinsicTargetRequirements(peach, target)
+local function canHeal(player, target, peach)
+  return require("packages.qiao.pkg.qiao_mode.rules.extra_targets")
+    .meetsIntrinsicTargetRequirements(player, peach, target)
 end
 
 local AUX = "#qiao__skill_jin001_2_active"
@@ -60,7 +61,7 @@ local function optionEquipLegal(room, player)
   if player:prohibitUse(peach) then return false end
   for _, target in ipairs(room:getPresentPlayers()) do
     if target:isAlive() and not target:isRemoved()
-      and canHeal(target, peach) and not player:isProhibited(target, peach) then
+      and canHeal(player, target, peach) and not player:isProhibited(target, peach) then
       return true
     end
   end
@@ -108,7 +109,7 @@ skill:addAuxActiveSkill(AUX, {
     if #selected >= 1 or to_select == nil then return false end
     if not to_select:isAlive() or to_select:isRemoved() then return false end
     local peach = Fk:cloneCard(PEACH)
-    return canHeal(to_select, peach) and not player:isProhibited(to_select, peach)
+    return canHeal(player, to_select, peach) and not player:isProhibited(to_select, peach)
   end,
 })
 

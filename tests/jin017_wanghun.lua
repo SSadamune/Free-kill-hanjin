@@ -38,6 +38,32 @@ function Testqiao_jin017_wanghun:testChuanzhengGrantsXianjie()
   end)
 end
 
+function Testqiao_jin017_wanghun:testXianjieChecksHanjinDamageCardCategory()
+  local room, me = FkTest.room, p(1)
+  local skill = Fk.skills[XIANJIE]
+  inRoom(function()
+    room:handleAddLoseSkills(me, XIANJIE, nil, false, true)
+    local hand = me:getCardIds("he")
+    if #hand > 0 then room:moveCardTo(hand, Card.DiscardPile, nil, fk.ReasonJustMove) end
+    for _, name in ipairs({ "qiao__slash", "qiao__fire__slash", "qiao__duel" }) do
+      local damage = room:printCard(name, Card.Spade, 2)
+      room:obtainCard(me, damage, false, fk.ReasonJustMove)
+      lu.assertFalse(skill:cardFilter(me, damage.id, {}))
+      lu.assertNil(skill:viewAs(me, { damage.id }))
+    end
+    lu.assertFalse(skill:enabledAtPlay(me))
+    for _, name in ipairs({ "qiao__lightning", "qiao__qinggang_sword" }) do
+      local material = room:printCard(name, Card.Spade, 3)
+      room:obtainCard(me, material, false, fk.ReasonJustMove)
+      lu.assertTrue(skill:cardFilter(me, material.id, {}))
+      local converted = skill:viewAs(me, { material.id })
+      lu.assertEquals(converted.name, "qiao__iron_chain")
+      lu.assertEquals(Card:getIdList(converted), { material.id })
+    end
+    lu.assertTrue(skill:enabledAtPlay(me))
+  end)
+end
+
 function Testqiao_jin017_wanghun:testZongrongOnlyRelaxesTheHoldersLimitsAgainstChainedTargets()
   local room, holder, other, distant = FkTest.room, p(1), p(2), p(4)
   local ids = {}

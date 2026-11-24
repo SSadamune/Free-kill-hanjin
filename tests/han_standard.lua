@@ -249,4 +249,43 @@ function Testqiao_han_standard:testJibingDamageAtLeastXNoHpLoss()
   lu.assertEquals(p2():getMark(JB .. "_x-turn"), 0)
 end
 
+local function checkTwoJibingDraws(damage, expectedLoss)
+  local room, owner = FkTest.room, p2()
+  setHand(room, owner, {})
+  setKingdom(room, p4(), "han")
+  owner.hp = 4
+  local changed = false
+  local skel = fk.CreateSkill { name = "#test_jibing_two_draws_" .. damage }
+  skel:addEffect(fk.EventPhaseEnd, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return not changed and target == owner and player == owner and data.phase == Player.Draw
+    end,
+    on_refresh = function()
+      changed = true
+      room:setPlayerProperty(p4(), "kingdom", "wei")
+      p4().kingdom = "wei"
+      if damage > 0 then
+        p3().maxHp, p3().hp = 6, 6
+        room:damage { from = owner, to = p3(), damage = damage }
+      end
+    end,
+  })
+  local helper = skel:createSkill()
+  Fk.skills[helper.name] = helper
+  FkTest.setNextReplies(owner, { "1", "1" })
+  inRoom(function()
+    room:addSkill(helper)
+    GameEvent.Turn:create(TurnData:new(owner, "game_rule", { Player.Draw, Player.Draw })):exec()
+  end)
+  lu.assertTrue(changed)
+  lu.assertEquals(owner:usedSkillTimes(JB, Player.HistoryGame), 2)
+  lu.assertEquals(owner:getHandcardNum(), 11)
+  lu.assertEquals(owner.hp, 4 - expectedLoss)
+end
+
+function Testqiao_han_standard:testJibingBothThresholdsMiss() checkTwoJibingDraws(0, 2) end
+function Testqiao_han_standard:testJibingFirstThresholdMisses() checkTwoJibingDraws(3, 1) end
+function Testqiao_han_standard:testJibingBothThresholdsMet() checkTwoJibingDraws(4, 0) end
+
 return { name = "qiao_han_standard" }

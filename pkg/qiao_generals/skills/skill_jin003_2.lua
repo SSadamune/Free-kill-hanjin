@@ -54,7 +54,7 @@ skill:addEffect("active", {
     if id ~= nil and table.contains(user:getCardIds("h"), id)
       and Fk:getCardById(id).type == Card.TypeBasic then
       use = C.useVirtualCard(room, user, SLASH, { id }, { victim },
-        skill.name, true, nil, C.explicit({ other_roles = true }, { names = { SLASH } }))
+        skill.name, nil, nil, C.explicit({ other_roles = true }, { names = { SLASH } }))
     end
     if use ~= nil then return end
 

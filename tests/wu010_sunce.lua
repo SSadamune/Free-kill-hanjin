@@ -2,6 +2,7 @@
 -- 规则依据：docs/rules/generals/wu010-sunce.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local H = require "packages.hegemony.util"
 
 local SUNCE = "qiao_heg__wu010"
 local JIANG = "qiao__skill_wu010_1"
@@ -196,8 +197,10 @@ function Testqiao_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi()
     on_refresh = function()
       captured.yinghun = player:hasSkill(YINGHUN)
       captured.yingzi = player:hasSkill(YINGZI)
-      -- 魂殇在回合结束前失去，清理仍应执行。
-      room:handleAddLoseSkills(player, "-" .. HUNSHANG, nil, false, true)
+      H.removeGeneral(player, true)
+      captured.lostHunshang = not player:hasSkill(HUNSHANG)
+      captured.stillYinghun = player:hasSkill(YINGHUN)
+      captured.stillYingzi = player:hasSkill(YINGZI)
     end,
   })
   inRoom(function() room:addSkill(probe:createSkill()) end)
@@ -221,8 +224,40 @@ function Testqiao_wu010_sunce:testHunshangGrantsAndCleanupKeepsOriginalYingzi()
   lu.assertEquals(invoked, 1)
   lu.assertTrue(captured.yinghun)
   lu.assertTrue(captured.yingzi)
+  lu.assertTrue(captured.lostHunshang)
+  lu.assertTrue(captured.stillYinghun)
+  lu.assertTrue(captured.stillYingzi)
   lu.assertFalse(player:hasSkill(YINGHUN))
   lu.assertTrue(player:hasSkill(YINGZI))
+end
+
+function Testqiao_wu010_sunce:testHunshangOutlivesOtherYingziSource()
+  local room, me = FkTest.room, FkTest.room.players[1]
+  local H = require "packages.hegemony.util"
+  local hun, ying = "qiao__skill_wu010_3", "qiao__skill_wu005_1"
+  local asked, beforeRemoval, afterRemoval, afterEnd = 0
+  local watcher = fk.CreateSkill{ name = "#qiao_test_hunshang_yingzi" }
+  watcher:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == me and player == me and data.phase == Player.Play
+    end,
+    on_refresh = function()
+      beforeRemoval = me:hasSkill(ying)
+      H.removeGeneral(me, false)
+      afterRemoval = me:hasSkill(ying)
+    end,
+  })
+  skill_test.withSkillRequests(room, hun, { askToSkillInvoke = function() asked = asked + 1; return true end }, function()
+    inRoom(function()
+      skill_test.installDualGenerals(room, me, { main = "qiao_heg__wu005", deputy = "qiao_heg__wu010", kingdom = "wu" })
+      me.hp = 1
+      room:addSkill(watcher:createSkill())
+      GameEvent.Turn:create(TurnData:new(me, "game_rule", { Player.Start, Player.Play })):exec()
+      afterEnd = me:hasSkill(ying)
+    end)
+  end)
+  lu.assertEquals({ asked, beforeRemoval, afterRemoval, afterEnd }, { 1, true, true, false })
 end
 
 return { name = "qiao_wu010_sunce" }

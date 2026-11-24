@@ -639,6 +639,20 @@ function Testqiao_extra_targets:testExplicitDistanceReplacesTheCardAttackRange()
   lu.assertFalse(contains(result, p[1])) -- distance 0
 end
 
+function Testqiao_extra_targets:testExplicitExtraTargetCannotAddSlashUser()
+  local p = room().players
+  local use = useData(p[1], { p[2] }, "qiao__fire__slash")
+  for _, condition in ipairs({ {}, function() return true end }) do
+    local entry = { effect = "add_target", target_condition = condition }
+    local result = candidates(use, entry)
+    lu.assertFalse(contains(result, p[1]))
+    lu.assertTrue(contains(result, p[3]))
+    FkTest.runInRoom(function()
+      lu.assertFalse(E.targetLegal(room(), use, p[1], { entries = { entry } }))
+    end)
+  end
+end
+
 function Testqiao_extra_targets:testExplicitConditionIsUsedByTheAddTargetPipeline()
   setKingdoms(groupKingdoms)
   local p = room().players

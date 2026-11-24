@@ -245,6 +245,24 @@ function Testqiao_wei017_lidian:testWangxiOncePerDamageEventNotPerPoint()
   revoke(player, XUNXUN)
 
   local invoked = 0
+  local draws = {}
+  local observer = fk.CreateSkill { name = "#qiao_wangxi_draws_test" }
+  observer:addEffect(fk.AfterCardsMove, {
+    global = true,
+    can_refresh = function(self, event, target, who)
+      return who == player
+    end,
+    on_refresh = function(self, event, target, who, moves)
+      local recipients = {}
+      for _, move in ipairs(moves) do
+        if move.skillName == WANGXI and move.moveReason == fk.ReasonDraw then
+          table.insert(recipients, move.to.id)
+        end
+      end
+      if #recipients > 0 then table.insert(draws, recipients) end
+    end,
+  })
+  inRoom(function() room:addSkill(observer:createSkill()) end)
   local function runDamage(from, to, damage)
     skill_test.withSkillRequests(room, WANGXI, {
       askToSkillInvoke = function(self, who, params, original)
@@ -272,6 +290,41 @@ function Testqiao_wei017_lidian:testWangxiOncePerDamageEventNotPerPoint()
   lu.assertEquals(invoked, 2)
   lu.assertEquals(#player:getCardIds(Player.Hand), 2)
   lu.assertEquals(#other:getCardIds(Player.Hand), 2)
+  lu.assertEquals(draws, { { player.id, other.id }, { player.id, other.id } })
+end
+
+function Testqiao_wei017_lidian:testWangxiDoesNotAskAfterLethalDamage()
+  local room, player, other = FkTest.room, p(1), p(2)
+  revoke(player, XUNXUN)
+  local asked = false
+  skill_test.withSkillRequests(room, WANGXI, {
+    askToSkillInvoke = function()
+      asked = true
+      return true
+    end,
+  }, function()
+    inRoom(function()
+      other.hp = 1
+      room:damage { from = player, to = other, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertTrue(other.dead)
+  lu.assertFalse(asked)
+end
+
+function Testqiao_wei017_lidian:testWangxiSealedHand()
+  local room, me, other = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local name = "qiao__skill_wei017_2"
+  local asked = 0
+  inRoom(function()
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    room:abortPlayerArea(other, Player.HandSlot)
+  end)
+  local hand = me:getHandcardNum()
+  skill_test.withSkillRequests(room, name, { askToSkillInvoke = function() asked = asked + 1; return true end }, function()
+    inRoom(function() room:damage { from = me, to = other, damage = 1 } end)
+  end)
+  lu.assertEquals({ asked, me:getHandcardNum() - hand, other:getHandcardNum()}, { 0, 0, 0 })
 end
 
 return { name = "qiao_wei017_lidian" }

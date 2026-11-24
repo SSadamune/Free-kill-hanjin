@@ -151,7 +151,7 @@ skill:addEffect("active", {
       room:addTableMarkIfNeed(player, NEXT_CARD .. "-turn", target.id)
       local point = pindian.fromCard and pindian.fromCard.number or 13
       if point < 9 and target:isAlive() and not target:isRemoved() then
-        C.useVirtualCard(room, player, "qiao__fire__slash", nil, { target }, skill.name, true,
+        C.useVirtualCard(room, player, "qiao__fire__slash", nil, { target }, skill.name, nil,
           nil, C.explicit({ other_roles = true }, { names = { "qiao__fire__slash" } }))
       end
       return

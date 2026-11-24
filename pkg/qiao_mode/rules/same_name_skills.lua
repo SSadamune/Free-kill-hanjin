@@ -18,16 +18,18 @@ function M.instanceName(name)
   return name .. "_second_source"
 end
 
--- 原实现的查询可能捕获原技能名。仅在实例回调期间解释为实例本身。
+--- 原实现的查询可能捕获原技能名。仅在实例回调期间解释为实例本身。
+function M.querySkillName(player, name)
+  local scope = scopes[coroutine.running()]
+  if scope and scope.player == player and name == scope.name then return scope.instance end
+  return name
+end
+
 local function installQueries()
   for _, method in ipairs({ "hasSkill", "hasShownSkill", "usedSkillTimes", "usedEffectTimes" }) do
     local original = Player[method]
     Player[method] = function(player, name, ...)
-      local scope = scopes[coroutine.running()]
-      if scope and scope.player == player and name == scope.name then
-        name = scope.instance
-      end
-      return original(player, name, ...)
+      return original(player, M.querySkillName(player, name), ...)
     end
   end
 end

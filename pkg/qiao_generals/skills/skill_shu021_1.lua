@@ -8,27 +8,14 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local GENERAL = "qiao_heg__shu021"
-local DONE_REVEAL = "qiao__skill_shu021_1-reveal-turn"
-
-local function turnId(player)
-  local current = player.room.logic:getCurrentEvent()
-  local turn = current and current:findParent(GameEvent.Turn, true)
-  return turn and turn.id or 0
-end
-
+local Reveal = require "packages.qiao.pkg.qiao_generals.util.mifuren_reveal"
 skill:addEffect(fk.GeneralRevealed, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    if target == nil or target ~= player or data == nil then return false end
-    if not player:hasShownSkill(skill.name) then return false end
-    return data.m == GENERAL or data.d == GENERAL
+    return target == player and data and (data.m == GENERAL or data.d == GENERAL)
   end,
-  on_refresh = function(self, event, target, player, data)
-    -- 同一张糜夫人牌在当前回合重复明置不重复摸牌。
-    local key = tostring(turnId(player)) .. ":" .. GENERAL
-    if player:getMark(DONE_REVEAL) == key then return end
-    player.room:setPlayerMark(player, DONE_REVEAL, key)
-    if not player.dead then player:drawCards(2, skill.name) end
+  on_refresh = function(self, event, target, player)
+    if Reveal.take(player) then player:drawCards(2, skill.name) end
   end,
 })
 

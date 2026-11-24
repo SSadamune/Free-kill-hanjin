@@ -1,7 +1,7 @@
 -- WU010 孙策 · 魂殇
 --
--- 副将技（☯️-1）。准备阶段体力恰为1时，本回合获得英魂、英姿；两项以魂殇
--- 为来源临时授予，回合结束只清理本次来源，保留角色原有的独立技能。
+-- 副将技（☯️-1）。准备阶段体力恰为1时，角色获得本回合的英魂和英姿。
+-- 以回合末清理技能作为授予来源，使其独立于孙策武将牌。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu010_3",
   tags = { Skill.DeputyPlace },
@@ -34,8 +34,13 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     if player.dead then return end
     ensureCleanup(room)
-    room:handleAddLoseSkills(player, YINGHUN, skill.name, false, true)
-    room:handleAddLoseSkills(player, YINGZI, skill.name, false, true)
+    for _, name in ipairs({ YINGHUN, YINGZI }) do
+      if player:hasSkill(name, true, true) then
+        player:addSkill(name, CLEANUP)
+      else
+        room:handleAddLoseSkills(player, name, CLEANUP, false, true)
+      end
+    end
     room:setPlayerMark(player, GRANTED_MARK, 1)
   end,
 })

@@ -31,7 +31,7 @@ local function canTarget(room, player, target)
   slash.skillName = skill.name
   return not target.dead and not target:isRemoved()
     and C.matchesCondition(room, player, slash, target, CONDITION)
-    and player:canUseTo(slash, target, { bypass_times = true, bypass_distances = true })
+    and C.canEffectUseTo(player, slash, target, { bypass_distances = true })
 end
 
 skill:addEffect("active", {
@@ -55,8 +55,8 @@ skill:addEffect("active", {
     if player == nil or player.dead then return end
     local tos = effect.tos or {}
     if #tos == 0 or not table.every(tos, function(target) return canTarget(room, player, target) end) then return end
-    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, true,
-      { bypass_times = true, [MARK] = { user = player.id } }, policy(#tos))
+    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, nil,
+      { [MARK] = { user = player.id } }, policy(#tos))
   end,
 })
 
