@@ -3,6 +3,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local DATA = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_jin2"
+local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
 
 
 local function inRoom(fn)
@@ -36,6 +37,43 @@ end
 function Testqiao_jin023_malong:testSkillsRegistered()
   lu.assertNotNil(Fk.skills["qiao__skill_jin023_1"])
   lu.assertNotNil(Fk.skills["qiao__skill_jin023_2"])
+end
+
+function Testqiao_jin023_malong:testSharedEquipmentSwapLetsThirdPlayerChooseBothCards()
+  local room, chooser, a, b = FkTest.room, p(1), p(2), p(3)
+  local reason = "qiao_test_equipment_exchange"
+  inRoom(function()
+    local mount = room:printCard("qiao__liulongcanjia", Card.Heart, 13).id
+    local sword = room:printCard("qiao__qinggang_sword", Card.Spade, 2).id
+    local treasure = room:printCard("qiao__bronze_sparrow", Card.Club, 3).id
+    local armor = room:printCard("qiao__eight_diagram", Card.Club, 2).id
+    room:moveCardIntoEquip(a, mount, reason, false, a)
+    room:moveCardIntoEquip(a, sword, reason, false, a)
+    room:moveCardIntoEquip(b, treasure, reason, false, b)
+    room:moveCardIntoEquip(b, armor, reason, false, b)
+
+    lu.assertTrue(EquipmentExchange.canSwapOneEach(chooser, a, b))
+    local asked = {}
+    skill_test.withSkillRequests(room, reason, {
+      askToChooseCard = function(_, player, params)
+        lu.assertIs(player, chooser)
+        table.insert(asked, params.target.id)
+        local candidates = params.flag.card_data[1][2]
+        if params.target == a then
+          lu.assertItemsEquals(candidates, { mount, sword })
+          return mount
+        end
+        lu.assertItemsEquals(candidates, { treasure, armor })
+        return treasure
+      end,
+    }, function()
+      lu.assertTrue(EquipmentExchange.swapOneEach(room, chooser, a, b, reason))
+    end)
+
+    lu.assertEquals(asked, { a.id, b.id })
+    lu.assertItemsEquals(a:getCardIds("e"), { sword, treasure })
+    lu.assertItemsEquals(b:getCardIds("e"), { armor, mount })
+  end)
 end
 
 function Testqiao_jin023_malong:testFengxieSwapsAcrossOpenSlotsThenUsesSlash()

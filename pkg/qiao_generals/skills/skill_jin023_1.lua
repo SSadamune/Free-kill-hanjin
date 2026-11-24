@@ -5,8 +5,6 @@ local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
 
-local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
-
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin023_1",
 }
@@ -14,74 +12,10 @@ skill.qiaoImplemented = true
 
 local SLASH = "qiao__slash"
 
-local function equipIds(player)
-  return player:getCardIds("e")
-end
-
-local function protected(owner, chooser, id)
-  return owner:hasShownSkill(Wu.JUBAO) and Wu.isProtectedTreasure(owner, chooser, id)
-end
-
-local function secondCandidates(chooser, a, b, idA)
-  if protected(a, chooser, idA) then return {} end
-  local cardA = a:getVirtualEquip(idA) or Fk:getCardById(idA)
-  return table.filter(equipIds(b), function(idB)
-    local cardB = b:getVirtualEquip(idB) or Fk:getCardById(idB)
-    return not protected(b, chooser, idB)
-      and EquipmentExchange.canReceive(b, cardA, idB) and EquipmentExchange.canReceive(a, cardB, idA)
-  end)
-end
-
-local function firstCandidates(chooser, a, b)
-  return table.filter(equipIds(a), function(id)
-    return #secondCandidates(chooser, a, b, id) > 0
-  end)
-end
-
 local function canExchangeWithSomeone(room, chooser, target)
   return table.find(room:getPresentPlayers(), function(other)
-    return other ~= target and #firstCandidates(chooser, target, other) > 0
+    return EquipmentExchange.canSwapOneEach(chooser, target, other)
   end) ~= nil
-end
-
-local function chooseEquip(room, chooser, target, ids)
-  if #ids == 0 then return end
-  if #ids == 1 then return ids[1] end
-  local id = room:askToChooseCard(chooser, {
-    target = target,
-    flag = { card_data = { { "$Equip", ids } } },
-    skill_name = skill.name,
-    prompt = "#qiao__skill_jin023_1-equip::" .. target.id .. ":" .. skill.name,
-  })
-  if table.contains(ids, id) then return id end
-end
-
-local function swapEquips(room, player, a, b, idA, idB)
-  local transfers = {
-    { from = a, to = b, id = idA, virtual = a:getVirtualEquip(idA) },
-    { from = b, to = a, id = idB, virtual = b:getVirtualEquip(idB) },
-  }
-  local outgoing, incoming = {}, {}
-  for _, t in ipairs(transfers) do
-    table.insert(outgoing, {
-      from = t.from, ids = { t.id }, toArea = Card.Processing,
-      moveReason = fk.ReasonExchange, proposer = player, skillName = skill.name, moveVisible = true,
-    })
-  end
-  room:moveCards(table.unpack(outgoing))
-  -- 先按两张牌离场后的实际栏位准备移动，执行移动前再做最后核对。
-  for _, t in ipairs(transfers) do
-    if room:getCardArea(t.id) == Card.Processing and not t.to.dead and not t.to:isRemoved()
-      and EquipmentExchange.canReceive(t.to, t.virtual or Fk:getCardById(t.id)) then
-      table.insert(incoming, {
-        ids = { t.id }, fromArea = Card.Processing, to = t.to, toArea = Card.PlayerEquip,
-        virtualEquip = t.virtual, moveReason = fk.ReasonExchange, proposer = player,
-        skillName = skill.name, moveVisible = true,
-      })
-    end
-  end
-  EquipmentExchange.moveIncoming(room, incoming)
-  room:cleanProcessingArea({ idA, idB }, skill.name)
 end
 
 local function queueTargets(room, other, user, condition)
@@ -104,13 +38,12 @@ skill:addEffect("active", {
     if player.phase ~= Player.Play or player.dead then return false end
     local room = Fk:currentRoom()
     return table.find(room:getPresentPlayers(), function(target)
-      return #equipIds(target) > 0 and canExchangeWithSomeone(room, player, target)
+      return canExchangeWithSomeone(room, player, target)
     end) ~= nil
   end,
   target_filter = function(self, player, to_select, selected)
-    if #selected >= 2 or to_select == nil or to_select.dead or to_select:isRemoved()
-      or #equipIds(to_select) == 0 or table.contains(selected, to_select) then return false end
-    if #selected == 1 then return #firstCandidates(player, selected[1], to_select) > 0 end
+    if #selected >= 2 then return false end
+    if #selected == 1 then return EquipmentExchange.canSwapOneEach(player, selected[1], to_select) end
     return canExchangeWithSomeone(Fk:currentRoom(), player, to_select)
   end,
   on_use = function(self, room, effect)
@@ -118,15 +51,7 @@ skill:addEffect("active", {
     local targets = effect.tos or {}
     if player == nil or player.dead or #targets ~= 2 then return end
     local a, b = targets[1], targets[2]
-    if a == nil or b == nil or a == b or a.dead or b.dead or a:isRemoved() or b:isRemoved() then return end
-
-    local idA = chooseEquip(room, player, a, firstCandidates(player, a, b))
-    if idA == nil or not table.contains(equipIds(a), idA) then return end
-    local idB = chooseEquip(room, player, b, secondCandidates(player, a, b, idA))
-    if idB == nil or a.dead or b.dead or a:isRemoved() or b:isRemoved()
-      or not table.contains(equipIds(a), idA)
-      or not table.contains(secondCandidates(player, a, b, idA), idB) then return end
-    swapEquips(room, player, a, b, idA, idB)
+    if not EquipmentExchange.swapOneEach(room, player, a, b, skill.name, "#qiao__skill_jin023_1-equip") then return end
 
     local other
     if a == player then other = b elseif b == player then other = a end

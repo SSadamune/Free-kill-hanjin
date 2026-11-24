@@ -15,28 +15,23 @@ tags: [操作, 牌]
 
 交换双方的各一张确定的牌的过程为：交换的双方先同时将自己的那一张牌置入处理区，然后同时将处理区里原本为对方所拥有的牌扣置入自己的手牌区。
 
-### 交换装备区中的各一张牌
+<!-- 暂定文案 -->
 
-汉晋规则（2026-11-23 确认，2026-11-24 补充入栏复核）。
-
-交换A与B的装备区里的各一张牌时，按效果指定的选择方式，从A与B的装备区里各选择一张能置入处理区的装备牌。选择时将两张牌视为已离开各自的装备区，须使A与B的装备区均有可置入对方所选牌的空栏。占用多个装备栏的牌须有其占用的所有空栏。
-
-A与B先同时将各自被选择的一张牌置入处理区。系统在将牌置入装备区前，分别按此时的空栏再次检查仍在处理区里的牌。若原本为A所拥有的牌能置入B的装备区，B将此牌置入其装备区，否则系统将此牌置入弃牌堆。原本为B所拥有的牌按相同流程处理。两张牌均能置入装备区时，同时置入各自的目标装备区。
+交换A与B的装备区里的各一张牌的过程为：动作执行者按以下标准(两张牌均能置入处理区，且在这两张牌在各自装备区里占用的装备栏为空置的假设下：双方的装备区里均有置入对方那一张牌所需的所有空置且未处于封印状态的装备栏)从A与B的装备区里各选择一张装备牌，交换的双方先同时将自己的那一张牌置入处理区，然后{若双方此时的装备区里均有置入对方那一张牌所需的所有空置且未处于封印状态的装备栏，双方同时将处理区里原本为对方所拥有的那一张牌置入自己的装备区；若仅一方的装备区里有置入对方那一张牌所需的所有空置且未处于封印状态的装备栏，其将处理区里原本为对方所拥有的那一张牌置入自己的装备区}，若这两张牌中仍有牌在处理区里，系统将这些牌置入弃牌堆。
 
 <!-- kb:refs:start -->
 
 ## 引用区
 
 ① API 实现：
-- [Player](../../project-api/entity/Player.md)
-- [Room](../../project-api/entity/Room.md)
-- [RoomHost](../../project-api/room/RoomHost.md)
+
+- [Room:swapAllCards](https://github.com/Qsgs-Fans/FreeKill/blob/671b0ad698c36b703808d8b29f3483ce54b36631/ltk/server/events/movecard.lua#L894)／[Room:swapCards](https://github.com/Qsgs-Fans/FreeKill/blob/671b0ad698c36b703808d8b29f3483ce54b36631/ltk/server/events/movecard.lua#L771)
+- [EquipmentExchange.swapOneEach](../../../pkg/qiao_mode/rules/equipment_exchange.lua#L77)／[EquipmentExchange.canSwapOneEach](../../../pkg/qiao_mode/rules/equipment_exchange.lua#L44)
 
 ② 扩展信息：
-  （暂无）
+（暂无）
 
 ③ 编写指南：
-  （暂无）
-
+（暂无）
 
 <!-- kb:refs:end -->
