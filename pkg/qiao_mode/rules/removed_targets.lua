@@ -81,7 +81,7 @@ function M.installServer(room)
   function room:askToChoosePlayers(player, params)
     if M.isRemoved(player) then return {} end
     params = eligibleTargets(params, params.targets)
-    if #params.targets == 0 then return {} end
+    if #params.targets == 0 and (not params.show_when_empty or params.cancelable == false) then return {} end
     return choosePlayers(self, player, params)
   end
 
