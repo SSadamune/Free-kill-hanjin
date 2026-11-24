@@ -24,23 +24,34 @@ Fk:addPostLoadFunc(function()
   local qiaoBoard = setmetatable({
     page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
   }, { __index = board })
-  local settings = table.clone(board.ui_settings)
-  for _, group in ipairs(settings) do
-    for _, row in ipairs(group._children) do
-      local help = collectionSettingHelp[row._settingsKey]
-      if help then
-        row.enabled = false
-        row.subTitle = help
-        -- Do not copy the operation timeout into the shared game settings
-        -- when an existing preference has timeoutAsGeneralTimeout enabled.
-        row.value = nil
+  local function restrictedBoard(helpByKey)
+    local settings = table.clone(board.ui_settings)
+    for _, group in ipairs(settings) do
+      for _, row in ipairs(group._children) do
+        local help = helpByKey[row._settingsKey]
+        if help then
+          row.enabled = false
+          row.subTitle = help
+          -- Ignore the operation timeout when timeoutAsGeneralTimeout was set in another mode.
+          row.value = nil
+        end
       end
     end
+    return setmetatable({ ui_settings = settings }, { __index = qiaoBoard })
   end
-  local collectionBoard = setmetatable({ ui_settings = settings }, { __index = qiaoBoard })
+  local collectionBoard = restrictedBoard(collectionSettingHelp)
+  local lockedBoard = restrictedBoard {
+    generalNum = collectionSettingHelp.generalNum,
+    generalTimeout = collectionSettingHelp.generalTimeout,
+    timeoutAsGeneralTimeout = collectionSettingHelp.timeoutAsGeneralTimeout,
+    luckTime = collectionSettingHelp.luckTime,
+    enableDeputy = "qiao_locked_deputy_help",
+    enableFreeAssign = "qiao_locked_assignment_help",
+  }
   local getBoardGame = Fk.getBoardGame
   function Fk:getBoardGame(name)
     if name == Modes.collection then return collectionBoard end
+    if name == Modes.locked then return lockedBoard end
     if Modes.isHanjin(name) then return qiaoBoard end
     return getBoardGame(self, name)
   end
@@ -71,6 +82,10 @@ Fk:loadTranslationTable {
   [":" .. Modes.collection] = "魏、蜀、吴、群固定纳入备选势力。可设置是否纳入汉、晋，以及是否禁用势力和启用客将替换规则。",
   [Modes.free] = "自由模式",
   [":" .. Modes.free] = "可自定义备选势力、允许势力上限及国战附加规则，使用汉晋武将和游戏牌。",
+  [Modes.locked] = "锁定投胎",
+  [":" .. Modes.locked] = "开局随机分配两个势力，每人从指定势力选主将和副将。三人局为斗地主，1 号位增加 1 点体力上限和体力，并获得〖飞扬〗和〖跋扈〗。四人局为随机座次的二对二，1 号位少一张初始手牌，4 号位多一张。",
+  ["qiao_locked_deputy_help"] = "锁定投胎使用主将和副将。",
+  ["qiao_locked_assignment_help"] = "锁定投胎须从获发的本势力武将牌中选择。",
   ["qiao_faction_ban_enabled"] = "势力禁用规则",
   ["help: qiao_faction_ban_enabled"] = "随机选择四个势力备选，其余势力将被禁用",
   ["qiao_guest_replacement"] = "客将替换规则",
@@ -96,6 +111,7 @@ Fk:loadTranslationTable {
   ["#QiaoFactionBan"] = "本局禁选势力：%arg；允许势力：%arg2",
   ["#QiaoChooseGenerals"] = "选择主将与副将",
   ["#QiaoChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
+  ["#QiaoChooseLockedKingdom"] = "你的势力是%arg，请选择主将与副将",
   ["#QiaoChooseKingdom"] = "选择你的初始势力",
   ["#QiaoGuestRedrawn"] = "%from 重抽客将：%arg → %arg2",
 }
@@ -107,7 +123,9 @@ if not Fk.choose_general_rule.qiao_heg_pair then
   Fk:addChooseGeneralRule {
     name = "qiao_heg_pair",
     card_filter = function(to_select, selected, data, extra_data)
-      if #selected == 0 then return true end
+      if #selected == 0 then
+        return not (extra_data and extra_data.locked) or extra_data.pairing[to_select] ~= nil
+      end
       if #selected >= 2 then return false end
       -- Free assignment deliberately ignores the pairing map. The server still
       -- requires two distinct real cards, so the client only blocks a duplicate.

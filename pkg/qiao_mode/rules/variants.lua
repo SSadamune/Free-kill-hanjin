@@ -13,7 +13,8 @@ function M.apply(room)
   -- the historical-event skill. 汉晋鏖战的桃用途统一由 only_as 来源提供，
   -- 因此该设置只影响事件/奇珍等附加机制，不再影响桃的转换目标。
   room.settings._mode = table.clone(room.settings._mode or {})
-  if room:getSettings("gameMode") == Modes.collection then
+  local mode = room:getSettings("gameMode")
+  if mode == Modes.collection or mode == Modes.locked then
     for _, key in ipairs({ "watchNextDeputy", "enterBattleRoyalOnFirstShuffle", "revealAllOnStart" }) do
       room.settings._mode[key] = false
     end

@@ -25,8 +25,8 @@ function M.finish(room, winners)
         table.insertIfNeed(kingdoms, p.kingdom)
       end
     end
-    data[key] = { version = 1, winners = kingdoms,
-      banned = table.simpleClone(room:getBanner("qiao_banned_kingdoms") or {}) }
+    local banned = room:getTag("qiao_rotation_banned_kingdoms") or room:getBanner("qiao_banned_kingdoms") or {}
+    data[key] = { version = 1, winners = kingdoms, banned = table.simpleClone(banned) }
   end
   room:setSessionData(data)
 end

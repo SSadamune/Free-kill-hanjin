@@ -5,6 +5,7 @@ local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
+local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Pool = require "packages.qiao.pkg.qiao_mode.rules.general_pool"
@@ -74,7 +75,8 @@ local function deal(room, players, count)
 end
 
 function M.create(base, name)
-  local collection = name == Modes.collection
+  local locked = name == Modes.locked
+  local collection = name == Modes.collection or locked
   local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
   local function getLogic()
     local parent = base.logic()
@@ -88,8 +90,7 @@ function M.create(base, name)
       -- Retinues are granted by the commander rules, never dealt as normal generals.
       Commander.excludeRetinuesFromPile(room)
       local previous = Session.consume(room)
-      local cap = room:getSettings("qiao_wild_count")
-      cap = math.min(cap or 4, 12)
+      local cap = math.min(room:getSettings("qiao_wild_count") or 4, 12)
       -- BAN-001 input is the host's candidate selection, never the pile.
       local config = resolveSettings(function(key) return room:getSettings(key) end)
       room:setBanner("qiao_candidate_kingdoms", config.candidates)
@@ -104,6 +105,12 @@ function M.create(base, name)
       -- top of its kept list.
       local plan = Versions.plan(room, room.general_pile, previous, cap, pick, getGeneral,
         { candidates = config.candidates, limit = config.limit, guestReplacement = Guest.replacementEnabled(room) })
+      local count = offerCount(room:getSettings("qiao_offer_count"), config.limit)
+      local offers, assigned
+      if locked then
+        offers, assigned = Locked.deal(room, plan, count)
+        room:setTag("qiao_rotation_banned_kingdoms", plan.rotationBans)
+      end
       room:setBanner("all_kingdoms", plan.allowed)
       room:setBanner("qiao_banned_kingdoms", plan.banned)
       local built = Pool.resolve(room, plan, { wildNames = wildNames, getGeneral = getGeneral })
@@ -115,11 +122,17 @@ function M.create(base, name)
       local lord = room:getLord()
       room:setCurrent(lord)
       lord.role = "hidden"
-      local offers = deal(room, room.players, offerCount(room:getSettings("qiao_offer_count"), #plan.allowed))
+      if locked then
+        for _, player in ipairs(room.players) do
+          for _, general in ipairs(offers[player]) do table.removeOne(room.general_pile, general) end
+        end
+      else
+        offers = deal(room, room.players, count)
+      end
       -- Per-game audit of voluntary re-draws and failed replacements.
       room:setTag("qiao_guest_redraws_v1", {})
       room:setTag("qiao_guest_redraw_failures_v1", {})
-      local answers, kingdoms, fallbacks = Selection.choose(room, room.players, offers)
+      local answers, kingdoms, fallbacks = Selection.choose(room, room.players, offers, assigned)
       local freeAssign = Selection.freeAssign(room)
       local unused, selected = {}, {}
       for _, player in ipairs(room.players) do table.insertTable(unused, offers[player]) end
@@ -184,8 +197,23 @@ function M.create(base, name)
     local baseBroadcastGeneral = parent.broadcastGeneral
     function logic:broadcastGeneral()
       if baseBroadcastGeneral then baseBroadcastGeneral(self) end
-      for _, player in ipairs(self.room.players) do
-        PairHp.apply_start(self.room, player)
+      local room = self.room
+      for _, player in ipairs(room.players) do
+        PairHp.apply_start(room, player)
+      end
+      if locked and #room.players == 3 then
+        local first = room.players[1]
+        local adjusted = Locked.adjusted(nil, first)
+        room:setPlayerProperty(first, "maxHp", adjusted.maxHp)
+        room:setPlayerProperty(first, "hp", adjusted.hp)
+      end
+    end
+    if locked then
+      function logic:attachSkillToPlayers()
+        parent.attachSkillToPlayers(self)
+        if #self.room.players == 3 then
+          self.room:handleAddLoseSkills(self.room.players[1], { "m_feiyang", "m_bahu" }, nil, false)
+        end
       end
     end
     -- 长驱需要的“本回合实际伤害目标”由模式级全局记录器提供，必须在第一个事件
@@ -196,6 +224,7 @@ function M.create(base, name)
         local settings = self.room.settings
         settings._mode = settings._mode or {}
         settings._mode.generalTimeout = settings._mode.generalTimeout or Selection.defaultTimeout
+        if locked then settings._mode.enableFreeAssign = false end
       end
       RemovedTargets.installServer(self.room)
       TriggerSelection.install(self.room)
@@ -375,10 +404,11 @@ function M.create(base, name)
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
-    name = name, minPlayer = base.minPlayer, maxPlayer = base.maxPlayer,
+    name = name, minPlayer = locked and 3 or base.minPlayer, maxPlayer = locked and 4 or base.maxPlayer,
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,
+    get_adjusted = locked and Locked.adjusted or nil,
     is_counted = base.countInFunc,
     reward_punish = function(self, victim, killer)
       local Counts=require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"

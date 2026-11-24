@@ -7,7 +7,14 @@
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
+
+local function inKingdom(room, name, kingdom)
+  if not kingdom then return true end
+  local entry = Guest.factionsOf(room, name)
+  return entry ~= nil and table.contains(entry.kingdoms, kingdom)
+end
 
 M.defaultTimeout = 90
 M.rule = "qiao_heg_pair"
@@ -63,33 +70,34 @@ end
 ---@param main string
 ---@param deputy string
 ---@return boolean
-function M.canPair(room, main, deputy)
+function M.canPair(room, main, deputy, kingdom)
   if main == deputy then return false end
   local a, b = Fk.generals[main], Fk.generals[deputy]
   if not (a and b) then return false end
   if not room:getSettings("disableSameConvert") and a.trueName == b.trueName then return false end
-  return Guest.canPair(room, main, deputy)
+  return #Guest.pairKingdoms(room, main, deputy, kingdom and { kingdom }) > 0
 end
 
 ---@param room Room
 ---@param names string[]
 ---@return table[]
-function M.legalPairs(room, names)
+function M.legalPairs(room, names, kingdom)
   local result = {}
+  local allowed = kingdom and { kingdom }
   for i = 1, #names do
     for j = i + 1, #names do
       -- Wild-exclusive generals may only be main generals, so the same two
       -- cards can be legal in one orientation and illegal in the other. The
       -- final offers are shuffled, so both orders must be considered.
-      if M.canPair(room, names[i], names[j]) then
+      if M.canPair(room, names[i], names[j], kingdom) then
         table.insert(result, {
           main = names[i], deputy = names[j],
-          kingdoms = Guest.pairKingdoms(room, names[i], names[j]),
+          kingdoms = Guest.pairKingdoms(room, names[i], names[j], allowed),
         })
-      elseif M.canPair(room, names[j], names[i]) then
+      elseif M.canPair(room, names[j], names[i], kingdom) then
         table.insert(result, {
           main = names[j], deputy = names[i],
-          kingdoms = Guest.pairKingdoms(room, names[j], names[i]),
+          kingdoms = Guest.pairKingdoms(room, names[j], names[i], allowed),
         })
       end
     end
@@ -100,8 +108,8 @@ end
 ---@param room Room
 ---@param names string[]
 ---@return table?
-function M.firstLegalPair(room, names)
-  return M.legalPairs(room, names)[1]
+function M.firstLegalPair(room, names, kingdom)
+  return M.legalPairs(room, names, kingdom)[1]
 end
 
 ---Whether a reply name is an offered card or a legal same-name replacement.
@@ -124,10 +132,10 @@ end
 ---@param room Room
 ---@param offers string[]
 ---@return string[], table<string, string[]>
-function M.pairing(room, offers)
+function M.pairing(room, offers, kingdom)
   local names, seen = {}, {}
   local function add(name)
-    if not seen[name] and Fk:canUseGeneral(name) then
+    if not seen[name] and Fk:canUseGeneral(name) and inKingdom(room, name, kingdom) then
       seen[name] = true
       table.insert(names, name)
     end
@@ -142,7 +150,7 @@ function M.pairing(room, offers)
   for _, name in ipairs(names) do pairing[name] = {} end
   for i = 1, #names do
     for j = i + 1, #names do
-      if M.canPair(room, names[i], names[j]) or M.canPair(room, names[j], names[i]) then
+      if M.canPair(room, names[i], names[j], kingdom) or M.canPair(room, names[j], names[i], kingdom) then
         table.insert(pairing[names[i]], names[j])
         table.insert(pairing[names[j]], names[i])
       end
@@ -161,7 +169,7 @@ end
 ---@param room Room
 ---@return boolean
 function M.freeAssign(room)
-  return room:getSettings("enableFreeAssign") == true
+  return room:getSettings("gameMode") ~= Modes.locked and room:getSettings("enableFreeAssign") == true
 end
 
 ---@param name any
@@ -181,9 +189,9 @@ end
 ---@param room Room
 ---@param offers string[]
 ---@return table
-function M.askData(room, offers, guests)
+function M.askData(room, offers, guests, kingdom)
   guests = guests or Guest.guestCandidates(room, offers)
-  local names, pairing = M.pairing(room, offers)
+  local names, pairing = M.pairing(room, offers, kingdom)
   local freeAssign = M.freeAssign(room)
   local guestIllustrations = Guest.replacementEnabled(room)
   local wild, guestFactions = {}, {}
@@ -210,11 +218,11 @@ function M.askData(room, offers, guests)
         prop = {
           generals = table.simpleClone(offers),
           choiceNum = 2,
-          prompt = M.prompt(room, offers),
+          prompt = kingdom and "#QiaoChooseLockedKingdom:::" .. Ban.kingdomLabel(kingdom) or M.prompt(room),
           hegemony = true,
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
-          extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
+          extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions, locked = kingdom ~= nil,
             freeAssign = freeAssign, guestIllustrations = guestIllustrations, offers = table.simpleClone(offers) },
         },
       },
@@ -233,19 +241,20 @@ end
 ---@param players ServerPlayer[]
 ---@param offers table<ServerPlayer, string[]>
 ---@return table<ServerPlayer, string[]>
-function M.ask(room, players, offers)
+function M.ask(room, players, offers, assigned)
   local answers = {}
   local req = Request:new(players, "CustomDialog")
   req.focus_text = "AskForGeneral"
   req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
   for _, player in ipairs(players) do
-    local data = M.askData(room, offers[player])
+    local kingdom = assigned and assigned[player]
+    local data = M.askData(room, offers[player], nil, kingdom)
     req:setData(player, data)
-    local default = assert(M.firstLegalPair(room, offers[player]))
+    local default = assert(M.firstLegalPair(room, offers[player], kingdom))
     req:setDefaultReply(player, { default.main, default.deputy })
     if data.component.url then
       player.mini_game_data = { type = "qiao_guest_selection",
-        offers = offers, req = req, failed = {} }
+        offers = offers, req = req, failed = {}, kingdom = kingdom }
     end
   end
   req:ask()
@@ -262,7 +271,7 @@ end
 ---@param offers string[]
 ---@param answer string[]
 ---@return table? @ { main, deputy, kingdoms, fallback }
-function M.validate(room, offers, answer)
+function M.validate(room, offers, answer, kingdom)
   local main, deputy = answer and answer[1], answer and answer[2]
   if M.freeAssign(room) then
     if validFreeGeneral(main) and validFreeGeneral(deputy) and main ~= deputy then
@@ -282,14 +291,14 @@ function M.validate(room, offers, answer)
     end
   elseif main and deputy and main ~= deputy
     and M.offered(room, offers, main) and M.offered(room, offers, deputy)
-    and M.canPair(room, main, deputy) then
+    and M.canPair(room, main, deputy, kingdom) then
     return {
       main = main, deputy = deputy,
-      kingdoms = Guest.pairKingdoms(room, main, deputy),
+      kingdoms = Guest.pairKingdoms(room, main, deputy, kingdom and { kingdom }),
       fallback = false,
     }
   end
-  local pair = M.firstLegalPair(room, offers)
+  local pair = M.firstLegalPair(room, offers, kingdom)
   if not pair then return nil end
   return { main = pair.main, deputy = pair.deputy, kingdoms = pair.kingdoms, fallback = true }
 end
@@ -326,11 +335,11 @@ end
 
 ---Ask, validate and resolve the initial kingdom for every player.
 ---@return table<ServerPlayer, string[]>, table<ServerPlayer, string>, number[]
-function M.choose(room, players, offers)
-  local answers = M.ask(room, players, offers)
+function M.choose(room, players, offers, assigned)
+  local answers = M.ask(room, players, offers, assigned)
   local pairs, kingdoms, fallbacks = {}, {}, {}
   for _, player in ipairs(players) do
-    local valid = assert(M.validate(room, offers[player], answers[player]),
+    local valid = assert(M.validate(room, offers[player], answers[player], assigned and assigned[player]),
       "Each player must keep a legal pair")
     if valid.fallback then table.insert(fallbacks, player.id) end
     local kingdom = assert(M.askKingdom(room, player, valid.kingdoms),
@@ -348,8 +357,16 @@ end
 ---@param offers string[]
 ---@param removing string[]
 ---@return string[]? , string?
-function M.replacements(room, offers, removing)
-  local available = table.simpleClone(room.general_pile)
+function M.replacements(room, offers, removing, kingdom, dealt)
+  local reserved = {}
+  if kingdom and dealt and not room:getSettings("disableSameConvert") then
+    for _, cards in pairs(dealt) do
+      for _, name in ipairs(cards) do reserved[Fk.generals[name].trueName] = true end
+    end
+  end
+  local available = table.filter(room.general_pile, function(name)
+    return inKingdom(room, name, kingdom) and not reserved[Fk.generals[name].trueName]
+  end)
   room:shuffleTable(available)
   local k = #removing
   if k == 0 then return {}, nil end
@@ -366,7 +383,7 @@ function M.replacements(room, offers, removing)
     return result
   end
 
-  if M.firstLegalPair(room, remaining) then
+  if M.firstLegalPair(room, remaining, kingdom) then
     local result = table.slice(available, 1, k + 1)
     if #result == k then return result end
   end
@@ -376,7 +393,7 @@ function M.replacements(room, offers, removing)
   if k >= 1 then
     for _, first in ipairs(remaining) do
       for _, second in ipairs(available) do
-        if M.canPair(room, first, second) or M.canPair(room, second, first) then
+        if M.canPair(room, first, second, kingdom) or M.canPair(room, second, first, kingdom) then
           local rest = extras({ second })
           if rest then
             table.insert(rest, second)
@@ -390,8 +407,8 @@ function M.replacements(room, offers, removing)
   if k >= 2 then
     for i = 1, #available do
       for j = i + 1, #available do
-        if M.canPair(room, available[i], available[j])
-          or M.canPair(room, available[j], available[i]) then
+        if M.canPair(room, available[i], available[j], kingdom)
+          or M.canPair(room, available[j], available[i], kingdom) then
           local rest = extras({ available[i], available[j] })
           if rest then
             table.insert(rest, available[i])
@@ -411,12 +428,12 @@ end
 ---@param offers table<ServerPlayer, string[]>
 ---@param names string[]
 ---@return boolean, string[]?, string?
-function M.applyRedraw(room, player, offers, names)
+function M.applyRedraw(room, player, offers, names, kingdom)
   names = table.filter(names, function(name)
     return Guest.isGuest(room, name) and table.contains(offers[player], name)
   end)
   if #names == 0 then return false, nil, "no_guest_candidate" end
-  local replacements, reason = M.replacements(room, offers[player], names)
+  local replacements, reason = M.replacements(room, offers[player], names, kingdom, offers)
   if not replacements then
     local failures = room:getTag("qiao_guest_redraw_failures_v1") or {}
     table.insert(failures, { player = player.id, names = table.simpleClone(names), reason = reason })
@@ -449,14 +466,14 @@ Fk:addMiniGame {
     local offers = state.offers[player]
     if message[1] ~= "redraw" or not slot or offers[slot] ~= original or not original
       or state.failed[original] or not Guest.isGuest(player.room, original) then return end
-    local ok = M.applyRedraw(player.room, player, state.offers, { original })
+    local ok = M.applyRedraw(player.room, player, state.offers, { original }, state.kingdom)
     if not ok then state.failed[original] = true end
     local guests = table.filter(Guest.guestCandidates(player.room, offers), function(name)
       return not state.failed[name]
     end)
-    local data = M.askData(player.room, offers, guests)
+    local data = M.askData(player.room, offers, guests, state.kingdom)
     state.req:setData(player, data)
-    local pair = assert(M.firstLegalPair(player.room, offers))
+    local pair = assert(M.firstLegalPair(player.room, offers, state.kingdom))
     state.req:setDefaultReply(player, { pair.main, pair.deputy })
     player:doNotify("UpdateMiniGame", { slot, original, offers[slot], data.component.model.prop.extraData })
   end,
