@@ -14,13 +14,15 @@ skill.qiaoImplemented = true
 
 local DYING_COUNT = "qiao__skill_wu013_1_dying-turn"
 local CHUANG = "创"
+local Markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+Markers.register(skill.name, CHUANG)
 local SUIT_ORDER = { Card.Spade, Card.Heart, Card.Club, Card.Diamond, Card.NoSuit }
 
 --- 对同花色多于一张的“创”逐一询问保留哪一张，移去其余。
 ---@return integer 移去的张数
-local function dedupeChuang(room, player)
+local function dedupeChuang(room, player, source)
   local bySuit = {}
-  for _, id in ipairs(player:getPile(CHUANG)) do
+  for _, id in ipairs(Markers.cards(player, source, CHUANG)) do
     local card = Fk:getCardById(id)
     local suit = card and card.suit or Card.NoSuit
     bySuit[suit] = bySuit[suit] or {}
@@ -61,12 +63,19 @@ end
 
 skill:addEffect(fk.EnterDying, {
   anim_type = "defensive",
+  trigger_times = function(self, event, target, player)
+    return target == player and Markers.limit(event, self, player, skill.name) or 0
+  end,
   can_trigger = function(self, event, target, player, data)
     return target == player and player:hasSkill(skill.name) and not player.dead
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local x = player:getMark(DYING_COUNT) + 1
+    local source = Markers.choose(room, Markers.available(event, self, player, skill.name), skill.name, player)
+    if not source then return end
+    Markers.used(event, self, source)
+    local x = event:getSkillData(skill, "dyingCount") or (player:getMark(DYING_COUNT) + 1)
+    event:setSkillData(skill, "dyingCount", x)
     room:setPlayerMark(player, DYING_COUNT, x)
 
     player:drawCards(x, skill.name)
@@ -81,13 +90,12 @@ skill:addEffect(fk.EnterDying, {
         prompt = "#qiao__skill_wu013_1-place",
       })[1]
       if card ~= nil and card ~= -1 and table.contains(player:getCardIds("he"), card) then
-        room:moveCardTo({ card }, Card.PlayerSpecial, player, fk.ReasonPut,
-          skill.name, CHUANG, true, player)
+        Markers.put(player, source, skill.name, { card }, true)
       end
     end
 
     if player.dead then return end
-    local removed = dedupeChuang(room, player)
+    local removed = dedupeChuang(room, player, source)
     if removed == 0 and player.hp < 1 then
       room:recover {
         who = player,

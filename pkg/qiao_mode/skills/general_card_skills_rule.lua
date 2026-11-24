@@ -27,8 +27,37 @@ skill:addEffect(fk.GeneralShown, {
 skill:addEffect(fk.GeneralRevealed, spec)
 skill:addEffect(fk.GeneralHidden, spec)
 skill:addEffect(fk.Death, spec)
-skill:addEffect(fk.AfterPropertyChange,spec)
-skill:addEffect(H.GeneralRemoved,spec)
+local Markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+skill:addAuxActiveSkill(Sources.DIRECT, { can_use = Util.FalseFunc, on_use = function() end })
+
+skill:addEffect(fk.AfterCardsMove, {
+  global = true,
+  can_refresh = function(self, event, target, player) return player.seat == 1 end,
+  on_refresh = function(self, event, target, player, moves) Markers.afterMove(player.room, moves) end,
+})
+
+skill:addEffect(fk.AfterPropertyChange, {
+  global = true, can_refresh = spec.can_refresh,
+  on_refresh = function(self, event, target, player, data)
+    for field, mark in pairs({ generalChange = "__heg_general", deputyChange = "__heg_deputy" }) do
+      local change = data.results and data.results[field]
+      if change and change[2] ~= "anjiang" and change[1] ~= change[2] then
+        local old = change[1] == "anjiang" and player:getMark(mark) or change[1]
+        if old and old ~= change[2] then Markers.endCard(player.room, old) end
+      end
+    end
+    G.sync(player.room)
+  end,
+})
+
+skill:addEffect(H.GeneralRemoved, {
+  global = true, can_refresh = spec.can_refresh,
+  on_refresh = function(self, event, target, player, data)
+    if data.origName then Markers.endCard(player.room, data.origName) end
+    G.sync(player.room)
+  end,
+})
 skill:addEffect(H.GeneralTransformed, spec)
 skill:addEffect(H.PlayerRemoved, spec)
 

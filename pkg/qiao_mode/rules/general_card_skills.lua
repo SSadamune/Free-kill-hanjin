@@ -57,6 +57,7 @@ function M.detachSource(room,player,name,source,noTrigger)
   local skill=Fk.skills[name]
   local list=player.derivative_skills[source]
   if not list or not table.contains(list,skill) then return end
+  require("packages.qiao.pkg.qiao_mode.rules.marker_cards").endGrant(player, source.name, name)
   if otherSource(player,skill,source) then
     table.removeOne(list,skill)
     if #list==0 then player.derivative_skills[source]=nil end
@@ -77,7 +78,11 @@ end
 function M.revoke(room,generalName,skillName)
   local all=data(room,false)
   if not all[generalName] then return end
-  table.removeOne(all[generalName].skills,skillName)
+  if not table.removeOne(all[generalName].skills,skillName) then return end
+  local printed = Fk.generals[generalName]:getSkillNameList(true)
+  if not table.contains(printed, skillName) then
+    require("packages.qiao.pkg.qiao_mode.rules.marker_cards").endCard(room, generalName, skillName)
+  end
   if #all[generalName].skills==0 then all[generalName]=nil end
   room:setTag(M.TAG,all)
   M.sync(room)

@@ -1092,6 +1092,9 @@ function M.exchange(room, first, second, options)
 
   -- 4. Named private piles move with the card after the new skills are in
   -- place (never for a same-player swap).
+  local markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+  markers.transfer(a.player, b.player, aSide.general)
+  markers.transfer(b.player, a.player, bSide.general)
   transferPiles(room, a.player, b.player, aSide, samePlayer)
   transferPiles(room, b.player, a.player, bSide, samePlayer)
 

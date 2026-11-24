@@ -69,6 +69,8 @@ function M.markLost(room, generalName, skillNames)
     entry[skillName] = true
   end
   room:setTag(M.TAG, data)
+  local markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+  for _, name in ipairs(skillNames) do markers.endCard(room, generalName, name) end
   CardSkills.sync(room)
 end
 
