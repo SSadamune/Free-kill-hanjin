@@ -4,6 +4,7 @@
 -- 第三段：持旗者受到牌的伤害后移去一张烽火，然后建立本回合下次受到的伤害-1。
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
   name = P.FLAG,
@@ -72,18 +73,18 @@ skill:addEffect(fk.EventPhaseStart, {
     local count = P.count(lord)
     local list = candidates(count)
     if #list == 0 then return false end
-    local limit = math.min(maxPick(count), #list)
-    local chosen = room:askToChoices(target, {
-      choices = list,
-      min_num = 1,
-      max_num = limit,
+    local limit = maxPick(count)
+    local allSkills = table.map(CANDIDATES, function(candidate) return candidate.id end)
+    local choices, all, sets = Selection.optionSets(allSkills, list, limit)
+    local choice = Selection.askOption(room, target, {
+      choices = choices,
+      all_choices = all,
       skill_name = skill.name,
       prompt = "#qiao__skill_em_wu001_flag-grant:::" .. count .. ":" .. limit,
-      cancelable = true,
-      -- 确认前按技能 ID 显示正式技能说明（':'..id），候选数与多选上限不变。
       detailed = true,
     })
-    if chosen == nil or #chosen == 0 then return false end
+    local chosen = sets[choice]
+    if chosen == nil then return false end
     event:setCostData(self, chosen)
     return true
   end,

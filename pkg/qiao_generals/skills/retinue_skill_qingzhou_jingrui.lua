@@ -8,6 +8,7 @@
 -- 客户端可用性只读公开摘要与公开手牌数（getCardIds("h")），不读 room tag
 -- 或其他角色的私有手牌。来源的明暗/公开性沿用引擎既有 hasSkill 与正式接入
 -- 的生命周期，本技能不另造可见性规则。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 
 local skill = fk.CreateSkill {
@@ -84,15 +85,13 @@ skill:addEffect("active", {
     if #discardableHand(target) > 0 then table.insert(choices, OPT_DISCARD) end
     table.insert(choices, OPT_DAMAGE)
 
-    local choice = OPT_DAMAGE
-    if #choices > 1 then
-      choice = room:askToChoice(target, {
-        choices = choices,
-        skill_name = skill.name,
-        prompt = "#qiao__retinue_skill_qingzhou_jingrui-choose:" .. player.id,
-        cancelable = false,
-      })
-    end
+    local choice = Selection.askOption(room, target, {
+      choices = choices,
+      all_choices = { OPT_DISCARD, OPT_DAMAGE },
+      skill_name = skill.name,
+      prompt = "#qiao__retinue_skill_qingzhou_jingrui-choose:" .. player.id,
+      cancelable = false,
+    })
 
     if choice == OPT_DISCARD then
       if #discardableHand(target) == 0 then return end

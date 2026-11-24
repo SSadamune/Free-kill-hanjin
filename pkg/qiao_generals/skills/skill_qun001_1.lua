@@ -118,8 +118,7 @@ skill:addEffect(fk.CardUsing, {
 
 Fk:loadTranslationTable {
   ["#qiao__skill_qun001_1"] = "济世：将一张红色牌当【桃】对濒死角色使用",
-  ["#qiao__skill_qun001_1-exchange"] = "济世：是否用你的一张武将牌交换 %dest 的华佗？",
-  ["#qiao__skill_qun001_1-choose-position"] = "济世：选择用哪一张明置武将牌交换此华佗",
+  ["#qiao__skill_qun001_1-exchange"] = "济世：你可以选择一张明置武将牌，交换 %dest 的华佗",
   ["#qiao__skill_qun001_1-main"] = "主将",
   ["#qiao__skill_qun001_1-deputy"] = "副将",
 }

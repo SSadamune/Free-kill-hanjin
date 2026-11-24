@@ -4,9 +4,12 @@
 local H = require "packages.hegemony.util"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill { name = "qiao__skill_wei044_1" }
 skill.qiaoImplemented = true
+local DRAW = "qiao__wei044_draw"
+local REMOVE = "qiao__wei044_remove"
 
 local function canRemoveDeputy(player)
   local name = Exchange.actualGeneral(player, true)
@@ -25,16 +28,15 @@ skill:addEffect(fk.Damaged, {
   end,
   on_cost = function(self, event, target, player, data)
     local choices = {}
-    if livingSource(data) then table.insert(choices, "1") end
-    if canRemoveDeputy(player) then table.insert(choices, "2") end
-    if #choices == 0 then return false end
-    table.insert(choices, "Cancel")
-    local choice = player.room:askToChoice(player, {
-      choices = choices, all_choices = { "1", "2", "Cancel" },
+    if livingSource(data) then table.insert(choices, DRAW) end
+    if canRemoveDeputy(player) then table.insert(choices, REMOVE) end
+    local choice = Selection.askOption(player.room, player, {
+      choices = choices, all_choices = { DRAW, REMOVE },
       skill_name = skill.name,
       prompt = "#qiao__wei044_prompt",
+      detailed = true,
     })
-    if choice == "Cancel" or not table.contains(choices, choice) then return false end
+    if choice == nil then return false end
     event:setCostData(self, { choice = choice })
     return true
   end,
@@ -42,7 +44,7 @@ skill:addEffect(fk.Damaged, {
     local room = player.room
     local cost = event:getCostData(self)
     local source = data.from
-    if cost.choice == "1" then
+    if cost.choice == DRAW then
       if source == nil or source.dead then return end
       local n = math.min(5, math.max(0, source:getHandcardNum() - player:getHandcardNum()))
       if n > 0 and not player.dead then player:drawCards(n, skill.name) end
@@ -73,6 +75,10 @@ Fk:loadTranslationTable {
   [":qiao__skill_wei044_1"] = "当你受到伤害后，你可以选择一项：1.摸牌至与来源相同（至多摸五张）；2.移除副将并回复1点体力，然后来源弃置手牌至与你相同。",
   ["#qiao__wei044_prompt"] = "胆戾：选择一项",
   ["#qiao__wei044_discard"] = "胆戾：弃置手牌至与受伤角色相同",
+  [DRAW] = "补齐手牌",
+  [":" .. DRAW] = "摸牌至与伤害来源相同（至多摸五张）。",
+  [REMOVE] = "移除副将并回复",
+  [":" .. REMOVE] = "移除副将并回复1点体力，然后伤害来源弃置手牌至与你相同。",
 }
 
 return skill

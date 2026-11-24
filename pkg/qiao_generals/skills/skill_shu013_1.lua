@@ -5,6 +5,8 @@
 --   1. 弃置一张基本牌；2. 此【杀】对你无效。
 -- 由使用者选择并由其支付弃牌；没有可弃置的基本牌时只能选择第 2 项。
 -- 无效只作用于当前目标，不取消其他目标。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu013_1",
   tags = { Skill.Compulsory },
@@ -35,17 +37,13 @@ skill:addEffect(fk.TargetConfirmed, {
     if user == nil or user.dead then return end
 
     local basics = discardableBasics(user)
-    local choice
-    if #basics == 0 then
-      choice = OPT_NULLIFY
-    else
-      choice = room:askToChoice(user, {
-        choices = { OPT_DISCARD, OPT_NULLIFY },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_shu013_1-choice:" .. player.id,
-        cancelable = false,
-      })
-    end
+    local choice = Selection.askOption(room, user, {
+      choices = #basics > 0 and { OPT_DISCARD, OPT_NULLIFY } or { OPT_NULLIFY },
+      all_choices = { OPT_DISCARD, OPT_NULLIFY },
+      skill_name = skill.name,
+      prompt = "#qiao__skill_shu013_1-choice:" .. player.id,
+      cancelable = false,
+    })
 
     if choice == OPT_DISCARD then
       local ids = room:askToCards(user, {

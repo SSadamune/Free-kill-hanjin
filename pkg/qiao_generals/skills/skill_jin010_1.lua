@@ -3,6 +3,7 @@
 -- 任一角色结束阶段，张春华选择：1. 若其手牌数大于张春华，将任意张张春华自己
 -- 的手牌当一张冰【杀】对其使用；2. 摸牌至张春华已损失的体力值。目标由效果
 -- 明确指定，使用显式目标策略，不叠加默认攻击距离。两项均不可执行时不发动。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 
 local skill = fk.CreateSkill {
@@ -72,7 +73,7 @@ skill:addEffect(fk.EventPhaseStart, {
     if canSlash(player, target) then table.insert(choices, SLASH) end
     if canDraw(player) then table.insert(choices, DRAW) end
     if #choices == 0 then return false end
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
       all_choices = { SLASH, DRAW },
       cancelable = true,

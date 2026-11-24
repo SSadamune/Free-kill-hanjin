@@ -2,6 +2,7 @@
 --
 -- 拼点牌亮出后、结果确定前，改动自己对应的拼点牌点数；只改本次拼点计算，
 -- 不改实体牌的持久点数。发起者或参与者均可发动。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu010_2",
 }
@@ -17,8 +18,8 @@ skill:addEffect(fk.PindianCardsDisplayed, {
       and (player == data.from or (data.results and data.results[player]))
   end,
   on_cost = function(self, event, target, player, data)
-    local choice = player.room:askToChoice(player, {
-      choices = { PLUS, MINUS, "Cancel" },
+    local choice = Selection.askOption(player.room, player, {
+      choices = { PLUS, MINUS },
       skill_name = skill.name,
       prompt = "#qiao__skill_wu010_2-choice",
     })

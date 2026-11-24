@@ -3,6 +3,7 @@
 -- 造成伤害时且没有手牌，可以失去自己的一个其他技能，然后令本次伤害 +1。
 -- 失去入口区分将牌技能与非将牌来源，不能选扼绝自身、内部骨架、装备技能或未
 -- 取得的技能；已建立效果不因失去原技能撤销。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local S = require "packages.qiao.pkg.qiao_generals.util.jin_sources"
 
 local skill = fk.CreateSkill {
@@ -41,7 +42,7 @@ skill:addEffect(fk.DamageCaused, {
     local labels = table.map(list, function(choice, index)
       return optionLabel(index, choice)
     end)
-    local chosen = player.room:askToChoice(player, {
+    local chosen = Selection.askOption(player.room, player, {
       choices = labels,
       skill_name = skill.name,
       prompt = "#qiao__skill_jin010_2-choice",

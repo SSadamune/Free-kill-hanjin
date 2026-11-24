@@ -400,7 +400,6 @@ function Testqiao_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
   })
 
   FkTest.setNextReplies(p(1), {
-    { OPT_HAND, OPT_EQUIP },
     {
       card = { skill = "virtual_viewas", subcards = {} },
       targets = { p(2).id, p(3).id },
@@ -408,7 +407,9 @@ function Testqiao_jin_chain:testWenhuDiscardsWholeZonesAndDuelTargetLimit()
     },
   })
   inRoom(function()
-    room:handleUseCardReply(p(1), FkTest.ReplyUseSkill(WENHU))
+    local reply = FkTest.ReplyUseSkill(WENHU)
+    reply.interaction_data = "qiao_option_pair:::" .. OPT_HAND .. ":" .. OPT_EQUIP
+    room:handleUseCardReply(p(1), reply)
   end)
 
   lu.assertEquals(#p(1):getCardIds("h"), 0)

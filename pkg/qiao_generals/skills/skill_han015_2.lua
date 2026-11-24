@@ -2,6 +2,8 @@
 --
 -- 主将技（☯️-1）。每名角色整局限一次：一名角色明置后已无暗置武将牌时，
 -- 卢植可以令其摸两张或弃两张。包含卢植自己；已用对象按技能来源记录在卢植身上。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_han015_2",
   tags = { Skill.MainPlace },
@@ -28,17 +30,15 @@ skill:addEffect(fk.GeneralRevealed, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_han015_2-invoke::" .. target.id,
-    }) then
-      return false
+    local choices = { DRAW }
+    if table.find(target:getCardIds("he"), function(id) return not target:prohibitDiscard(id) end) then
+      table.insert(choices, DISCARD)
     end
-    local choice = room:askToChoice(player, {
-      choices = { DRAW, DISCARD },
+    local choice = Selection.askOption(room, player, {
+      choices = choices,
+      all_choices = { DRAW, DISCARD },
       skill_name = skill.name,
-      prompt = "#qiao__skill_han015_2-choice",
-      cancelable = false,
+      prompt = "#qiao__skill_han015_2-choice::" .. target.id,
     })
     if choice ~= DRAW and choice ~= DISCARD then return false end
     event:setCostData(self, { choice = choice })
@@ -67,8 +67,7 @@ skill:addEffect(fk.GeneralRevealed, {
 Fk:loadTranslationTable {
   ["qiao__skill_han015_2"] = "备寇",
   [":qiao__skill_han015_2"] = "主将技（☯️-1），每名角色限一次，当一名角色的武将牌明置后，若其已没有暗置的武将牌，你可以令其摸两张牌或弃置两张牌。",
-  ["#qiao__skill_han015_2-invoke"] = "备寇：你可以令 %dest 摸两张或弃两张",
-  ["#qiao__skill_han015_2-choice"] = "备寇：选择令其摸两张牌或弃置两张牌",
+  ["#qiao__skill_han015_2-choice"] = "备寇：你可以令 %dest 摸两张牌或弃置两张牌",
   ["#qiao__skill_han015_2-discard"] = "备寇：弃置两张牌",
   [DRAW] = "令其摸两张牌",
   [DISCARD] = "令其弃置两张牌",

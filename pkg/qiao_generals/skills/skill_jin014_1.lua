@@ -9,6 +9,8 @@
 -- 时机使用 fk.Damage（使用者为事件目标），不是 DamageFinished。
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin014_1",
 }
@@ -39,23 +41,18 @@ skill:addEffect(fk.Damage, {
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
-    if not room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_jin014_1-invoke",
-    }) then
-      return false
-    end
     local choices = {}
     if canDrawToHp(player) then table.insert(choices, OPTION_DRAW) end
     if canDiscardAll(player) then table.insert(choices, OPTION_RECOVER) end
     if #choices == 0 then return false end
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
+      all_choices = { OPTION_DRAW, OPTION_RECOVER },
       skill_name = skill.name,
       prompt = "#qiao__skill_jin014_1-choice",
-      cancelable = false,
+      detailed = true,
     })
-    if choice == nil or choice == "" then return false end
+    if choice == nil then return false end
     event:setCostData(self, { choice = choice })
     return true
   end,
@@ -76,8 +73,8 @@ skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
   [OPTION_DRAW] = "摸牌至体力值",
-  [OPTION_RECOVER] = "弃置所有手牌，然后将体力回复至实际弃置的张数",
-  ["#qiao__skill_jin014_1-invoke"] = "膂力：你可以选择一项",
+  [OPTION_RECOVER] = "弃手牌并回复",
+  [":" .. OPTION_RECOVER] = "弃置所有手牌，然后将体力回复至实际弃置的张数",
   ["#qiao__skill_jin014_1-choice"] = "膂力：请选择一项",
 }
 

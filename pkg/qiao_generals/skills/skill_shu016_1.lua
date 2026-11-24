@@ -4,6 +4,7 @@
 -- 当你回复1点体力后，你可以选择一名其他角色，令其回复1点体力，或与其各摸一张牌。
 -- 每实际回复1点提供一次独立机会；目标已满体力时不能选择回复分支。
 local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu016_1",
 }
@@ -43,12 +44,13 @@ skill:addEffect(fk.HpRecover, {
     if to == nil or to.dead or to:isRemoved() then return false end
     local choices = { OPT_DRAW }
     if to.hp < to.maxHp then table.insert(choices, 1, OPT_RECOVER) end
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
+      all_choices = { OPT_RECOVER, OPT_DRAW },
       skill_name = skill.name,
       prompt = "#qiao__skill_shu016_1-choice:" .. to.id,
-      cancelable = false,
     })
+    if choice == nil then return false end
     event:setCostData(self, { to = to, choice = choice })
     return true
   end,

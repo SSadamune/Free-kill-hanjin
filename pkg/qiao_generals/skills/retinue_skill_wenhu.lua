@@ -7,6 +7,7 @@
 -- 至少实际弃置一个区域。决斗的其他目标条件沿用原牌，不因本技能放宽距离。
 -- 限一取得与统领能力次数由统领公共规则处理，本技能不另建限一逻辑。
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_wenhu",
@@ -42,6 +43,12 @@ local function eligibleZones(player)
   end)
 end
 
+local function zoneOptions(player)
+  local all = table.map(ZONES, function(zone) return ZONE_LABEL[zone] end)
+  local available = table.map(eligibleZones(player), function(zone) return ZONE_LABEL[zone] end)
+  return Selection.optionSets(all, available, #ZONES)
+end
+
 --- 至少存在一名决斗可指定的其他角色。
 ---@param player ServerPlayer | ClientPlayer
 ---@return boolean
@@ -60,6 +67,7 @@ skill:addEffect("active", {
   card_num = 0,
   target_num = 0,
   card_filter = Util.FalseFunc,
+  interaction = Selection.optionButtons(skill, zoneOptions),
   can_use = function(self, player)
     return self:withinTimesLimit(player, Player.HistoryPhase)
       and #eligibleZones(player) > 0
@@ -70,30 +78,12 @@ skill:addEffect("active", {
     if player == nil or player.dead then return end
     if not player:hasSkill(skill.name) then return end
 
-    local zones = eligibleZones(player)
-    if #zones == 0 then return end
-    local choices = table.map(zones, function(zone) return ZONE_LABEL[zone] end)
-    -- 单选时直接返回；多选时由玩家勾选任意个区域。
-    local picked = room:askToChoices(player, {
-      choices = choices,
-      min_num = 1,
-      max_num = #choices,
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_wenhu-zones",
-      cancelable = false,
-    })
-    if picked == nil or #picked == 0 then return end
-
-    -- 将界面选项还原为区域，并复核仍非空、仍可全弃且不重复。
-    local selected, seen = {}, {}
-    for _, label in ipairs(picked) do
-      local zone = table.find(zones, function(z) return ZONE_LABEL[z] == label end)
-      if zone ~= nil and not seen[zone] and canDiscardWholeZone(player, zone) then
-        seen[zone] = true
-        table.insert(selected, zone)
-      end
-    end
-    if #selected == 0 then return end
+    local available, _, sets = zoneOptions(player)
+    local choice = effect.interaction_data
+    if not table.contains(available, choice) then return end
+    local selected = table.filter(ZONES, function(zone)
+      return table.contains(sets[choice], ZONE_LABEL[zone])
+    end)
 
     -- 选择后先固定所有选中区的牌，再用一次弃牌操作同时弃置；不能在逐区弃置
     -- 之间重新读取区域，否则本次弃牌触发的新牌会被一并收走。
@@ -144,7 +134,6 @@ Fk:loadTranslationTable {
   ["qiao__retinue_skill_wenhu"] = "文虎",
   [":qiao__retinue_skill_wenhu"] = "出牌阶段限一次，你可以弃置任意个区域的所有牌，然后视为使用目标上限为X的【决斗】（X为你以此法弃置牌的区域数）。",
   ["#qiao__retinue_skill_wenhu-prompt"] = "文虎：弃置任意个区域的所有牌，然后视为使用【决斗】",
-  ["#qiao__retinue_skill_wenhu-zones"] = "文虎：选择要完整弃置的区域（至少一个）",
   ["#qiao__retinue_skill_wenhu-duel"] = "文虎：选择至多 %arg 名【决斗】目标",
   [OPT_HAND] = "手牌区",
   [OPT_EQUIP] = "装备区",

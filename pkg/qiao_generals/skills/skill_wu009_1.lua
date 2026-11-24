@@ -4,6 +4,8 @@
 -- 准备阶段：选择一名其他角色并选择一项：
 -- 1. 令其摸 X 张牌，然后弃置一张牌；
 -- 2. 令其摸一张牌，然后弃置 X 张牌（X 为孙坚已损失的体力值）。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu009_1",
 }
@@ -43,23 +45,24 @@ skill:addEffect(fk.EventPhaseStart, {
       prompt = "#qiao__skill_wu009_1-choose:::" .. player:getLostHp(),
       cancelable = true,
     })
-    if #to > 0 then
-      event:setCostData(self, { tos = to })
-      return true
-    end
-  end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    local to = event:getCostData(self).tos[1]
+    if #to == 0 then return false end
     local n = player:getLostHp()
     local draw = DRAW .. ":::" .. n
     local discard = DISCARD .. ":::" .. n
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(player.room, player, {
       choices = { draw, discard },
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu009_1-choice::" .. to.id,
+      prompt = "#qiao__skill_wu009_1-choice::" .. to[1].id,
     })
-    if choice == draw then
+    if choice == nil then return false end
+    event:setCostData(self, { tos = to, n = n, draw = choice == draw })
+    return true
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local cost = event:getCostData(self)
+    local to, n = cost.tos[1], cost.n
+    if cost.draw then
       if to.dead then return end
       to:drawCards(n, skill.name)
       if to:isAlive() then
@@ -72,7 +75,7 @@ skill:addEffect(fk.EventPhaseStart, {
           cancelable = false,
         })
       end
-    elseif choice == discard then
+    else
       if to.dead then return end
       to:drawCards(1, skill.name)
       if n > 0 and to:isAlive() then

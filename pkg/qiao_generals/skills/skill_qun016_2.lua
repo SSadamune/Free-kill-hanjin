@@ -7,6 +7,7 @@
 --      角色，不能把「与自己同势力的濒死角色」当成来源条件。
 --   2. 与自己势力相同的其他角色死亡时，自己选择：失去 1 点体力，或弃置所有
 --      手牌。不是强制失去体力；两个选项都必须提供，即使当前没有手牌。
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local H = require "packages.hegemony.util"
 
 local skill = fk.CreateSkill {
@@ -42,7 +43,7 @@ skill:addEffect(fk.Death, {
     return H.compareKingdomWith(target, player)
   end,
   on_cost = function(self, event, target, player, data)
-    local choice = player.room:askToChoice(player, {
+    local choice = Selection.askOption(player.room, player, {
       choices = { OPT_LOSE_HP, OPT_DISCARD },
       skill_name = skill.name,
       prompt = "#qiao__skill_qun016_2-choice",

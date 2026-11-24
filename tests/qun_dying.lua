@@ -120,9 +120,9 @@ function Testqiao_qun_dying:testJishiSavesWithRedEquipmentThenExchangesHuatuoOnc
     { card = { skill = JISHI, subcards = { redEquip } }, targets = { exchanged.id } },
   })
   -- AskForChoices 的回复体是选项表；裸字符串会被 askToChoices 当作非法回复取消。
-  FkTest.setNextReplies(exchanged, { { "yes" }, { "#qiao__skill_qun001_1-main" } })
+  FkTest.setNextReplies(exchanged, { { "#qiao__skill_qun001_1-main" } })
   -- 若错误地在首次成功后继续询问，这张牌会被换给原持有者。
-  FkTest.setNextReplies(later, { { "yes" }, { "#qiao__skill_qun001_1-main" } })
+  FkTest.setNextReplies(later, { { "#qiao__skill_qun001_1-main" } })
   enterDying(room, exchanged)
 
   lu.assertEquals(exchanged.hp, 1)
@@ -173,7 +173,7 @@ function Testqiao_qun_dying:testJishiStillExchangesWhenDyingPlayerDies()
   for index = 2, #room.players do
     local player = p(index)
     if player == candidate then
-      FkTest.setNextReplies(player, { "", { "yes" }, { "#qiao__skill_qun001_1-main" } })
+      FkTest.setNextReplies(player, { "", { "#qiao__skill_qun001_1-main" } })
     else
       FkTest.setNextReplies(player, { "", "" })
     end

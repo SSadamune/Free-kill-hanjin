@@ -2,6 +2,7 @@
 -- 规则依据：docs/rules/generals/wu023-chenwu-dongxi.md。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local CHEN = "qiao_heg__wu023"
@@ -131,6 +132,10 @@ function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
   local thirdCard = give(third, "qiao__jink", Card.Heart, 4)
   inRoom(function()
     room:moveCardIntoEquip(player, equip, "test", true, player)
+    local disabled = FkTest.ReplyUseSkill(FENGMING, {}, {})
+    disabled.interaction_data = OPT_DISCARD
+    room:handleUseCardReply(player, disabled)
+    lu.assertEquals(player:usedSkillTimes(FENGMING, Player.HistoryPhase), 0)
     FkTest.setRoomBreakpoint(player, "AskForUseActiveSkill", function(data)
       if data[4].skillName == FENGMING then
         lu.assertEquals(data[1], "discard_skill")
@@ -142,29 +147,42 @@ function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
   end)
 
   local skill = assert(Fk.skills[FENGMING])
-  local choiceCount, discards = 0, {}
-  local function useFengming()
+  local discards = {}
+  local function useFengming(option, unavailable)
+    local reply
+    client_room.run(room, function(clients)
+      local board = Fk:getBoardGame("qiao_heg_mode")
+      local client = board.client_klass:new(ClientInstance.client)
+      local handler = client.request_handlers.PlayCard:new(clients[1])
+      handler:setup()
+      handler:selectSkill(FENGMING, { selected = true })
+      local spec = handler.scene:getAllItems("Interaction")["1"].spec
+      lu.assertEquals(spec.type, "optionbox")
+      lu.assertTrue(spec.direct_send)
+      lu.assertEquals(spec.all_options, { OPT_CHAIN, OPT_DISCARD })
+      lu.assertEquals(spec.options, { option })
+      lu.assertFalse(table.contains(spec.options, unavailable))
+      local original = ClientInstance.notifyUI
+      ClientInstance.notifyUI = function(_, cmd, data)
+        if cmd == "ReplyToServer" then reply = data end
+      end
+      local ok, err = pcall(function()
+        -- 原生选项按钮在一次点击中写入选项并提交。
+        handler:update("Interaction", "1", "finish", option)
+        handler:update("Button", "OK", "click", {})
+        handler:_finish()
+      end)
+      ClientInstance.notifyUI = original
+      assert(ok, err)
+    end)
+    lu.assertEquals(reply.interaction_data, option)
     inRoom(function()
-      lu.assertTrue(skill:canUse(player))
-      room:useSkill(player, skill, function()
-        skill:onUse(room, { from = player, cards = {}, tos = {} })
-      end, { from = player, cards = {}, tos = {} })
+      room:handleUseCardReply(player, reply)
     end)
   end
 
   skill_test.withSkillRequests(room, FENGMING, {
-    askToChoice = function(self, who, params, original)
-      if params.skill_name ~= FENGMING then
-        return original(self, who, params)
-      end
-      choiceCount = choiceCount + 1
-      if choiceCount == 1 then
-        local option = OPT_CHAIN .. ":::" .. player:getLostHp()
-        lu.assertTrue(table.contains(params.choices, option))
-        return option
-      end
-      return OPT_DISCARD
-    end,
+    askToChoice = function() error("奋命应由选项按钮直接提交") end,
     askToChoosePlayers = function(self, who, params, original)
       if params.skill_name ~= FENGMING then
         return original(self, who, params)
@@ -187,15 +205,14 @@ function Testqiao_wu023_chenwu_dongxi:testFengmingTwoOptionsEachOnce()
       return id
     end,
   }, function()
-    useFengming()
+    useFengming(OPT_CHAIN, OPT_DISCARD)
     lu.assertTrue(player.chained)
     lu.assertTrue(second.chained)
     lu.assertFalse(third.chained)
     FkTest.setNextReplies(player, { FkTest.ReplyDiscard({ own }) })
-    useFengming()
+    useFengming(OPT_DISCARD, OPT_CHAIN)
   end)
 
-  lu.assertEquals(choiceCount, 2)
   lu.assertEquals(player:getMark(USED_CHAIN), 1)
   lu.assertEquals(player:getMark(USED_DISCARD), 1)
   lu.assertFalse(skill:canUse(player))

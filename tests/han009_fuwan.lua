@@ -108,6 +108,7 @@ function Testqiao_han009:testMoukuiSingleOptionsWithoutCounter()
   -- 只摸一张：目标没有任何牌，弃牌选项不可选。
   FkTest.setNextReplies(p1(), {
     FkTest.ReplyChoosePlayer({ p2() }),
+    { OPTION_DRAW },
   })
   inRoom(function()
     room:useCard { from = p1(), tos = { p2() }, card = Fk:cloneCard("qiao__slash") }
@@ -141,7 +142,7 @@ function Testqiao_han009:testMoukuiDoubleSelectionCounterDiscardsOwnerCard()
 
   FkTest.setNextReplies(p1(), {
     FkTest.ReplyChoosePlayer({ p2() }),
-    { OPTION_DRAW, OPTION_DISCARD },
+    { "qiao_option_pair:::" .. OPTION_DRAW .. ":" .. OPTION_DISCARD },
     discardCard,
   })
   FkTest.setNextReplies(p2(), {
@@ -168,7 +169,7 @@ function Testqiao_han009:testMoukuiOtherTargetCancelsNoCounter()
 
   FkTest.setNextReplies(p1(), {
     FkTest.ReplyChoosePlayer({ p2() }),
-    { OPTION_DRAW, OPTION_DISCARD },
+    { "qiao_option_pair:::" .. OPTION_DRAW .. ":" .. OPTION_DISCARD },
     p2card,
   })
   FkTest.setNextReplies(p3(), {

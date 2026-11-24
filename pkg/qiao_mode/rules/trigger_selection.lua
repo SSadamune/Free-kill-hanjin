@@ -6,6 +6,84 @@ local otherSelectionSources = {
   ["#qiao_adaptation_rule"] = true,
 }
 
+-- Native single-choice requests display every option and submit on the click.
+-- Keep the visible list even when only one option is available, so the engine
+-- cannot auto-return it and disabled alternatives are still explained.
+function M.askOption(room, player, params)
+  if #params.choices == 0 then return end
+  local choice = room:askToChoice(player, {
+    choices = table.simpleClone(params.choices),
+    all_choices = table.simpleClone(params.all_choices or params.choices),
+    skill_name = params.skill_name,
+    prompt = params.prompt,
+    detailed = params.detailed,
+    cancelable = params.cancelable ~= false,
+  })
+  if choice == "Cancel" or not table.contains(params.choices, choice) then return end
+  local frame = room.qiaoTriggerSelection
+  if frame and frame.player == player and room.current_cost_skill == frame.skill then
+    frame.confirmed = true
+  end
+  return choice
+end
+
+-- For small sets, each permitted combination can itself be chosen in one click.
+-- The order of the members follows the original option order.
+function M.optionSets(all, available, max)
+  local choices, allChoices, sets = {}, {}, {}
+  local function add(members)
+    local label
+    if #members == 1 then
+      label = members[1]
+    elseif #members == 2 then
+      label = "qiao_option_pair:::" .. table.concat(members, ":")
+    else
+      label = "qiao_option_triple:::" .. table.concat(members, ":")
+    end
+    sets[label] = members
+    table.insert(allChoices, label)
+    if table.every(members, function(choice) return table.contains(available, choice) end) then
+      table.insert(choices, label)
+    end
+  end
+  for _, option in ipairs(all) do add({ option }) end
+  if max >= 2 then
+    for i, first in ipairs(all) do
+      for j = i + 1, #all do add({ first, all[j] }) end
+    end
+  end
+  if max >= 3 then
+    for i, first in ipairs(all) do
+      for j = i + 1, #all do
+        for k = j + 1, #all do add({ first, all[j], all[k] }) end
+      end
+    end
+  end
+  return choices, allChoices, sets
+end
+
+function M.optionButtons(skeleton, options)
+  skeleton.qiaoDirectOptions = options
+  return function(self, player)
+    local available, all = options(player)
+    return UI.OptionBox { options = available, all_options = all, direct_send = true }
+  end
+end
+
+function M.validDirectOption(skill, player, reply)
+  local skeleton = skill and skill:getSkeleton()
+  local options = skeleton and skeleton.qiaoDirectOptions
+  if options == nil then return true end
+  local available = options(player)
+  return table.contains(available, reply.interaction_data)
+    and #(reply.card.subcards or {}) == 0 and #(reply.targets or {}) == 0
+end
+
+Fk:loadTranslationTable {
+  ["qiao_option_pair"] = "%arg＋%arg2",
+  ["qiao_option_triple"] = "%arg＋%arg2＋%arg3",
+}
+
 -- The native selector already enforces its own cardinality and eligibility.
 -- Use it for cancellable HanJin selections, including auxiliary skill requests.
 function M.applies(name, extra, cancelable)

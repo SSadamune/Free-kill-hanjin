@@ -55,10 +55,10 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
     p2.hp = p2.maxHp
     room():moveCardTo(room():printCard("qiao__jink", Card.Heart, 6), Card.DrawPile)
   end)
-  FkTest.setNextReplies(p1, { TIEQI, "1" })
+  FkTest.setNextReplies(p1, { TIEQI })
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
-    askToSkillInvoke = function() return true end,
+    askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
     askToChoice = function(self, player, params, original)
       if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
       return original(self, player, params)
@@ -95,9 +95,9 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
     room():setPlayerMark(p2, "__heg_deputy", "qiao_heg__shu001")
     room():moveCardTo(room():printCard("qiao__jink", Card.Heart, 6), Card.DrawPile)
   end)
-  FkTest.setNextReplies(p1, { TIEQI, "1" })
+  FkTest.setNextReplies(p1, { TIEQI })
   skill_test.withSkillRequests(room(), TIEQI, {
-    askToSkillInvoke = function() return true end,
+    askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
     askToChoice = function(self, player, params, original)
       if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-deputy" end
       return original(self, player, params)
@@ -130,10 +130,10 @@ function Testqiao_shu_tieqi:testTieqiNoMatchingCardCannotRespond()
     p2.hp = p2.maxHp
     room():moveCardTo(room():printCard("qiao__jink", Card.Heart, 6), Card.DrawPile)
   end)
-  FkTest.setNextReplies(p1, { TIEQI, "1" })
+  FkTest.setNextReplies(p1, { TIEQI })
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
-    askToSkillInvoke = function() return true end,
+    askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
     askToChoice = function(self, player, params, original)
       if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
       return original(self, player, params)

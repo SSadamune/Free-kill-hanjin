@@ -629,8 +629,8 @@ function Testqiao_em_wei001_caocao:testBannerExtraTurnExpiresThenThirdNeedsPubli
         return { id }
       end,
       askToChoice = function(self, who, params, original)
+        if params.prompt == "#qiao__em_wei001_banner-position" then return params.choices[1] end
         if onChoice ~= nil then onChoice(params) end
-        if table.contains(params.choices, "m") then return "m" end
         lu.assertTrue(table.contains(params.choices, FIRST),
           "授技候选应包含突袭：" .. table.concat(params.choices, ","))
         return FIRST
@@ -818,7 +818,7 @@ function Testqiao_em_wei001_caocao:testDanliDrawUpToFive()
   local before = #user:getCardIds("h")
   skill_test.withSkillRequests(room, "qiao__skill_wei044_1", {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei044_1" then return "1" end
+      if params.skill_name == "qiao__skill_wei044_1" then return "qiao__wei044_draw" end
       return original(self, who, params)
     end,
   }, function()
@@ -856,7 +856,7 @@ function Testqiao_em_wei001_caocao:testDanliRemoveDeputyRecoverAndSourceDiscard(
   end
   skill_test.withSkillRequests(room, "qiao__skill_wei044_1", {
     askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei044_1" then return "2" end
+      if params.skill_name == "qiao__skill_wei044_1" then return "qiao__wei044_remove" end
       return original(self, who, params)
     end,
   }, function()
@@ -1407,9 +1407,9 @@ function Testqiao_em_wei001_caocao:testDanliCannotRemoveBannerDeputy()
     local asked = false
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, _, params)
-        lu.assertEquals(params.choices, { "1", "Cancel" })
+        lu.assertEquals(params.choices, { "qiao__wei044_draw" })
         asked = true
-        return "1"
+        return "qiao__wei044_draw"
       end,
     }, function()
       room.logic:trigger(fk.Damaged, user, { who = user, from = source, damage = 1 })
@@ -1437,9 +1437,9 @@ function Testqiao_em_wei001_caocao:testLightningWithoutSourceAllowsDanliDeputyOn
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, who, params)
         lu.assertIs(who, user)
-        lu.assertEquals(params.choices, {"2", "Cancel"})
+        lu.assertEquals(params.choices, { "qiao__wei044_remove" })
         asked = asked + 1
-        return "2"
+        return "qiao__wei044_remove"
       end,
       askToDiscard = function() error("无伤害来源时不应要求弃牌") end,
     }, function()
@@ -1463,8 +1463,8 @@ function Testqiao_em_wei001_caocao:testDanliDeadSourceAllowsLegalDeputy()
     user.hp = user.maxHp - 1
     skill_test.withSkillRequests(room, danli, {
       askToChoice = function(_, _, params)
-        lu.assertTrue(table.contains(params.choices, "2"))
-        return "2"
+        lu.assertTrue(table.contains(params.choices, "qiao__wei044_remove"))
+        return "qiao__wei044_remove"
       end,
       askToDiscard = function() error("死亡的来源不应再被询问弃牌") end,
     }, function()

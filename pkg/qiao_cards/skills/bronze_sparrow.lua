@@ -9,6 +9,7 @@
 --   * 选择一个条目即发动；取消不消耗本回合次数。
 --   * 一个令牌只作用于一条被明确指定的条目，不能开启全部条目。
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
   name = "qiao__bronze_sparrow_skill",
@@ -51,13 +52,11 @@ skill:addEffect(fk.AfterCardUseDeclared, {
       choices[index] = string.format("%s:%d::qiao_adaptation_%s:qiao_condition_%s",
         label, index, entry.effect, entry.condition)
     end
-    local choice = room:askToChoice(player, {
+    local choice = Selection.askOption(room, player, {
       choices = choices,
       skill_name = skill.name,
-      cancelable = true,
       prompt = "#qiao__bronze_sparrow-choose",
     })
-    if choice == nil or choice == "Cancel" then return false end
     local picked = entries[table.indexOf(choices, choice)]
     if picked == nil then return false end
     event:setCostData(self, { entry_id = picked.id })
