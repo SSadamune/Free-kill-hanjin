@@ -13,21 +13,6 @@ local OPT_DISCARD = "qiao__skill_wu023_1-discard-all"
 local USED_CHAIN = "qiao__skill_wu023_1-chain-phase"
 local USED_DISCARD = "qiao__skill_wu023_1-discard-phase"
 
---- 服务端与客户端共用只读房间；ClientPlayer 没有 room 字段。
----@param player ServerPlayer | ClientPlayer
----@return Room | Client
-local function currentRoom(player)
-  return player.room or Fk:currentRoom()
-end
-
----@param player ServerPlayer
----@return ServerPlayer[]
-local function alivePlayers(player)
-  return table.filter(currentRoom(player):getPresentPlayers(), function(p)
-    return p:isAlive() and not p:isRemoved()
-  end)
-end
-
 ---@param player ServerPlayer
 ---@return boolean
 local function canChain(player)
@@ -54,7 +39,7 @@ skill:addEffect("active", {
     local player = effect.from
     if player == nil or player.dead then return end
 
-    local targets = alivePlayers(player)
+    local targets = room:getPresentPlayers()
     local max = math.min(math.max(1, player:getLostHp()), #targets)
     local chain = OPT_CHAIN .. ":::" .. max
     local choices = {}
@@ -90,18 +75,24 @@ skill:addEffect("active", {
       end)
       for _, to in ipairs(targets) do
         if to:isAlive() and not to:isRemoved() then
-          local ids = table.filter(to:getCardIds("he"), function(id)
-            return not to:prohibitDiscard(id)
-          end)
+          local ids = table.filter(to:getCardIds("he"), function(id) return not to:prohibitDiscard(id) end)
           if #ids > 0 then
-            local id = room:askToChooseCard(player, {
-              target = to,
-              flag = "he",
-              skill_name = skill.name,
-              prompt = "#qiao__skill_wu023_1-discard::" .. to.id .. ":" .. skill.name,
-            })
-            if id ~= nil and id ~= -1 and table.contains(ids, id) then
-              room:throwCard({ id }, skill.name, to, player)
+            if to == player then
+              room:askToDiscard(player, {
+                min_num = 1, max_num = 1, include_equip = true, cancelable = false,
+                skill_name = skill.name,
+                prompt = "#qiao__skill_wu023_1-discard-self",
+              })
+            else
+              local id = room:askToChooseCard(player, {
+                target = to,
+                flag = "he",
+                skill_name = skill.name,
+                prompt = "#qiao__skill_wu023_1-discard::" .. to.id .. ":" .. skill.name,
+              })
+              if id ~= nil and id ~= -1 and table.contains(ids, id) then
+                room:throwCard({ id }, skill.name, to, player)
+              end
             end
           end
         end
@@ -117,6 +108,7 @@ Fk:loadTranslationTable {
   ["#qiao__skill_wu023_1-choice"] = "奋命：请选择一项",
   ["#qiao__skill_wu023_1-target"] = "奋命：选择至多 %arg 名角色横置（可选自己）",
   ["#qiao__skill_wu023_1-discard"] = "奋命：选择 %dest 的一张牌弃置",
+  ["#qiao__skill_wu023_1-discard-self"] = "奋命：弃置自己的一张手牌或装备牌",
   [OPT_CHAIN] = "令至多 %arg 名角色横置，然后自己横置",
   [OPT_DISCARD] = "弃置所有横置角色各一张牌",
 }
