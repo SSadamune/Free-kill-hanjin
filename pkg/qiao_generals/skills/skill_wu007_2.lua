@@ -27,8 +27,14 @@ local function burningTargetsFor(player)
   end)
 end
 
+local function materialIds(player)
+  local ids = player:getHandlyIds()
+  table.insertTableIfNeed(ids, player:getCardIds("e"))
+  return ids
+end
+
 local function usableCards(player)
-  return table.filter(player:getCardIds("he"), function(id)
+  return table.filter(materialIds(player), function(id)
     local card = Fk:getCardById(id)
     return (card.suit == Card.Spade or card.suit == Card.Heart
       or card.suit == Card.Club or card.suit == Card.Diamond)
@@ -37,16 +43,15 @@ local function usableCards(player)
   end)
 end
 
-local function redCards(player)
-  return table.filter(player:getCardIds("he"), function(id)
-    return Fk:getCardById(id).color == Card.Red
-  end)
+local function isRed(id)
+  return Fk:getCardById(id).color == Card.Red
 end
 
 skill:addEffect("viewas", {
   anim_type = "drawcard",
   pattern = "qiao__await_exhausted",
   prompt = "#qiao__skill_wu007_2-prompt",
+  handly_pile = true,
   filter_pattern = {
     min_num = 1,
     max_num = 1,
@@ -57,7 +62,7 @@ skill:addEffect("viewas", {
     return table.contains(usableCards(player), to_select)
   end,
   view_as = function(self, player, cards)
-    if #cards ~= 1 then return nil end
+    if #cards ~= 1 or not table.contains(usableCards(player), cards[1]) then return nil end
     local card = Fk:cloneCard("qiao__await_exhausted")
     card.skillName = skill.name
     card:addSubcard(cards[1])
@@ -90,9 +95,13 @@ skill:addEffect("viewas", {
 
     local targets = burningTargetsFor(target)
     local x = #targets
-    if x <= 0 or #redCards(target) < x then return end
+    -- 手牌与木马牌在询问前只计张数，装备区可以按公开颜色计算。
+    local extra = target:getHandlyIds(false)
+    local upperBound = target:getHandcardNum() + #extra + #table.filter(target:getCardIds("e"), isRed)
+    if x <= 0 or upperBound < x then return end
     local picked = room:askToCards(target, {
       include_equip = true,
+      expand_pile = extra,
       min_num = x,
       max_num = x,
       pattern = ".|.|red",
@@ -101,8 +110,9 @@ skill:addEffect("viewas", {
       cancelable = true,
     })
     if picked == nil or #picked ~= x then return end
+    local available = materialIds(target)
     for _, id in ipairs(picked) do
-      if Fk:getCardById(id).color ~= Card.Red then return end
+      if not table.removeOne(available, id) or not isRed(id) then return end
     end
     -- 主效果是真实的【火烧连营】使用；目标已按该牌规则计算。
     local card = Fk:cloneCard(BURNING)

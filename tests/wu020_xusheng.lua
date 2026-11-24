@@ -6,6 +6,7 @@ local XUSHENG = "qiao_heg__wu020"
 local YICHENG = "qiao__skill_wu020_1"
 local POJUN = "qiao__skill_wu020_2"
 local DELAY = "qiao__skill_wu020_1-delay"
+local USE_EQUIP = "qiao__skill_wu020_1-use"
 
 local function inRoom(fn)
   local result
@@ -57,17 +58,22 @@ function Testqiao_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
   local room, player, ally, source = FkTest.room, p(1), p(2), p(3)
   local slash = give(source, "qiao__slash", Card.Spade, 2)
   local spare = give(ally, "qiao__slash", Card.Heart, 3)
+  local choices
   inRoom(function()
     room.current = source
     player:revealGeneral(false)
+    room:moveCardTo(room:printCard("qiao__slash", Card.Club, 7), Card.DrawPile)
+    FkTest.setRoomBreakpoint(ally, "AskForChoices", function(data)
+      if data[5] == YICHENG then
+        choices = { data[1], data[2] }
+        FkTest.setNextReplies(ally, { { DELAY } })
+      end
+      return false
+    end)
   end)
   skill_test.withSkillRequests(room, YICHENG, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == YICHENG then return true end
-      return original(self, who, params)
-    end,
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == YICHENG then return DELAY end
       return original(self, who, params)
     end,
   }, function()
@@ -75,6 +81,7 @@ function Testqiao_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
       room:useCard { from = source, tos = { ally }, card = Fk:getCardById(slash) }
     end)
   end)
+  lu.assertEquals(choices, { { DELAY }, { DELAY, USE_EQUIP } })
   lu.assertTrue(table.contains(ally:getCardIds("h"), spare))
   skill_test.withSkillRequests(room, "qiao__wu020_yicheng_rule", {
     askToDiscard = function(self, who, params, original)
@@ -90,6 +97,64 @@ function Testqiao_wu020_xusheng:testYichengDrawsThenDelayedDiscard()
     end)
   end)
   lu.assertFalse(table.contains(ally:getCardIds("h"), spare))
+end
+
+local function checkYichengUsesEquipment(fromOx)
+  local room, ally, source = FkTest.room, p(2), p(3)
+  local equip
+  inRoom(function()
+    room.current = source
+    equip = room:printCard("qiao__qinggang_sword", Card.Spade, 6)
+    if fromOx then
+      local ox = room:printCard("qiao__wooden_ox", Card.Diamond, 5)
+      room:moveCardTo(ox, Card.PlayerEquip, ally, fk.ReasonJustMove, "test")
+      ally:addToPile("$sa_carriage", equip.id, false, "test")
+      room:moveCardTo(room:printCard("qiao__slash", Card.Club, 7), Card.DrawPile)
+    else
+      room:moveCardTo(equip, Card.DrawPile)
+    end
+    FkTest.setRoomBreakpoint(ally, "AskForChoices", function(data)
+      if data[5] == YICHENG then
+        lu.assertEquals(data[1], { DELAY, USE_EQUIP })
+        FkTest.setNextReplies(ally, { { USE_EQUIP }, FkTest.ReplyCard(equip, { ally }) })
+      end
+      return false
+    end)
+    skill_test.withSkillRequests(room, YICHENG, {
+      askToSkillInvoke = function() return true end,
+    }, function()
+      room:useCard { from = source, tos = { ally }, card = Fk:cloneCard("qiao__slash") }
+    end)
+  end)
+  lu.assertEquals(room:getCardArea(equip.id), Card.PlayerEquip)
+  lu.assertIs(room:getCardOwner(equip.id), ally)
+  lu.assertEquals(#(room:getTag("qiao_wu020_yicheng_pending") or {}), 0)
+end
+
+function Testqiao_wu020_xusheng:testYichengCanUseDrawnEquipment()
+  checkYichengUsesEquipment(false)
+end
+
+function Testqiao_wu020_xusheng:testYichengCanUseOnlyEquipmentUnderWoodenOx()
+  checkYichengUsesEquipment(true)
+end
+
+function Testqiao_wu020_xusheng:testPojunDoesNotAskAgainstUndeterminedTarget()
+  local room, owner, target = FkTest.room, p(1), p(5)
+  local hand = give(target, "qiao__slash")
+  local asks = 0
+  inRoom(function()
+    target:hideGeneral(false)
+    target:hideGeneral(true)
+    room:setPlayerProperty(target, "kingdom", "unknown")
+    skill_test.withSkillRequests(room, POJUN, {
+      askToSkillInvoke = function() asks = asks + 1; return false end,
+    }, function()
+      room:useCard { from = owner, tos = { target }, card = Fk:cloneCard("qiao__slash") }
+    end)
+  end)
+  lu.assertEquals(asks, 0)
+  lu.assertTrue(table.contains(target:getCardIds("h"), hand))
 end
 
 function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()

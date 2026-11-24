@@ -6,17 +6,7 @@ local skill = fk.CreateSkill { name = P.CONSUME }
 skill.qiaoImplemented = true
 
 local function hasFourSuits(holder)
-  local suits = {}
-  for _, id in ipairs(holder:getPile(P.PILE)) do
-    local card = Fk:getCardById(id, true)
-    if card ~= nil and card.suit ~= nil and card.suit >= Card.Spade
-      and card.suit <= Card.Diamond then
-      suits[card.suit] = true
-    end
-  end
-  local n = 0
-  for _ in pairs(suits) do n = n + 1 end
-  return n >= 4
+  return #P.pileSuits(holder:getPile(P.PILE)) == 4
 end
 
 skill:addEffect(fk.AfterCardsMove, {

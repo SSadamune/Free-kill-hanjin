@@ -2,6 +2,7 @@
 local H = require "packages.hegemony.util"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
+local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 
 local M = {}
 M.LORD = "qiao_heg__em_han001"
@@ -95,6 +96,15 @@ end
 
 function M.count(lord)
   return lord and #lord:getPile(M.PILE) or 0
+end
+
+function M.pileSuits(ids)
+  local suits = {}
+  for _, id in ipairs(ids) do
+    local card = Fk:getCardById(id, true)
+    if card and Deck.validSuit(card.suit) then table.insertIfNeed(suits, card.suit) end
+  end
+  return suits
 end
 
 function M.isSameKingdom(lord, player)

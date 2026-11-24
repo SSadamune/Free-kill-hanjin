@@ -15,9 +15,8 @@ local function ensureRule(room)
   if rule ~= nil and not room:hasSkill(RULE) then room:addSkill(rule) end
 end
 
-local function kingdomCount(room, target)
-  local mapper = H.getKingdomPlayersNum(room, false)
-  return mapper[H.getKingdom(target)] or 0
+local function maxCards(room, target)
+  return math.min(H.getSameKingdomPlayersNum(room, target), #target:getCardIds("he"))
 end
 
 skill:addEffect(fk.TargetSpecified, {
@@ -25,6 +24,7 @@ skill:addEffect(fk.TargetSpecified, {
     return target == player and not player.dead and player:hasSkill(skill.name)
       and data ~= nil and data.card ~= nil and data.card.trueName == "slash"
       and data.to ~= nil and data.to:isAlive() and not data.to:isRemoved()
+      and maxCards(player.room, data.to) > 0
   end,
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {
@@ -36,7 +36,7 @@ skill:addEffect(fk.TargetSpecified, {
     local room = player.room
     local to = data.to
     if to == nil or to.dead or to:isRemoved() then return end
-    local x = math.min(kingdomCount(room, to), #to:getCardIds("he"))
+    local x = maxCards(room, to)
     if x <= 0 then return end
     local ids = to:getCardIds("he")
     local chosen = room:askToChooseCards(player, {

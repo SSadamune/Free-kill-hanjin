@@ -271,6 +271,7 @@ local function verifyClientEdictConsumption(room, holder)
       holder:addToPile(P.PILE, { c.id }, true, BANNER)
       fourth = c.id
     end
+    holder:addToPile(P.PILE, room:printCard("qiao__jink", Card.Heart, 9), true, BANNER)
     holder.phase = Player.Play
   end)
   local reply
@@ -283,7 +284,7 @@ local function verifyClientEdictConsumption(room, holder)
     lu.assertEquals(Fk:translate("qiao__edict_take_trick"), "获得势力锦囊")
 
     local mark = assert(Fk.qml_marks[P.PILE_MARK])
-    lu.assertEquals(mark.how_to_show(P.PILE, me:getPile(P.PILE), me), "4")
+    lu.assertEquals(mark.how_to_show(P.PILE, me:getPile(P.PILE), me), "5 ♠♥♣♦")
     local popup = mark.qml(P.PILE, me:getPile(P.PILE), me)
     lu.assertEquals(popup.url, "packages/qiao/pkg/qiao_mode/qml/EdictPile.qml")
     lu.assertEquals(popup.prop.holderId, me.id)
@@ -299,6 +300,7 @@ local function verifyClientEdictConsumption(room, holder)
     me.phase = Player.Play
     local pile = table.simpleClone(me:getPile(P.PILE))
     table.removeOne(pile, fourth)
+    lu.assertEquals(mark.how_to_show(P.PILE, pile, me), "4 ♠♥♣")
     me.special_cards = table.simpleClone(me.special_cards)
     me.special_cards[P.PILE] = pile
     lu.assertFalse(client:canConsumeEdict(me.id), "三花色不能消费")
