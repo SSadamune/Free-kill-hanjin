@@ -572,7 +572,7 @@ local function resolveDushiFollowUp(actor, target, reply)
     end
     return false
   end)
-  FkTest.setNextReplies(target, { reply })
+  if reply ~= nil then FkTest.setNextReplies(target, { reply }) end
   FkTest.setNextReplies(actor, { FkTest.ReplyChoosePlayer({ target }) })
   inRoom(function()
     Fk.skills[activeName(DUSHI)]:afterUse(actor, { card = Fk:cloneCard("qiao__await_exhausted") })
@@ -639,6 +639,95 @@ function Testqiao_wu_phases:testDushiBurningCampsRealUse()
   lu.assertEquals(#resolveDushiFollowUp(actor, target, FkTest.ReplyChooseCards(red)), 1)
   lu.assertTrue(targets[1].hp < before)
   for _, id in ipairs(red) do lu.assertEquals(room():getCardArea(id), Card.DiscardPile) end
+end
+
+local function placeDushiCargo(player, suit)
+  local ox = give(player, "qiao__wooden_ox", Card.Diamond, 5)
+  local cargo = give(player, "qiao_test__blank_basic", suit)
+  inRoom(function()
+    room():moveCardTo(ox, Card.PlayerEquip, player, fk.ReasonJustMove, "test")
+    player:addToPile("$sa_carriage", cargo, false, "test")
+  end)
+  return ox, cargo
+end
+
+function Testqiao_wu_phases:testDushiUsesOnlyEligibleCardUnderWoodenOx()
+  local actor = prepareDushiFollowUp()
+  clearCards(actor)
+  local ox, cargo = placeDushiCargo(actor, Card.Heart)
+  local diamond = give(actor, "qiao_test__blank_basic", Card.Diamond)
+  inRoom(function()
+    room().current, actor.phase = actor, Player.Play
+    H.clear(room())
+    room():throwCard({ diamond }, "test", actor, actor)
+  end)
+  local reply
+  client_room.run(room(), function(clients)
+    local handler = ReqPlayCard:new(clients[actor.seat])
+    handler:setup()
+    lu.assertTrue(handler:skillButtonValidity(DUSHI))
+    handler:selectSkill(DUSHI, { selected = true })
+    lu.assertNotNil(handler.scene:getAllItems("CardItem")[cargo])
+    lu.assertTrue(handler:cardValidity(cargo))
+    lu.assertFalse(handler:cardValidity(ox))
+    handler:selectCard(cargo, { selected = true })
+    if handler:targetValidity(actor.id) then handler:selectTarget(actor.id, { selected = true }) end
+    lu.assertTrue(handler:feasible())
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(_, command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function() handler:doOKButton() end)
+    ClientInstance.notifyUI = notify
+    assert(ok, err)
+    handler:_finish()
+  end)
+  lu.assertNotNil(reply)
+  inRoom(function() room():handleUseCardReply(actor, reply) end)
+  lu.assertEquals(room():getCardArea(cargo), Card.DiscardPile)
+  lu.assertTrue(H.hasSuit(actor, Card.Heart))
+end
+
+local function checkDushiBurningWithCargo(suit)
+  local actor, target, targets = prepareDushiFollowUp()
+  local ox, cargo = placeDushiCargo(target, suit)
+  local payment = { ox, cargo }
+  for _ = 1, #targets - 2 do
+    table.insert(payment, give(target, "qiao_test__blank_basic", Card.Heart))
+  end
+  FkTest.setRoomBreakpoint(target, "AskForUseActiveSkill", function(data)
+    if data[4].skillName == DUSHI then
+      lu.assertEquals(data[4].expand_pile, { cargo })
+      local reply = ""
+      if suit == Card.Heart then
+        reply = client_room.confirmCards(room(), target, {
+          skill_name = data[1], prompt = data[2], cancelable = data[3], extra_data = data[4],
+        }, payment)
+      end
+      FkTest.setNextReplies(target, { reply })
+    end
+    return false
+  end)
+  local hp, x = targets[1].hp, #targets
+  lu.assertEquals(resolveDushiFollowUp(actor, target), {
+    { "#qiao__skill_wu007_2-burn:::" .. x, true, x, x, ".|.|red", true },
+  })
+  if suit == Card.Heart then
+    lu.assertTrue(targets[1].hp < hp)
+    for _, id in ipairs(payment) do lu.assertEquals(room():getCardArea(id), Card.DiscardPile) end
+  else
+    lu.assertEquals(targets[1].hp, hp)
+    lu.assertEquals(target:getPile("$sa_carriage"), { cargo })
+    lu.assertEquals(room():getCardArea(ox), Card.PlayerEquip)
+  end
+end
+
+function Testqiao_wu_phases:testDushiRedCargoCanPayForBurningCamps()
+  checkDushiBurningWithCargo(Card.Heart)
+end
+
+function Testqiao_wu_phases:testDushiBlackCargoGetsSameCancelableRequest()
+  checkDushiBurningWithCargo(Card.Spade)
 end
 
 -- 失败回归：短兵应使距离 1 的目标需要两张【闪】。当前仅一张【闪】仍抵消成功，

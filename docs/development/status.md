@@ -14,7 +14,7 @@
 - **合并前的完整全量**（2026-11-21）为 `main` 的 1,262/1,262 和 Issue #32 分支的 1,259/1,259。本次合并执行定向验证，结果见[最近验证记录](#最近验证记录)。
 - **人工验收**：完整的真实客户端交互、多人联网／重连和干净本体安装仍待验收。各项记录只列专项差异，已完成的人工复测按批注明范围。
 
-- [陆逊【度势】](implementation/generals/standard/wu007.md#wu007-2)与[刘辩【诗怨】](implementation/generals/standard/han002.md#han002-1)的两套原生专项 29/29、分支全量 1,382/1,382 通过。另从出牌入口验证两次【度势】，用六张全黑手牌取消及用六张红牌转化【火烧连营】；离屏 Qt 核对了【诗怨】两档摸牌数的显示。见 [Issue #61](https://github.com/SSadamune/Free-kill-hanjin/issues/61)。
+- [陆逊【度势】](implementation/generals/standard/wu007.md#wu007-2)与[刘辩【诗怨】](implementation/generals/standard/han002.md#han002-1)的两套原生专项 32/32、分支全量 1,385/1,385 通过。补测从木牛下选牌转为【以逸待劳】，以及用红色木马牌转为【火烧连营】、黑色木马牌收到同一询问后取消。另从出牌入口验证两次【度势】，用六张全黑手牌取消及用六张红牌转化【火烧连营】；离屏 Qt 核对了【诗怨】两档摸牌数的显示。见 [Issue #61](https://github.com/SSadamune/Free-kill-hanjin/issues/61)。
 
 ## 规则资料编纂
 
