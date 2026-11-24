@@ -3,6 +3,7 @@
 local F = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local CAOHONG = "qiao_heg__wei018"
 local HUYUAN = "qiao__skill_wei018_1"
@@ -91,8 +92,10 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
   -- p2/p3 在曹洪队列中已有飞影，距离不再为1；p8为相邻异势力角色。
   local room, player, second, third = FkTest.room, p(1), p(8), p(3)
   local victimCard = give(second, "qiao__jink", Card.Heart, 2)
+  local judgeCard = give(second, "qiao__indulgence", Card.Heart, 6)
   give(third, "qiao__jink", Card.Heart, 3)
   inRoom(function()
+    room:moveCardTo(judgeCard, Card.PlayerJudge, second, fk.ReasonPut, HUYUAN)
     room.current = player
     player.phase = Player.Play
     room:setBanner("RoundCount", 1)
@@ -101,7 +104,7 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
   end)
   local equip = give(player, "qiao__eight_diagram", Card.Spade, 2)
 
-  local chosenPlayer, chosenCard
+  local chosenPlayer, chosenCard, uiData
   skill_test.withSkillRequests(room, HUYUAN, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == HUYUAN then return true end
@@ -115,7 +118,15 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
     askToChooseCard = function(self, who, params, original)
       if params.skill_name ~= HUYUAN then return original(self, who, params) end
       chosenPlayer = params.target
-      chosenCard = params.target:getCardIds("h")[1]
+      client_room.run(room, function(clients, clientRoom)
+        Client.askForCardChosen({
+          notifyUI = function(_, command, data)
+            if command == "AskForCardChosen" then uiData = data end
+          end,
+        }, { clientRoom:getPlayerById(params.target.id), params.flag, params.prompt })
+      end)
+      FkTest.setNextReplies(who, { victimCard })
+      chosenCard = original(self, who, params)
       return chosenCard
     end,
   }, function()
@@ -125,7 +136,10 @@ function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
   end)
 
   lu.assertIs(chosenPlayer, second)
-  lu.assertNotNil(chosenCard)
+  lu.assertEquals(chosenCard, victimCard)
+  lu.assertFalse(uiData.visible_data[tostring(victimCard)])
+  lu.assertNotEquals(uiData.visible_data[tostring(judgeCard)], false)
+  lu.assertTrue(table.contains(uiData.card_data[1][2], judgeCard))
   lu.assertEquals(room:getCardArea(victimCard), Card.DiscardPile)
   lu.assertEquals(#player:getCardIds("e"), 1)
 end

@@ -135,13 +135,19 @@ skill:addEffect(fk.AfterCardsMove, {
     if to == nil or to.dead or to:isRemoved() then return end
     local ids = discardableArea(to)
     if #ids == 0 then return end
+    local visible = {}
+    for _, cardId in ipairs(ids) do
+      if not player:cardVisible(cardId, nil, true) then
+        visible[tostring(cardId)] = false
+      end
+    end
     local id = room:askToChooseCard(player, {
       target = to,
-      flag = { card_data = { { "可弃置", ids } } },
+      flag = { card_data = { { "可弃置", ids } }, visible_data = visible },
       skill_name = skill.name,
       prompt = "#qiao__skill_wei018_1-card",
     })
-    if id == nil or id == 0 then return end
+    if not table.contains(ids, id) or not table.contains(discardableArea(to), id) then return end
     room:throwCard(id, skill.name, to, player)
   end,
 })
