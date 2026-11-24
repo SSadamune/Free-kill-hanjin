@@ -1198,12 +1198,9 @@ function Testqiao_em_wei001_caocao:testQiceDeputyChangePublicEntry()
   end)
   local chosen
   skill_test.withSkillRequests(room, "qiao__skill_wei020_1", {
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei020_1" then
-        chosen = params.choices[1]
-        return chosen
-      end
-      return original(self, who, params)
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
     end,
   }, function()
     inRoom(function()
@@ -1250,13 +1247,10 @@ function Testqiao_em_wei001_caocao:testQiceFullUseThenChangeDeputy()
   end)
   local skill = Fk.skills["qiao__skill_wei020_1"]
   skill_test.withSkillRequests(room, "qiao__skill_wei020_1", {
-    askToChoice = function(self, who, params, original)
-      if params.skill_name == "qiao__skill_wei020_1" then
-        if table.contains(params.choices, "changeDeputy") then return "changeDeputy" end
-        chosen = params.choices[1]
-        return chosen
-      end
-      return original(self, who, params)
+    askToChoice = function() return "changeDeputy" end,
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
     end,
   }, function()
     inRoom(function()
@@ -1536,6 +1530,9 @@ function Testqiao_em_wei001_caocao:testGuestChangeAndSharedQiceLimit()
           return offers == 1 and "Cancel" or "changeDeputy"
         end
         return params.choices[1]
+      end,
+      askToCustomDialog = function(_, _, params)
+        return { general = params.component.prop.candidates[1] }
       end,
     }, function()
       for _, who in ipairs({ first, first, second }) do

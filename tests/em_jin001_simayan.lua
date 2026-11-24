@@ -342,8 +342,7 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     end
     local resource = resourceChoice(params)
     if resource ~= nil then return resource end
-    chosen = params.choices[1]
-    return chosen
+    return params.choices[1]
   end
   -- 通过真实首次双亮生成赐，确保该将牌已从剩余池占用。
   skill_test.withSkillRequests(room, BANNER, {
@@ -370,6 +369,10 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
   end)
   skill_test.withSkillRequests(room, BANNER, {
     askToChoice = handler,
+    askToCustomDialog = function(_, _, params)
+      chosen = params.component.prop.candidates[1]
+      return { general = chosen }
+    end,
     askToChoices = function(_, _, params)
       lu.assertTrue(table.contains(params.choices, CHANGE))
       return { CHANGE }
@@ -844,6 +847,10 @@ function Testqiao_em_jin001_simayan:testTransferredCiChangesDeputyAfterLordDeath
       askToChoice = function(_, _, params)
         lu.assertTrue(table.contains(params.choices, "deputy"))
         return "deputy"
+      end,
+      askToCustomDialog = function(_, _, params)
+        lu.assertEquals(params.component.prop.candidates, { jin })
+        return { general = jin }
       end,
     }, function()
       local reply = FkTest.ReplyUseSkill(CONSUME, {}, {})
