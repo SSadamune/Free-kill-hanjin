@@ -42,8 +42,8 @@ end
 
 local MAX_OFFERS = 10
 
-local function offerCount(value, kingdomLimit)
-  return math.max(kingdomLimit + 1, math.min(value or 7, MAX_OFFERS))
+local function offerCount(value, minimum, maximum)
+  return math.max(minimum, math.min(value or 7, maximum))
 end
 
 -- Reserve a legal pair for every seat, then fill the remaining offers without duplicates.
@@ -76,6 +76,7 @@ end
 
 function M.create(base, name)
   local locked = name == Modes.locked
+  local maxOffers = locked and 5 or MAX_OFFERS
   local collection = name == Modes.collection or locked
   local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
   local function getLogic()
@@ -105,7 +106,8 @@ function M.create(base, name)
       -- top of its kept list.
       local plan = Versions.plan(room, room.general_pile, previous, cap, pick, getGeneral,
         { candidates = config.candidates, limit = config.limit, guestReplacement = Guest.replacementEnabled(room) })
-      local count = offerCount(room:getSettings("qiao_offer_count"), config.limit)
+      local minOffers = locked and 2 or config.limit + 1
+      local count = offerCount(room:getSettings("qiao_offer_count"), minOffers, maxOffers)
       local offers, assigned
       if locked then
         offers, assigned = Locked.deal(room, plan, count)
@@ -303,6 +305,10 @@ function M.create(base, name)
     return math.max(1, math.min(mode[Ban.limitKey] or 4, Ban.candidateCount(mode)))
   end
 
+  local function uiMinOffers(settings)
+    return locked and 2 or uiKingdomLimit(settings) + 1
+  end
+
   local function checkbox(key, title)
     local row = W.SwitchRow {
       _settingsKey = key, title = title,
@@ -365,10 +371,10 @@ function M.create(base, name)
     title = "qiao_rule_settings",
     W.SpinRow {
       _settingsKey = "qiao_offer_count", title = "qiao_offer_count",
-      from = function(settings) return uiKingdomLimit(settings) + 1 end,
-      to = MAX_OFFERS,
+      from = uiMinOffers,
+      to = maxOffers,
       value = function(settings)
-        return offerCount(modeOf(settings).qiao_offer_count, uiKingdomLimit(settings))
+        return offerCount(modeOf(settings).qiao_offer_count, uiMinOffers(settings), maxOffers)
       end,
     },
     W.SpinRow {

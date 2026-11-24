@@ -65,9 +65,11 @@ local function startRoom(count, alternate, modeSettings, previous)
   for _, player in ipairs(room.players) do
     local props = assert(propsById[player.id])
     lu.assertEquals(props.choiceNum, 2)
+    lu.assertTrue(#props.generals <= 5)
     local assigned = player:getMark("__heg_init_kingdom")
     lu.assertEquals(props.prompt, "#QiaoChooseLockedKingdom:::" .. Ban.kingdomLabel(assigned))
     lu.assertFalse(props.extraData.freeAssign)
+    lu.assertEquals(props.extraData.guests, {})
     lu.assertEquals(props.extraData.guestIllustrations, Guest.replacementEnabled(room))
     lu.assertFalse(props.convertDisabled)
     local rule = Fk.choose_general_rule.qiao_heg_pair
@@ -160,11 +162,22 @@ function Testlocked_factions:testFourPlayerFormationAndSiege()
 end
 
 function Testlocked_factions:testCollectionFactionSettingsAndRotation()
-  local room = startRoom(3, nil, {
-    generalTimeout = 1, qiao_candidate_jin = false, qiao_guest_replacement = false,
-  }, {
+  local modeSettings = {
+    generalTimeout = 1, qiao_candidate_jin = false, qiao_guest_replacement = false, qiao_offer_count = 9,
+  }
+  local room = startRoom(3, nil, modeSettings, {
     version = 1, winners = { "wei" }, banned = { "han" },
   })
+  local W = require "ui_emu.preferences"
+  local function configuredOffers(settings)
+    for _, group in ipairs(W.toQmlData(Fk.game_modes[Modes.locked].ui_settings, { _mode = settings })) do
+      for _, field in ipairs(group._children) do
+        if field._settingsKey == "qiao_offer_count" then return { field.from, field.to, field.value } end
+      end
+    end
+  end
+  lu.assertEquals(configuredOffers(modeSettings), { 2, 5, 5 })
+  lu.assertEquals(configuredOffers({ qiao_faction_ban_enabled = false, qiao_offer_count = 3 }), { 2, 5, 3 })
   lu.assertEquals(room:getBanner("qiao_candidate_kingdoms"), { "wei", "shu", "wu", "qun", "han" })
   lu.assertEquals(room:getTag("qiao_rotation_banned_kingdoms"), { "wei" })
   lu.assertFalse(table.contains(room:getBanner("all_kingdoms"), "wei"))
@@ -172,33 +185,45 @@ function Testlocked_factions:testCollectionFactionSettingsAndRotation()
   lu.assertFalse(Guest.replacementEnabled(room))
 end
 
-function Testlocked_factions:testRedrawAndClientConversionRespectAssignment()
+function Testlocked_factions:testGuestCandidateCanBeSelectedButCannotBeRedrawn()
   local room = startRoom(3)
-  local first, second = table.unpack(room.players)
-  local assigned = first:getMark("__heg_kingdom")
-  local main, deputy = PairHp.actual_main(first), PairHp.actual_deputy(first)
-  local originalPool = room.general_pile
-  local allowed = table.find(originalPool, function(name)
-    return table.contains(Guest.factionsOf(room, name).kingdoms, assigned)
-      and Selection.canPair(room, deputy, name, assigned)
+  local player = room.players[1]
+  local general, deputy, spare = "qiao_heg__shu002", "qiao_test__wei_1", "qiao_test__wei_2"
+  local offers = { [player] = { general, deputy } }
+  local props, hasRedrawState, picked, kingdoms, fallbacks, redrawn, replacement, reason
+  FkTest.setRoomBreakpoint(player, "CustomDialog", function(data)
+    props = data.component.model.prop
+    hasRedrawState = player.mini_game_data ~= nil
+    room:handleUpdateMini(player.id, { player.id, "updatemini", "redraw", "1", general })
+    return false
   end)
-  local other = table.find({ PairHp.actual_main(second), PairHp.actual_deputy(second) }, function(name)
-    return not table.contains(Guest.factionsOf(room, name).kingdoms, assigned)
-  end)
-  if other == nil then
-    other = table.find(originalPool, function(name)
-      return not table.contains(Guest.factionsOf(room, name).kingdoms, assigned)
-    end)
-  end
-  assert(allowed and other)
-  local replacement
+  FkTest.setNextReplies(player, { { general, deputy } })
   FkTest.runInRoom(function()
-    room.general_pile = { other, allowed }
-    replacement = Selection.replacements(room, { main, deputy }, { main }, assigned)
-    room.general_pile = originalPool
+    room:setBanner("all_kingdoms", { "wei", "jin" })
+    room:setTag(Guest.key, {})
+    for _, name in ipairs({ general, deputy, spare }) do table.removeOne(room.disabled_generals, name) end
+    room.general_pile = { spare }
+    picked, kingdoms, fallbacks = Selection.choose(room, { player }, offers, { [player] = "wei" })
+    redrawn, replacement, reason = Selection.applyRedraw(room, player, offers, { general })
   end)
-  lu.assertEquals(replacement, { allowed })
+  lu.assertTrue(Guest.isGuest(room, general))
+  lu.assertTrue(props.extraData.guestIllustrations)
+  lu.assertEquals(props.extraData.guestFactions[general], Guest.guestKingdoms(general))
+  lu.assertEquals(props.extraData.guests, {})
+  lu.assertFalse(hasRedrawState)
+  lu.assertFalse(redrawn)
+  lu.assertNil(replacement)
+  lu.assertEquals(reason, "redraw_disabled")
+  lu.assertEquals(offers[player], { general, deputy })
+  lu.assertEquals(room.general_pile, { spare })
+  lu.assertEquals(picked[player], { general, deputy })
+  lu.assertEquals(kingdoms[player], "wei")
+  lu.assertEquals(fallbacks, {})
+  lu.assertEquals(room:getTag("qiao_guest_redraws_v1"), {})
+end
 
+function Testlocked_factions:testClientConversionRespectsAssignment()
+  startRoom(3)
   local client = Fk:getBoardGame(Modes.locked).client_klass:new({ notifyUI = function() end })
   client.settings = { gameMode = Modes.locked }
   client.disabled_packs, client.disabled_generals = {}, {}
@@ -211,9 +236,9 @@ function Testlocked_factions:testRedrawAndClientConversionRespectAssignment()
       component = { model = { prop = { extraData = { locked = true, pairing = { [general] = {} } } } } },
     })
     lu.assertFalse(table.contains(LtkUI:getSameGenerals(general), alternative))
-    client:notifyUI("UpdateMiniGame", { 1, general, general, {
-      locked = true, pairing = { [general] = {}, [alternative] = {} },
-    } })
+    client:notifyUI("CustomDialog", { component = { model = { prop = {
+      extraData = { locked = true, pairing = { [general] = {}, [alternative] = {} } },
+    } } } })
     lu.assertTrue(table.contains(LtkUI:getSameGenerals(general), alternative))
   end)
   ClientInstance = prior

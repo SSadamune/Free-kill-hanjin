@@ -451,9 +451,6 @@ function QiaoClient:notifyUI(command, data)
       local model = data.component and data.component.model
       local extra = model and model.prop and model.prop.extraData
       self.lockedPairing = extra and extra.locked and extra.pairing or nil
-    elseif command == "UpdateMiniGame" and self.lockedPairing then
-      local extra = data[4]
-      if type(extra) == "table" and extra.locked then self.lockedPairing = extra.pairing end
     elseif command == "CancelRequest" or command == "GameStart" or command == "GameOver"
       or command == "ChangeSelf" then
       self.lockedPairing = nil
