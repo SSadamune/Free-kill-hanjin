@@ -49,6 +49,7 @@ end
 skill:addEffect("active", {
   anim_type = "control",
   prompt = "#qiao__retinue_skill_qingzhou_jingrui-prompt",
+  card_num = 0,
   target_num = 1,
   target_filter = function(self, player, to_select, selected)
     if #selected > 0 then return false end

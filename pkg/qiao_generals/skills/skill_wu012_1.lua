@@ -39,6 +39,7 @@ end
 skill:addEffect("active", {
   anim_type = "offensive",
   prompt = "#qiao__skill_wu012_1-prompt",
+  card_num = 0,
   target_num = 1,
   max_phase_use_time = 1,
   target_filter = function(self, player, to_select, selected)

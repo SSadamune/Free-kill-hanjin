@@ -17,16 +17,6 @@ local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local LtkUI = require "packages.freekill-core.ltk.client.util"
-local MZ = "qiao__skill_han001_2"
-
---- Only the HanJin room's 密诏 request uses the recipient-replacement UI.
---- The shared board client also serves every upstream room, so all other modes
---- and skills must keep the original request class behavior.
-local function isQiaoMZ(request)
-  if request.skill_name ~= MZ then return false end
-  local room = request.room or Fk:currentRoom()
-  return room ~= nil and Modes.inRoom(room)
-end
 
 local function checkSelectedTargets(request, targetValidity)
   local selected = request.selected_targets
@@ -58,24 +48,45 @@ local function checkCommanderCost(request, targetValidity, check)
   return check()
 end
 
-local function recipientRequest(base, name)
+local function activeSelectionSkill(request)
+  if not Modes.inRoom(request.room) or request.sub_selection_flag
+    or not TriggerSelection.applies(request.skill_name, request.extra_data) then return end
+  local skill = Fk.skills[request.skill_name]
+  if skill:isInstanceOf(ActiveSkill) then return skill end
+end
+
+local function canReplaceTarget(request)
+  local skill = activeSelectionSkill(request)
+  return skill ~= nil and skill:getMaxTargetNum(request.player) == 1
+end
+
+local function skillTargetRequest(base, name)
   local request = base:subclass(name)
 
   function request:targetValidity(pid)
     if RemovedTargets.inMode(self.room)
       and RemovedTargets.isRemoved(self.room:getPlayerById(pid)) then return false end
-    if not isQiaoMZ(self) then
-      return checkCommanderCost(self, base.targetValidity, function() return base.targetValidity(self, pid) end)
+    if self.selected_targets and #self.selected_targets > 0 and canReplaceTarget(self) then
+      -- 目标上限为一时，以替换后的空列表判断候选，保留技能原有的目标筛选。
+      local previous = self.selected_targets
+      self.selected_targets = {}
+      local ok, valid = pcall(base.targetValidity, self, pid)
+      self.selected_targets = previous
+      if not ok then error(valid, 0) end
+      return valid
     end
-    local to = self.room:getPlayerById(pid)
-    -- 其他合法角色保持可点击；每次点击都是替换收牌者，而非追加目标。
-    return to ~= nil and not not Fk.skills[MZ]:targetFilter(
-      self.player, to, {}, self.pendings, nil, self.extra_data)
+    return checkCommanderCost(self, base.targetValidity, function() return base.targetValidity(self, pid) end)
+  end
+
+  function request:selectCard(cid, data)
+    local skill = activeSelectionSkill(self)
+    if data.selected and skill and skill:getMaxCardNum(self.player) == 0 then return end
+    return base.selectCard(self, cid, data)
   end
 
   function request:selectTarget(pid, data)
-    if isQiaoMZ(self) and data.selected then
-      if not self:targetValidity(pid) then return end
+    if data.selected and canReplaceTarget(self) then
+      if table.contains(self.selected_targets, pid) or not self:targetValidity(pid) then return end
       self.selected_targets = {}
       self.scene:unselectAllTargets()
     end
@@ -85,10 +96,10 @@ local function recipientRequest(base, name)
   return request
 end
 
-local QiaoPlayCard = recipientRequest(ReqPlayCard, "QiaoPlayCard")
+local QiaoPlayCard = skillTargetRequest(ReqPlayCard, "QiaoPlayCard")
 -- 锁定本体按 class.name 识别「使用牌」请求，例如禁止用牌的界面提示。
-local QiaoUseCard = recipientRequest(ReqUseCard, ReqUseCard.name)
-local QiaoActiveSkill = recipientRequest(ReqActiveSkill, "QiaoActiveSkill")
+local QiaoUseCard = skillTargetRequest(ReqUseCard, ReqUseCard.name)
+local QiaoActiveSkill = skillTargetRequest(ReqActiveSkill, "QiaoActiveSkill")
 
 local function usesTriggerSelection(request)
   return Modes.inRoom(request.room) and not request.sub_selection_flag

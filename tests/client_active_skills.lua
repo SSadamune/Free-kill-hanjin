@@ -29,6 +29,12 @@ local EXPECTED_FALSE_SELF = {
   ["qiao__skill_wei012_1"] = true,
 }
 
+local TARGETS_WITHOUT_CARD_SELECTION = {
+  "qiao__skill_jin006_1", "qiao__skill_jin016_2", "qiao__skill_qun018_2",
+  "qiao__skill_wei011_1", "qiao__skill_wei013_1", "qiao__skill_wu012_1",
+  "qiao__retinue_skill_qingzhou_jingrui",
+}
+
 local function inRoom(fn)
   local result
   FkTest.runInRoom(function() result = fn() end)
@@ -65,6 +71,58 @@ Testqiao_client_active_skills = {
   end,
   tearDown = support.clearRoom,
 }
+
+function Testqiao_client_active_skills:testTargetOnlySkillsKeepHandCardsUnselectable()
+  client_room.run(FkTest.room, function(clients)
+    local me, first, second = table.unpack(clients, 1, 3)
+    local hand = me:getCardIds(Player.Hand)
+    lu.assertTrue(#hand > 0)
+    local handlerClass = qiaoPlayCardClass()
+    me.player_skills = table.simpleClone(me.player_skills)
+    for _, name in ipairs(TARGETS_WITHOUT_CARD_SELECTION) do
+      table.insert(me.player_skills, Fk.skills[name])
+      local handler = handlerClass:new(me)
+      handler:setup()
+      handler:selectSkill(name, { selected = true })
+      for _, id in ipairs(hand) do
+        lu.assertFalse(handler.scene:getAllItems("CardItem")[id].enabled, name)
+      end
+      handler:update("CardItem", hand[1], "click", { selected = true })
+      lu.assertEquals(handler.pendings, {}, name)
+
+      if name == "qiao__skill_jin006_1" or name == "qiao__skill_jin016_2" then
+        lu.assertFalse(handler.scene:getAllItems("Button").OK.enabled)
+        handler:update("Photo", first.id, "click", { selected = true })
+        handler:update("Photo", second.id, "click", { selected = true })
+        local multi = name == "qiao__skill_jin016_2"
+        lu.assertEquals(handler.selected_targets, multi and { first.id, second.id } or { second.id })
+        lu.assertEquals(handler.scene:getAllItems("Photo")[first.id].selected, multi)
+        lu.assertTrue(handler.scene:getAllItems("Photo")[second.id].selected)
+        lu.assertTrue(handler.scene:getAllItems("Button").OK.enabled)
+      end
+      handler:_finish()
+    end
+  end)
+end
+
+function Testqiao_client_active_skills:testSingleTargetNativePromptUsesTheSameReplacement()
+  local room, me, first, second = FkTest.room, table.unpack(FkTest.room.players, 1, 3)
+  client_room.confirmSelection(room, me, {
+    skill_name = "choose_players_skill",
+    cancelable = true,
+    extra_data = {
+      skillName = "qiao__skill_han008_2", targets = { first.id, second.id },
+      pattern = "", min_num = 1, num = 1,
+    },
+  }, {}, { second }, function(handler)
+    lu.assertFalse(handler:feasible())
+    handler:update("Photo", first.id, "click", { selected = true })
+    lu.assertTrue(handler:feasible())
+    handler:update("Photo", second.id, "click", { selected = true })
+    lu.assertFalse(handler.scene:getAllItems("Photo")[first.id].selected)
+    lu.assertTrue(handler:feasible())
+  end)
+end
 
 function Testqiao_client_active_skills:testAllFormalSkillButtonsUseClientRoom()
   local room = FkTest.room

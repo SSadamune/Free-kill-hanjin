@@ -42,12 +42,13 @@ skill:addEffect(fk.EventPhaseStart, {
 
 skill:addEffect("active", {
   prompt = "#qiao__skill_jin006_1-prompt",
+  card_num = 0,
   target_num = 1,
   can_use = function(self, player)
     return U.sanChenRemaining(player) > 0 and #eligibleTargets(player) > 0
   end,
   target_filter = function(self, player, to_select, selected)
-    return to_select ~= nil and not to_select.dead and not to_select:isRemoved()
+    return #selected == 0 and to_select ~= nil and not to_select.dead and not to_select:isRemoved()
       and not U.sanChenTargeted(player, to_select)
   end,
   on_use = function(self, room, effect)
