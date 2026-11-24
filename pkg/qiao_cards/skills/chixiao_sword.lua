@@ -40,7 +40,7 @@ skill:addEffect(fk.TargetSpecified, {
     local to = data.to
     local red = table.filter(to:getCardIds(Player.Hand), isRedHandCard)
     local card
-    if #red > 0 then
+    if not to:isKongcheng() then
       card = room:askToCards(to, {
         min_num = 1,
         max_num = 1,

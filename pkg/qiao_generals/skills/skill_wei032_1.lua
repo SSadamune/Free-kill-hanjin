@@ -9,34 +9,32 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local function getCount(player)
-  return H.cardCount(player.room, player)
+local function drawCount(player)
+  local count = H.cardCount(player.room, player)
+  if count == player.hp then return 2 end
+  return count > player.hp and 1 or 0
 end
 
 skill:addEffect(fk.TurnEnd, {
   can_trigger = function(self, event, target, player)
     return not player.dead and player:hasSkill(skill.name)
-      and getCount(player) >= player.hp
+      and drawCount(player) > 0
   end,
   on_cost = function(self, event, target, player)
     return player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_wei032_1-invoke",
+      prompt = "#qiao__skill_wei032_1-invoke:::" .. drawCount(player),
     })
   end,
   on_use = function(self, event, target, player)
-    local count, hp = getCount(player), player.hp
-    if count > hp then
-      player:drawCards(1, skill.name)
-    elseif count == hp then
-      player:drawCards(2, skill.name)
-    end
+    local n = drawCount(player)
+    if n > 0 then player:drawCards(n, skill.name) end
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__skill_wei032_1"] = "精策",
-  ["#qiao__skill_wei032_1-invoke"] = "精策：本回合使用或打出的牌数不少于体力值，你可以摸牌",
+  ["#qiao__skill_wei032_1-invoke"] = "精策：你可以摸 %arg 张牌",
 }
 
 return skill

@@ -185,14 +185,25 @@ function Testqiao_lord_equipment:testChixiaoBigSmallTargetGivesRedOrCannotOffset
   local hpBig = big.hp
   local jink = card("qiao__jink", Card.Diamond, 7)
   local slash2 = card("qiao__slash", Card.Spade, 9)
+  local blackHandAsks = 0
   FkTest.runInRoom(function()
     give(room, small, black)
     give(room, big, jink)
     lu.assertTrue(table.contains(big:getCardIds("h"), jink.id))
+    FkTest.setRoomBreakpoint(small, "AskForUseActiveSkill", function(data)
+      if data[1] == "choose_cards_skill" and data[4].skillName == "qiao__chixiao_sword_skill" then
+        blackHandAsks = blackHandAsks + 1
+        lu.assertTrue(data[3])
+        lu.assertEquals(data[4].pattern, ".|.|red|hand")
+        FkTest.setNextReplies(small, { "" })
+      end
+      return false
+    end)
     FkTest.setNextReplies(big, { FkTest.ReplyCard(jink) })
     use(room, user, { small, big }, slash2)
   end)
   lu.assertEquals(small.hp, hpSmall2 - 1, "未交红色手牌的目标不能抵消")
+  lu.assertEquals(blackHandAsks, 1, "只有黑色手牌时也应收到可取消的交牌请求")
   lu.assertTrue(table.contains(small:getCardIds("h"), black.id), "未交牌不额外弃置")
   lu.assertEquals(big.hp, hpBig, "同为一个大势力的目标仍可响应")
   lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
