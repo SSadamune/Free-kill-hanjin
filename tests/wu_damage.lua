@@ -915,6 +915,56 @@ function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeYuyuRefillsIt()
   lu.assertEquals(owner.hp, hp - 1)
 end
 
+function Testqiao_wu_damage:testFenjiSeesEmptyHandBeforeZhoujunGift()
+  local room, owner, current = FkTest.room, p(1), p(2)
+  local donor = p(3)
+  local history = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+  local huyuan, zhoujun = "qiao__skill_wei018_1", "qiao__zhoujun_lingbingyin_skill"
+  local seal = setHand(room, current, { { "qiao__zhoujun_lingbingyin" } })[1]
+  local gift = setHand(room, donor, { { "qiao__jink" } })[1]
+  grant(current, huyuan)
+  grant(owner, FENJI)
+  local order = {}
+  skill_test.withSkillRequests(room, huyuan, {
+    askToSkillInvoke = function()
+      table.insert(order, huyuan)
+      return false
+    end,
+    askToChoosePlayers = function()
+      table.insert(order, huyuan)
+      return {}
+    end,
+  }, function()
+    skill_test.withSkillRequests(room, zhoujun, {
+      askToCards = function(_, who)
+        if who ~= donor then return {} end
+        table.insert(order, zhoujun)
+        return { gift }
+      end,
+    }, function()
+      inRoom(function()
+        room:setCurrent(current)
+        current.phase = Player.Finish
+        room:setPlayerMark(current, history.LOST_HAND, 0)
+        room:setPlayerMark(donor, history.LOST_HAND, 0)
+        FkTest.setNextReplies(current, { FkTest.ReplyUseSkill("#" .. huyuan .. "_active", { current }, { seal }) })
+        room.logic:trigger(fk.EventPhaseStart, current, { phase = Player.Finish })
+      end)
+    end)
+  end)
+  lu.assertEquals(room:getCardArea(seal), Card.PlayerEquip)
+  lu.assertEquals(order, { huyuan, zhoujun })
+  lu.assertEquals(current:getCardIds("h"), { gift })
+  lu.assertEquals(current:getMark(history.LOST_HAND), 1)
+  lu.assertEquals(donor:getMark(history.LOST_HAND), 1)
+
+  local hp = owner.hp
+  FkTest.setNextReplies(owner, { FkTest.ReplyChoosePlayer({ current }) })
+  turnEnd(room, current)
+  lu.assertEquals(current:getHandcardNum(), 3)
+  lu.assertEquals(owner.hp, hp - 1)
+end
+
 function Testqiao_wu_damage:testDiscardMarksAskBelowAtAndAboveHandLimit()
   local room, player = FkTest.room, p(1)
   local H = require "packages.hegemony.util"
