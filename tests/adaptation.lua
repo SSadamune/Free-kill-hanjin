@@ -259,14 +259,17 @@ function Testqiao_adaptation:testInvalidSupportReplyCannotWinTheRace()
   local room = FkTest.room
   local data = use({ {condition="zhuzhan",effect="damage"} })
   local helper, invalid = room.players[3], room.players[8]
-  local id
+  local id, wrongCard
   FkTest.runInRoom(function()
     id = giveType(room, helper, Card.TypeBasic)
-    giveType(room, invalid, Card.TypeBasic)
+    room:moveCardTo(invalid:getCardIds("h"), Card.DiscardPile, nil, fk.ReasonJustMove, "test", nil, false)
+    wrongCard = giveType(room, invalid, Card.TypeTrick)
     FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({id}) })
-    FkTest.setNextReplies(invalid, { FkTest.ReplyDiscard({9999999}) })
+    FkTest.setNextReplies(invalid, { FkTest.ReplyDiscard({wrongCard}) })
     A.prepare(room, data); A.resolve(room, data)
   end)
+  lu.assertTrue(table.contains(room.last_request.players, invalid))
+  lu.assertTrue(table.contains(invalid:getCardIds("h"), wrongCard))
   lu.assertEquals(room.last_request.winners[1].id, helper.id)
   lu.assertEquals(data.additionalDamage, 1)
 end
@@ -276,6 +279,37 @@ function Testqiao_adaptation:testNoSupportMeansNoEffect()
   FkTest.runInRoom(function() A.prepare(FkTest.room, data); A.resolve(FkTest.room, data) end)
   lu.assertNil(data.additionalDamage)
   lu.assertFalse(A.getResult(data).triggered)
+end
+
+function Testqiao_adaptation:testSupporterCanBeAddedIfStillLegalAfterCost()
+  local room = FkTest.room
+  local player, target, helper = room.players[1], room.players[2], room.players[8]
+  FkTest.runInRoom(function() skill_test.installBlankGenerals(room, "jin") end)
+  for _, example in ipairs({
+    { name = "qiao__slash", cost = "qiao__jink", eligible = true },
+    { name = "qiao__fire_attack", cost = "qiao__duel", eligible = false },
+    { name = "qiao__fire_attack", cost = "qiao__duel", keepCard = true, eligible = true },
+  }) do
+    local data, cost
+    FkTest.runInRoom(function()
+      for _, who in ipairs(room.players) do
+        room:moveCardTo(who:getCardIds("h"), Card.DiscardPile, nil, fk.ReasonJustMove, "test", nil, false)
+      end
+      local card = Fk:cloneCard(example.name)
+      A.setCardEntries(card, { { condition = "zhuzhan", effect = "add_target" } })
+      data = UseCardData:new { from = player, tos = { target }, card = card, extra_data = {} }
+      cost = room:printCard(example.cost, Card.Spade, 7)
+      room:obtainCard(helper, cost, false, fk.ReasonJustMove)
+      if example.keepCard then
+        room:obtainCard(helper, room:printCard("qiao__jink", Card.Heart, 9), false, fk.ReasonJustMove)
+      end
+    end)
+    FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({ cost.id }) })
+    FkTest.setNextReplies(player, { FkTest.ReplyChoosePlayer({ helper }) })
+    FkTest.runInRoom(function() A.prepare(room, data); A.resolve(room, data) end)
+    lu.assertEquals(A.getResult(data).entries[1].support.player, helper.id)
+    lu.assertEquals(table.contains(data.tos, helper), example.eligible)
+  end
 end
 
 function Testqiao_adaptation:testEachSupportEntryRequiresItsOwnDiscard()
