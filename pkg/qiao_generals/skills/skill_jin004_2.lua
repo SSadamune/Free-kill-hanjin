@@ -63,7 +63,7 @@ local function canDiscardCategory(player, pattern)
   end) ~= nil
 end
 
-skill:addEffect(fk.TargetConfirmed, {
+skill:addEffect(fk.TargetConfirming, {
   anim_type = "defensive",
   can_trigger = function(self, event, target, player, data)
     if target ~= player or player.dead or not player:hasSkill(skill.name) then return false end
@@ -71,7 +71,7 @@ skill:addEffect(fk.TargetConfirmed, {
     if use == nil or use.from == player or use.card == nil then return false end
     local card = use.card
     if card.trueName ~= "slash" and card.type ~= Card.TypeTrick then return false end
-    if #use.tos ~= 1 or use.tos[1] ~= player then return false end
+    if not data:isOnlyTarget(player) then return false end
     return canDiscardCategory(player, categoryPattern(card))
   end,
   on_cost = function(self, event, target, player, data)
