@@ -189,19 +189,37 @@ end
 
 function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCards()
   local room = FkTest.room
-  local player = room.players[1]
+  local player, other = room.players[1], room.players[2]
   local c = card("qiao__foresight")
   local top1, top2, top3
   local order = {}
+  local privateMoves = {}
   local handAfter, bottom
   FkTest.runInRoom(function()
     clearAllAreas(room)
     give(room, player, c)
+    local nullification = room:printCard("qiao__nullification", Card.Spade, 11)
+    room:moveCards { ids = { nullification.id }, toArea = Card.DrawPile,
+      moveReason = fk.ReasonPut, moveVisible = false }
     top1, top2, top3 = room.draw_pile[1], room.draw_pile[2], room.draw_pile[3]
-    lu.assertNotNil(top1)
+    lu.assertEquals(top1, nullification.id)
     lu.assertNotNil(top2)
     lu.assertNotNil(top3)
     local originalGuanxing, originalDraw = room.askToGuanxing, room.drawCards
+    local originalNotify = room.notifyMoveCards
+    room.notifyMoveCards = function(self, viewers, moves, eventId)
+      for _, move in ipairs(moves) do
+        if move.toArea == Card.Processing or move.toArea == Card.DrawPile then
+          for _, info in ipairs(move.moveInfo) do
+            local id = info.cardId
+            if id == top1 or id == top2 then
+              table.insert(privateMoves, { player:cardVisible(id, move), other:cardVisible(id, move) })
+            end
+          end
+        end
+      end
+      return originalNotify(self, viewers, moves, eventId)
+    end
     room.askToGuanxing = function(self, who, params)
       table.insert(order, "guanxing")
       lu.assertEquals(who.id, player.id)
@@ -222,10 +240,12 @@ function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCar
     room:useCard(UseCardData:new { from = player, tos = { player }, card = c, extra_data = {} })
     room.askToGuanxing = originalGuanxing
     room.drawCards = originalDraw
+    room.notifyMoveCards = originalNotify
     handAfter = player:getCardIds("h")
     bottom = room.draw_pile[#room.draw_pile]
   end)
   lu.assertEquals(order, { "guanxing", "arranged", "draw" })
+  lu.assertEquals(privateMoves, { { true, false }, { true, false }, { true, false }, { true, false } })
   lu.assertEquals(#handAfter, 2)
   lu.assertTrue(table.contains(handAfter, top1))
   lu.assertTrue(table.contains(handAfter, top3))
