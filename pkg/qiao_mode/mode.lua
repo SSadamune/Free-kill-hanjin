@@ -6,6 +6,7 @@ local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
 local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
+local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Pool = require "packages.qiao.pkg.qiao_mode.rules.general_pool"
@@ -28,6 +29,7 @@ local M = {}
 
 -- 大小势力/玉玺公共查询：服务器与客户端都只在本模式安装。
 function M.installRules()
+  BattleRoyal.install()
   KingdomSize.install()
   Ascension.installFoundingCountries()
   FaqRules.install()
@@ -393,7 +395,12 @@ function M.create(base, name)
       end,
     },
   }
-  if not collection then
+  if locked then
+    table.insert(ruleSettings, W.SwitchRow {
+      _settingsKey = BattleRoyal.settingKey, title = BattleRoyal.settingKey,
+      value = function(settings) return modeOf(settings)[BattleRoyal.settingKey] == true end,
+    })
+  elseif not collection then
     table.insert(ruleSettings, 1, W.SwitchRow {
       _settingsKey = Variants.key, title = "qiao_wolves",
       value = function(settings) return modeOf(settings)[Variants.key] == true end,

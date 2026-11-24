@@ -35,6 +35,8 @@ end
 function M.deal(room, plan, count)
   local num = #room.players
   assert(num == 3 or num == 4, "Locked Draft requires three or four players")
+  local landlord = num == 3 and room.players[1] or nil
+  local landlordBonus = landlord and 2 or 0
   local pool = table.simpleClone(plan.kept)
   local factions = table.simpleClone(plan.allowed)
   room:shuffleTable(pool)
@@ -72,9 +74,9 @@ function M.deal(room, plan, count)
           for _, slot in ipairs(slots) do
             table.insert(offers[room.players[slot.seat]], slot.name)
           end
-          for size = 3, count do
+          for size = 3, count + landlordBonus do
             for _, player in ipairs(room.players) do
-              if #offers[player] == size - 1 then
+              if #offers[player] == size - 1 and (size <= count or player == landlord) then
                 local name = table.find(candidates[assigned[player]], function(candidate)
                   return not occupied[cardKey(candidate)]
                 end)

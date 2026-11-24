@@ -1,5 +1,6 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
+local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local H = require "packages.hegemony.util"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
@@ -23,8 +24,11 @@ local function startRoom(count, alternate, modeSettings, previous)
         defaults[player.id] = self.default_reply[player.id]
       end
       local first = self.players[1]
+      local faction = function(player)
+        return propsById[player.id].prompt:match(":::([^:]+):seat#%d+$")
+      end
       local otherFaction = table.find(self.players, function(player)
-        return propsById[player.id].prompt ~= propsById[first.id].prompt
+        return faction(player) ~= faction(first)
       end)
       -- A reply with two real cards from another faction must still be rejected.
       for _, player in ipairs(self.players) do
@@ -62,12 +66,22 @@ local function startRoom(count, alternate, modeSettings, previous)
   local kingdoms = room:getBanner("qiao_candidate_kingdoms")
   lu.assertEquals(#room:getBanner("qiao_banned_kingdoms"), #kingdoms - 2)
   local dealt = {}
+  local baseOffers = math.max(2, math.min(modeSettings and modeSettings.qiao_offer_count or 5, 5))
   for _, player in ipairs(room.players) do
     local props = assert(propsById[player.id])
     lu.assertEquals(props.choiceNum, 2)
-    lu.assertTrue(#props.generals <= 5)
+    local landlord = count == 3 and player.seat == 1
+    lu.assertEquals(#props.generals, baseOffers + (landlord and 2 or 0))
     local assigned = player:getMark("__heg_init_kingdom")
-    lu.assertEquals(props.prompt, "#QiaoChooseLockedKingdom:::" .. Ban.kingdomLabel(assigned))
+    local promptKey, faction, seat = props.prompt:match("^(.-):::([^:]+):(seat#%d+)$")
+    lu.assertEquals(seat, "seat#" .. player.seat)
+    lu.assertEquals(faction, Ban.kingdomLabel(assigned))
+    local title = Fk:translate(promptKey, "zh_CN"):gsub("%%arg2", Fk:translate(seat, "zh_CN"))
+      :gsub("%%arg", faction)
+    local seatName = ({ "一号位", "二号位", "三号位", "四号位" })[player.seat]
+    local identity = landlord and "地主" or "农民"
+    local expectedTitle = count == 3 and (identity .. "（" .. seatName .. "）") or seatName
+    lu.assertEquals(title, "你是" .. expectedTitle .. "，势力为" .. faction .. "，请选择主将与副将")
     lu.assertFalse(props.extraData.freeAssign)
     lu.assertEquals(props.extraData.guests, {})
     lu.assertEquals(props.extraData.guestIllustrations, Guest.replacementEnabled(room))
@@ -157,6 +171,25 @@ function Testlocked_factions:testFourPlayerFormationAndSiege()
       lu.assertFalse(player:hasSkill("m_bahu"))
     end
     lu.assertEquals(counts, { 3, 4, 4, 5 })
+    support.clearRoom()
+  end
+end
+
+function Testlocked_factions:testBattleRoyalRequiresOptIn()
+  for _, enabled in ipairs({ false, true }) do
+    local settings = { generalTimeout = 1, qiao_offer_count = 3 }
+    if enabled then settings[BattleRoyal.settingKey] = true end
+    local room = startRoom(3, nil, settings)
+    local first = room.players[1]
+    lu.assertFalse(BattleRoyal.entered(room))
+    FkTest.runInRoom(function()
+      room.logic:trigger(fk.BeforeTurnStart, first, TurnData:new(first, "game_rule"))
+      lu.assertEquals(BattleRoyal.entered(room), enabled)
+      if not enabled then H.enterBattleRoyalMode(room) end
+    end)
+    lu.assertEquals(BattleRoyal.entered(room), enabled)
+    lu.assertEquals(first:hasSkill(BattleRoyal.SKILL), enabled)
+    lu.assertFalse(first:hasSkill("battle_royal&"))
     support.clearRoom()
   end
 end

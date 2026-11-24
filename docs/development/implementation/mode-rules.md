@@ -10,11 +10,13 @@
 
 ### 锁定投胎
 
-[模式规则](../../rules/faction-ban.md#锁定投胎)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。先为每个座位预留两张互不重复的合法武将牌，再从各自势力补齐待选牌。房间设置与服务端均将每人的候选数限制为 2 至 5 张。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
+[模式规则](../../rules/faction-ban.md#锁定投胎)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。先为每个座位预留两张互不重复的合法武将牌，再从各自势力补齐待选牌。每人的基础候选数为 2 至 5 张。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
 
 开局双将体力计算后增加斗地主 1 号位的体力与上限，按上游欢乐斗地主的默认接线授予引擎的 `m_feiyang` 和 `m_bahu`。其实现分别位于 FreeKill v0.5.25 的 `standard/pkg/skills/feiyang.lua` 与 `standard/pkg/skills/bahu.lua`。二对二通过 `getAdjustedProperty` 在 `DrawInitialCards` 前调整发牌数。[Gitee 斗地主模式](https://gitee.com/qsgs-fans/gamemode/blob/master/pkg/gamemodes/1v2.lua)
 
-[开局专项用例](../../../tests/locked_factions.lua)覆盖选将回包、候选数量上限、大合集候选和跨局禁选、客将选取与重抽拒绝、同名替换候选、三人场明置与模式技能，以及四人场队列／围攻及发牌。
+[鏖战入口](../../../pkg/qiao_mode/rules/battle_royal.lua)根据锁定投胎的房间开关决定是否进入。开关缺省关闭，开启后使用国战回合开始条件。该开关作用于汉晋和上游的进入入口。
+
+选将提示复用引擎的座次翻译。三人局显示身份、座次和获配势力，四人局显示座次和获配势力。[开局专项用例](../../../tests/locked_factions.lua)覆盖两种提示、候选数量、鏖战开关、跨局禁选、客将与同名替换、三人场明置与模式技能，以及四人场队列／围攻及发牌。
 
 ## 势力与身份
 

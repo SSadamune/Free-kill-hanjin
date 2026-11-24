@@ -193,11 +193,17 @@ end
 ---@param room Room
 ---@param offers string[]
 ---@return table
-function M.askData(room, offers, guests, kingdom)
+function M.askData(room, offers, guests, kingdom, seat)
   guests = canRedraw(room) and (guests or Guest.guestCandidates(room, offers)) or {}
   local names, pairing = M.pairing(room, offers, kingdom)
   local freeAssign = M.freeAssign(room)
   local guestIllustrations = Guest.replacementEnabled(room)
+  local prompt = M.prompt(room)
+  if kingdom then
+    local key = "#QiaoChooseLockedKingdom"
+    if #room.players == 3 then key = seat == 1 and "#QiaoChooseLandlord" or "#QiaoChooseFarmer" end
+    prompt = key .. ":::" .. Ban.kingdomLabel(kingdom) .. ":seat#" .. seat
+  end
   local wild, guestFactions = {}, {}
   for _, name in ipairs(names) do
     local entry = Guest.factionsOf(room, name)
@@ -222,7 +228,7 @@ function M.askData(room, offers, guests, kingdom)
         prop = {
           generals = table.simpleClone(offers),
           choiceNum = 2,
-          prompt = kingdom and "#QiaoChooseLockedKingdom:::" .. Ban.kingdomLabel(kingdom) or M.prompt(room),
+          prompt = prompt,
           hegemony = true,
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
@@ -252,7 +258,7 @@ function M.ask(room, players, offers, assigned)
   req.timeout = room:getSettings("generalTimeout") or M.defaultTimeout
   for _, player in ipairs(players) do
     local kingdom = assigned and assigned[player]
-    local data = M.askData(room, offers[player], nil, kingdom)
+    local data = M.askData(room, offers[player], nil, kingdom, player.seat)
     req:setData(player, data)
     local default = assert(M.firstLegalPair(room, offers[player], kingdom))
     req:setDefaultReply(player, { default.main, default.deputy })
