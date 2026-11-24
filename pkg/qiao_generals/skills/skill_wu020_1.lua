@@ -52,13 +52,14 @@ skill:addEffect(fk.TargetConfirmed, {
     if to == nil or to.dead or to:isRemoved() then return end
     to:drawCards(1, skill.name)
     if to.dead then return end
-    local equipIds = table.filter(to:getCardIds("h"), function(id)
-      return Fk:getCardById(id).type == Card.TypeEquip
+    local hasEquip = table.find(to:getHandlyIds(), function(id)
+      local card = Fk:getCardById(id)
+      return card.type == Card.TypeEquip and to:canUse(card, { bypass_times = true })
     end)
-    local choices = { DELAY }
-    if #equipIds > 0 then table.insert(choices, USE_EQUIP) end
+    local options = { DELAY, USE_EQUIP }
     local choice = room:askToChoice(to, {
-      choices = choices,
+      choices = hasEquip and options or { DELAY },
+      all_choices = options,
       skill_name = skill.name,
       prompt = "#qiao__skill_wu020_1-choice",
       cancelable = false,
@@ -70,8 +71,10 @@ skill:addEffect(fk.TargetConfirmed, {
         prompt = "#qiao__skill_wu020_1-equip",
         cancelable = false,
       })
-      -- 必须实际使用成功；取消/无合法装备不能免费跳过，转为回合末弃牌。
-      if use ~= nil and room:useCard(use) then return end
+      if use and use.from == to and use.card.type == Card.TypeEquip and to:canUse(use.card, use.extra_data) then
+        room:useCard(use)
+        return
+      end
     end
     recordDelay(room, to)
   end,

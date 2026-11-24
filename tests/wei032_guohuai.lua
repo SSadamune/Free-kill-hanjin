@@ -160,19 +160,26 @@ function Testqiao_wei032_guohuai:testJingceChecksEveryTurnAndOnlyAsksWhenEligibl
     room.logic:trigger(fk.CardResponding, owner, { card = Fk:cloneCard("jink") })
     owner.hp = 2
   end)
-  local asks, hand = 0, owner:getHandcardNum()
+  local prompts, hand = {}, owner:getHandcardNum()
   skill_test.withSkillRequests(room, JINGCE, {
-    askToSkillInvoke = function() asks = asks + 1; return true end,
+    askToSkillInvoke = function(_, _, params)
+      table.insert(prompts, params.prompt)
+      return true
+    end,
   }, function()
     local function finish()
       inRoom(function() room.logic:trigger(fk.TurnEnd, other, TurnData:new(other, "game_rule", {})) end)
     end
     finish()
-    lu.assertEquals(asks, 0)
+    lu.assertEquals(prompts, {})
     owner.hp = 1
     finish()
-    lu.assertEquals(asks, 1)
+    lu.assertEquals(prompts, { "#qiao__skill_wei032_1-invoke:::2" })
     lu.assertEquals(owner:getHandcardNum(), hand + 2)
+    inRoom(function() room.logic:trigger(fk.CardResponding, owner, { card = Fk:cloneCard("jink") }) end)
+    finish()
+    lu.assertEquals(prompts[2], "#qiao__skill_wei032_1-invoke:::1")
+    lu.assertEquals(owner:getHandcardNum(), hand + 3)
   end)
 end
 
@@ -193,7 +200,7 @@ function Testqiao_wei032_guohuai:testPrelightJingceAtAnotherPlayersTurnEnd()
   local asked, hand = 0, owner:getHandcardNum()
   skill_test.withSkillRequests(room, JINGCE, {
     askToSkillInvoke = function(_, _, params)
-      if params.prompt == "#qiao__skill_wei032_1-invoke" then asked = asked + 1 end
+      if params.prompt == "#qiao__skill_wei032_1-invoke:::2" then asked = asked + 1 end
       return true
     end,
   }, function()

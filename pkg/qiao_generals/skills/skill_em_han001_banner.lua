@@ -1,5 +1,6 @@
 -- EM(HAN001) 诏书入口：同势力角色（含本人）出牌阶段限一次交手牌到诏书。
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local H = require "packages.hegemony.util"
 
 local skill = fk.CreateSkill {
@@ -52,7 +53,10 @@ skill:addEffect("active", {
 Fk:addQmlMark {
   name = P.PILE_MARK,
   how_to_show = function(_, cards)
-    return type(cards) == "table" and tostring(#cards) or ""
+    if type(cards) ~= "table" then return "" end
+    local visible = table.filter(cards, function(id) return Self:cardVisible(id) end)
+    local symbols = Deck.suitSymbols(P.pileSuits(visible))
+    return symbols == "" and tostring(#cards) or (#cards .. " " .. symbols)
   end,
   qml = function(_, cards, holder)
     if type(cards) ~= "table" or holder == nil then return nil end
