@@ -28,7 +28,8 @@ skill:addEffect(fk.GeneralRevealed, spec)
 skill:addEffect(fk.GeneralHidden, spec)
 skill:addEffect(fk.Death, spec)
 local Markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
-skill:addAuxActiveSkill(Markers.DIRECT, { can_use = Util.FalseFunc, on_use = function() end })
+local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+skill:addAuxActiveSkill(Sources.DIRECT, { can_use = Util.FalseFunc, on_use = function() end })
 
 skill:addEffect(fk.AfterCardsMove, {
   global = true,

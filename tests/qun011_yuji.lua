@@ -141,7 +141,7 @@ end
 function Testqiao_yuji:testWithdrawingDirectGrantWhileYujiIsHidden()
   local room, owner, donor = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-  local markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
+  local sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
   inRoom(function()
     fixture.installDualGenerals(room, donor, {
       main = "qiao_heg__qun011", deputy = "qiao_test__qun_2", kingdom = "qun",
@@ -149,9 +149,9 @@ function Testqiao_yuji:testWithdrawingDirectGrantWhileYujiIsHidden()
     assert(exchange.exchange(room, { player = owner, isDeputy = false }, { player = donor, isDeputy = false }))
     owner:hideGeneral(false)
   end)
-  lu.assertNotNil(owner.derivative_skills[Fk.skills[markers.DIRECT]])
+  lu.assertNotNil(owner.derivative_skills[Fk.skills[sources.DIRECT]])
   inRoom(function() room:handleAddLoseSkills(owner, "-" .. SKILL, nil, false, true) end)
-  lu.assertNil(owner.derivative_skills[Fk.skills[markers.DIRECT]])
+  lu.assertNil(owner.derivative_skills[Fk.skills[sources.DIRECT]])
   inRoom(function() owner:revealGeneral(false) end)
   lu.assertTrue(owner:hasSkill(SKILL))
 end
@@ -207,6 +207,14 @@ end
 
 function Testqiao_yuji:testRemovingYujiKeepsEarlierDirectGrant()
   checkIndependentGrants(receiveYuji, removeYuji)
+end
+
+function Testqiao_yuji:testRemovingYujiAfterPermanentLossKeepsDirectGrant()
+  checkIndependentGrants(receiveYuji, function(room, owner)
+    local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+    assert(loss.loseCardSkill(room, owner, false, SKILL))
+    removeYuji(room, owner)
+  end)
 end
 
 local function showYujiFirst(room, owner, general)

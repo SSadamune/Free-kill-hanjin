@@ -460,6 +460,61 @@ function Testgeneral_exchange:testSameNameSkillFromAnotherPositionIsNotRemoved()
   end)
 end
 
+function Testgeneral_exchange:testRemovingDeputyAfterPermanentLossKeepsDirectGrant()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  FkTest.runInRoom(function()
+    content.setup(room, player, G.plain.name, G.wei_b.name, "wei")
+    room:handleAddLoseSkills(player, S.round, nil, false, true)
+    local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+    lu.assertTrue(loss.loseCardSkill(room, player, true, S.round))
+    lu.assertTrue(player:hasSkill(S.round))
+    room:invalidateSkill(player, S.round)
+    H.removeGeneral(player, true)
+    lu.assertEquals(player.deputyGeneral, "blank_shibing")
+    lu.assertTrue(player:hasSkill(S.round, true))
+    lu.assertFalse(player:hasSkill(S.round))
+    room:validateSkill(player, S.round)
+    lu.assertTrue(player:hasSkill(S.round))
+    lu.assertTrue(table.contains(player:getSkillNameList(), S.round))
+    lu.assertFalse(player:hasSkill(S.branch))
+    room:handleAddLoseSkills(player, "-" .. S.round, nil, false, true)
+    lu.assertFalse(player:hasSkill(S.round))
+    lu.assertFalse(table.contains(player:getSkillNameList(), S.round))
+  end)
+end
+
+function Testgeneral_exchange:testRemovingHiddenDeputyKeepsEarlierDirectGrant()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  FkTest.runInRoom(function()
+    content.setup(room, player, G.plain.name, G.wei_b.name, "wei")
+    player:hideGeneral(true)
+    -- 明置清理会按名称撤回已经不在预亮表中的牌面技能。
+    player:loseFakeSkill(S.round)
+    player:addSkill(S.round)
+    H.removeGeneral(player, true)
+    lu.assertEquals(player.deputyGeneral, "blank_shibing")
+    lu.assertTrue(player:hasSkill(S.round))
+    lu.assertFalse(player:hasSkill(S.branch))
+  end)
+end
+
+function Testgeneral_exchange:testChangingGeneralKeepsUnrelatedGrantAndItsChild()
+  local room, player = FkTest.room, FkTest.room.players[1]
+  FkTest.runInRoom(function()
+    content.setup(room, player, G.wei_a.name, G.plain.name, "wei")
+    player:addSkill(S.limited, S.shared)
+    player:addSkill(S.switch, S.limited)
+    room:changeHero(player, G.plain2.name, false, false, false, false, false)
+    lu.assertEquals(player.general, G.plain2.name)
+    lu.assertTrue(player:hasSkill(S.limited))
+    lu.assertTrue(player:hasSkill(S.switch))
+    lu.assertFalse(player:hasSkill(S.mainonly))
+    room:handleAddLoseSkills(player, "-" .. S.limited, S.shared, false, true)
+    lu.assertFalse(player:hasSkill(S.limited))
+    lu.assertFalse(player:hasSkill(S.switch))
+  end)
+end
+
 function Testgeneral_exchange:testUpstreamSwapDeputyStillWorksWithoutOurEntryPoint()
   local room, a, b = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
   local listenerCalled = false

@@ -1,7 +1,7 @@
 -- 游戏牌标记。实例身份与游戏牌 ID 只在服务端登记；客户端仍看原有的具名牌堆。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local M = {}
-M.DIRECT = "qiao__marker_direct_grant"
 local rooms = setmetatable({}, { __mode = "k" })
 local registered = {}
 local instances = setmetatable({}, { __mode = "k" })
@@ -47,7 +47,7 @@ local function candidates(player, effect, root)
     end
     table.sort(grants)
     for _, grant in ipairs(grants) do
-      local label = grant == M.DIRECT and root or grant
+      local label = grant == Sources.DIRECT and root or grant
       table.insert(list, instance(player.room, grantKey(player, grant, root), label, nil, root))
     end
     -- 暗将预亮时，技能查询可能找到暗置的武将牌。已有直接授技且未预亮时
@@ -212,86 +212,13 @@ function M.transfer(from, to, general)
   end
 end
 
--- 牌面授技和角色获授可能使用同一引擎入口。变将事件显式记录了离开和进入的武将牌。
-local function changingCard(player, root, side)
-  local event = player.room.logic:getCurrentEvent()
-  if not event then return false end
-  local data = event.data
-  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-  if event.event == GameEvent.ChangeProperty and data.from == player then
-    for _, key in ipairs({ "generalChange", "deputyChange" }) do
-      local change = data.results[key]
-      if change and exchange.cardProvidesSkill(player.room, change[side], root) then return true end
-    end
-  elseif side == 1 and event.event == require("packages.hegemony.util").GameEvent.RemoveGeneral
-    and data.who == player then
-    -- 通用移除先撤技能再换士兵，同时覆盖主将、副将及移除前被替换的位置。
-    return exchange.cardProvidesSkill(player.room, exchange.publicGeneral(player, data.isDeputy), root)
-  end
-  return false
-end
-
-local function installGrantEntry(room)
-  if room.qiaoMarkerGrantsInstalled then return end
-  room.qiaoMarkerGrantsInstalled = true
-  local handle = room.handleAddLoseSkills
-  function room:handleAddLoseSkills(player, names, source, ...)
-    if not source then
-      local list = type(names) == "string" and names:split("|") or names
-      for _, root in ipairs(list) do
-        if registered[root] and player:hasSkill(root, true, true) then
-          -- 原方法跳过已经持有的技能。只补来源，照常由原方法负责日志和首次获技事件。
-          if changingCard(player, root, 2) then
-            if not table.contains(player.player_skills, Fk.skills[root]) then player:addSkill(root) end
-          else
-            player:addSkill(root, M.DIRECT)
-          end
-        end
-      end
-    end
-    return handle(self, player, names, source, ...)
-  end
-end
-
--- 引擎移除一个派生来源时，即使同名技能仍在，也必须结束这个授予实例。
--- 直接调用 loseSkill 或 no_trigger 撤技时不一定产生 EventLoseSkill。
-function M.install(room)
-  installGrantEntry(room)
-  local class = require "ltk.server.serverplayer"
+-- 引擎直接撤销父技能时也要清理实际结束的标记来源。
+function M.install()
   if M.installed then return end
   M.installed = true
+  local class = require "ltk.server.serverplayer"
   local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-  local addSkill, loseSkill = class.addSkill, class.loseSkill
-  local function printedOnShownCard(player, root)
-    return exchange.cardProvidesSkill(player.room, player.general, root)
-      or exchange.cardProvidesSkill(player.room, player.deputyGeneral, root)
-  end
-  local hiding = setmetatable({}, { __mode = "k" })
-  local hideGeneral = class.hideGeneral
-  function class:hideGeneral(deputy)
-    if not self.derivative_skills[Fk.skills[M.DIRECT]] then return hideGeneral(self, deputy) end
-    local previous = hiding[self]
-    hiding[self] = deputy and self.deputyGeneral or self.general
-    local ok, result = pcall(hideGeneral, self, deputy)
-    hiding[self] = previous
-    if not ok then error(result, 0) end
-    return result
-  end
-  local function withdrawingCard(player, root)
-    if hiding[player] and exchange.cardProvidesSkill(player.room, hiding[player], root) then return true end
-    return changingCard(player, root, 1)
-  end
-  function class:addSkill(skill, source)
-    local root = type(skill) == "string" and skill or skill.name
-    if not source and registered[root] and Modes.inRoom(self.room) then
-      -- 交换同步只在缺少牌面条目时安装。已有牌面条目再获授时，登记到角色来源。
-      if not printedOnShownCard(self, root) or
-        (table.contains(self.player_skills, Fk.skills[root]) and not changingCard(self, root, 2)) then
-        source = M.DIRECT
-      end
-    end
-    return addSkill(self, skill, source)
-  end
+  local loseSkill = class.loseSkill
   function class:loseSkill(skill, source)
     if not Modes.inRoom(self.room) then return loseSkill(self, skill, source) end
     local parent = type(skill) == "string" and Fk.skills[skill] or skill
@@ -301,18 +228,12 @@ function M.install(room)
     for _, child in ipairs(self.derivative_skills[parent] or {}) do
       if registered[child.name] then table.insert(children, child.name) end
     end
+    source = Sources.lossSource(self, parent, source)
     local sourceName = type(source) == "table" and source.name or source
-    if not source and registered[root] then
-      local direct = self.derivative_skills[Fk.skills[M.DIRECT]]
-      if direct and table.contains(direct, parent) and not withdrawingCard(self, root) then
-        source, sourceName = M.DIRECT, M.DIRECT
-        if not printedOnShownCard(self, root) and table.contains(self.player_skills, parent) then
-          loseSkill(self, skill)  -- 已永久失技的明将可能仍有引擎合并后的基础条目。
-        end
-      end
-    end
     local result = loseSkill(self, skill, source)
-    for _, child in ipairs(children) do M.endGrant(self, root, child) end
+    if not self.derivative_skills[parent] then
+      for _, child in ipairs(children) do M.endGrant(self, root, child) end
+    end
     if registered[root] then
       M.endGrant(self, sourceName, root)
       if not sourceName and not self:hasSkill(root, true, true) then

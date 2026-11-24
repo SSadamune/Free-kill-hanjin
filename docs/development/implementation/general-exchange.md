@@ -23,6 +23,12 @@
 - [武将弃牌堆](../../../pkg/qiao_mode/rules/general_discard.lua) 以房间 tag `qiao_general_discard_v1` 记录进堆的武将牌，同步 `disabled_generals` 并将这些牌从 `general_pile` 移出。通用移除成功且旧将已换为白板士兵时，在 `RemoveGeneral` 的归还阶段写入此堆，早于 `GeneralRemoved`。候选、回池、随机抽取与检索都会排除已入堆的牌。普通国战仍走原引擎流程。[武将牌堆规则](../../../rulebook/terms/zone-terms/wujiangpaidui.md)说明各类入堆来源。
 - [交换与移除回归](../../../tests/general_exchange.lua#L480)覆盖主副将移除、入堆时机内不可检索、再次抽取排除、禁止移除以及上游国战照常回池。技能的特殊分支由各自的真实入口验证。
 
+## 武将牌离场与技能来源
+
+汉晋在服务器的授技和撤技入口记录角色直接获得的技能。原生移除武将按离场牌的原始技能表提交失技请求，清除该牌的基础技能条目时须保留仍由角色或其他来源提供的同名技能。即使离场牌此前已永久失去该技能，后续移除也不触发同名技能的失技回调，不重置其失效状态。原生换将和暗置沿用同一来源判断。[公共适配](../../../pkg/qiao_mode/rules/skill_sources.lua)
+
+[武将交换专项](../../../tests/general_exchange.lua)从通用移除与换将入口核对普通技能的保留、独立来源及其关联技能的实际撤回。[于吉专项](../../../tests/qun011_yuji.lua)核对武将牌先永久失去【千幻】后再移除时，角色授技与其标记仍可使用。
+
 ## 牌类标记生命周期
 
 [牌类标记的来源与去向](../../rules/general-principles.md#牌类标记的来源与去向)由[实体标记接口](../../../pkg/qiao_mode/rules/marker_cards.lua)执行。置牌时登记实体 ID 和技能来源；同一角色有多份同名技能时，按所选来源登记。[不屈](generals/standard/wu013.md#wu013-1)和[千幻](generals/zhen/qun011.md#qun011-1)是首批接入对象。
