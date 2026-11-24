@@ -169,16 +169,18 @@ function Testqiao_jin023_malong:testEquipSlotsAfterJubao()
   lu.assertEquals(count, slots, "受聚宝保护的宝物须独占原栏位")
 end
 
-function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterEquipsLeave()
+local function checkFengxieSingleDirectionAfterRefill(event, shouldRefill)
   local room, me, other = FkTest.room, p(1), p(2)
   local feng = "qiao__skill_jin023_1"
   local mine, theirs, replacement
   local occupied = false
-  local refill = fk.CreateSkill { name = "#qiao_test_fengxie_refill" }
-  refill:addEffect(fk.AfterCardsMove, {
+  local refill = fk.CreateSkill { name = "#qiao_test_fengxie_refill_" .. tostring(event) }
+  refill:addEffect(event, {
     global = true,
-    can_refresh = function(_, _, _, player)
+    late_refresh = event == fk.BeforeCardsMove,
+    can_refresh = function(_, _, _, player, moves)
       return player == me and not occupied and mine and room:getCardArea(mine) == Card.Processing
+        and shouldRefill(moves, other, feng)
     end,
     on_refresh = function()
       occupied = true
@@ -201,6 +203,18 @@ function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterEquipsLeave()
   lu.assertEquals(other:getEquipments(Card.SubtypeTreasure), { replacement })
   lu.assertEquals(me:getEquipments(Card.SubtypeTreasure), { theirs })
   lu.assertEquals(room:getCardArea(mine), Card.DiscardPile)
+end
+
+function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterEquipsLeave()
+  checkFengxieSingleDirectionAfterRefill(fk.AfterCardsMove, function() return true end)
+end
+
+function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterIncomingMoveRefresh()
+  checkFengxieSingleDirectionAfterRefill(fk.BeforeCardsMove, function(moves, recipient, skillName)
+    return table.find(moves, function(move)
+      return move.to == recipient and move.toArea == Card.PlayerEquip and move.skillName == skillName
+    end) ~= nil
+  end)
 end
 
 function Testqiao_jin023_malong:testFengxieAfterOrdinarySlashLeavesCountUnchanged()

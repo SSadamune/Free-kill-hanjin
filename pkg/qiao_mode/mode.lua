@@ -1,5 +1,6 @@
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
 local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
+local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
@@ -202,6 +203,7 @@ function M.create(base, name)
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)
       SlashUseTiming.installServer(self.room)
+      EquipmentExchange.installServer(self)
       self.room:addSkill(WeiHistory.HISTORY_SKILL)
       self.room:addSkill(WeiHistory.WEIKUI_DISTANCE_SKILL)
       self.room:addSkill(WuHistory.HISTORY_SKILL)

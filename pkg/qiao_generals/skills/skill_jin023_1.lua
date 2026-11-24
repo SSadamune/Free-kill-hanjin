@@ -3,6 +3,7 @@
 -- 若其中一名为自己，随后对另一名或其队列视为使用【杀】。
 local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
 
 local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
@@ -17,18 +18,6 @@ local function equipIds(player)
   return player:getCardIds("e")
 end
 
-local function canReceive(player, card, outgoing)
-  local function hasRoom(subtype)
-    local equips = player:getEquipments(subtype)
-    local remaining = #equips - (table.contains(equips, outgoing) and 1 or 0)
-    return #player:getAvailableEquipSlots(subtype) > remaining
-  end
-  if Fk.packages.qiao_cards.qiao_cards.isDualMount(card) then
-    return hasRoom(Card.SubtypeOffensiveRide) and hasRoom(Card.SubtypeDefensiveRide)
-  end
-  return hasRoom(card.sub_type)
-end
-
 local function protected(owner, chooser, id)
   return owner:hasShownSkill(Wu.JUBAO) and Wu.isProtectedTreasure(owner, chooser, id)
 end
@@ -38,7 +27,8 @@ local function secondCandidates(chooser, a, b, idA)
   local cardA = a:getVirtualEquip(idA) or Fk:getCardById(idA)
   return table.filter(equipIds(b), function(idB)
     local cardB = b:getVirtualEquip(idB) or Fk:getCardById(idB)
-    return not protected(b, chooser, idB) and canReceive(b, cardA, idB) and canReceive(a, cardB, idA)
+    return not protected(b, chooser, idB)
+      and EquipmentExchange.canReceive(b, cardA, idB) and EquipmentExchange.canReceive(a, cardB, idA)
   end)
 end
 
@@ -79,10 +69,10 @@ local function swapEquips(room, player, a, b, idA, idB)
     })
   end
   room:moveCards(table.unpack(outgoing))
-  -- 两张牌一起离开后，防移动与嵌套结算可能改变实际空槽。
+  -- 先按两张牌离场后的实际栏位准备移动，执行移动前再做最后核对。
   for _, t in ipairs(transfers) do
     if room:getCardArea(t.id) == Card.Processing and not t.to.dead and not t.to:isRemoved()
-      and canReceive(t.to, t.virtual or Fk:getCardById(t.id)) then
+      and EquipmentExchange.canReceive(t.to, t.virtual or Fk:getCardById(t.id)) then
       table.insert(incoming, {
         ids = { t.id }, fromArea = Card.Processing, to = t.to, toArea = Card.PlayerEquip,
         virtualEquip = t.virtual, moveReason = fk.ReasonExchange, proposer = player,
@@ -90,7 +80,7 @@ local function swapEquips(room, player, a, b, idA, idB)
       })
     end
   end
-  if #incoming > 0 then room:moveCards(table.unpack(incoming)) end
+  EquipmentExchange.moveIncoming(room, incoming)
   room:cleanProcessingArea({ idA, idB }, skill.name)
 end
 
