@@ -43,6 +43,8 @@ A.grantIgnore(use, "another_effect")                -- 一个令牌，未指定�
 - `A.getResult(use)`：本次执行结果，含 `triggered`、`triggered_count`、逐项记录和效果次数。
 - `A.hasEffect(use, "execute_both")`：供独立卡牌的效果实现判断是否执行两种选项。
 - `A.Triggered`：每个成功条目的触发事件，数据含 `use` 和本条目的 `entry` 结果。尚未实装的刘渊、贾充等应明确区分检查“是应变牌”还是检查“本次触发应变”。
+
+铜雀在使用应变牌时将可选效果与取消放在同一窗口，即使只有一个可选效果也显示其按钮。每个按钮显示应变效果和条件，询问时自然成立的条件追加「（已满足）」。这个状态只作提示，实际结算沿用逐项判定和只无视一项的规则。「无视次数」在更早的使用阶段锁定，不进入本次选择；尚待其他角色回应的助战没有已满足标记。
 - `A.registerEffect(name, {apply = function(room, use, entry) ... end})`：注册明确的新效果。若是增减目标，须声明 `target_change = true` 并以布尔值返回是否实际改变目标。
 
 内置效果：`draw`、`damage`、`disresponsive`、`add_target`、`remove_target`、`obtain_response_card`、`execute_both`、`ignore_times`。
