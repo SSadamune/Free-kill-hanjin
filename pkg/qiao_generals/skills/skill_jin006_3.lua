@@ -22,7 +22,6 @@ skill:addEffect("viewas", {
     local last = U.lastUse(player)
     if last == nil then return nil end
     local card = Fk:cloneCard(last)
-    if card == nil then return nil end
     card.skillName = skill.name
     card:addSubcard(cards[1])
     return card
@@ -33,6 +32,10 @@ skill:addEffect("viewas", {
   -- ReqUseCard（包括回合外要求“使用”闪/无懈）为 false；纯打出为 true。
   enabled_at_response = function(self, player, cardResponsing)
     return not cardResponsing and U.lastUse(player) ~= nil and #U.treasureIds(player) > 0
+  end,
+  enabled_at_nullification = function(self, player)
+    local last = U.lastUse(player)
+    return last ~= nil and Fk.all_card_types[last].trueName == "nullification" and #U.treasureIds(player) > 0
   end,
 })
 

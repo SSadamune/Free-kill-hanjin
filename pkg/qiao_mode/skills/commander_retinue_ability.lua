@@ -51,29 +51,45 @@ skill:addEffect("viewas", {
     -- 客户端 view_as 不能读取服务端来源 tag；构造牌后由服务端 before_use 复核。
     return C.viewAsCardForClient(player, key)
   end,
-  before_use = function(self, player, use)
+  on_use = function(self, room, effect, card, params)
+    if card == nil then return "" end
+    local extra = params and params.extra_data
+    if params and (params.is_response or (params.pattern and not card:matchVSPattern(params.pattern))) then
+      return skill.name
+    end
+    if card.is_passive and extra and extra.not_passive then return skill.name end
+    local use = { from = effect.from, tos = effect.tos, card = card }
+    if extra then use.extra_data = table.simpleClone(extra) end
+    return self:beforeUse(effect.from, use, true) or use
+  end,
+  before_use = function(self, player, use, validateTargets)
     local key = use.card and use.card:getMark(C.CARD_SOURCE_MARK)
     if type(key) ~= "string" or key == "" then return skill.name end
     local spec = C.commanders[key]
     if spec == nil or use.card.name ~= spec.card then return skill.name end
-    local source = C.source(player.room, key)
-    if source == nil or not C.sourceAuthorizedFor(player.room, source, player) then
+    local room = player.room
+    local source = C.source(room, key)
+    if source == nil or not C.sourceAuthorizedFor(room, source, player) then
       return skill.name
     end
-    local isDeputy = C.chooseCostPosition(player, source)
-    if isDeputy == nil then return skill.name end
     local policy = source.bypass_distances and T.bypassDistance() or T.default()
-    T.attachUse(player.room, use, policy)
-    -- 支付前先按真实 CardSkill 复核本次目标的选牌合法性；失败时连令牌一起
-    -- 释放，不产生武将移除代价。空目标表示该入口尚未得到目标（由真正请求
-    -- 的 target 选择/PreCardUse 复核），不能据此把固定目标牌误判为非法。
-    if #(use.tos or {}) > 0 and not T.validateUse(player.room, player, use, policy, nil,
-      { require_trusted = true, stage = "selection" }) then
-      T.releaseToken(player.room, use)
-      return skill.name
+    local function canUse()
+      if use.card.is_passive then
+        return not player:prohibitUse(use.card) and not player:prohibitResponse(use.card)
+      end
+      if not player:canUse(use.card, use.extra_data) then return false end
+      -- 正式请求下，通用校验区分上游补入的固定目标与漏选的自选目标。
+      if not validateTargets and #(use.tos or {}) == 0 then return true end
+      return T.validateTargets(room, player, use, policy, "selection")
     end
+    local candidates = table.filter(C.costCandidates(player, source), function(deputy)
+      return C.checkCost(player, deputy, canUse)
+    end)
+    local isDeputy = C.chooseCostPosition(player, source, candidates)
+    if isDeputy == nil or not C.checkCost(player, isDeputy, canUse) then return skill.name end
+    T.attachUse(room, use, policy)
     if not C.payCost(player, source, isDeputy) then
-      T.releaseToken(player.room, use)
+      T.releaseToken(room, use)
       return skill.name
     end
   end,

@@ -27,9 +27,7 @@ end
 ---@param player ServerPlayer
 ---@return ServerPlayer[]
 local function slashTargets(room, player)
-  return C.candidates(room, player, Fk:cloneCard(SLASH), slashPolicy(), {
-    bypass_times = true,
-  })
+  return C.effectCandidates(room, player, Fk:cloneCard(SLASH), slashPolicy())
 end
 
 ---@param player ServerPlayer
@@ -136,8 +134,7 @@ skill:addEffect(fk.EventPhaseChanging, {
       room:loseHp(player, 1, skill.name)
     end
     if player.dead then return end
-    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, true,
-      { bypass_times = true }, slashPolicy())
+    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, nil, nil, slashPolicy())
   end,
 })
 

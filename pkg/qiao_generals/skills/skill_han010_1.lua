@@ -71,7 +71,7 @@ skill:addEffect(fk.TurnEnd, {
     -- 效果指定唯一目标，按显式目标策略处理（不叠加【杀】的距离条件）；仅
     -- 此次使用带有无视防具标记，TargetSpecified 复用青釭剑的公共无视防具
     -- 机制，只在该次用牌结算中令目标防具无效。
-    C.useVirtualCard(room, player, "qiao__slash", nil, { to }, skill.name, true,
+    C.useVirtualCard(room, player, "qiao__slash", nil, { to }, skill.name, nil,
       { [ARMOR_MARK] = true },
       C.explicit({ other_roles = true }, { names = { "qiao__slash" } }))
   end,

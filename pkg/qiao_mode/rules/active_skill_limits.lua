@@ -1,8 +1,7 @@
 -- 汉晋普通出牌请求的主动技次数声明检查。
 --
--- 限定范围：仅汉晋扩展自身的正式主主动效果（技能名即骨架名，且不是辅助主动
--- 技、转化技或牌的使用）。辅助/额外发动、翼从逐实例机制、ViewAs、牌使用与其他
--- 模式继续走各自的原有路径。
+-- 限定范围：汉晋扩展的正式主主动效果及主动出牌时有骨架次数声明的转化技。
+-- 辅助/额外发动、翼从逐实例机制、响应和其他模式继续走各自的原有路径。
 --
 -- 次数来源仍是引擎记录的声明，不新增标记或计数：
 --   * 效果（UsableSkill）的 max_use_time：按 usedEffectTimes 比较；
@@ -32,15 +31,16 @@ local function limitAt(declarations, scope, owner, player)
   return nil
 end
 
---- 是否为本模块负责的正式主主动效果。
+--- 是否为本模块负责的正式出牌技能。
 ---@param skill Skill?
 ---@return boolean
 function M.appliesTo(skill)
-  if skill == nil or not skill:isInstanceOf(ActiveSkill) then return false end
+  if skill == nil or not skill.name:startsWith("qiao__") then return false end
   local skeleton = skill:getSkeleton()
   -- 主效果在 createSkill 时取得骨架名；辅助主动技使用独立名字，不在此列。
   if skeleton == nil or skeleton.name ~= skill.name then return false end
-  return type(skill.name) == "string" and skill.name:startsWith("qiao__")
+  return skill:isInstanceOf(ActiveSkill)
+    or (skill:isInstanceOf(ViewAsSkill) and next(skeleton.max_use_time or {}) ~= nil)
 end
 
 --- 该主动技在声明次数内是否已经用尽。

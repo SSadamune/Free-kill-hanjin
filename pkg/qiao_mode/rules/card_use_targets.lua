@@ -14,6 +14,7 @@
 local M = {}
 
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
+local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
 
 M.RULE_SKILL = "#qiao_use_targets_rule"
 M.POLICY_MARK = "@[qiao_use_target_policy]"
@@ -512,10 +513,9 @@ end
 
 -- Candidate and validation --------------------------------------------------
 
---- Server-side candidate list under one strategy.  This deliberately runs the
---- card's own targetFilter (through the proxy) so UI, server request checks and
---- final validation share one rule.  The policy mark is pushed only for the
---- duration of the query.
+--- Query the engine under the request policy, then verify the returned targets
+--- against the effect's condition and the card's basic target requirements.
+--- The policy mark lasts only for the engine query.
 function M.candidates(room, player, card, policy, extra_data)
   if card == nil or player == nil then return {} end
   local rec = normalize(policy)
@@ -526,7 +526,22 @@ function M.candidates(room, player, card, policy, extra_data)
     end)
   end)
   if not ok or type(result) ~= "table" then return {} end
-  return result
+  return table.filter(result, function(target)
+    if rec.kind == M.KIND_EXPLICIT then
+      return M.matchesCondition(room, player, card, target, rec.condition)
+    end
+    return ExtraTargets.meetsIntrinsicTargetRequirements(player, card, target)
+  end)
+end
+
+function M.effectCandidates(room, player, card, policy, extra_data)
+  if card.trueName == "slash" then extra_data = SlashUseTiming.effectTargetData(extra_data) end
+  return M.candidates(room, player, card, policy, extra_data)
+end
+
+function M.canEffectUseTo(player, card, target, extra_data)
+  if card.trueName == "slash" then extra_data = SlashUseTiming.effectTargetData(extra_data) end
+  return player:canUseTo(card, target, extra_data)
 end
 
 -- Real CardSkill target selection.  The engine's target-selection UI calls
@@ -558,7 +573,7 @@ local function validateSelectionList(room, player, card, tos, extra_data, ignore
 
   for _, target in ipairs(players) do
     if not target:isAlive() or target:isRemoved() then return false, "dead-target" end
-    if not ExtraTargets.meetsIntrinsicTargetRequirements(card, target) then return false, "intrinsic-target" end
+    if not ExtraTargets.meetsIntrinsicTargetRequirements(player, card, target) then return false, "intrinsic-target" end
     if player:isProhibited(target, card) then return false, "prohibit-target" end
   end
 
@@ -856,6 +871,7 @@ function M.askToUseCard(room, player, params)
   M.pop(room, player, rec)
   if not ok then error(use, 0) end
   if use == nil then return nil end
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   -- Forward the free-use marker independently: opts.not_passive is consumed only
   -- by validateUse's passive branch, so validateTargets keeps resolving extra
@@ -896,6 +912,7 @@ function M.selectVirtualCard(room, player, params)
   M.pop(room, player, rec)
   if not ok then error(use, 0) end
   if use == nil or use.card == nil then return nil end
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   if not M.validateUse(room, player, use, rec, params.context,
     { require_trusted = true, stage = "selection" }) then
@@ -931,6 +948,7 @@ function M.useVirtualCard(room, player, card_name, subcards, tos, skillName, ext
     extraUse = extra,
     extra_data = extra_data and table.simpleClone(extra_data) or {},
   }
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   local ok = M.validateUse(room, player, use, rec, context,
     { require_trusted = true, stage = "selection" })
@@ -946,6 +964,7 @@ end
 --- Use an already constructed UseCardData-like table under a strategy.
 function M.useCard(room, player, use, policy, context)
   local rec = M.push(room, player, { use.card.name }, policy or M.default(), context)
+  SlashUseTiming.applyEffectUse(use)
   M.attachUse(room, use, rec)
   local ok = M.validateUse(room, player, use, rec, context,
     { require_trusted = true, stage = "selection" })

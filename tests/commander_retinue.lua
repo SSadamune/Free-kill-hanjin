@@ -1759,4 +1759,59 @@ function Testqiao_commander_retinue:testZhuRongCommanderSlashIgnoresDistanceOnly
   handler:_finish()
 end
 
+function Testqiao_commander_retinue:testCommanderCannotSpendZhangFeiOnExtraSlash()
+  local user, target = room().players[1], room().players[2]
+  local source, zhangfei = "qiao_heg__shu006", "qiao_heg__shu003"
+  setHidden(user, source, zhangfei, "shu")
+  settleKingdom(user, "shu")
+  revealBoth(user)
+  setCurrent(user)
+  user.phase = Player.Play
+  FkTest.runInRoom(function() user:addCardUseHistory("slash", 1) end)
+  lu.assertTrue(user:canUseTo(C.viewAsCardForClient(user, source), target))
+
+  local client = __dofile("../../../tests/support/client_room.lua")
+  client.run(room(), function(_, current)
+    local me = current:getPlayerById(user.id)
+    local board = Fk:getBoardGame(room():getSettings("gameMode"))
+    local instance = board.client_klass:new(ClientInstance.client)
+    local handler = instance.request_handlers.PlayCard:new(me)
+    handler.skill_name = C.ABILITY_SKILL
+    handler:setup()
+    lu.assertFalse(handler:targetValidity(target.id))
+    handler.selected_targets = { target.id }
+    lu.assertFalse(handler:feasible())
+    handler:_finish()
+  end)
+
+  local hp = target.hp
+  lu.assertEquals(useAbilityThroughEngine(user, source, { target }), C.ABILITY_SKILL)
+  lu.assertEquals(user.deputyGeneral, zhangfei)
+  lu.assertEquals(user:usedCardTimes("slash", Player.HistoryPhase), 1)
+  lu.assertEquals(target.hp, hp)
+end
+
+function Testqiao_commander_retinue:testCommanderKeepsCostThatDoesNotSupplyDistance()
+  local user, holder, target = table.unpack(room().players, 1, 3)
+  local source, machao, deputy = "qiao_heg__qun002", "qiao_heg__shu006", "qiao_test__shu_2"
+  setHidden(holder, source, nil, "shu")
+  setHidden(user, machao, deputy, "shu")
+  settleKingdom(holder, "shu")
+  settleKingdom(user, "shu")
+  reveal(holder, false)
+  revealBoth(user)
+  setCurrent(user)
+  user.phase = Player.Play
+  lu.assertEquals(user:getAttackRange(), 1)
+  lu.assertEquals(user:distanceTo(target), 1)
+  local hp = target.hp
+
+  lu.assertEquals(useAbilityThroughEngine(user, source), C.ABILITY_SKILL)
+  lu.assertEquals(user.deputyGeneral, deputy)
+  lu.assertNil(useAbilityThroughEngine(user, source, { target }))
+  lu.assertEquals(user.general, machao)
+  lu.assertTrue(C.isSoldier(user.deputyGeneral))
+  lu.assertEquals(target.hp, hp - 1)
+end
+
 return { name = "qiao_commander_retinue" }

@@ -1,6 +1,8 @@
 -- SHU012 姜维：挑衅、天覆、承志真实主流程验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local Client = require "ltk.client.client"
 local H = require "packages.hegemony.util"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
@@ -107,25 +109,60 @@ function Testqiao_shu012_jiangwei:testTiaoxinRealSlashOnJiangwei()
   lu.assertTrue(table.contains(target:getCardIds("he"), slash) == false)
 end
 
-function Testqiao_shu012_jiangwei:testTiaoxinCancelDiscardsTargetCard()
+local function checkTiaoxinDiscardVisibility(respondWithSlash)
   local room, player, target = FkTest.room, p(1), p(2)
-  local jink = give(target, "qiao__jink", Card.Heart, 3)
+  local hidden = give(target, "qiao__jink", Card.Heart, 3)
+  local weapon = give(target, "qiao__qinggang_sword", Card.Spade, 6)
   inRoom(function()
     room.current = player
     player.phase = Player.Play
+    room:moveCardIntoEquip(target, weapon, TIAOXIN, true, target)
   end)
-  FkTest.setNextReplies(target, { "" })
-  local original = room.askToChooseCard
-  local ok, err = pcall(function()
-    room.askToChooseCard = function() return jink end
+  if respondWithSlash then
+    local slash = give(target, "qiao__slash", Card.Spade, 2)
+    local dodge = give(player, "qiao__jink", Card.Heart, 2)
+    FkTest.setNextReplies(target, { { card = slash, targets = { player.id } } })
+    FkTest.setNextReplies(player, { { card = dodge }, hidden })
+  else
+    FkTest.setNextReplies(target, { "" })
+    FkTest.setNextReplies(player, { hidden })
+  end
+  local uiData
+  skill_test.withSkillRequests(room, TIAOXIN, {
+    askToChooseCard = function(self, chooser, params, original)
+      client_room.run(room, function(clients, clientRoom)
+        local oldSelf = Self
+        Self = clientRoom:getPlayerById(chooser.id)
+        local ok, err = pcall(Client.askForCardChosen, {
+          notifyUI = function(_, command, data)
+            if command == "AskForCardChosen" then uiData = data end
+          end,
+        }, { clientRoom:getPlayerById(params.target.id), params.flag, params.prompt })
+        Self = oldSelf
+        if not ok then error(err, 0) end
+      end)
+      return original(self, chooser, params)
+    end,
+  }, function()
     inRoom(function()
       Fk.skills[TIAOXIN]:onUse(room, { from = player, tos = { target } })
     end)
   end)
-  room.askToChooseCard = original
-  if not ok then error(err, 0) end
-  lu.assertFalse(table.contains(target:getCardIds("he"), jink),
-    "挑衅取消使用杀后应实际弃置目标一张牌")
+  lu.assertNotNil(uiData)
+  lu.assertFalse(uiData.visible_data[tostring(hidden)])
+  lu.assertNotEquals(uiData.visible_data[tostring(weapon)], false)
+  lu.assertTrue(table.find(uiData.card_data, function(group)
+    return group[1] == "$Equip" and table.contains(group[2], weapon)
+  end) ~= nil)
+  lu.assertEquals(room:getCardArea(hidden), Card.DiscardPile)
+end
+
+function Testqiao_shu012_jiangwei:testTiaoxinCancelDiscardsWithoutShowingHand()
+  checkTiaoxinDiscardVisibility(false)
+end
+
+function Testqiao_shu012_jiangwei:testTiaoxinDodgedSlashDiscardsWithoutShowingHand()
+  checkTiaoxinDiscardVisibility(true)
 end
 
 function Testqiao_shu012_jiangwei:testChengzhiReallyAddsTwoGuanxingCards()

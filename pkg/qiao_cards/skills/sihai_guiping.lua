@@ -9,7 +9,7 @@
 --   * 用牌时已确定为晋势力才继续：可将本次获得且仍持有的牌分给其他晋势力
 --     角色（每名一张）；随后无论是否分出，都按座次询问当前场上每名晋势力
 --     角色是否使用一张实体牌，走真实用牌入口并只使用一次，沿用牌本身的
---     目标规则，不额外放宽距离或次数。
+--     目标规则，出杀次数按公共效果用牌规则处理。
 local FactionTricks = require "packages.qiao.pkg.qiao_mode.rules.faction_tricks"
 local FreeUse = require "packages.qiao.pkg.qiao_mode.rules.free_use"
 
@@ -155,17 +155,14 @@ skill:addEffect("cardskill", {
     for _, other in ipairs(jin) do
       if not other.dead and not other:isRemoved() then
         -- 普通可选用牌请求（含已确认合法的转化牌）；请求声明 not_passive，
-        -- 不提供【闪】【无懈可击】等被动牌。选择后只执行一次，不额外放宽
-        -- 次数或目标条件；服务端公共入口按本次请求复核后再返回待执行数据。
+        -- 不提供【闪】【无懈可击】等被动牌。服务端公共入口按本次请求复核
+        -- 后返回待执行数据，选择后只执行一次。
         local use = FreeUse.askToUseCard(other, {
           pattern = ".",
           skill_name = skill.name,
           prompt = "#qiao__sihai_guiping-use",
           cancelable = true,
-          extra_data = {
-            bypass_times = false,
-            extraUse = false,
-          },
+          extra_data = { bypass_times = false, extraUse = false },
         })
         if use ~= nil then room:useCard(use) end
       end

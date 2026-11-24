@@ -86,7 +86,7 @@ local function leavingIds(data)
   return ids
 end
 
-local function discardData(owner, ids)
+local function discardData(owner, ids, incoming)
   local moveInfo = {}
   for _, id in ipairs(ids) do
     table.insert(moveInfo, {
@@ -103,6 +103,7 @@ local function discardData(owner, ids)
     skillName = skill.name,
     moveVisible = true,
     proposer = owner,
+    extra_data = incoming and { [Placement.REPLACEMENT_CARD] = incoming } or nil,
   }
 end
 
@@ -168,7 +169,9 @@ skill:addEffect(fk.BeforeCardsMove, {
                   end
                 end
               end
-              if #replaced > 0 then table.insert(additions, discardData(move.to, replaced)) end
+              if #replaced > 0 then
+                table.insert(additions, discardData(move.to, replaced, info.cardId))
+              end
             end
           end
           move.moveInfo = usable
@@ -214,5 +217,7 @@ skill:addEffect(fk.BeforeCardsMove, {
     for _, addition in ipairs(additions) do table.insert(data, addition) end
   end,
 })
+
+Fk:loadTranslationTable { [skill.name] = "坐骑替换" }
 
 return skill

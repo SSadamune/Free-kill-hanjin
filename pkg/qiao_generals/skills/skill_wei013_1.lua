@@ -68,7 +68,7 @@ skill:addEffect("active", {
       end
     elseif player:isAlive() and target:isAlive() then
       -- 没赢（含平局）：视为对你使用一张【杀】，不计次数。
-      C.useVirtualCard(room, target, "qiao__slash", nil, { player }, skill.name, true, nil,
+      C.useVirtualCard(room, target, "qiao__slash", nil, { player }, skill.name, nil, nil,
         C.explicit({ other_roles = true }, { names = { "qiao__slash" } }))
     end
   end,

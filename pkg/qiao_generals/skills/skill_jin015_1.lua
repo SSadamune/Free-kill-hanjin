@@ -65,14 +65,9 @@ skill:addEffect(fk.EventPhaseStart, {
       prompt = "#qiao__skill_jin015_1-use",
       cancelable = true,
       policy = policy,
-      extra_data = { bypass_times = true, extraUse = true },
     })
     if use == nil or use.card == nil then return end
     -- askToUseCard 只构造使用数据，不执行；本次使用仍需真实进入 room:useCard。
-    use.extra_data = use.extra_data or {}
-    use.extra_data.bypass_times = true
-    use.extra_data.extraUse = true
-    use.extraUse = true
     A.addEntry(use, {
       id = ENTRY_ID,
       condition = "zhuzhan",

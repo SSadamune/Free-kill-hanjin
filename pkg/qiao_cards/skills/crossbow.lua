@@ -5,12 +5,13 @@ local skill = fk.CreateSkill {
 }
 
 skill:addEffect("targetmod", {
-  bypass_times = function(self, player, skill, scope, card)
-    if player:hasSkill(self.name) and card and card.trueName == "slash"
+  bypass_times = function(self, player, cardSkill, scope, card)
+    if player:hasSkill(skill.name) and card and card.trueName == "slash"
       and scope == Player.HistoryPhase then
       local cardIds = table.connect(Card:getIdList(card), card.fake_subcards)
       local crossbows = table.filter(player:getEquipments(Card.SubtypeWeapon), function(id)
-        return Fk:getCardById(id).name == self.attached_equip
+        local equip = player:getVirtualEquip(id) or Fk:getCardById(id)
+        return equip.name == skill.attached_equip
       end)
       return #crossbows == 0 or not table.every(crossbows, function(id)
         return table.contains(cardIds, id)

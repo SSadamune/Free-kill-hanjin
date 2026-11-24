@@ -146,7 +146,7 @@ skill:addEffect("active", {
     -- 不叠加【杀】的普通距离条件，但仍检查禁止使用/禁止指定。
     local policy = C.explicit({ other_roles = true }, { names = { "qiao__slash" } })
     C.useVirtualCard(room, winner, "qiao__slash", nil, { loser },
-      skill.name, true, nil, policy)
+      skill.name, nil, nil, policy)
   end,
 })
 
