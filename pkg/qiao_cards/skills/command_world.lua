@@ -44,7 +44,7 @@ local function canSlashAt(room, participant, target)
   if participant.dead or participant:isRemoved() or target.dead or target:isRemoved() then
     return false
   end
-  local candidates = C.candidates(room, participant, Fk:cloneCard(SLASH), slashPolicy())
+  local candidates = C.effectCandidates(room, participant, Fk:cloneCard(SLASH), slashPolicy())
   return table.contains(candidates, target)
 end
 
@@ -84,7 +84,7 @@ local function doOrderAttack(room, participant, target, exempt)
     if id == nil or room:getCardArea(id) == Card.PlayerHand then return end
   end
   if participant.dead or participant:isRemoved() or target.dead or target:isRemoved() then return end
-  C.useVirtualCard(room, participant, SLASH, nil, { target }, skill.name, false, nil, slashPolicy())
+  C.useVirtualCard(room, participant, SLASH, nil, { target }, skill.name, nil, nil, slashPolicy())
 end
 
 --- 第二项：弃置目标一张手牌或装备；魏条件成立时取得本次实际弃置的牌。

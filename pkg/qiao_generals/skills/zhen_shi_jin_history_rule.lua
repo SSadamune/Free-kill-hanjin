@@ -16,17 +16,7 @@ skill:addEffect(fk.AfterCardUseDeclared, {
     return target == player and U.isBasicOrNormalTrick(data.card)
   end,
   on_refresh = function(self, event, target, player, data)
-    U.recordUse(player, data.card.trueName or data.card.name)
-  end,
-})
-
-skill:addEffect(fk.TurnStart, {
-  global = true,
-  can_refresh = function(self, event, target, player)
-    return target == player
-  end,
-  on_refresh = function(self, event, target, player)
-    U.resetTurn(player)
+    U.recordUse(player, data.card)
   end,
 })
 

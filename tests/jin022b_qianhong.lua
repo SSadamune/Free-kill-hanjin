@@ -40,7 +40,6 @@ end
 function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
   local first, second, third = p(1), p(2), p(3)
   inRoom(function()
-    FkTest.room:addSkill(Fk.skills[U.RANGE_SKILL])
     FkTest.room:setPlayerMark(first, U.RANGE, 1)
     lu.assertEquals(first:getAttackRange(), 2)
     lu.assertTrue(first:inMyAttackRange(third), "距离2应在+X后的攻击范围内")
@@ -52,6 +51,53 @@ function Testqiao_jin022b_qianhong:testRangeSkillAndFarthestCandidate()
     FkTest.room:setPlayerMark(first, U.RANGE, 0)
     lu.assertEquals(first:getAttackRange(), 1)
   end)
+end
+
+function Testqiao_jin022b_qianhong:testLieRongRangeAndZeroLostHpUseRealRequest()
+  local room, me, adjacent, farther = FkTest.room, p(1), p(2), p(3)
+  local name = "qiao__skill_jin022b_1"
+  local healAfterCost = false
+  local watcher = fk.CreateSkill { name = "#qiao_test_lierong_recover" }
+  watcher:addEffect(fk.HpLost, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return healAfterCost and target == me and player == me and data.skillName == name
+    end,
+    on_refresh = function()
+      room:recover { who = me, num = 1 }
+    end,
+  })
+  inRoom(function()
+    room:addSkill(watcher:createSkill())
+    room.current = me
+    me.phase = Player.Play
+    room:handleAddLoseSkills(me, name, nil, false, true)
+    for _, target in ipairs({ adjacent, farther }) do
+      local hand = target:getCardIds("h")
+      if #hand > 0 then room:moveCardTo(hand, Card.DiscardPile, nil, fk.ReasonJustMove) end
+    end
+  end)
+  local function useOn(target)
+    FkTest.setNextReplies(me, { {
+      card = { skill = "virtual_viewas", subcards = {} },
+      targets = { target.id }, interaction_data = "qiao__fire__slash",
+    } })
+    FkTest.setNextReplies(target, { "" })
+    inRoom(function() Fk.skills[name]:onUse(room, { from = me }) end)
+  end
+  local fartherHp, adjacentHp = farther.hp, adjacent.hp
+  useOn(farther)
+  lu.assertEquals(me:getMark(U.RANGE), 1)
+  lu.assertEquals(farther.hp, fartherHp - 1)
+  inRoom(function()
+    room:setPlayerMark(me, U.RANGE, 0)
+    me.hp = me.maxHp
+  end)
+  healAfterCost = true
+  useOn(adjacent)
+  lu.assertEquals(me.hp, me.maxHp)
+  lu.assertEquals(me:getMark(U.RANGE), 0)
+  lu.assertEquals(adjacent.hp, adjacentHp - 1)
 end
 
 function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
@@ -88,6 +134,75 @@ function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
       return entry.condition == "zhuzhan" and entry.effect == "damage"
     end) ~= nil)
   end)
+end
+
+function Testqiao_jin022b_qianhong:testLieRongAddsAcrossPlayPhases()
+  local room, me = FkTest.room, FkTest.room.players[1]
+  local skillName = "qiao__skill_jin022b_1"
+  local limit = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+  local used, bonus = 0
+  local skeleton = fk.CreateSkill{ name = "#qiao_test_lierong_extra_play" }
+  skeleton:addEffect(fk.EventPhaseStart, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == me and player == me and data.phase == Player.Play
+    end,
+    on_refresh = function()
+      local skill = Fk.skills[skillName]
+      lu.assertTrue(skill:canUse(me))
+      used = used + 1
+      skill:onUse(room, { from = me, tos = {} })
+      if used == 2 then bonus = me:getMark(limit.RANGE) end
+    end,
+  })
+  skill_test.withSkillRequests(room, skillName, { askToChoice = function() return "1" end }, function()
+    inRoom(function()
+      room:handleAddLoseSkills(me, skillName, nil, false, true)
+      room:addSkill(skeleton:createSkill())
+      GameEvent.Turn:create(TurnData:new(me, "game_rule", { Player.Play, Player.Play })):exec()
+    end)
+  end)
+  lu.assertEquals(used, 2)
+  lu.assertEquals(bonus, 2, "同回合两次增加攻击范围应累计")
+end
+
+function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
+  local room, me, target = FkTest.room, FkTest.room.players[1], FkTest.room.players[2]
+  local name = "qiao__skill_jin022b_1"
+  local asked, canDecline, legal, range, spent, history, slashCount
+  local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+  local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+  skill_test.withSkillRequests(room, name, {
+    askToUseVirtualCard = function(self, player, params, original)
+      asked = true
+      legal = C.canEffectUseTo(player, Fk:cloneCard("qiao__fire__slash"), target)
+      canDecline = params.cancelable
+      FkTest.setNextReplies(me, { "" })
+      return original(self, player, params)
+    end,
+  }, function()
+    inRoom(function()
+      room:setCurrent(me)
+      me.phase = Player.Play
+      room:handleAddLoseSkills(me, name, nil, false, true)
+      local first = room:printCard("qiao__slash", Card.Spade, 6)
+      room:obtainCard(me, first)
+      FkTest.setNextReplies(target, { "" })
+      support.playCard(room, me, first, { target })
+      local beforeHp = me.hp
+      Fk.skills[name]:onUse(room, { from = me, tos = {} })
+      spent = beforeHp - me.hp
+      range = me:getMark(U.RANGE)
+      history = #room.logic:getEventsOfScope(GameEvent.UseCard, 10, function(e)
+        return e.data.from == me and e.data.card.name == "qiao__fire__slash"
+      end, Player.HistoryGame)
+      slashCount = me:usedCardTimes("slash", Player.HistoryPhase)
+    end)
+  end)
+  lu.assertEquals({ asked, legal, spent, range }, { true, true, 1, 1 })
+  lu.assertFalse(canDecline)
+  lu.assertEquals(history, 1)
+  lu.assertEquals(slashCount, 1)
 end
 
 return { name = "qiao_jin022b_qianhong" }

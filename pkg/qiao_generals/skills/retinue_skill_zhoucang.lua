@@ -100,14 +100,9 @@ skill:addEffect(fk.CardUseFinished, {
       pattern = "slash",
       skill_name = skill.name,
       cancelable = true,
-      extra_data = { bypass_times = true, extraUse = true },
       policy = policy,
     })
     if use == nil or use.card == nil then return end
-    use.extra_data = use.extra_data or {}
-    use.extra_data.bypass_times = true
-    use.extra_data.extraUse = true
-    use.extraUse = true
     C.useCard(room, to, use, policy)
   end,
 })

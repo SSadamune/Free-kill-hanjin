@@ -140,7 +140,8 @@ function Testqiao_shu_retinues:testZhoucangRedSlashLetsThirdPlayerUseOwnSlashInZ
   lu.assertEquals(room():getCardArea(own), Card.DiscardPile)
   -- 效果结算中真实使用的杀带 extraUse，不占通常次数。
   lu.assertEquals(p3:usedCardTimes("slash", Player.HistoryPhase), 0)
-  lu.assertEquals(p1:usedCardTimes("slash", Player.HistoryPhase), 1)
+  -- 夹具中的双材料转化【杀】由效果直接生成，也不占空闲出杀额度。
+  lu.assertEquals(p1:usedCardTimes("slash", Player.HistoryPhase), 0)
 
 
 end

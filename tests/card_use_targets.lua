@@ -260,6 +260,31 @@ function Testqiao_card_use_targets:testExplicitOtherRolesRejectsSelf()
   lu.assertTrue(table.contains(p1:getCardIds("h"), card.id))
 end
 
+function Testqiao_card_use_targets:testSlashRejectsSelfBeforeUseEvenWithExplicitTargets()
+  local p1, far = room().players[1], room().players[5]
+  local policy = C.explicit({})
+  local selfOnly = C.explicit({ other_roles = false })
+  local hp = p1.hp
+  run(function()
+    for _, name in ipairs({ "qiao__slash", "qiao__fire__slash", "qiao__thunder__slash", "qiao__ice__slash" }) do
+      local card = Fk:cloneCard(name)
+      local candidates = C.candidates(room(), p1, card, policy)
+      lu.assertFalse(hasTarget(candidates, p1), name)
+      lu.assertTrue(hasTarget(candidates, far), name)
+      lu.assertEquals(C.candidates(room(), p1, card, selfOnly), {}, name)
+      lu.assertEquals(C.candidates(room(), p1, card, policy, { exclusive_targets = { p1.id } }), {}, name)
+      lu.assertFalse(C.matchesCondition(room(), p1, card, p1, selfOnly.condition), name)
+
+      local use = { from = p1, tos = { p1 }, card = card }
+      local valid, reason = C.validateTargets(room(), p1, use, selfOnly, "selection")
+      lu.assertFalse(valid)
+      lu.assertEquals(reason, "intrinsic-target")
+      lu.assertNil(C.useCard(room(), p1, use, selfOnly))
+    end
+  end)
+  lu.assertEquals(p1.hp, hp)
+end
+
 function Testqiao_card_use_targets:testCountOnlyPolicyDoesNotRelaxConditions()
   local p1, p2, p5 = room().players[1], room().players[2], room().players[5]
   local card = snatch(p1, Card.Spade, 3)

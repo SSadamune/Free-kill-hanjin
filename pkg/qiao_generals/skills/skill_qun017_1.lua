@@ -30,14 +30,12 @@ local function equipmentOwners(room)
 end
 
 local function slashTargets(room, player)
-  return C.candidates(room, player, Fk:cloneCard(SLASH), slashPolicy(),
-    { bypass_times = true })
+  return C.effectCandidates(room, player, Fk:cloneCard(SLASH), slashPolicy())
 end
 
 --- 客户端与服务端共用「存在合法【杀】目标」判断。card_use_targets 的策略栈只在
 --- 服务端可用（该模块的 isServer 断言），客户端改用公开接口：
---- Player:canUseTo(slash, to, {bypass_times, bypass_distances})（锁定
---- ltk/core/player.lua:1219），包含禁止使用/禁止指定目标与杀的目标条件，
+--- 公共效果用牌查询包含禁止使用／禁止指定目标与【杀】的目标条件，
 --- 与服务端显式策略的禁止语义一致，不再用「有存活角色」的近似分支。
 local function hasSlashTarget(room, player)
   if room == nil then return false end
@@ -48,7 +46,7 @@ local function hasSlashTarget(room, player)
   slash.skillName = skill.name
   return table.find(room:getPresentPlayers(), function(p)
     return p ~= player and not p.dead and not p:isRemoved()
-      and player:canUseTo(slash, p, { bypass_times = true, bypass_distances = true })
+      and C.canEffectUseTo(player, slash, p, { bypass_distances = true })
   end) ~= nil
 end
 
@@ -113,8 +111,7 @@ skill:addEffect("active", {
     })
     if tos == nil or #tos == 0 then return end
 
-    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, true, {
-      bypass_times = true,
+    C.useVirtualCard(room, player, SLASH, nil, tos, skill.name, nil, {
       [MARK] = { user = player.id, self = fromSelf },
     }, slashPolicy())
   end,

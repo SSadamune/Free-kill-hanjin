@@ -38,13 +38,8 @@ skill:addEffect(fk.EventPhaseStart, {
       pattern = "slash",
       skill_name = skill.name,
       cancelable = true,
-      extra_data = { bypass_times = true, extraUse = true },
     })
     if use == nil or use.card == nil then return end
-    use.extra_data = use.extra_data or {}
-    use.extra_data.bypass_times = true
-    use.extra_data.extraUse = true
-    use.extraUse = true
     C.useCard(player.room, player, use)
   end,
 })

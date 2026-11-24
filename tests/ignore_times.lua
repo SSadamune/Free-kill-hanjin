@@ -37,6 +37,7 @@ end
 
 local function use(room, player, target, card)
   FkTest.setNextReplies(target, { "" })
+  if not card:isVirtual() then return support.playCard(room, player, card, { target }) end
   local data = UseCardData:new { from = player, tos = { target }, card = card, extra_data = {} }
   room:useCard(data)
   return data

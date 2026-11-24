@@ -1,7 +1,7 @@
--- 临筱玉舆进出装备区的当前回合者效果。以单个 MoveCards 事件判定“本次确有
--- 坐骑因正常使用装备牌被实际替换”，不使用跨事件房间布尔，也不把同事件内
--- 无关的坐骑移动算作替换；同一事件只执行一次。
+-- 临筱玉舆进出装备区后由当前回合角色受益。替换须在同一个 MoveCards 事件
+-- 关联进入的坐骑和离开的坐骑，主动置入由双栏规则记录导致替换的牌。
 local skill = fk.CreateSkill { name = "qiao__linxiao_yuyu_rule" }
+local Placement = require "packages.qiao.pkg.qiao_mode.rules.mount_placement"
 local CARD = "qiao__linxiao_yuyu"
 local DUAL_RULE = "qiao__dual_mount_rule"
 
@@ -21,11 +21,12 @@ local function isRide(info)
     or card.sub_type == Card.SubtypeDefensiveRide
 end
 
---- 使用装备牌替换坐骑时，引擎与双栏规则产生的置入弃牌堆移动。
-local function isReplacementDiscard(move, owner)
-  return move.from == owner and move.toArea == Card.DiscardPile
-    and move.moveReason == fk.ReasonPutIntoDiscardPile
-    and (move.skillName == nil or move.skillName == DUAL_RULE)
+local function isReplacementDiscard(move, incomingMove, incomingId)
+  if move.from ~= incomingMove.to or move.toArea ~= Card.DiscardPile
+    or move.moveReason ~= fk.ReasonPutIntoDiscardPile then return false end
+  local replacement = move.extra_data and move.extra_data[Placement.REPLACEMENT_CARD]
+  if replacement ~= nil then return replacement == incomingId end
+  return incomingMove.moveReason == fk.ReasonUse and (move.skillName == nil or move.skillName == DUAL_RULE)
 end
 
 local function hasLinMove(data)
@@ -42,45 +43,20 @@ local function hasLinMove(data)
   return false
 end
 
---- 临筱玉舆进入时，只有“本次使用装备牌替换下的坐骑”才构成实际替换。
-local function enteredByReplacement(data, owner)
+local function replacesLinxiao(data)
   for _, move in ipairs(data or {}) do
-    for _, info in ipairs(move.moveInfo or {}) do
-      if isLinxiao(info) and move.moveReason == fk.ReasonUse
-        and move.toArea == Card.PlayerEquip and move.to == owner then
-        for _, other in ipairs(data or {}) do
-          if isReplacementDiscard(other, owner) then
-            for _, oleave in ipairs(other.moveInfo or {}) do
-              if oleave.fromArea == Card.PlayerEquip and isRide(oleave) then
-                return true
+    if move.toArea == Card.PlayerEquip and move.to ~= nil then
+      for _, incoming in ipairs(move.moveInfo or {}) do
+        if isRide(incoming) then
+          for _, discard in ipairs(data) do
+            if isReplacementDiscard(discard, move, incoming.cardId) then
+              for _, outgoing in ipairs(discard.moveInfo or {}) do
+                if outgoing.fromArea == Card.PlayerEquip and isRide(outgoing)
+                  and (isLinxiao(incoming) or isLinxiao(outgoing)) then return true end
               end
             end
           end
         end
-      end
-    end
-  end
-  return false
-end
-
---- 临筱玉舆离开时，只有“本次正常使用的坐骑进入同一角色装备区”才算被替换。
-local function leftByReplacement(data, owner)
-  local leavingLinxiao = false
-  for _, move in ipairs(data or {}) do
-    for _, info in ipairs(move.moveInfo or {}) do
-      if isLinxiao(info) and info.fromArea == Card.PlayerEquip
-        and move.toArea ~= Card.PlayerEquip
-        and isReplacementDiscard(move, owner) then
-        leavingLinxiao = true
-      end
-    end
-  end
-  if not leavingLinxiao then return false end
-  for _, move in ipairs(data or {}) do
-    if move.moveReason == fk.ReasonUse and move.toArea == Card.PlayerEquip
-      and move.to == owner then
-      for _, info in ipairs(move.moveInfo or {}) do
-        if isRide(info) then return true end
       end
     end
   end
@@ -100,23 +76,7 @@ skill:addEffect(fk.AfterCardsMove, {
     room:setTag("qiao_linxiao_after", event.id)
     local current = room.current or room:getCurrent()
     if current == nil or current.dead then return end
-    local entering, leaving, owner = false, false, nil
-    for _, move in ipairs(data or {}) do
-      for _, info in ipairs(move.moveInfo or {}) do
-        if isLinxiao(info) then
-          if move.toArea == Card.PlayerEquip and move.to ~= nil then
-            entering = true
-            owner = move.to
-          elseif info.fromArea == Card.PlayerEquip and move.toArea ~= Card.PlayerEquip then
-            leaving = true
-            owner = move.from
-          end
-        end
-      end
-    end
-    local replaced = (entering and enteredByReplacement(data, owner))
-      or (leaving and leftByReplacement(data, owner))
-    if replaced then
+    if replacesLinxiao(data) then
       room:recover { who = current, num = 1, recoverBy = current,
         skillName = "qiao__linxiao_yuyu_skill" }
     else

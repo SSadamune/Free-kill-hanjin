@@ -1,4 +1,6 @@
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
+local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
+local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
@@ -27,6 +29,7 @@ function M.installRules()
   KingdomSize.install()
   Ascension.installFoundingCountries()
   FaqRules.install()
+  SlashUseTiming.installCardChecks()
 end
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
@@ -199,6 +202,8 @@ function M.create(base, name)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)
+      SlashUseTiming.installServer(self.room)
+      EquipmentExchange.installServer(self)
       self.room:addSkill(WeiHistory.HISTORY_SKILL)
       self.room:addSkill(WeiHistory.WEIKUI_DISTANCE_SKILL)
       self.room:addSkill(WuHistory.HISTORY_SKILL)
@@ -222,6 +227,7 @@ function M.create(base, name)
       self.room:addSkill("qiao__jin_adaptation_rule")
       self.room:addSkill("qiao__jin_sources_rule")
       self.room:addSkill("qiao__zhen_shi_history_rule")
+      self.room:addSkill("qiao__skill_jin022b_range")
       self.room:addSkill("qiao__general_card_skills_rule")
       self.room:addSkill("qiao__lord_flag_display")
       self.room:addSkill("qiao__em_jin001_double_rule")

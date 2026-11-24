@@ -12,6 +12,13 @@ M.FLAG = "qiao__skill_em_wu001_flag"
 M.ENTRY = "qiao__skill_em_wu001_flag_entry"
 M.PEARL = "qiao__luminous_pearl"
 
+-- 调用方区分选牌时公开的聚宝与实际移牌时发动的聚宝。
+function M.isProtectedTreasure(owner, proposer, id)
+  if not proposer or proposer == owner then return false end
+  local card = owner:getVirtualEquip(id) or Fk:getCardById(id, true)
+  return card and card.sub_type == Card.SubtypeTreasure
+end
+
 -- 准备阶段临时授技：来源只记本次授予，到期只撤销这一份。
 M.SOURCE = "qiao__skill_em_wu001_flag_source"
 M.RULE = "qiao__skill_em_wu001_rule"

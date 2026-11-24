@@ -241,7 +241,7 @@ function Testqiao_client_active_skills:testServerNormalPlaySharedDeclarationScen
       end,
     },
     {
-      name = "标记驱动的动态效果声明（破竹）",
+      name = "标记驱动的转化技能骨架声明（破竹）",
       skill = POZHU,
       scope = Player.HistoryPhase,
       prepare = function()
@@ -250,8 +250,8 @@ function Testqiao_client_active_skills:testServerNormalPlaySharedDeclarationScen
         room:setPlayerMark(user, "qiao_jin006_1_phase", { uses = 0, restored = 1 })
       end,
       limit = function()
-        local effect = assert(Fk.skills[POZHU])
-        return resolveLimit(effect, effect.max_use_time, Player.HistoryPhase)
+        local skeleton = assert(Fk.skills[POZHU]:getSkeleton())
+        return resolveLimit(skeleton, skeleton.max_use_time, Player.HistoryPhase)
       end,
     },
     {

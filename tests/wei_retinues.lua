@@ -313,6 +313,7 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
     FkTest.ReplyUseSkill(WUSHENG, { p3() }, { slashMaterial }),
     "",
   })
+  local slashCount = p1():usedCardTimes("slash", Player.HistoryTurn)
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, p2(), TurnData:new(p2(), "game_rule", { Player.Start }))
   end)
@@ -321,6 +322,8 @@ function Testqiao_wei_retinues:testNiujinUsesCardKillsAndDrawsThree()
     return use.name == "qiao__slash" and use.from == p1()
   end)
   lu.assertNotNil(usedSlash)
+  lu.assertEquals(p1():usedCardTimes("slash", Player.HistoryTurn), slashCount,
+    "牛金实际使用的【杀】不计入普通出杀次数")
   lu.assertTrue(p3().dead)
   -- 牛金奖励必须恰好一次、恰好3张；另加标准国战击杀不同势力角色的正常奖励1张。
   lu.assertEquals(reward.moves, 1)
@@ -362,10 +365,6 @@ function Testqiao_wei_retinues:testNiujinFreeUseHidesPassiveCardsAndRejectsInjec
   lu.assertNotNil(captured, "牛金必须发出真实自由用牌请求")
   lu.assertTrue(captured.extra_data ~= nil and captured.extra_data.not_passive == true,
     "自由用牌请求必须声明 not_passive")
-  lu.assertTrue(captured.extra_data.bypass_times == true,
-    "效果内用牌仍应绕过通常次数")
-  lu.assertTrue(captured.extra_data.extraUse == true,
-    "效果内用牌仍不应占通常次数")
   lu.assertEquals(p1():usedSkillTimes(NJ, Player.HistoryGame), 0)
   lu.assertTrue(table.contains(p1():getCardIds("h"), jink),
     "服务端应拒绝注入的【闪】，牌留在手牌")

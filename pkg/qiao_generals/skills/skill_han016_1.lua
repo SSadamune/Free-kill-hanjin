@@ -55,11 +55,7 @@ local function targetPolicy()
 end
 
 local function legalTargets(room, player)
-  -- 这是技能视为使用，不占通常出杀次数；候选查询同样带上 bypass_times，
-  -- 否则本阶段已出过【杀】时会被普通次数限制误挡。
-  return C.candidates(room, player, Fk:cloneCard(SLASH), targetPolicy(), {
-    bypass_times = true,
-  })
+  return C.effectCandidates(room, player, Fk:cloneCard(SLASH), targetPolicy())
 end
 
 skill:addEffect(fk.EventPhaseEnd, {
@@ -92,10 +88,7 @@ skill:addEffect(fk.EventPhaseEnd, {
     local cost = event:getCostData(self) or {}
     local to = cost.to
     if player.dead or to == nil or to.dead or to:isRemoved() then return end
-    -- 技能视为使用不占通常出杀次数：目标校验与实际使用都带 bypass_times，
-    -- 否则本阶段已出过【杀】时会在 targetFilter 的组合校验处被误挡。
-    C.useVirtualCard(room, player, SLASH, nil, { to }, skill.name, true,
-      { bypass_times = true }, targetPolicy())
+    C.useVirtualCard(room, player, SLASH, nil, { to }, skill.name, nil, nil, targetPolicy())
   end,
 })
 

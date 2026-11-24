@@ -84,21 +84,14 @@ skill:addEffect("active", {
     room:addPlayerMark(player, OFFER_MARK, 1)
 
     -- 视为使用任意一种基本牌；取消窗口即放弃本次机会。
-    -- 次数已满时，选择阶段的 bypass_times 必须随 use 进入目标校验；引擎
-    -- askToUseVirtualCard 不会把 extra_data 带回 use，因此选择后由 C.useCard
-    -- 统一挂接目标策略并复核。
     local use = room:askToUseVirtualCard(player, {
       name = BASIC_NAMES,
       skill_name = skill.name,
       prompt = "#qiao__skill_shu001_1-basic",
       cancelable = true,
       skip = true,
-      extra_data = { bypass_times = true, extraUse = true },
     })
     if use == nil or use.card == nil then return end
-    use.extra_data = use.extra_data or {}
-    use.extra_data.bypass_times = true
-    use.extraUse = true
     C.useCard(room, player, use)
   end,
 })
