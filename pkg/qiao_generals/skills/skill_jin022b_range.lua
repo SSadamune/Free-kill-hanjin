@@ -26,4 +26,8 @@ skill:addEffect(fk.TurnEnd, {
   end,
 })
 
+Fk:loadTranslationTable {
+  [U.RANGE] = "烈戎·攻击范围+",
+}
+
 return skill

@@ -164,6 +164,8 @@ function Testqiao_jin022b_qianhong:testLieRongAddsAcrossPlayPhases()
   end)
   lu.assertEquals(used, 2)
   lu.assertEquals(bonus, 2, "同回合两次增加攻击范围应累计")
+  lu.assertTrue(U.RANGE:startsWith("@"), "累计加成需通过公开标记显示")
+  lu.assertEquals(me:getMark(U.RANGE), 0, "回合结束清除公开加成")
 end
 
 function Testqiao_jin022b_qianhong:testLieRongUsesSlashAfterPayment()
