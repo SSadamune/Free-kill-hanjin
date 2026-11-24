@@ -156,15 +156,12 @@ function Testqiao_yuji:testWithdrawingDirectGrantWhileYujiIsHidden()
   lu.assertTrue(owner:hasSkill(SKILL))
 end
 
-function Testqiao_yuji:testUninvokedDirectGrantSurvivesReceivingAndLosingPrintedSkill()
-  local room, owner, donor, ally = FkTest.room, FkTest.room.players[1], FkTest.room.players[2], FkTest.room.players[3]
-  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-  local loss = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+local function checkIndependentGrants(prepare, removePrinted)
+  local room, owner, ally = FkTest.room, FkTest.room.players[1], FkTest.room.players[3]
   local general = "qiao_heg__qun011"
   local ids = {}
   inRoom(function()
-    fixture.installDualGenerals(room, donor, { main = general, deputy = "qiao_test__qun_2", kingdom = "qun" })
-    assert(exchange.exchange(room, { player = owner, isDeputy = false }, { player = donor, isDeputy = false }))
+    prepare(room, owner, general)
     for value = 1, 3 do
       ids[value] = room:printCard("qiao__jink", Card.Heart, value).id
     end
@@ -177,7 +174,7 @@ function Testqiao_yuji:testUninvokedDirectGrantSurvivesReceivingAndLosingPrinted
   }, function()
     inRoom(function() room:damage { from = room.players[5], to = ally, damage = 1 } end)
     lu.assertEquals(owner:getPile(PILE), { ids[1], ids[2] })
-    inRoom(function() assert(loss.loseCardSkill(room, owner, false, SKILL)) end)
+    inRoom(function() removePrinted(room, owner) end)
     lu.assertEquals(room:getCardArea(ids[1]), Card.DiscardPile)
     lu.assertEquals(owner:getPile(PILE), { ids[2] })
     inRoom(function() room:damage { from = room.players[5], to = ally, damage = 1 } end)
@@ -188,6 +185,48 @@ function Testqiao_yuji:testUninvokedDirectGrantSurvivesReceivingAndLosingPrinted
   lu.assertFalse(owner:hasSkill(SKILL))
   lu.assertEquals(room:getCardArea(ids[2]), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(ids[3]), Card.DiscardPile)
+end
+
+local function receiveYuji(room, owner, general)
+  local donor = room.players[2]
+  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  fixture.installDualGenerals(room, donor, { main = general, deputy = "qiao_test__qun_2", kingdom = "qun" })
+  assert(exchange.exchange(room, { player = owner, isDeputy = false }, { player = donor, isDeputy = false }))
+end
+
+local function removeYuji(room, owner)
+  require("packages.hegemony.util").removeGeneral(owner, false)
+  lu.assertNotEquals(owner.general, "qiao_heg__qun011")
+end
+
+function Testqiao_yuji:testUninvokedDirectGrantSurvivesReceivingAndLosingPrintedSkill()
+  checkIndependentGrants(receiveYuji, function(room, owner)
+    assert(require("packages.qiao.pkg.qiao_mode.rules.qun_duanchang").loseCardSkill(room, owner, false, SKILL))
+  end)
+end
+
+function Testqiao_yuji:testRemovingYujiKeepsEarlierDirectGrant()
+  checkIndependentGrants(receiveYuji, removeYuji)
+end
+
+local function showYujiFirst(room, owner, general)
+  room:handleAddLoseSkills(owner, "-" .. SKILL, nil, false, true)
+  fixture.installDualGenerals(room, owner, { main = general, deputy = "qiao_test__qun_2", kingdom = "qun" })
+end
+
+function Testqiao_yuji:testRoomGrantsQianhuanAfterShowingYuji()
+  checkIndependentGrants(function(room, owner, general)
+    showYujiFirst(room, owner, general)
+    room:handleAddLoseSkills(owner, SKILL, nil, false, true)
+  end, removeYuji)
+end
+
+function Testqiao_yuji:testPlayerGrantsQianhuanAfterShowingYuji()
+  checkIndependentGrants(function(room, owner, general)
+    showYujiFirst(room, owner, general)
+    owner:addSkill(SKILL)
+    owner:addSkill(SKILL)
+  end, removeYuji)
 end
 
 return {name="qiao_yuji"}

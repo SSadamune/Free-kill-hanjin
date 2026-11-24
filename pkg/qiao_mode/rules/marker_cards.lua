@@ -212,9 +212,51 @@ function M.transfer(from, to, general)
   end
 end
 
+-- 牌面授技和角色获授可能使用同一引擎入口。变将事件显式记录了离开和进入的武将牌。
+local function changingCard(player, root, side)
+  local event = player.room.logic:getCurrentEvent()
+  if not event then return false end
+  local data = event.data
+  local exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  if event.event == GameEvent.ChangeProperty and data.from == player then
+    for _, key in ipairs({ "generalChange", "deputyChange" }) do
+      local change = data.results[key]
+      if change and exchange.cardProvidesSkill(player.room, change[side], root) then return true end
+    end
+  elseif side == 1 and event.event == require("packages.hegemony.util").GameEvent.RemoveGeneral
+    and data.who == player then
+    -- 通用移除先撤技能再换士兵，同时覆盖主将、副将及移除前被替换的位置。
+    return exchange.cardProvidesSkill(player.room, exchange.publicGeneral(player, data.isDeputy), root)
+  end
+  return false
+end
+
+local function installGrantEntry(room)
+  if room.qiaoMarkerGrantsInstalled then return end
+  room.qiaoMarkerGrantsInstalled = true
+  local handle = room.handleAddLoseSkills
+  function room:handleAddLoseSkills(player, names, source, ...)
+    if not source then
+      local list = type(names) == "string" and names:split("|") or names
+      for _, root in ipairs(list) do
+        if registered[root] and player:hasSkill(root, true, true) then
+          -- 原方法跳过已经持有的技能。只补来源，照常由原方法负责日志和首次获技事件。
+          if changingCard(player, root, 2) then
+            if not table.contains(player.player_skills, Fk.skills[root]) then player:addSkill(root) end
+          else
+            player:addSkill(root, M.DIRECT)
+          end
+        end
+      end
+    end
+    return handle(self, player, names, source, ...)
+  end
+end
+
 -- 引擎移除一个派生来源时，即使同名技能仍在，也必须结束这个授予实例。
 -- 直接调用 loseSkill 或 no_trigger 撤技时不一定产生 EventLoseSkill。
-function M.install()
+function M.install(room)
+  installGrantEntry(room)
   local class = require "ltk.server.serverplayer"
   if M.installed then return end
   M.installed = true
@@ -237,22 +279,16 @@ function M.install()
   end
   local function withdrawingCard(player, root)
     if hiding[player] and exchange.cardProvidesSkill(player.room, hiding[player], root) then return true end
-    -- changeHero 也先写新将名。当前变更事件保存了实际离开的将牌。
-    local event = player.room.logic:getCurrentEvent()
-    local data = event and event.data
-    if type(data) == "table" and data.from == player and type(data.results) == "table" then
-      for _, key in ipairs({ "generalChange", "deputyChange" }) do
-        local change = data.results[key]
-        if change and exchange.cardProvidesSkill(player.room, change[1], root) then return true end
-      end
-    end
-    return false
+    return changingCard(player, root, 1)
   end
   function class:addSkill(skill, source)
     local root = type(skill) == "string" and skill or skill.name
-    if not source and registered[root] and Modes.inRoom(self.room) and not printedOnShownCard(self, root) then
-      -- 在获得时保存角色来源；第一次发动前交换到同名武将也不会覆盖它。
-      source = M.DIRECT
+    if not source and registered[root] and Modes.inRoom(self.room) then
+      -- 交换同步只在缺少牌面条目时安装。已有牌面条目再获授时，登记到角色来源。
+      if not printedOnShownCard(self, root) or
+        (table.contains(self.player_skills, Fk.skills[root]) and not changingCard(self, root, 2)) then
+        source = M.DIRECT
+      end
     end
     return addSkill(self, skill, source)
   end
