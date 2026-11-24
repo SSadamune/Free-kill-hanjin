@@ -49,7 +49,7 @@ end
 
 skill:addEffect("viewas", {
   anim_type = "drawcard",
-  pattern = "qiao__await_exhausted",
+  pattern = "await_exhausted|.|.|.|qiao__await_exhausted",
   prompt = "#qiao__skill_wu007_2-prompt",
   handly_pile = true,
   filter_pattern = {
@@ -71,8 +71,8 @@ skill:addEffect("viewas", {
   enabled_at_play = function(self, player)
     return player.phase == Player.Play and #usableCards(player) > 0
   end,
-  enabled_at_response = function()
-    return false
+  enabled_at_response = function(self, player, response)
+    return not response and #usableCards(player) > 0
   end,
   after_use = function(self, player, use)
     if player == nil or player.dead or use == nil or use.card == nil then return end

@@ -19,7 +19,7 @@ local ANALEPTIC = "qiao__analeptic"
 
 skill:addEffect("viewas", {
   anim_type = "defensive",
-  pattern = table.concat({ SLASH, JINK, PEACH, ANALEPTIC }, ","),
+  pattern = "slash,jink,peach,analeptic|.|.|.|" .. table.concat({ SLASH, JINK, PEACH, ANALEPTIC }, ","),
   prompt = "#qiao__skill_shu005_1-prompt",
   handly_pile = true,
   filter_pattern = function(self, player, card_name, selected)

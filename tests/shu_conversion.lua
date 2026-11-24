@@ -514,15 +514,53 @@ function Testqiao_shu_conversion:testLongdanFourConversionsAndRealJinkResponse()
   lu.assertEquals(skill:filterPattern(p1, "qiao__peach", {}).pattern, "analeptic")
   lu.assertEquals(skill:filterPattern(p1, "qiao__analeptic", {}).pattern, "peach")
 
-  -- 真实打出权限：【杀】当【闪】响应别人的【杀】。
+  -- 客户端在回合外的求闪窗口实际点亮按钮、选择材料并确认。
+  setPlayPhase(p2)
   inRoom(function() p1.hp = p1.maxHp; p2.hp = p2.maxHp end)
-  FkTest.setNextReplies(p1, { {
-    card = { skill = LONGDAN, subcards = { slash } },
-    targets = {},
-  } })
+  local reply
+  client_room.run(room(), function(clients)
+    local board = Fk:getBoardGame(room():getSettings("gameMode"))
+    local client = board.client_klass:new(ClientInstance.client)
+    local handler = client.request_handlers.AskForUseCard:new(clients[1], { nil, "jink", "", true, {} })
+    local previous, notify = Fk.currentResponsePattern, ClientInstance.notifyUI
+    Fk.currentResponsePattern = "jink"
+    ClientInstance.notifyUI = function(_, command, data)
+      if command == "ReplyToServer" then reply = data end
+    end
+    local ok, err = pcall(function()
+      handler:setup()
+      lu.assertTrue(handler:skillButtonValidity(LONGDAN))
+      handler:selectSkill(LONGDAN, { selected = true })
+      lu.assertTrue(handler:cardValidity(slash))
+      handler:update("CardItem", slash, "click", { selected = true })
+      lu.assertTrue(handler:feasible())
+      handler:update("Button", "OK", "click", {})
+      handler:_finish()
+    end)
+    Fk.currentResponsePattern, ClientInstance.notifyUI = previous, notify
+    if not ok then error(err, 0) end
+  end)
+  lu.assertNotNil(reply)
+  FkTest.setNextReplies(p1, { reply })
   use(p2, Fk:cloneCard("qiao__slash"), { p1 })
   lu.assertEquals(p1.hp, p1.maxHp)
   lu.assertFalse(table.contains(p1:getCardIds("h"), slash))
+end
+
+function Testqiao_shu_conversion:testScopedConversionPatternsMatchNamedCardRequests()
+  for name, cardName in pairs({
+    qiao__five_elements_fan_skill = "slash",
+    qiao__qun_cards_state = "duel",
+    qiao__skill_han012_2 = "peach",
+    qiao__skill_jin006_2 = "unexpectation",
+    qiao__skill_jin017_3 = "iron_chain",
+    qiao__skill_qun004_1 = "archery_attack",
+    qiao__skill_shu010_1 = "iron_chain",
+    qiao__skill_wei010_1 = "supply_shortage",
+    qiao__skill_wu007_2 = "await_exhausted",
+  }) do
+    lu.assertTrue(Exppattern:Parse(cardName):matchExp(Fk.skills[name].pattern), name)
+  end
 end
 
 function Testqiao_shu_conversion:testMashuOnlyChangesOwnDistance()
