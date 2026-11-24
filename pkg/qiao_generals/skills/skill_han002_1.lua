@@ -10,6 +10,11 @@ skill.qiaoImplemented = true
 local GREATER_MARK = "qiao__skill_han002_1-greater-turn"
 local NOT_GREATER_MARK = "qiao__skill_han002_1-not-greater-turn"
 
+local function drawBranch(source, player)
+  if source.hp > player.hp then return GREATER_MARK, 2 end
+  return NOT_GREATER_MARK, 1
+end
+
 -- 每回合开始时用 refresh 逐个清除持有者的两档标记；不通过 on_use
 -- 对每名角色重复触发。`技能名-...` 命名使武将交换时由 Exchange 自动携带。
 skill:addEffect(fk.TurnStart, {
@@ -30,28 +35,30 @@ skill:addEffect(fk.TargetConfirmed, {
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     if data.card == nil or data.from == nil or data.from == player then return false end
-    local mark = data.from.hp > player.hp and GREATER_MARK or NOT_GREATER_MARK
+    local mark = drawBranch(data.from, player)
     return player:getMark(mark) == 0
   end,
   on_cost = function(self, event, target, player, data)
-    return player.room:askToSkillInvoke(player, {
+    local mark, count = drawBranch(data.from, player)
+    if not player.room:askToSkillInvoke(player, {
       skill_name = skill.name,
-      prompt = "#qiao__skill_han002_1-invoke",
-    })
+      prompt = "#qiao__skill_han002_1-invoke:::" .. count,
+    }) then return false end
+    event:setCostData(self, { mark = mark, count = count })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local greater = data.from.hp > player.hp
-    local mark = greater and GREATER_MARK or NOT_GREATER_MARK
-    room:setPlayerMark(player, mark, 1)
+    local cost = event:getCostData(self)
+    room:setPlayerMark(player, cost.mark, 1)
     if not player.dead then
-      player:drawCards(greater and 2 or 1, skill.name)
+      player:drawCards(cost.count, skill.name)
     end
   end,
 })
 
 Fk:loadTranslationTable {
-  ["#qiao__skill_han002_1-invoke"] = "诗怨：你可以发动诗怨",
+  ["#qiao__skill_han002_1-invoke"] = "诗怨：你可以摸 %arg 张牌",
 }
 
 return skill

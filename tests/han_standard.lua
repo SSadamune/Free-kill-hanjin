@@ -100,41 +100,64 @@ function Testqiao_han_standard:testFixtureHasFormalSkills()
   lu.assertTrue(p2():hasSkill(JB))
 end
 
+local function trackShiyuanPrompts(owner)
+  local prompts = {}
+  FkTest.setRoomBreakpoint(owner, "AskForSkillInvoke", function(data)
+    if data[1] == SY then table.insert(prompts, data[2]) end
+    return false
+  end)
+  return prompts
+end
+
+local function checkShiyuanOnce(sourceHp, expectedDraw)
+  local room, owner, source = FkTest.room, p1(), p2()
+  setHand(room, owner, {})
+  setHand(room, source, {})
+  owner.hp, source.hp = 3, sourceHp
+  local prompts = trackShiyuanPrompts(owner)
+  FkTest.setNextReplies(owner, { "1", "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(prompts, { "#qiao__skill_han002_1-invoke:::" .. expectedDraw })
+  lu.assertNotNil(Fk:translate("#qiao__skill_han002_1-invoke"):find("%arg", 1, true))
+  lu.assertEquals(owner:getHandcardNum(), expectedDraw)
+  lu.assertEquals(owner:usedSkillTimes(SY, Player.HistoryTurn), 1)
+
+  FkTest.setNextReplies(owner, { "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(#prompts, 1)
+  lu.assertEquals(owner:getHandcardNum(), expectedDraw)
+  lu.assertEquals(owner:usedSkillTimes(SY, Player.HistoryTurn), 1)
+end
+
 function Testqiao_han_standard:testShiyuanGreaterBranchOncePerTurn()
-  local room = FkTest.room
-  setHand(room, p1(), {})
-  setHand(room, p2(), {})
-  p1().hp = 3
-  p2().hp = 4
-
-  FkTest.setNextReplies(p1(), { "1", "" })
-  useSlash(room, p2(), p1())
-  lu.assertEquals(#p1():getCardIds("h"), 2)
-  lu.assertEquals(p1():usedSkillTimes(SY, Player.HistoryTurn), 1)
-
-  -- 同一档本回合第二次成为目标：不再询问、不再摸牌。
-  FkTest.setNextReplies(p1(), { "" })
-  useSlash(room, p2(), p1())
-  lu.assertEquals(#p1():getCardIds("h"), 2)
-  lu.assertEquals(p1():usedSkillTimes(SY, Player.HistoryTurn), 1)
+  checkShiyuanOnce(4, 2)
 end
 
 function Testqiao_han_standard:testShiyuanNotGreaterBranchOncePerTurn()
-  local room = FkTest.room
-  setHand(room, p1(), {})
-  setHand(room, p2(), {})
-  p1().hp = 3
-  p2().hp = 2
+  checkShiyuanOnce(2, 1)
+end
 
-  FkTest.setNextReplies(p1(), { "1", "" })
-  useSlash(room, p2(), p1())
-  lu.assertEquals(#p1():getCardIds("h"), 1)
+function Testqiao_han_standard:testShiyuanDeclineAtEqualHpPreservesEachBranch()
+  local room, owner, source = FkTest.room, p1(), p2()
+  setHand(room, owner, {})
+  setHand(room, source, {})
+  owner.hp, source.hp = 3, 3
+  local prompts = trackShiyuanPrompts(owner)
+  FkTest.setNextReplies(owner, { "", "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(owner:getHandcardNum(), 0)
+  lu.assertEquals(owner:usedSkillTimes(SY, Player.HistoryTurn), 0)
 
-  -- 第一张杀造成伤害后 p1 体力下降；p2 仍不大于 p1，继续落在同一档。
-  FkTest.setNextReplies(p1(), { "" })
-  useSlash(room, p2(), p1())
-  lu.assertEquals(#p1():getCardIds("h"), 1)
-  lu.assertEquals(p1():usedSkillTimes(SY, Player.HistoryTurn), 1)
+  -- 同一回合再次平血时可以接受，下一张杀则因体力差落入另一档。
+  owner.hp = 3
+  FkTest.setNextReplies(owner, { "1", "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(owner:getHandcardNum(), 1)
+  FkTest.setNextReplies(owner, { "1", "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(owner:getHandcardNum(), 3)
+  lu.assertEquals(prompts, { "#qiao__skill_han002_1-invoke:::1", "#qiao__skill_han002_1-invoke:::1",
+    "#qiao__skill_han002_1-invoke:::2" })
 end
 
 function Testqiao_han_standard:testDushiOnlyProhibitsOthersPeach()

@@ -541,46 +541,104 @@ function Testqiao_wu_phases:testDushiPublicDiscardSuitsAndClientFilter()
   lu.assertTrue(#expected > 0)
 end
 
--- 度势主效果真实用牌回归：不直接断言计算器，而是执行 after_use 的实际
--- 【火烧连营】转化用牌。小势力角色选 p1；X 由火烧连营目标规则计算。
-function Testqiao_wu_phases:testDushiBurningCampsRealUse()
-  local p1 = p(1)
-  setGeneral(p1, "qiao_heg__wu007")
-  for i = 2, #room().players do
-    local pl = room().players[i]
-    inRoom(function()
-      pl.kingdom = "wei"
-      room():setPlayerProperty(pl, "kingdom", "wei")
-      room():setPlayerMark(pl, "__heg_kingdom", "wei")
-    end)
-  end
-  clearCards(p1)
-  inRoom(function() H.clear(room()) end)
-  for _, suit in ipairs({ Card.Spade, Card.Heart, Card.Club, Card.Diamond }) do
-    local id = give(p1, "qiao_test__blank_basic", suit)
-    inRoom(function() room():throwCard({ id }, "test", p1, p1) end)
-  end
-  lu.assertTrue(H.allSuits(p1))
-
-  local skel = Fk.skill_skels[DUSHI]
-  lu.assertNotNil(skel and skel.burningTargetsFor)
-  local targets = skel.burningTargetsFor(p1)
-  lu.assertTrue(#targets > 0)
-  local red = {}
-  for _ = 1, #targets do
-    table.insert(red, give(p1, "qiao_test__blank_basic", Card.Heart))
-  end
-  local active = Fk.skills[activeName(DUSHI)]
-  lu.assertNotNil(active)
-  FkTest.setNextReplies(p1, {
-    FkTest.ReplyChoosePlayer({ p1 }),
-    FkTest.ReplyChooseCards(red),
-  })
-  local before = targets[1].hp
+local function prepareDushiFollowUp()
+  local actor, target = p(1), p(2)
+  setGeneral(actor, "qiao_heg__wu007")
   inRoom(function()
-    active:afterUse(p1, { card = Fk:cloneCard("qiao__await_exhausted") })
+    for i = 2, #room().players do
+      local pl = p(i)
+      local kingdom = i == 2 and "qun" or "wei"
+      room():setPlayerProperty(pl, "kingdom", kingdom)
+      room():setPlayerMark(pl, "__heg_kingdom", kingdom)
+    end
+    H.clear(room())
   end)
+  clearCards(target)
+  for _, suit in ipairs({ Card.Spade, Card.Heart, Card.Club, Card.Diamond }) do
+    local id = give(actor, "qiao_test__blank_basic", suit)
+    inRoom(function() room():throwCard({ id }, "test", actor, actor) end)
+  end
+  lu.assertTrue(H.allSuits(actor))
+  local targets = Fk.skill_skels[DUSHI].burningTargetsFor(target)
+  lu.assertTrue(#targets > 1)
+  return actor, target, targets
+end
+
+local function resolveDushiFollowUp(actor, target, reply)
+  local prompts = {}
+  FkTest.setRoomBreakpoint(target, "AskForUseActiveSkill", function(data)
+    if data[1] == "choose_cards_skill" and data[4].skillName == DUSHI then
+      table.insert(prompts, { data[2], data[3], data[4].min_num, data[4].num, data[4].pattern, data[4].include_equip })
+    end
+    return false
+  end)
+  FkTest.setNextReplies(target, { reply })
+  FkTest.setNextReplies(actor, { FkTest.ReplyChoosePlayer({ target }) })
+  inRoom(function()
+    Fk.skills[activeName(DUSHI)]:afterUse(actor, { card = Fk:cloneCard("qiao__await_exhausted") })
+  end)
+  return prompts
+end
+
+local function checkDushiDecline(suit)
+  local actor, target, targets = prepareDushiFollowUp()
+  local x = #targets
+  for _ = 1, x do give(target, "qiao_test__blank_basic", suit) end
+  local hand, hp = target:getCardIds("h"), targets[1].hp
+  lu.assertEquals(resolveDushiFollowUp(actor, target, ""), {
+    { "#qiao__skill_wu007_2-burn:::" .. x, true, x, x, ".|.|red", true },
+  })
+  lu.assertEquals(target:getCardIds("h"), hand)
+  lu.assertEquals(targets[1].hp, hp)
+end
+
+function Testqiao_wu_phases:testDushiBlackHandStillGetsOptionalRequest()
+  checkDushiDecline(Card.Spade)
+end
+
+function Testqiao_wu_phases:testDushiRedHandCanDeclineSameRequest()
+  checkDushiDecline(Card.Heart)
+end
+
+local function equipDushiWeapon(target, suit)
+  local id = give(target, "qinggang_sword", suit)
+  inRoom(function() room():moveCardTo(id, Card.PlayerEquip, target, fk.ReasonJustMove, "test") end)
+  lu.assertEquals(room():getCardArea(id), Card.PlayerEquip)
+  return id
+end
+
+function Testqiao_wu_phases:testDushiSkipsWhenPublicCardsCannotCoverCost()
+  local actor, target, targets = prepareDushiFollowUp()
+  for _ = 1, #targets - 1 do give(target, "qiao_test__blank_basic", Card.Heart) end
+  equipDushiWeapon(target, Card.Spade)
+  lu.assertEquals(resolveDushiFollowUp(actor, target, ""), {})
+end
+
+function Testqiao_wu_phases:testDushiRequiresDistinctOwnedRedCards()
+  local actor, target, targets = prepareDushiFollowUp()
+  local red = {}
+  for _ = 1, #targets - 1 do table.insert(red, give(target, "qiao_test__blank_basic", Card.Heart)) end
+  local black = give(target, "qiao_test__blank_basic", Card.Spade)
+  local other = give(actor, "qiao_test__blank_basic", Card.Heart)
+  local hand, hp = target:getCardIds("h"), targets[1].hp
+  for _, last in ipairs({ black, red[1], other }) do
+    local reply = table.simpleClone(red)
+    table.insert(reply, last)
+    lu.assertEquals(#resolveDushiFollowUp(actor, target, FkTest.ReplyChooseCards(reply)), 1)
+    lu.assertEquals(target:getCardIds("h"), hand)
+    lu.assertTrue(room():getCardOwner(other) == actor)
+    lu.assertEquals(targets[1].hp, hp)
+  end
+end
+
+function Testqiao_wu_phases:testDushiBurningCampsRealUse()
+  local actor, target, targets = prepareDushiFollowUp()
+  local red = { equipDushiWeapon(target, Card.Diamond) }
+  for _ = 1, #targets - 1 do table.insert(red, give(target, "qiao_test__blank_basic", Card.Heart)) end
+  local before = targets[1].hp
+  lu.assertEquals(#resolveDushiFollowUp(actor, target, FkTest.ReplyChooseCards(red)), 1)
   lu.assertTrue(targets[1].hp < before)
+  for _, id in ipairs(red) do lu.assertEquals(room():getCardArea(id), Card.DiscardPile) end
 end
 
 -- 失败回归：短兵应使距离 1 的目标需要两张【闪】。当前仅一张【闪】仍抵消成功，

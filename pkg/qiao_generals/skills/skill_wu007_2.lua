@@ -37,10 +37,8 @@ local function usableCards(player)
   end)
 end
 
-local function redCards(player)
-  return table.filter(player:getCardIds("he"), function(id)
-    return Fk:getCardById(id).color == Card.Red
-  end)
+local function isRed(id)
+  return Fk:getCardById(id).color == Card.Red
 end
 
 skill:addEffect("viewas", {
@@ -90,7 +88,8 @@ skill:addEffect("viewas", {
 
     local targets = burningTargetsFor(target)
     local x = #targets
-    if x <= 0 or #redCards(target) < x then return end
+    -- 装备颜色公开；询问前只把每张手牌计作一张可能的红牌。
+    if x <= 0 or target:getHandcardNum() + #table.filter(target:getCardIds("e"), isRed) < x then return end
     local picked = room:askToCards(target, {
       include_equip = true,
       min_num = x,
@@ -101,8 +100,9 @@ skill:addEffect("viewas", {
       cancelable = true,
     })
     if picked == nil or #picked ~= x then return end
+    local available = target:getCardIds("he")
     for _, id in ipairs(picked) do
-      if Fk:getCardById(id).color ~= Card.Red then return end
+      if not table.removeOne(available, id) or not isRed(id) then return end
     end
     -- 主效果是真实的【火烧连营】使用；目标已按该牌规则计算。
     local card = Fk:cloneCard(BURNING)
