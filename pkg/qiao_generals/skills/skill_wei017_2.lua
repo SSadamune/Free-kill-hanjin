@@ -19,6 +19,7 @@ local function otherPlayer(player, data)
 end
 
 local function canDraw(player)
+  -- 当前汉晋扩展没有废除手牌区的效果。此项校验兼容引擎中的该状态。
   return player ~= nil and player:isAlive() and not player:isRemoved() and not player:isHandAreaSealed()
 end
 
