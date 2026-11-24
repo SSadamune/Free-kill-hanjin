@@ -1,6 +1,8 @@
 -- JIN005 柔克/顺流、JIN013 克清、JIN014 文虎（翼从）：真实主流程定向用例。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local StateToggle = require "packages.qiao.pkg.qiao_mode.rules.state_toggle"
 
 local ROUKE = "qiao__skill_jin005_1"
 local SHUNLIU = "qiao__skill_jin005_2"
@@ -69,7 +71,7 @@ end
 
 -- 柔克：首张杀实际改为冰杀；未造成伤害后，至多两名角色横置/重置；手牌上限读取
 -- 当前横置总数。
-local function checkRoukeConversion(cardName, accepts)
+local function checkRoukeConversion(cardName, accepts, cancelFollow)
   local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
@@ -129,31 +131,50 @@ local function checkRoukeConversion(cardName, accepts)
   })
   local playProbe = playSkel:createSkill()
   Fk.skills[playSkel.name] = playProbe
-  local asked
+  local asked, followRequests = nil, 0
   skill_test.withSkillRequests(room, ROUKE, {
     askToSkillInvoke = function(self, who)
-      asked = who
+      lu.assertNil(asked)
+      asked = who.id
       return accepts
     end,
-    askToChoosePlayers = function(self, who)
-      if who == p(1) then return { p(2), p(3) } end
-      return {}
-    end,
   }, function()
-    inRoom(function()
-      room:addSkill(playProbe)
-      GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+    skill_test.withSkillRequests(room, "choose_players_skill", {
+      askToUseActiveSkill = function(self, who, params, ask)
+        if params.extra_data.skillName == ROUKE then
+          followRequests = followRequests + 1
+          lu.assertEquals(who.id, p(1).id)
+          lu.assertEquals(params.extra_data.num, 2)
+          lu.assertTrue(params.cancelable)
+          local reply = ""
+          if not cancelFollow then
+            reply = client_room.confirmSelection(room, who, params, {}, { p(2), p(3) }, function(handler)
+              lu.assertFalse(handler:feasible())
+              lu.assertTrue(handler.scene:getAllItems("Button").Cancel.enabled)
+            end)
+          end
+          FkTest.setNextReplies(who, { reply })
+        end
+        return ask(self, who, params)
+      end,
+    }, function()
+      inRoom(function()
+        room:addSkill(playProbe)
+        GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+      end)
     end)
   end)
   lu.assertTrue(fired)
-  lu.assertIs(asked, p(2))
+  lu.assertEquals(asked, p(2).id)
+  lu.assertEquals(followRequests, accepts and 1 or 0)
   lu.assertFalse(table.contains(p(2):getCardIds("h"), slash))
 
   lu.assertEquals(usedCard, accepts and "qiao__ice__slash" or cardName)
   lu.assertEquals(actor and actor.id, accepts and p(2).id or nil)
   lu.assertFalse(require("packages.qiao.pkg.qiao_mode.rules.skill_prelight").canPrelight(ROUKE))
-  lu.assertEquals(p(2).chained, accepts)
-  lu.assertEquals(p(3).chained, not accepts)
+  local changesChain = accepts and not cancelFollow
+  lu.assertEquals(p(2).chained, changesChain)
+  lu.assertEquals(p(3).chained, not changesChain)
   -- 场上恰有一个横置角色；只有柔克持有者羊祜的手牌上限增加。
   inRoom(function()
     lu.assertEquals(p(1):getMaxCards(), math.max(p(1).hp, 0) + 1)
@@ -171,6 +192,27 @@ end
 
 function Testqiao_jin_chain:testRoukeDeclinedOnFirstIceSlashDoesNotFollowUp()
   checkRoukeConversion("qiao__ice__slash", false)
+end
+
+function Testqiao_jin_chain:testRoukeFollowUpCanBeCancelledInPlayerSelection()
+  checkRoukeConversion("qiao__slash", true, true)
+end
+
+function Testqiao_jin_chain:testStackToggleUsesCurrentOrientationWithoutChangingChain()
+  support.initQiaoRoom()
+  inRoom(function()
+    local first, second = p(1), p(2)
+    first:setChainState(true)
+    second:turnOver()
+
+    StateToggle.stack(first)
+    StateToggle.stack(second)
+
+    lu.assertFalse(first.faceup)
+    lu.assertTrue(second.faceup)
+    lu.assertTrue(first.chained)
+    lu.assertFalse(second.chained)
+  end)
 end
 
 -- 柔克：改牌后、本次用牌结束前失去技能，已建立的“然后”仍按实际改牌来源处理。

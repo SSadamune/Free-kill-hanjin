@@ -7,7 +7,7 @@
 -- UseCardData:changeCard 完成，沿用本次使用与实体材料，不另起第二次使用。
 -- 只有实际执行改牌后，才在该次用牌结束、确认未造成伤害时获得横置/重置机会。
 -- 手牌上限加的是当前横置角色总数，与本次是否走到横置分支无关。
-local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
+local StateToggle = require "packages.qiao.pkg.qiao_mode.rules.state_toggle"
 local B = require "packages.qiao.pkg.qiao_generals.util.jin_basic"
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_chain"
 
@@ -50,28 +50,18 @@ local function ensureFollowListener(room)
           and not J.dealtDamage(data)
       end,
       on_cost = function(self, event, target, player, data)
-        local room = player.room
-        local candidates = table.filter(room:getPresentPlayers(), function(p)
-          return p ~= nil and not p.dead and not p:isRemoved()
-        end)
-        if #candidates == 0 then return false end
-        local chosen = Invoke.ask(room, player, {
-          min_num = 1,
-          max_num = math.min(2, #candidates),
-          targets = candidates,
+        local chosen = StateToggle.ask(player, {
+          max_num = 2,
           skill_name = skill.name,
-          prompt = "#qiao__skill_jin005_1-targets",
-          invoke_prompt = "#qiao__skill_jin005_1-follow",
+          prompt = "#qiao__skill_jin005_1-follow",
         })
         if #chosen == 0 then return false end
         event:setCostData(self, { tos = chosen })
         return true
       end,
       on_use = function(self, event, target, player, data)
-        local room = player.room
-        local chosen = event:getCostData(self).tos
-        for _, p in ipairs(chosen or {}) do
-          if not p.dead and not p:isRemoved() then p:setChainState(not p.chained) end
+        for _, to in ipairs(event:getCostData(self).tos) do
+          StateToggle.chain(to)
         end
       end,
     })
@@ -124,8 +114,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_jin005_1"] = "柔克",
   [":qiao__skill_jin005_1"] = "与你势力相同的角色每回合使用首张【杀】可以改为冰【杀】，然后若此牌未造成伤害，你可以令至多两名角色横置或重置。你的手牌上限+X（X为横置角色数）。",
   ["#qiao__skill_jin005_1-invoke"] = "柔克：是否将你本回合使用的首张【杀】改为冰【杀】",
-  ["#qiao__skill_jin005_1-follow"] = "柔克：此牌未造成伤害，你可以令至多两名角色横置或重置",
-  ["#qiao__skill_jin005_1-targets"] = "柔克：选择至多两名角色",
+  ["#qiao__skill_jin005_1-follow"] = "柔克：你可以选择至多两名角色，切换其横置状态",
 }
 
 return skill
