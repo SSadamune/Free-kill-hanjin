@@ -9,8 +9,8 @@ QtObject {
   required property var eligible
 
   function attach(card) {
-    if (card && !card.children.some(child => child.objectName === "qiaoAscensionBadge")) {
-      badge.createObject(card, { card });
+    if (card && !card.children.some(child => child.objectName === "qiaoSelectionBadges")) {
+      badges.createObject(card, { card });
     }
   }
 
@@ -23,49 +23,75 @@ QtObject {
     function onItemAdded(index, item) { root.attach(item); }
   }
 
-  readonly property Component badge: Component {
-    Rectangle {
-      id: hint
-      objectName: "qiaoAscensionBadge"
+  readonly property Component badges: Component {
+    Column {
+      id: tags
+      objectName: "qiaoSelectionBadges"
       required property Item card
+      readonly property Item nativeCompanion: card.children.find(child => child instanceof Image
+        && /-companions(?:\.png)?$/i.test(child.source.toString())) ?? null
 
       anchors.right: parent.right
       anchors.rightMargin: 1
       anchors.bottom: parent.bottom
-      // Native companion art begins at y=80 and crosses the lower corner.
-      // Otherwise leave 16 pixels for the package badge and a 2-pixel gap.
-      anchors.bottomMargin: card.dataModel?.hasCompanion ? card.height - 78 : 18
+      // Leave 16 pixels for the package badge and a 2-pixel gap.
+      anchors.bottomMargin: 18
       z: 2
-      visible: !!hint.card.dataModel && root.eligible[hint.card.dataModel.name] === true
-      width: label.implicitWidth + 24
-      height: 17
-      color: "transparent"
+      spacing: 2
 
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0; color: "#001e1a15" }
-        GradientStop { position: 0.42; color: "#a61e1a15" }
-        GradientStop { position: 1; color: "#cf1e1a15" }
+      Binding {
+        target: tags.nativeCompanion
+        property: "visible"
+        when: tags.nativeCompanion !== null
+        value: false
       }
 
-      Text {
-        id: label
-        anchors.right: parent.right
-        anchors.rightMargin: 7
-        anchors.verticalCenter: parent.verticalCenter
-        text: Lua.tr("qiao_selection_can_ascend")
-        color: "#ffe6b1"
-        font.pixelSize: 11
-        font.bold: true
+      SelectionBadge {
+        objectName: "qiaoAscensionBadge"
+        caption: Lua.tr("qiao_selection_can_ascend")
+        visible: root.eligible[tags.card.dataModel?.name] === true
       }
 
-      Rectangle {
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        width: 2
-        height: parent.height - 4
-        color: "#d9b477"
+      SelectionBadge {
+        objectName: "qiaoCompanionBadge"
+        caption: Lua.tr("Companions")
+        visible: tags.card.dataModel?.hasCompanion ?? false
       }
+    }
+  }
+
+  component SelectionBadge: Rectangle {
+    id: badge
+    required property string caption
+    anchors.right: parent.right
+    width: label.implicitWidth + 24
+    height: 17
+    color: "transparent"
+
+    gradient: Gradient {
+      orientation: Gradient.Horizontal
+      GradientStop { position: 0; color: "#001e1a15" }
+      GradientStop { position: 0.42; color: "#a61e1a15" }
+      GradientStop { position: 1; color: "#cf1e1a15" }
+    }
+
+    Text {
+      id: label
+      anchors.right: parent.right
+      anchors.rightMargin: 7
+      anchors.verticalCenter: parent.verticalCenter
+      text: badge.caption
+      color: "#ffe6b1"
+      font.pixelSize: 11
+      font.bold: true
+    }
+
+    Rectangle {
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: 2
+      height: parent.height - 4
+      color: "#d9b477"
     }
   }
 }

@@ -98,7 +98,7 @@ Fk:loadTranslationTable {
   ["#QiaoFactionBan"] = "本局禁选势力：%arg；允许势力：%arg2",
   ["#QiaoChooseGenerals"] = "选择主将与副将",
   ["#QiaoChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
-  ["qiao_selection_can_ascend"] = "可升变",
+  ["qiao_selection_can_ascend"] = "可君主升变",
   ["#QiaoChooseKingdom"] = "选择你的初始势力",
   ["#QiaoGuestRedrawn"] = "%from 重抽客将：%arg → %arg2",
 }
