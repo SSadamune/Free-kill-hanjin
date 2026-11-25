@@ -1,13 +1,22 @@
--- 六势力变包共用辅助。
+-- 六势力变包共用辅助：装备空栏/双坐骑校验、限定翼从逐实例计次、左慈「魂」随牌管理。
 -- 客户端可达查询统一使用 Fk:currentRoom() 与公开标记，不访问服务端 room tag 或私有字段。
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
+local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local WuLord = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
 local M = {}
 
 M.FEIXIONG_SKILL = "qiao__retinue_skill_feixiongjun"
 M.LIMITED_RETINUE_MARK = "qiao_bian_retinue_limited"
+
+M.ZUOCI_GENERAL = "qiao_heg__qun009"
+M.ZUOCI_SKILL = "qiao__skill_qun009_1"
+M.ZUOCI_TAG = "qiao_zuoci_hun_v1"
+M.ZUOCI_COUNT_MARK = "@qiao_zuoci_hun"
+M.ZUOCI_PRIVATE_MARK = "@&qiao_zuoci_hun"
+M.ZUOCI_POOL_AVAILABLE = "qiao_zuoci_pool_available"
 
 local function isServerPlayer(player)
   return player ~= nil and player.room ~= nil and type(player.id) == "number"
@@ -169,10 +178,224 @@ end
 
 R.addChangeListener(function(player) M.publishLimitedRetinues(player) end)
 
--- 武将交换完成监听：同步伍琼&种辑个人鏖战状态。
+---------------------------------------------------------------------------
+-- 左慈「魂」随牌管理（仅持有者私密可见内容，全员公开可见数量）
+---------------------------------------------------------------------------
+
+-- 服务端按本局实际候选复核；客户端只读取本次出牌请求前同步的可用性。
+function M.canDrawSoul(room)
+  if room == RoomInstance then
+    return #Change.skillAvailablePool(room, { any_kingdom = true, limit = 1 }) > 0
+  end
+  return room:getBanner(M.ZUOCI_POOL_AVAILABLE) == true
+end
+
+local function zuociRegistry(room)
+  local reg = room:getTag(M.ZUOCI_TAG)
+  if type(reg) ~= "table" then
+    reg = {}
+    room:setTag(M.ZUOCI_TAG, reg)
+  end
+  return reg
+end
+
+--- 定位左慈「魂」账本键：武将牌自带【化形】按该牌名归属，角色授技按玩家 ID 归属。
+function M.zuociKey(room, player)
+  if player ~= nil then
+    for _, deputy in ipairs({ false, true }) do
+      local general = Exchange.actualGeneral(player, deputy)
+      if Exchange.cardProvidesSkill(room, general, M.ZUOCI_SKILL) then
+        return "card:" .. general
+      end
+    end
+    return "player:" .. tostring(player.id)
+  end
+  return "card:" .. M.ZUOCI_GENERAL
+end
+
+local function zuociEntry(room, key, create)
+  local reg = zuociRegistry(room)
+  local entry = reg[key]
+  if entry == nil and create then
+    entry = { souls = {}, first_used = false, holder_id = nil }
+    reg[key] = entry
+  end
+  return entry
+end
+
+--- 同步持有者的公开数量标记与私密武将列表（绝不向其他角色广播私密列表）。
+function M.syncZuociMarks(room, holder, souls)
+  if room == nil or holder == nil then return end
+  souls = souls or {}
+  room:setPlayerMark(holder, M.ZUOCI_COUNT_MARK, #souls)
+  -- 座位的 doNotify 会转发给旁观者。这里与本人重连使用同一条持有者连接。
+  local recipient = holder._splayer
+  if recipient:getState() ~= fk.Player_Robot then
+    recipient:doNotify("SetPlayerMark", cbor.encode({
+      holder.id, M.ZUOCI_PRIVATE_MARK, #souls > 0 and souls or 0,
+    }))
+  end
+end
+
+function M.zuociSouls(room, player)
+  if room == nil or player == nil then return {} end
+  local entry = zuociEntry(room, M.zuociKey(room, player), false)
+  if entry == nil then return {} end
+  return table.simpleClone(entry.souls)
+end
+
+function M.zuociFirstUsed(room, player)
+  if room == nil or player == nil then return false end
+  local entry = zuociEntry(room, M.zuociKey(room, player), false)
+  return entry ~= nil and entry.first_used == true
+end
+
+function M.addZuociSouls(room, player, names, markFirst)
+  if room == nil or player == nil then return {} end
+  local key = M.zuociKey(room, player)
+  local entry = zuociEntry(room, key, true)
+  entry.holder_id = player.id
+  if markFirst then entry.first_used = true end
+  for _, name in ipairs(names or {}) do
+    table.insertIfNeed(entry.souls, name)
+  end
+  room:setTag(M.ZUOCI_TAG, zuociRegistry(room))
+  M.syncZuociMarks(room, player, entry.souls)
+  return table.simpleClone(entry.souls)
+end
+
+function M.removeZuociSoul(room, player, name)
+  if room == nil or player == nil or type(name) ~= "string" then return false end
+  local key = M.zuociKey(room, player)
+  local entry = zuociEntry(room, key, false)
+  if entry == nil then return false end
+  local removed = table.removeOne(entry.souls, name)
+  if removed then
+    entry.holder_id = player.id
+    room:setTag(M.ZUOCI_TAG, zuociRegistry(room))
+    M.syncZuociMarks(room, player, entry.souls)
+  end
+  return removed
+end
+
+function M.discardZuociEntry(room, key, holder)
+  local reg = zuociRegistry(room)
+  local entry = reg[key]
+  if entry == nil then return end
+  local souls = entry.souls or {}
+  if #souls > 0 then
+    Discard.add(room, souls)
+  end
+  local owner = holder or (entry.holder_id and room:getPlayerById(entry.holder_id))
+  entry.souls = {}
+  reg[key] = nil
+  room:setTag(M.ZUOCI_TAG, reg)
+  if owner ~= nil then
+    M.syncZuociMarks(room, owner, {})
+  end
+end
+
+function M.discardPlayerZuociSouls(room, player)
+  if room == nil or player == nil then return end
+  local reg = zuociRegistry(room)
+  local keys = {}
+  for key, entry in pairs(reg) do
+    if entry.holder_id == player.id then table.insert(keys, key) end
+  end
+  for _, key in ipairs(keys) do
+    M.discardZuociEntry(room, key, player)
+  end
+end
+
+function M.cleanupDetachedZuociCards(room)
+  if room == nil then return end
+  local reg = zuociRegistry(room)
+  local toDiscard = {}
+  for key, entry in pairs(reg) do
+    if key:startsWith("card:") then
+      local general = key:sub(6)
+      local stillHeld = false
+      for _, p in ipairs(room.alive_players) do
+        if Exchange.actualGeneral(p, false) == general or Exchange.actualGeneral(p, true) == general then
+          stillHeld = true
+          break
+        end
+      end
+      if not stillHeld then table.insert(toDiscard, key) end
+    end
+  end
+  for _, key in ipairs(toDiscard) do
+    M.discardZuociEntry(room, key)
+  end
+end
+
+--- 汉晋房间级接线：重连序列化时仅为「魂」当前持有者本人的快照补入私密武将名列表，
+--- 不向其他座位或旁观者（tellRoomToObserver 借用首座视角生成的 Observe 快照）泄露。
+function M.installServer(room)
+  if room == nil or room.qiaoBianSerializeInstalled then return end
+  room.qiaoBianSerializeInstalled = true
+  local originalTellObserver = room.tellRoomToObserver
+  if type(originalTellObserver) == "function" then
+    function room:tellRoomToObserver(observer)
+      local prev = self._qiao_serializing_observer
+      self._qiao_serializing_observer = true
+      local ok, err = pcall(originalTellObserver, self, observer)
+      self._qiao_serializing_observer = prev
+      if not ok then error(err, 0) end
+    end
+  end
+  local originalSerialize = room.serialize
+  function room:serialize(viewer)
+    local o = originalSerialize(self, viewer)
+    if self._qiao_serializing_observer then
+      return o
+    end
+    if viewer ~= nil and type(o) == "table" and type(o.players) == "table" then
+      local reg = self:getTag(M.ZUOCI_TAG)
+      if type(reg) == "table" then
+        local souls = {}
+        for _, entry in pairs(reg) do
+          if entry.holder_id == viewer.id and type(entry.souls) == "table" then
+            for _, name in ipairs(entry.souls) do
+              table.insertIfNeed(souls, name)
+            end
+          end
+        end
+        local pdata = o.players[viewer.id]
+        if #souls > 0 and type(pdata) == "table" and type(pdata.mark) == "string" then
+          local ok, marks = pcall(cbor.decode, pdata.mark)
+          if ok and type(marks) == "table" then
+            marks[M.ZUOCI_PRIVATE_MARK] = souls
+            pdata.mark = cbor.encode(marks)
+          end
+        end
+      end
+    end
+    return o
+  end
+end
+
+-- 武将变更完成监听：暗置或明置左慈武将牌被变更换走后，余下「魂」立即置入武将弃牌堆并清标记。
+Change.addCompletionListener(function(room)
+  M.cleanupDetachedZuociCards(room)
+end)
+
+-- 武将交换完成监听：同步左慈「魂」归属与伍琼&种辑个人鏖战状态。
 Exchange.addCompletionListener(function(room, context)
   if room == nil or context == nil then return end
   local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
+  local reg = zuociRegistry(room)
+  for _, move in ipairs(context.moved or {}) do
+    local key = "card:" .. tostring(move.general)
+    local entry = reg[key]
+    if entry ~= nil and move.from and move.to and move.from.player ~= move.to.player then
+      local oldOwner, newOwner = move.from.player, move.to.player
+      entry.holder_id = newOwner.id
+      room:setTag(M.ZUOCI_TAG, reg)
+      M.syncZuociMarks(room, oldOwner, {})
+      M.syncZuociMarks(room, newOwner, entry.souls)
+    end
+  end
   for _, side in ipairs(context.sides or {}) do
     local p = side.player
     if p ~= nil then
@@ -181,5 +404,10 @@ Exchange.addCompletionListener(function(room, context)
     end
   end
 end)
+
+Fk:loadTranslationTable {
+  [M.ZUOCI_COUNT_MARK] = "魂",
+  [M.ZUOCI_PRIVATE_MARK] = "魂",
+}
 
 return M

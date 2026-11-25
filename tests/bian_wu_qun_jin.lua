@@ -215,6 +215,96 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduAndDiancaiZeroDrawStillChanges(
   lu.assertNotEquals(lvfan.deputyGeneral, "qiao_test__wu_2", "典财摸 0 张后仍可执行变更副将")
 end
 
+-- QUN009 左慈：化形（首次 3 魂、后续 1 魂、移去/额外变副将、旧副将入弃牌堆、私密标记不泄露、交换随牌）
+function Testqiao_bian_wu_qun_jin:testQun009ZuociHuaxingFirstThreeSoulsPrivateAndExchange()
+  local room = FkTest.room
+  local zuoci, ally, foe = p(1), p(2), p(3)
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "qun", "wei", "shu" })
+    skill_test.installDualGenerals(room, zuoci, {
+      main = "qiao_heg__qun009", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 3,
+    })
+    resetGeneralPool(room, {
+      "qiao_heg__wei001", "qiao_heg__shu001", "qiao_heg__wu001",
+      "qiao_heg__han001", "qiao_heg__jin001", "qiao_heg__qun001",
+    }, { "qun", "wei", "shu", "wu", "han", "jin" })
+    zuoci.phase = Player.Play
+  end)
+
+  -- 首次发动（出牌阶段主动入口）：扣置 3 张「魂」，选选项 2 将副将额外变更为其中 1 张异势力「魂」。
+  local pickedSoul
+  skill_test.withSkillRequests(room, Bian.ZUOCI_SKILL, {
+    askToChoice = function() return "#qiao__skill_qun009_1-opt-change" end,
+    askToCustomDialog = function(self, who, params)
+      lu.assertEquals(#params.component.prop.candidates, 3, "首次化形应扣置 3 张魂")
+      pickedSoul = params.component.prop.candidates[1]
+      return { general = pickedSoul }
+    end,
+  }, function()
+    inRoom(function()
+      Fk.skills[Bian.ZUOCI_SKILL]:onUse(room, { from = zuoci, tos = {}, cards = {} })
+    end)
+  end)
+  lu.assertEquals(zuoci.deputyGeneral, pickedSoul, "选项 2 应无视势力额外变更副将为所选魂")
+  lu.assertEquals(zuoci.kingdom, "qun", "化形额外变更副将不得改变左慈势力")
+  lu.assertEquals(#Bian.zuociSouls(room, zuoci), 2, "3 魂消耗 1 张后应剩 2 张魂")
+  lu.assertEquals(zuoci:getMark(Bian.ZUOCI_COUNT_MARK), 2, "公开标记仅同步魂数量")
+  lu.assertEquals(zuoci:getMark(Bian.ZUOCI_PRIVATE_MARK), 0, "私密列表不写入公开 player.mark 防泄露")
+  lu.assertTrue(table.contains(Discard.list(room), "qiao_test__qun_2"), "旧副将应进入武将弃牌堆而非扣回魂")
+
+  -- 第二次发动（受到 1 点伤害后）：改为扣置 1 张「魂」，选选项 1 移去 1 张「魂」入武将弃牌堆。
+  local removedSoul
+  skill_test.withSkillRequests(room, Bian.ZUOCI_SKILL, {
+    askToSkillInvoke = function() return true end,
+    askToChoice = function() return "#qiao__skill_qun009_1-opt-remove" end,
+    askToCustomDialog = function(self, who, params)
+      lu.assertEquals(#params.component.prop.candidates, 3, "原剩 2 魂 + 后续加 1 魂 = 3 魂")
+      removedSoul = params.component.prop.candidates[1]
+      return { general = removedSoul }
+    end,
+  }, function()
+    inRoom(function()
+      room:damage { from = foe, to = zuoci, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(#Bian.zuociSouls(room, zuoci), 2)
+  lu.assertTrue(table.contains(Discard.list(room), removedSoul), "移去的魂应进入武将弃牌堆")
+
+  -- 交换左慈主将到同势力队友 ally：「魂」应随左慈武将牌迁移！
+  inRoom(function()
+    local ctx = Exchange.exchange(room,
+      { player = zuoci, isDeputy = false },
+      { player = ally, isDeputy = false })
+    lu.assertTrue(ctx ~= false)
+  end)
+  lu.assertEquals(zuoci:getMark(Bian.ZUOCI_COUNT_MARK), 0, "原持有者数量标记应清空")
+  lu.assertEquals(ally:getMark(Bian.ZUOCI_COUNT_MARK), 2, "新持有者应继承全部 2 张魂")
+  lu.assertEquals(#Bian.zuociSouls(room, ally), 2)
+
+  -- 副将为士兵牌（含白板士兵或翼从）时，化形不得提供选项 2（直接走选项 1 移去魂）。
+  local choiceAsked = 0
+  local soldierDeputy
+  inRoom(function()
+    room:changeHero(ally, "blank_shibing", false, true, false, false, false)
+    room:setPlayerMark(ally, "__heg_deputy", ally.deputyGeneral)
+    soldierDeputy = ally.deputyGeneral
+  end)
+  lu.assertTrue(Exchange.isSoldier(soldierDeputy), "测试前置应使副将为士兵牌")
+  skill_test.withSkillRequests(room, Bian.ZUOCI_SKILL, {
+    askToSkillInvoke = function() return true end,
+    askToChoice = function() choiceAsked = choiceAsked + 1; return "#qiao__skill_qun009_1-opt-change" end,
+    askToCustomDialog = function(self, who, params)
+      return { general = params.component.prop.candidates[1] }
+    end,
+  }, function()
+    inRoom(function()
+      room:damage { from = foe, to = ally, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(choiceAsked, 0, "副将为士兵牌时不能选选项 2，应直接执行选项 1")
+  lu.assertEquals(ally.deputyGeneral, soldierDeputy, "士兵副将不得被化形变更")
+end
+
 -- QUN022A 李傕：凶算（对自己发动并回合末复原凶算自身循环）+ 挠袭（不同目标复用 / 无新目标禁止发动）
 function Testqiao_bian_wu_qun_jin:testQun022aXiongsuanSelfLoopAndNaoxiDisjointTargets()
   local room = FkTest.room
@@ -515,6 +605,42 @@ function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   lu.assertFalse(canClient, "场上仅有明置聚宝保护的宝物时勇进不可发动（客户端）")
 end
 
+-- 审阅回归（第 4、11 项）：暗置副将左慈换走时余下「魂」全部入弃牌堆；重连快照只向本人提供私密「魂」名单。
+function Testqiao_bian_wu_qun_jin:testQun009ZuociHiddenChangeDiscardAndReconnectSnapshot()
+  local room = FkTest.room
+  local zuoci, other = p(1), p(2)
+  local ownPrivate, otherPrivate, ownCount, otherCount, okChange, discarded, countAfter
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, zuoci, {
+      main = "qiao_test__qun_2", deputy = "qiao_heg__qun009", kingdom = "qun", hp = 3,
+    })
+    resetGeneralPool(room, { "qiao_heg__qun007" })
+    Bian.addZuociSouls(room, zuoci, { "qiao_heg__wei004", "qiao_heg__wu003" }, true)
+
+    local snapOwn = cbor.decode(room:serialize(zuoci).players[zuoci.id].mark)
+    local snapOther = cbor.decode(room:serialize(other).players[zuoci.id].mark)
+    ownPrivate = snapOwn[Bian.ZUOCI_PRIVATE_MARK]
+    otherPrivate = snapOther[Bian.ZUOCI_PRIVATE_MARK]
+    ownCount = snapOwn[Bian.ZUOCI_COUNT_MARK]
+    otherCount = snapOther[Bian.ZUOCI_COUNT_MARK]
+
+    zuoci:hideGeneral(true)
+    lu.assertEquals(zuoci:getMark(Bian.ZUOCI_COUNT_MARK), 2, "暗置左慈时「魂」应保留")
+    okChange = Change.changeTo(room, zuoci, true, "qiao_heg__qun007")
+    discarded = Discard.list(room)
+    countAfter = zuoci:getMark(Bian.ZUOCI_COUNT_MARK)
+  end)
+  lu.assertEquals(ownCount, 2)
+  lu.assertEquals(otherCount, 2)
+  lu.assertEquals(ownPrivate, { "qiao_heg__wei004", "qiao_heg__wu003" }, "持有者重连快照应恢复私密魂名单")
+  lu.assertNil(otherPrivate, "其他座位重连快照不得包含左慈私密魂名单")
+  lu.assertTrue(okChange)
+  lu.assertTrue(table.contains(discarded, "qiao_heg__wei004"))
+  lu.assertTrue(table.contains(discarded, "qiao_heg__wu003"))
+  lu.assertEquals(countAfter, 0, "暗置副将左慈被换走后应清空魂数量标记")
+end
+
 -- 审阅回归（第 3、5 项）：挠袭排除被【谦逊】取消的原目标；凶算复原【激诏】【鼎沸】独立已用标记后可实际再次发动。
 function Testqiao_bian_wu_qun_jin:testQun022aNaoxiCancelledTargetAndXiongsuanCustomLimitedReset()
   local room = FkTest.room
@@ -685,6 +811,126 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduSkipsProtectedTreasureKeepsOthe
   lu.assertEquals(type(offeredFlag), "table", "混有受保护宝物时应使用过滤后的装备候选表")
   lu.assertEquals(offeredFlag.card_data[1][2], { sword.id }, "过滤候选应排除宝物、保留普通武器")
   lu.assertTrue(table.contains(lvfan:getCardIds("h"), sword.id), "应成功获得合法武器青釭剑")
+end
+
+-- 复审回归（第 2 项）：首座左慈有「魂」时，旁观者 Observe 包不含私密魂名单，本人重连仍可恢复。
+function Testqiao_bian_wu_qun_jin:testQun009ZuociObserverDoesNotLeakPrivateSouls()
+  local room = FkTest.room
+  local owner, other = p(1), p(2)
+  local obsReceived, obsCount, obsPrivate, ownPrivate, otherPrivate
+  local publicUpdates, observerLists, ownerLists = {}, {}, {}
+  local added = "qiao_heg__shu001"
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "shu", "wu" })
+    skill_test.installDualGenerals(room, owner, {
+      main = "qiao_heg__qun009", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    Bian.addZuociSouls(room, owner, { "qiao_heg__wei004", "qiao_heg__wu003" }, true)
+
+    local observer = {
+      getScreenName = function() return "obs" end, getId = function() return 677 end,
+      getState = function() return fk.Player_Online end,
+    }
+    function observer:doNotify(cmd, bytes)
+      if cmd == "Observe" then
+        local msg = cbor.decode(bytes)
+        local marks = cbor.decode(msg.players[owner.id].mark)
+        obsReceived = msg.settings.isObserver
+        obsCount = marks[Bian.ZUOCI_COUNT_MARK]
+        obsPrivate = marks[Bian.ZUOCI_PRIVATE_MARK]
+      elseif cmd == "SetPlayerMark" then
+        local msg = cbor.decode(bytes)
+        if msg[1] == owner.id and msg[2] == Bian.ZUOCI_COUNT_MARK then table.insert(publicUpdates, msg[3]) end
+        if msg[1] == owner.id and msg[2] == Bian.ZUOCI_PRIVATE_MARK then table.insert(observerLists, msg[3]) end
+      end
+    end
+    local prevSettings = room.getSettings
+    room.getSettings = function(self, key, ...)
+      if key == "enableObserverViewCard" then return false end
+      return prevSettings(self, key, ...)
+    end
+    room:tellRoomToObserver(observer)
+    -- 测试后端以此旁观者模拟 C++ 房间的已入房名单，通知仍走引擎分发。
+    local hasObserver = room.room.hasObserver
+    room.room.hasObserver = function(_, who) return who == observer end
+    local connection = owner._splayer
+    local notify = connection.doNotify
+    function connection:doNotify(cmd, bytes)
+      if cmd == "SetPlayerMark" then
+        local msg = cbor.decode(bytes)
+        if msg[1] == owner.id and msg[2] == Bian.ZUOCI_PRIVATE_MARK then table.insert(ownerLists, msg[3]) end
+      end
+      return notify(self, cmd, bytes)
+    end
+    Bian.addZuociSouls(room, owner, { added })
+    Bian.removeZuociSoul(room, owner, added)
+    room:removeObserver(observer:getId())
+    connection.doNotify = notify
+    room.room.hasObserver = hasObserver
+    room.getSettings = prevSettings
+
+    ownPrivate = cbor.decode(room:serialize(owner).players[owner.id].mark)[Bian.ZUOCI_PRIVATE_MARK]
+    otherPrivate = cbor.decode(room:serialize(other).players[owner.id].mark)[Bian.ZUOCI_PRIVATE_MARK]
+  end)
+  lu.assertTrue(obsReceived)
+  lu.assertEquals(obsCount, 2, "旁观者应可见公开魂数量")
+  lu.assertNil(obsPrivate, "旁观者入房包不得包含左慈私密魂名单")
+  lu.assertEquals(publicUpdates, { 3, 2 })
+  lu.assertEquals(observerLists, {}, "已在房的旁观者也只应收到数量")
+  lu.assertEquals(ownerLists, {
+    { "qiao_heg__wei004", "qiao_heg__wu003", added }, { "qiao_heg__wei004", "qiao_heg__wu003" },
+  })
+  lu.assertEquals(ownPrivate, { "qiao_heg__wei004", "qiao_heg__wu003" }, "左慈本人重连仍应恢复私密魂名单")
+  lu.assertNil(otherPrivate, "其他玩家快照仍不得包含私密魂名单")
+end
+
+function Testqiao_bian_wu_qun_jin:testQun009HuaxingRequiresAnAvailableGeneralBeforeActivation()
+  local room, owner = FkTest.room, p(1)
+  local name = Bian.ZUOCI_SKILL
+  local function checkButton(available)
+    room.logic:trigger(fk.StartPlayCard, owner, {}, true)
+    client_room.run(room, function(players)
+      local client = Fk:getBoardGame("qiao_heg_mode").client_klass:new(ClientInstance.client)
+      local handler = client.request_handlers.PlayCard:new(players[1])
+      handler:setup()
+      lu.assertEquals(handler:skillButtonValidity(name), available)
+      if available then
+        handler:selectSkill(name, { selected = true })
+        lu.assertTrue(handler:feasible())
+      end
+      handler:_finish()
+    end)
+  end
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "shu", "wu" })
+    skill_test.installDualGenerals(room, owner, {
+      main = "qiao_heg__qun009", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    room:setCurrent(owner)
+    owner.phase = Player.Play
+    resetGeneralPool(room, { "qiao_heg__em_wu001" })
+    checkButton(false) -- 池中只有君主，也无可取的魂。
+
+    local candidate = "qiao_heg__wei004"
+    table.insert(room.general_pile, candidate)
+    checkButton(true)
+    table.removeOne(room.general_pile, candidate) -- 请求发出后最后一个候选离池。
+    local reply = FkTest.ReplyUseSkill(name, {}, {})
+    room:handleUseCardReply(owner, reply)
+    lu.assertEquals(owner:usedEffectTimes(name, Player.HistoryPhase), 0)
+    lu.assertFalse(Bian.zuociFirstUsed(room, owner))
+    checkButton(false)
+
+    table.insert(room.general_pile, candidate)
+    checkButton(true)
+    skill_test.withSkillRequests(room, name, {
+      askToChoice = function() return "#qiao__skill_qun009_1-opt-remove" end,
+      askToCustomDialog = function() return { general = candidate } end,
+    }, function() room:handleUseCardReply(owner, reply) end)
+    lu.assertEquals(owner:usedEffectTimes(name, Player.HistoryPhase), 1)
+    lu.assertTrue(Bian.zuociFirstUsed(room, owner))
+    lu.assertTrue(table.contains(Discard.list(room), candidate))
+  end)
 end
 
 -- 复审回归（第 4 项）：挠袭对固定目标牌按完整固定集合判重（有重叠整张禁用，完全不重叠才允许复用）。

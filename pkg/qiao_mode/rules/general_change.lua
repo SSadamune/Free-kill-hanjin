@@ -12,6 +12,20 @@ local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 
+local completion_listeners = {}
+
+function M.addCompletionListener(fn)
+  assert(type(fn) == "function", "Change completion listener must be a function")
+  table.insertIfNeed(completion_listeners, fn)
+  return fn
+end
+
+local function notifyCompletion(room, context)
+  for _, listener in ipairs(completion_listeners) do
+    listener(room, context)
+  end
+end
+
 local function kingdomOf(player)
   local kingdom = player:getMark("__heg_kingdom")
   if type(kingdom) ~= "string" or kingdom == "" or kingdom == "unknown" then
@@ -59,6 +73,7 @@ function M.skillAvailablePool(room, options)
       else
         result[#result + 1] = name
       end
+      if options.limit and #result >= options.limit then break end
     end
   end
   return result
@@ -135,6 +150,12 @@ local function chooseCandidate(room, player, isDeputy, shown, options)
   end
 end
 
+--- 复用变更选将面板，让玩家从给定武将牌列表中选择一张（带详情与珠联预览）。
+function M.chooseGeneral(room, player, isDeputy, candidates, options)
+  if type(candidates) ~= "table" or #candidates == 0 then return nil end
+  return chooseCandidate(room, player, isDeputy == true, candidates, options)
+end
+
 --- 将指定位置直接变更为给定的合法武将牌（明置加入、不触发明置后、旧将入弃牌堆）。
 function M.changeTo(room, player, isDeputy, chosen, options)
   options = options or {}
@@ -162,6 +183,12 @@ function M.changeTo(room, player, isDeputy, chosen, options)
     while table.removeOne(room.general_pile, chosen) do end
   end
   if CardSkills and CardSkills.sync then CardSkills.sync(room) end
+  notifyCompletion(room, {
+    player = player,
+    isDeputy = isDeputy,
+    oldGeneral = oldName,
+    newGeneral = chosen,
+  })
   return true, chosen
 end
 

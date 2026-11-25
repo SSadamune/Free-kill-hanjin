@@ -1,14 +1,14 @@
--- 六势力变包正式数据：11 名普通武将、飞熊军及其统领来源。
+-- 六势力变包正式数据：12 名普通武将、1 种普通翼从（飞熊军）及 1 条统领来源。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 11
+M.generalCount = 12
 M.retinueCount = 1
 M.commanderCount = 1
-M.skillCount = 21
+M.skillCount = 22
 M.retinueSkillCount = 1
 M.kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }
 
@@ -265,6 +265,32 @@ M.generals = {
         id = [==[qiao__skill_wu022_2]==],
         name = [==[典财]==],
         text = [==[其他角色的出牌阶段结束时，若你此阶段失去过的牌数达到X（X为你的体力值），你可以摸牌至体力上限，然后你可以变更副将。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[QUN009]==],
+    id = [==[qiao_heg__qun009]==],
+    name = [==[左慈]==],
+    kingdom = [==[qun]==],
+    title = [==[鬼影神道、迷之仙人]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[wei]==], [==[shu]==], [==[wu]==] },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_qun009_1]==],
+        name = [==[化形]==],
+        text = [==[当你受到1点伤害后、其他角色脱离濒死时或出牌阶段限一次，你可以将一张（首次发动时改为三张）剩余武将牌扣置于武将牌上，称为“魂”，然后选择一项：1.移去一张“魂”；2.将副将武将牌额外变更为一张“魂”。]==],
         related = false,
         tags = {  },
       },

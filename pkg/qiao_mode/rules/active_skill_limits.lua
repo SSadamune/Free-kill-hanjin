@@ -13,6 +13,7 @@
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Array = require "packages.qiao.pkg.qiao_mode.rules.array_summon"
+local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local M = {}
 
@@ -87,7 +88,8 @@ function M.installServer(room)
       end
       local skill = Fk.skills[data.card.skill]
       if M.exhausted(skill, player, self) then return nil end
-      if data.card.skill == Array.skill and not skill:canUse(player) then return nil end
+      if (data.card.skill == Array.skill or data.card.skill == Bian.ZUOCI_SKILL)
+        and not skill:canUse(player) then return nil end
       if not Selection.validDirectOption(skill, player, data) then return nil end
       if data.card.skill == Ci.CONSUME and (not Ci.canChoose(player, data.interaction_data)
         or #(data.card.subcards or {}) > 0 or #(data.targets or {}) > 0) then return nil end

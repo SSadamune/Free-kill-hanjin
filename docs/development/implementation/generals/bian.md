@@ -1,6 +1,6 @@
 # 变包
 
-正式登记 11 张普通武将、1 张君主版（君孙权）与 1 种普通翼从（飞熊军）。本包在程序中共用 `qiao_zhenshi`（君临天下）加载包，角标为 `qiao_prefix_bian`（“变”），此索引按卡面包别编排。规则定稿见[变包索引](../../../rules/bian-generals.md)，当前全量验收记录见[开发状态](../../status.md#最近验证记录)。
+正式登记 12 张普通武将、1 张君主版（君孙权）与 1 种普通翼从（飞熊军）。本包在程序中共用 `qiao_zhenshi`（君临天下）加载包，角标为 `qiao_prefix_bian`（“变”），此索引按卡面包别编排。规则定稿见[变包索引](../../../rules/bian-generals.md)，当前全量验收记录见[开发状态](../../status.md#最近验证记录)。
 
 ## 逐将检索
 
@@ -15,6 +15,7 @@
 | EM(WU001) | [君孙权](bian/em-wu001.md) | [嘉禾](bian/em-wu001.md#em-wu001-1)、[敛资](bian/em-wu001.md#em-wu001-2)、[聚宝](bian/em-wu001.md#em-wu001-3)、[缘江烽火图](bian/em-wu001.md#em-wu001-flag)（派生／标记）、[攻心](bian/em-wu001.md#em-wu001-gongxin)（派生／标记） |
 | WU021 | [凌统](bian/wu021.md) | [旋略](bian/wu021.md#wu021-1)、[勇进](bian/wu021.md#wu021-2) |
 | WU022 | [吕范](bian/wu022.md) | [调度](bian/wu022.md#wu022-1)、[典财](bian/wu022.md#wu022-2) |
+| QUN009 | [左慈](bian/qun009.md) | [化形](bian/qun009.md#qun009-1) |
 | QUN022A | [李傕](bian/qun022a.md) | [凶算](bian/qun022a.md#qun022a-1)、[挠袭](bian/qun022a.md#qun022a-2)、[飞熊军](bian/retinue-feixiongjun.md#feixiongjun)（关联翼从） |
 | JIN018 | [陈骞](bian/jin018.md) | [忽辱](bian/jin018.md#jin018-1)、[武督](bian/jin018.md#jin018-2) |
 | JIN020 | [荀勖](bian/jin020.md) | [应政](bian/jin020.md#jin020-1)、[拨律](bian/jin020.md#jin020-2) |

@@ -1,5 +1,8 @@
 -- 六势力变包模式级静态规则：承接已建立持续/延时效果，不依赖来源技能后续是否仍在。
+-- 包含：除奸（无距离/无次数与阶段末伤害）、心疾（单人鏖战同步）、约俭（手牌上限初值与弃牌末摸牌）、
+-- 武督（公开手牌与实际回合末清除）、凶算（回合末复原限定技）、左慈「魂」离场清理。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local H = require "packages.hegemony.util"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
@@ -275,6 +278,53 @@ skill:addEffect(fk.TargetSpecifying, {
   end,
   on_refresh = function(self, event, target, player, data)
     recordEverTargets(data.use, { data.to })
+  end,
+})
+
+-- 6. 左慈「魂」：死亡掩埋或左慈武将牌被移除/变更离场时，剩余「魂」置入武将弃牌堆。
+-- 每次出牌请求只同步池中是否仍有可用武将，不公开候选名称或暗将身份。
+skill:addEffect(fk.StartPlayCard, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target == player and inQiao(player.room)
+  end,
+  on_refresh = function(self, event, target, player)
+    local room = player.room
+    local available = Bian.canDrawSoul(room)
+    if room:getBanner(Bian.ZUOCI_POOL_AVAILABLE) ~= available then
+      room:setBanner(Bian.ZUOCI_POOL_AVAILABLE, available)
+    end
+  end,
+})
+
+skill:addEffect(fk.BuryVictim, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target == player and inQiao(player.room)
+  end,
+  on_refresh = function(self, event, target, player)
+    Bian.discardPlayerZuociSouls(player.room, player)
+  end,
+})
+
+skill:addEffect(H.GeneralRemoved, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target == player and inQiao(player.room)
+  end,
+  on_refresh = function(self, event, target, player)
+    Bian.cleanupDetachedZuociCards(player.room)
+  end,
+})
+
+skill:addEffect(fk.EventLoseSkill, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and inQiao(player.room)
+      and data ~= nil and data.skill ~= nil and data.skill.name == Bian.ZUOCI_SKILL
+  end,
+  on_refresh = function(self, event, target, player)
+    Bian.cleanupDetachedZuociCards(player.room)
   end,
 })
 

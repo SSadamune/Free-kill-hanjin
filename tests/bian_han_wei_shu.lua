@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 11)
+  lu.assertEquals(Data.generalCount, 12)
   lu.assertEquals(Data.retinueCount, 1)
   lu.assertEquals(Data.commanderCount, 1)
-  lu.assertEquals(Data.skillCount, 21)
+  lu.assertEquals(Data.skillCount, 22)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -66,6 +66,8 @@ function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests(
   lu.assertTrue(Fk.generals["qiao_heg__qun022a"]:isCompanionWith(Fk.generals["qiao_heg__qun007"]))
   lu.assertTrue(Fk.generals["qiao_heg__jin018"]:isCompanionWith(Fk.generals["qiao_heg__jin015"]))
   lu.assertTrue(Fk.generals["qiao_heg__jin020"]:isCompanionWith(Fk.generals["qiao_heg__jin004"]))
+  lu.assertFalse(Fk.generals["qiao_heg__qun009"]:isCompanionWith(Fk.generals["qiao_heg__qun011"]))
+  lu.assertEquals(Guest.guestKingdoms("qiao_heg__qun009"), { "wei", "shu", "wu" })
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__wei020"), { "han" })
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__qun022a"), { "han" })
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__shu020"), {})
