@@ -87,10 +87,10 @@ function Testqiao_qun081_xurong:testFormalRegistration()
 end
 
 function Testqiao_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
-  local room, player, target = FkTest.room, p(1), p(2)
+  local room, player, target, other = FkTest.room, p(1), p(2), p(3)
   local mount = give(player, "qiao__jueying", Card.Spade, 5)
   local treasure = give(target, "qiao__bronze_sparrow", Card.Heart, 6)
-  local slash = give(player, "qiao__slash", Card.Spade, 7)
+  local savage = give(player, "qiao__savage_assault", Card.Spade, 7)
   inRoom(function()
     room:moveCardIntoEquip(player, mount, "test", true, player)
     room:moveCardIntoEquip(target, treasure, "test", true, target)
@@ -102,12 +102,19 @@ function Testqiao_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
   local client_room = __dofile("../../../tests/support/client_room.lua")
   skill_test.withSkillRequests(room, SELECT, {
     askToUseActiveSkill = function(self, who, params, original)
-      local reply = client_room.confirmSelection(room, who, params, { mount }, { target }, function(handler)
-        lu.assertEquals(handler.selected_targets, { target.id })
+      local reply = client_room.confirmSelection(room, who, params, { mount }, { other }, function(handler)
+        lu.assertEquals(handler.selected_targets, {})
         lu.assertEquals(handler.pendings, {})
         lu.assertFalse(handler:feasible())
-        lu.assertTrue(handler:cardValidity(mount))
         lu.assertTrue(handler:cardValidity(treasure))
+        handler:update("CardItem", treasure, "click", { selected = true })
+        lu.assertEquals(handler.selected_targets, { target.id })
+        lu.assertFalse(handler:targetValidity(other.id))
+        handler:update("CardItem", treasure, "click", { selected = false })
+        handler:update("Photo", target.id, "click", { selected = false })
+        handler:update("Photo", other.id, "click", { selected = true })
+        lu.assertFalse(handler:cardValidity(treasure))
+        lu.assertEquals(handler.pendings, { mount })
       end)
       FkTest.setNextReplies(who, { reply })
       return original(self, who, params)
@@ -115,13 +122,14 @@ function Testqiao_qun081_xurong:testPiaoluOnlyChosenTargetAndSelfMount()
   }, function()
     inRoom(function()
       room:useCard(UseCardData:new {
-        from = player, tos = { target }, card = Fk:getCardById(slash), extra_data = {},
+        from = player, tos = { target, other }, card = Fk:getCardById(savage), extra_data = {},
       })
     end)
   end)
 
   lu.assertEquals(room:getCardArea(mount), Card.DiscardPile)
-  lu.assertEquals(target.hp, target.maxHp - 2) -- 基础1 + 本次对该目标+1。
+  lu.assertEquals(target.hp, target.maxHp - 1)
+  lu.assertEquals(other.hp, other.maxHp - 2)
   lu.assertTrue(table.contains(target:getCardIds(Player.Equip), treasure))
 end
 
