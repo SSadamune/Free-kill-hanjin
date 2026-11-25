@@ -15,8 +15,8 @@ Item {
   Binding {
     target: root.card
     property: "cardFrontSource"
-    when: !!root.picture
-    value: root.picture
+    // The selection box reuses its card item when the general changes.
+    value: root.picture || root.model?.frontSkin || ""
   }
   Binding {
     target: root.model
