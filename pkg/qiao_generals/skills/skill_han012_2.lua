@@ -5,7 +5,7 @@
 -- 可以将四种花色各一张牌，或基本牌/锦囊牌/装备牌各一张牌（共 4 或 3 张
 -- 自己的手牌或装备牌）当任意一种基本牌使用。
 --
--- 仅支持使用，不支持单纯打出（enabled_at_response=false）。多张实体牌构成
+-- 支持普通用牌和效果用牌请求，不支持单纯打出。多张实体牌构成
 -- 的虚拟牌花色/点数由引擎 addSubcards 按普通多子牌规则确定，不在此手算。
 --
 -- 使用结算结束（fk.CardUseFinished）时，只询问是否将仍在处理区的
@@ -27,7 +27,7 @@ local BASIC_NAMES = {
   "qiao__peach",
   "qiao__analeptic",
 }
-local BASIC_PATTERN = table.concat(BASIC_NAMES, ",")
+local BASIC_PATTERN = "slash,jink,peach,analeptic|.|.|.|" .. table.concat(BASIC_NAMES, ",")
 
 ---@param id integer
 ---@return Card
@@ -126,7 +126,7 @@ skill:addEffect("viewas", {
     return card
   end,
   -- 博通只允许「使用」，不能作为响应打出。
-  enabled_at_response = function() return false end,
+  enabled_at_response = function(self, player, response) return not response end,
 })
 
 skill:addEffect(fk.CardUseFinished, {

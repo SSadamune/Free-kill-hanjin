@@ -16,7 +16,7 @@ local function isMaterial(id)
 end
 
 skill:addEffect("viewas", {
-  pattern = CHAIN,
+  pattern = "iron_chain|.|.|.|" .. CHAIN,
   prompt = "#qiao__skill_jin017_3-prompt",
   include_equip = true,
   card_filter = function(self, player, to_select, selected)
@@ -36,7 +36,9 @@ skill:addEffect("viewas", {
   enabled_at_play = function(self, player)
     return table.find(player:getCardIds("he"), isMaterial) ~= nil
   end,
-  enabled_at_response = function() return false end,
+  enabled_at_response = function(self, player, response)
+    return not response and table.find(player:getCardIds("he"), isMaterial) ~= nil
+  end,
 })
 
 Fk:loadTranslationTable {

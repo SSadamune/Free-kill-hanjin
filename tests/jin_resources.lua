@@ -111,11 +111,40 @@ function Testqiao_jin_resources:testTairanRecordsAndSettlesAtTurnEnd()
   local card = setHand(room, p, { { "jink" } })[1]
   inRoom(function() p.hp = p.maxHp end)
 
-  FkTest.setNextReplies(p, { "1", FkTest.ReplyDiscard({ card }) })
-  skill_test.withSkillRequests(room, TAIRAN, {
-    askToNumber = function() return 1 end,
+  FkTest.setNextReplies(p, { "1" })
+  local reply
+  skill_test.withSkillRequests(room, "spin_skill", {
+    askToUseActiveSkill = function(self, who, params, ask)
+      if params.extra_data.skillName == TAIRAN then
+        client_room.run(self, function(clients)
+          local board = Fk:getBoardGame(self:getSettings("gameMode"))
+          local client = board.client_klass:new(ClientInstance.client)
+          local handler = client.request_handlers.AskForUseActiveSkill:new(clients[who.seat], {
+            params.skill_name, params.prompt, params.cancelable, params.extra_data,
+          })
+          local skill = Fk.skills[params.skill_name]
+          local extraData, notify = skill._extra_data, ClientInstance.notifyUI
+          skill._extra_data = params.extra_data
+          ClientInstance.notifyUI = function(_, command, data)
+            if command == "ReplyToServer" then reply = data end
+          end
+          local ok, err = pcall(function()
+            handler:setup()
+            handler:update("Interaction", "1", "update", 1)
+            handler:update("Button", "OK", "click", {})
+            handler:_finish()
+          end)
+          skill._extra_data, ClientInstance.notifyUI = extraData, notify
+          if not ok then error(err, 0) end
+        end)
+        if reply then FkTest.setNextReplies(who, { reply, FkTest.ReplyDiscard({ card }) }) end
+      end
+      return ask(self, who, params)
+    end,
   }, function() triggerPlayStart(room, p) end)
 
+  lu.assertNotNil(reply)
+  lu.assertEquals(reply.interaction_data, 1)
   lu.assertEquals(p.hp, p.maxHp - 1)
   lu.assertEquals(#p:getCardIds("h"), 0)
   lu.assertEquals(#p:getTableMark("qiao_jin002_1_records-turn"), 1)

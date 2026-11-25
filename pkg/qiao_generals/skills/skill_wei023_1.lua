@@ -26,7 +26,8 @@ skill:addEffect(fk.Damaged,{
     local room=player.room
     if not room:hasSkill(RULE) then room:addSkill(Fk.skills[RULE]) end
     local current=room.current
-    room:addPlayerMark(current,"qiao_hengjiang_penalty-turn",math.max(1,#current:getCardIds("e")))
+    room:addPlayerMark(current,MarkEnum.MinusMaxCardsInTurn,math.max(1,#current:getCardIds("e")))
+    room:broadcastProperty(current,"MaxCards")
     local follow=current:getTableMark("qiao_hengjiang_follow-turn")
     table.insert(follow,player.id)
     room:setPlayerMark(current,"qiao_hengjiang_follow-turn",follow)

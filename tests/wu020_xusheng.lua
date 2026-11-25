@@ -157,7 +157,7 @@ function Testqiao_wu020_xusheng:testPojunDoesNotAskAgainstUndeterminedTarget()
   lu.assertTrue(table.contains(target:getCardIds("h"), hand))
 end
 
-function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
+local function checkPojunAtTurnEnd(targetDies)
   local room, player, target = FkTest.room, p(1), p(2)
   local slash = give(player, "qiao__slash", Card.Spade, 2)
   local first = give(target, "qiao__jink", Card.Heart, 3)
@@ -183,11 +183,24 @@ function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
   end)
   lu.assertEquals(room:getCardArea(first), Card.Void)
   lu.assertEquals(room:getCardArea(second), Card.Void)
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(first, Card.PlayerHand, Card.Void, { target })
   inRoom(function()
+    if targetDies then room:killPlayer { who = target } end
     room.logic:trigger(fk.TurnEnd, player, TurnData:new(player, "game_rule", { Player.Start }))
   end)
-  lu.assertEquals(room:getCardArea(first), Card.PlayerHand)
-  lu.assertEquals(room:getCardArea(second), Card.PlayerHand)
+  local area = targetDies and Card.DiscardPile or Card.PlayerHand
+  local viewers = targetDies and room.players or { target }
+  assertMoveViews(first, Card.Void, area, viewers)
+  assertMoveViews(second, Card.Void, area, viewers)
+end
+
+function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
+  checkPojunAtTurnEnd(false)
+end
+
+function Testqiao_wu020_xusheng:testPojunDiscardsPubliclyIfTargetDies()
+  checkPojunAtTurnEnd(true)
 end
 
 return { name = "qiao_wu020_xusheng" }

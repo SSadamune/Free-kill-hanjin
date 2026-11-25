@@ -175,9 +175,9 @@ local function subCandidates(room, use, main, rule, context)
   end)
 end
 
---- Public candidate query.  `opts` may be an adaptation entry (or a table with
---- `target_condition`) and is only used to read the explicit replacement
---- condition.  The target list itself is always recomputed from current state.
+--- Public candidate query. `opts.target_condition` replaces the printed target
+--- condition. `opts.excluded_player_id` excludes a player independently of it.
+--- The target list is recomputed from current state.
 function E.candidates(room, use, opts)
   if use == nil or use.from == nil or use.card == nil then return {} end
   if not E.isRoleTargetUse(use) then return {} end
@@ -195,7 +195,7 @@ function E.candidates(room, use, opts)
 
   local result = {}
   for _, target in ipairs(room:getPresentPlayers()) do
-    if commonLegal(use, target) then
+    if target.id ~= opts.excluded_player_id and commonLegal(use, target) then
       local legal
       if explicit ~= nil then
         legal = E.matchesCondition(room, use, target, explicit)
@@ -310,12 +310,11 @@ end
 --- declares one.  The request is cancelable and the whole operation is atomic:
 --- nothing is written to the use data until both selections have been rechecked
 --- against the current game state.
-function E.addTarget(room, use, entry)
+function E.addTarget(room, use, opts)
   if use == nil or use.from == nil or use.card == nil then return false end
   if use.from.dead then return false end
-  entry = entry or {}
   local rule = E.ruleFor(use.card)
-  local candidates = E.candidates(room, use, entry)
+  local candidates = E.candidates(room, use, opts)
   if #candidates == 0 then return false end
 
   local chosen = room:askToChoosePlayers(use.from, {
@@ -325,10 +324,10 @@ function E.addTarget(room, use, entry)
     cancelable = true,
   })
   local main = chosen and chosen[1]
-  if main == nil or use.from.dead or not E.isCandidate(room, use, main, entry) then return false end
+  if main == nil or use.from.dead or not E.isCandidate(room, use, main, opts) then return false end
 
   if rule ~= nil and rule.sub_candidates ~= nil then
-    local subs = E.subCandidates(room, use, main, entry)
+    local subs = E.subCandidates(room, use, main, opts)
     if #subs == 0 then
       if rule.allow_no_sub then
         -- No legal attached target: add the main target alone and never inherit
@@ -349,8 +348,8 @@ function E.addTarget(room, use, entry)
     if sub == nil or use.from.dead then return false end
     -- Both the main target condition and the attached-target condition may have
     -- changed while the second request was being answered.
-    if not E.isCandidate(room, use, main, entry) then return false end
-    if not table.contains(E.subCandidates(room, use, main, entry), sub) then return false end
+    if not E.isCandidate(room, use, main, opts) then return false end
+    if not table.contains(E.subCandidates(room, use, main, opts), sub) then return false end
     use:addTarget(main, { sub })
     return true
   end

@@ -68,7 +68,7 @@ skill:addEffect("active", {
     local lord = lordFor(player)
     local cards = effect.cards or {}
     if player == nil or lord == nil or #cards ~= 2 then return end
-    room:obtainCard(lord, cards, true, fk.ReasonGive, player, skill.name)
+    room:obtainCard(lord, cards, false, fk.ReasonGive, player, skill.name)
     if player.dead then return end
     local choices = available(player)
     if #choices == 0 then return end

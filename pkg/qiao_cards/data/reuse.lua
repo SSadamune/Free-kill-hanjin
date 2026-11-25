@@ -48,7 +48,7 @@ M.cards = {
   ["qiao__await_exhausted"] = { status = "reused", kind = "skill", upstream = "await_exhausted", skill = "await_exhausted_skill" },
   ["qiao__indulgence"] = { status = "reused", kind = "skill", upstream = "indulgence", skill = "indulgence_skill" },
   ["qiao__supply_shortage"] = { status = "reused", kind = "skill", upstream = "supply_shortage", skill = "supply_shortage_skill" },
-  ["qiao__iron_chain"] = { status = "reused", kind = "skill", upstream = "iron_chain", skill = "iron_chain_skill", desc = false },
+  ["qiao__iron_chain"] = { status = "reused", kind = "skill", upstream = "iron_chain", skill = "qiao__iron_chain_skill", desc = false },
   ["qiao__foresight"] = { status = "reused", kind = "qiao_skill", upstream = "foresight", skill = "qiao__foresight_skill" },
   ["qiao__chasing_near"] = { status = "reused", kind = "qiao_skill", upstream = "chasing_near", skill = "qiao__chasing_near_skill", desc = false },
   ["qiao__unexpectation"] = { status = "reused", kind = "qiao_skill", upstream = "unexpectation", skill = "qiao__unexpectation_skill" },

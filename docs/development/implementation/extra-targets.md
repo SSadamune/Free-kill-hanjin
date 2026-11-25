@@ -17,12 +17,14 @@
 | 接口 | 用途 |
 | --- | --- |
 | `attach(skill, rule)` | 在牌技上登记群体上下文、候选及独立副目标规则，不在公共层硬编码牌名清单 |
-| `candidates`／`isCandidate` | 按当前目标列表、公共禁止条件和本次上下文计算候选 |
+| `candidates`／`isCandidate` | 按当前目标列表、公共禁止条件和本次上下文计算候选；`excluded_player_id` 可另行排除该次选择的角色 |
 | `subCandidates` | 为新增主目标单独计算副目标 |
 | `targetLegal`／`subTargetLegal` | 宣告阶段复核已展开或新增的主目标及其独立副目标，不要求目标尚未出现在列表中 |
 | `addTarget` | 询问、重新复核后原子写入新增主目标及副目标；取消或候选失效时不改用牌数据 |
 
 显式 `target_condition` 替代牌面目标条件；仅改变数量时继续使用原牌面条件。`skills/collateral.lua`、`fight_together.lua`、`alliance_feast.lua` 的包装分别处理独立杀目标、大小势力类别及已选势力上下文。
+
+实战反馈第 60 条的 `excluded_player_id` 由助战应变条目的实际支付者提供。`addTarget` 生成候选及回包后复核都使用此参数。红桃 3【出其不意】覆盖正式用牌和客户端确认；【杀】【火攻】覆盖空候选、非法回包及独立条目。见 [Issue #65](https://github.com/SSadamune/Free-kill-hanjin/issues/65)。
 
 `tests/extra_targets.lua` 已纳入默认套件，覆盖动态候选、距离／势力／区域条件、群体展开后的重加、借刀独立副目标及取消、显式条件与数量限制的区别、候选变化复核及成功事件。
 

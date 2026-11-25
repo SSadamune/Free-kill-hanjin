@@ -1,15 +1,14 @@
 -- JIN005 柔克/顺流、JIN013 克清、JIN014 文虎（翼从）：真实主流程定向用例。
--- 本文件尚未加入 tests/all.lua；由负责测试接线的批次在测试槽中运行并登记。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
+local StateToggle = require "packages.qiao.pkg.qiao_mode.rules.state_toggle"
 
 local ROUKE = "qiao__skill_jin005_1"
 local SHUNLIU = "qiao__skill_jin005_2"
 local KEQING = "qiao__skill_jin013_2"
 local WENHU = "qiao__retinue_skill_wenhu"
 
-local OPT_CHAIN = "#qiao__skill_jin005_1-chain"
-local OPT_RESET = "#qiao__skill_jin005_1-reset"
 local OPT_HAND = "#qiao__retinue_skill_wenhu-hand"
 local OPT_EQUIP = "#qiao__retinue_skill_wenhu-equip"
 
@@ -72,7 +71,7 @@ end
 
 -- 柔克：首张杀实际改为冰杀；未造成伤害后，至多两名角色横置/重置；手牌上限读取
 -- 当前横置总数。
-function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
+local function checkRoukeConversion(cardName, accepts, cancelFollow)
   local room = support.initQiaoRoom()
   inRoom(function()
     skill_test.installBlankGenerals(room, { "jin", "jin", "jin", "jin" })
@@ -86,14 +85,20 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
   end)
   for i = 1, 4 do clearCards(room, p(i)) end
 
-  local slash = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 7 } })[1]
+  local slash = giveHand(room, p(2), { { cardName, Card.Heart, 7 } })[1]
   local jink = giveHand(room, p(3), { { "qiao__jink", Card.Spade, 3 } })[1]
   inRoom(function()
     p(2):setChainState(false)
     p(3):setChainState(true)
   end)
 
-  local usedCard
+  local usedCard, actor
+  addProbe(room, "#qiao_jin_chain_rouke_actor", fk.SkillEffect, {
+    can_refresh = function(self, event, target, player, data)
+      return target == player and data.skill.name == ROUKE
+    end,
+    on_refresh = function(self, event, target, player, data) actor = data.who end,
+  })
   addProbe(room, "#qiao_jin_chain_rouke_probe", fk.CardUseFinished, {
     can_refresh = function(self, event, target, player, data)
       return target == p(2) and data.card ~= nil
@@ -103,13 +108,6 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
     end,
   })
 
-  -- 羊祜：改牌；不造成伤害后的后续；选择 p2 横置、p3 重置。
-  FkTest.setNextReplies(p(1), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p(2), p(3) }),
-    { OPT_CHAIN },
-    { OPT_RESET },
-  })
   -- p3 以闪响应冰杀，使此牌不造成伤害。
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
@@ -128,23 +126,92 @@ function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
         tos = { p(3) },
         card = Fk:getCardById(slash),
       }
+      data.phase_end = true
     end,
   })
   local playProbe = playSkel:createSkill()
   Fk.skills[playSkel.name] = playProbe
-  inRoom(function()
-    room:addSkill(playProbe)
-    GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+  local asked, followRequests = nil, 0
+  skill_test.withSkillRequests(room, ROUKE, {
+    askToSkillInvoke = function(self, who)
+      lu.assertNil(asked)
+      asked = who.id
+      return accepts
+    end,
+  }, function()
+    skill_test.withSkillRequests(room, "choose_players_skill", {
+      askToUseActiveSkill = function(self, who, params, ask)
+        if params.extra_data.skillName == ROUKE then
+          followRequests = followRequests + 1
+          lu.assertEquals(who.id, p(1).id)
+          lu.assertEquals(params.extra_data.num, 2)
+          lu.assertTrue(params.cancelable)
+          local reply = ""
+          if not cancelFollow then
+            reply = client_room.confirmSelection(room, who, params, {}, { p(2), p(3) }, function(handler)
+              lu.assertFalse(handler:feasible())
+              lu.assertTrue(handler.scene:getAllItems("Button").Cancel.enabled)
+            end)
+          end
+          FkTest.setNextReplies(who, { reply })
+        end
+        return ask(self, who, params)
+      end,
+    }, function()
+      inRoom(function()
+        room:addSkill(playProbe)
+        GameEvent.Turn:create(TurnData:new(p(2), "game_rule", { Player.Play })):exec()
+      end)
+    end)
   end)
   lu.assertTrue(fired)
+  lu.assertEquals(asked, p(2).id)
+  lu.assertEquals(followRequests, accepts and 1 or 0)
+  lu.assertFalse(table.contains(p(2):getCardIds("h"), slash))
 
-  lu.assertEquals(usedCard, "qiao__ice__slash")
-  lu.assertTrue(p(2).chained)
-  lu.assertFalse(p(3).chained)
-  -- p2 是当前唯一横置角色；只有柔克持有者羊祜的手牌上限增加。
+  lu.assertEquals(usedCard, accepts and "qiao__ice__slash" or cardName)
+  lu.assertEquals(actor and actor.id, accepts and p(2).id or nil)
+  lu.assertFalse(require("packages.qiao.pkg.qiao_mode.rules.skill_prelight").canPrelight(ROUKE))
+  local changesChain = accepts and not cancelFollow
+  lu.assertEquals(p(2).chained, changesChain)
+  lu.assertEquals(p(3).chained, not changesChain)
+  -- 场上恰有一个横置角色；只有柔克持有者羊祜的手牌上限增加。
   inRoom(function()
     lu.assertEquals(p(1):getMaxCards(), math.max(p(1).hp, 0) + 1)
     lu.assertEquals(p(2):getMaxCards(), math.max(p(2).hp, 0))
+  end)
+end
+
+function Testqiao_jin_chain:testRoukeChangesFirstSlashAndFollowsUp()
+  checkRoukeConversion("qiao__slash", true)
+end
+
+function Testqiao_jin_chain:testRoukeChangesFirstIceSlashAndFollowsUp()
+  checkRoukeConversion("qiao__ice__slash", true)
+end
+
+function Testqiao_jin_chain:testRoukeDeclinedOnFirstIceSlashDoesNotFollowUp()
+  checkRoukeConversion("qiao__ice__slash", false)
+end
+
+function Testqiao_jin_chain:testRoukeFollowUpCanBeCancelledInPlayerSelection()
+  checkRoukeConversion("qiao__slash", true, true)
+end
+
+function Testqiao_jin_chain:testStackToggleUsesCurrentOrientationWithoutChangingChain()
+  support.initQiaoRoom()
+  inRoom(function()
+    local first, second = p(1), p(2)
+    first:setChainState(true)
+    second:turnOver()
+
+    StateToggle.stack(first)
+    StateToggle.stack(second)
+
+    lu.assertFalse(first.faceup)
+    lu.assertTrue(second.faceup)
+    lu.assertTrue(first.chained)
+    lu.assertFalse(second.chained)
   end)
 end
 
@@ -181,11 +248,8 @@ function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
     end,
   })
 
-  FkTest.setNextReplies(p(1), {
-    "1",
-    FkTest.ReplyChoosePlayer({ p(2) }),
-    { OPT_CHAIN },
-  })
+  FkTest.setNextReplies(p(2), { "1" })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   FkTest.setNextReplies(p(3), { FkTest.ReplyCard(Fk:getCardById(jink)) })
 
   local fired = false
@@ -202,6 +266,7 @@ function Testqiao_jin_chain:testRoukeFollowUpSurvivesSkillLoss()
         tos = { p(3) },
         card = Fk:getCardById(slash),
       }
+      data.phase_end = true
     end,
   })
   local playProbe = playSkel:createSkill()

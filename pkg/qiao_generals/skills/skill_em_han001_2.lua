@@ -15,7 +15,7 @@ local function giveCard(room, from, to, cards, requireDelivery)
     return false
   end
   local start = room.logic.current_event_id
-  room:obtainCard(to, cards, true, fk.ReasonGive, from, skill.name)
+  room:obtainCard(to, cards, false, fk.ReasonGive, from, skill.name)
   if not requireDelivery then return true end
 
   local moves = room.logic:getEventsByRule(GameEvent.MoveCards, 1, function(e)
