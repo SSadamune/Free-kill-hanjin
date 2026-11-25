@@ -159,6 +159,7 @@ skill:addEffect(fk.Damage, {
     if #choices == 0 then return false end
     local kingdom = Selection.askOption(player.room, player, {
       choices = choices, all_choices = Ban.kingdoms,
+      buttons = true,
       skill_name = skill.name, prompt = "#qiao__jin001_banner-transfer::" .. target.id,
     })
     if kingdom == nil or not groups[kingdom] then return false end
@@ -216,7 +217,7 @@ Fk:loadTranslationTable {
   ["qiao__ci_consume"] = "消耗一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
-  ["#qiao__jin001_banner-transfer"] = "诸王敕封册：你可以选择一个势力，将该势力的所有“赐”交给 %dest",
+  ["#qiao__jin001_banner-transfer"] = "诸王敕封册：请选择一个势力，将该势力的所有“赐”交给%dest",
   ["#qiao__jin001_banner-prevent-skip"] = "诸王敕封册：你可以移去一枚“赐”，防止跳过%arg",
   ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
   [CHANGE] = "变更武将",

@@ -133,8 +133,8 @@ function Testqiao_em_jin001_simayan:testTransferCannotChooseBannedKingdomAfterFr
     setCi(room, lord, { jinShu, guanYu })
   end)
   local function give(reply)
-    skill_test.withSkillRequests(room, BANNER, { askToChoices = function(_, _, params)
-      lu.assertItemsEquals(params.choices, { "jin", "wei", "Cancel" })
+    skill_test.withSkillRequests(room, BANNER, { askToOptions = function(_, _, params)
+      lu.assertItemsEquals(params.options, { "jin", "wei" })
       return { reply }
     end }, function()
       inRoom(function() room:damage { from = source, to = p(5), damage = 1 } end)
@@ -162,12 +162,13 @@ function Testqiao_em_jin001_simayan:testDamageTransfersAllCiOfChosenKingdom()
     })
   end)
   local asks = 0
-  FkTest.setRoomBreakpoint(lord, "AskForChoices", function(data)
+  FkTest.setRoomBreakpoint(lord, "AskForOptions", function(data)
     if data[5] == BANNER then
       asks = asks + 1
-      lu.assertItemsEquals(data[1], { "wei", "wu", "han", "Cancel" })
-      lu.assertTrue(data[4], "只有一个势力也应可以放弃")
+      lu.assertItemsEquals(data[1], { "wei", "wu", "han" })
+      lu.assertTrue(data[4], "允许取消交赐")
       lu.assertStrContains(data[6], tostring(source.id))
+      lu.assertTrue(data[7], "单击选项直接提交")
     end
     return false
   end)
@@ -200,9 +201,9 @@ function Testqiao_em_jin001_simayan:testTransferCanDeclineAndOnlyOtherJinDamageQ
     Guest.store(room, { [name] = { name = name, source = "original", kingdoms = { "jin" } } })
   end)
   skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, who, params)
+    askToOptions = function(_, who, params)
       lu.assertIs(who, lord)
-      lu.assertEquals(params.choices, { "jin", "Cancel" })
+      lu.assertEquals(params.options, { "jin" })
       lu.assertTrue(params.cancelable)
       asks = asks + 1
       return {}
