@@ -3,6 +3,7 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local H = require "packages.hegemony.util"
+local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
@@ -105,6 +106,26 @@ local function startRoom(count, alternate, modeSettings, previous)
   end
   lu.assertEquals(room:getTag("qiao_selection_fallbacks"), { room.players[1].id })
   return room
+end
+
+function Testlocked_factions:testRoomRuleSelectsCapacity()
+  local mode = Fk.game_modes[Modes.locked]
+  local W = require "ui_emu.preferences"
+  local function settings(count, rule)
+    return { playerNum = count, _mode = { [Locked.ruleKey] = rule } }
+  end
+
+  local defaultRow = W.toQmlData(mode.ui_settings, settings(3))[1]._children[1]
+  lu.assertEquals(defaultRow._settingsKey, Locked.ruleKey)
+  lu.assertEquals(defaultRow.title, Locked.ruleKey)
+  lu.assertEquals(defaultRow.model, Locked.rules)
+  lu.assertEquals(defaultRow.roomSizes, { [Locked.rules[1]] = 3, [Locked.rules[2]] = 4 })
+  lu.assertEquals(defaultRow.value, Locked.rules[1])
+  lu.assertTrue(mode:feasible(settings(3, Locked.rules[1])))
+  lu.assertFalse(mode:feasible(settings(4, Locked.rules[1])))
+  lu.assertTrue(mode:feasible(settings(4, Locked.rules[2])))
+  lu.assertFalse(mode:feasible(settings(3, Locked.rules[2])))
+  lu.assertTrue(mode:feasible(settings(4)))
 end
 
 function Testlocked_factions:testThreePlayerSeatsAndLandlordSkills()

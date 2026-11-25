@@ -1,5 +1,8 @@
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local M = {}
+M.ruleKey = "qiao_locked_game_rule"
+M.rules = { "qiao_locked_landlord", "qiao_locked_2v2" }
+M.roomSizes = { [M.rules[1]] = 3, [M.rules[2]] = 4 }
 local openingHandAdjustments = { -1, 0, 0, 1 }
 
 -- Give each seat two distinct legal cards before filling the remaining slots.

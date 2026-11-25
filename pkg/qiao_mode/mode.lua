@@ -397,6 +397,16 @@ function M.create(base, name)
     },
   }
   if locked then
+    local ruleRow = W.ComboRow {
+      _settingsKey = Locked.ruleKey, title = Locked.ruleKey,
+      model = Locked.rules, roomSizes = Locked.roomSizes, modeName = name,
+      value = function(settings)
+        local rule = modeOf(settings)[Locked.ruleKey]
+        return Locked.roomSizes[rule] and rule or Locked.rules[1]
+      end,
+    }
+    ruleRow._qml = { url = "packages/qiao/pkg/qiao_mode/qml/LockedGameRuleRow.qml" }
+    table.insert(ruleSettings, 1, ruleRow)
     table.insert(ruleSettings, W.SwitchRow {
       _settingsKey = BattleRoyal.settingKey, title = BattleRoyal.settingKey,
       value = function(settings) return modeOf(settings)[BattleRoyal.settingKey] == true end,
@@ -437,6 +447,10 @@ function M.create(base, name)
         if settings._mode and settings._mode[key] ~= nil then return settings._mode[key] end
         if settings._game and settings._game[key] ~= nil then return settings._game[key] end
         return settings[key]
+      end
+      if locked then
+        local rule = getSetting(Locked.ruleKey)
+        if rule ~= nil and Locked.roomSizes[rule] ~= settings.playerNum then return false end
       end
       if not pcall(resolveSettings, getSetting) then return false end
       local generals, cards = 0, 0

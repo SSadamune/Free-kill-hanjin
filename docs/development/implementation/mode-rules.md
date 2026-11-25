@@ -8,13 +8,15 @@
 - [faq_core_rules.lua](../../../pkg/qiao_mode/rules/faq_core_rules.lua) 在 `GameEvent.DrawInitial` 处理后置位手气卡。大合集按 0 次通用手气卡计算，7 人及以上从 7 号位各发一次。自由模式在房间通用次数之外按「后置位补偿」设置发放。每次换手牌后更新发牌结束事件里的实际初始手牌，供应变等后续入口读取。
 - [房间规则回归](../../../tests/qiao_rules.lua#L191)验证两模式设置、联动选项存在或缺失、选将请求执行和时长。[FAQ 专项](../../../tests/faq_core_rules.lua#L160)验证座位、自由模式开关、重抽牌和事件。设置页离屏覆盖与人工边界见[开发状态](../status.md#最近验证记录)。
 
-### 锁定投胎
+### 锁定势力
 
-[模式规则](../../rules/faction-ban.md#锁定投胎)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。先为每个座位预留两张互不重复的合法武将牌，再从各自势力补齐待选牌。每人的基础候选数为 2 至 5 张。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
+「游戏规则」在「模式设置」首项，默认斗地主。正式扩展的 [LockedGameRuleRow.qml](../../../pkg/qiao_mode/qml/LockedGameRuleRow.qml) 将选择映射为建房容量 3 或 4，并锁定通用设置中的人数控件。模式可行性检查校验规则与人数一致。缺少规则键的旧设置仍可按 3 或 4 人开局。锁定势力的客户端与服务端均关闭自由选将。
+
+[模式规则](../../rules/faction-ban.md#锁定势力)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。先为每个座位预留两张互不重复的合法武将牌，再从各自势力补齐待选牌。每人的基础候选数为 2 至 5 张。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
 
 开局双将体力计算后增加斗地主 1 号位的体力与上限，按上游欢乐斗地主的默认接线授予引擎的 `m_feiyang` 和 `m_bahu`。其实现分别位于 FreeKill v0.5.25 的 `standard/pkg/skills/feiyang.lua` 与 `standard/pkg/skills/bahu.lua`。二对二通过 `getAdjustedProperty` 在 `DrawInitialCards` 前调整发牌数。[Gitee 斗地主模式](https://gitee.com/qsgs-fans/gamemode/blob/master/pkg/gamemodes/1v2.lua)
 
-[鏖战入口](../../../pkg/qiao_mode/rules/battle_royal.lua)根据锁定投胎的房间开关决定是否进入。开关缺省关闭，开启后使用国战回合开始条件。该开关作用于汉晋和上游的进入入口。
+[鏖战入口](../../../pkg/qiao_mode/rules/battle_royal.lua)根据锁定势力的房间开关决定是否进入。开关缺省关闭，开启后使用国战回合开始条件。该开关作用于汉晋和上游的进入入口。
 
 选将提示复用引擎的座次翻译。三人局显示身份、座次和获配势力，四人局显示座次和获配势力。[开局专项用例](../../../tests/locked_factions.lua)覆盖两种提示、候选数量、鏖战开关、跨局禁选、客将与同名替换、三人场明置与模式技能，以及四人场队列／围攻及发牌。
 
