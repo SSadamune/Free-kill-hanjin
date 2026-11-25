@@ -2,6 +2,7 @@
 -- 不写 MarkEnum.InvalidSkills；只读目标身上的位置记录，因此不误伤另一位置、
 -- 不误伤不属于将牌的后天技能，失去马超技能也不撤销已建立失效。
 local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local skill = fk.CreateSkill { name = "qiao__shu_tieqi_invalidity" }
 
 local POS = "qiao__skill_shu006_2_positions-turn"
@@ -23,7 +24,7 @@ skill:addEffect("invalidity", {
     for _, pos in ipairs(positions) do
       local general = generalOf(from, pos)
       local general_data = general and Fk.generals[general] or nil
-      if general_data ~= nil
+      if general_data ~= nil and not Exchange.isSoldier(general)
         and table.contains(general_data:getSkillNameList(), skill_obj.name)
         and SkillSources.isGeneralSkill(skill_obj, from) then
         return true

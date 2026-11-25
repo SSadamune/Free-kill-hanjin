@@ -45,6 +45,7 @@ function M.install(room)
   if room.qiaoSkillSourcesInstalled then return end
   room.qiaoSkillSourcesInstalled = true
   local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
   local H = require "packages.hegemony.util"
   local class = require "ltk.server.serverplayer"
 
@@ -75,10 +76,12 @@ function M.install(room)
     function class:getSkillNameList()
       local names = getSkillNameList(self)
       if Modes.inRoom(self.room) then
-        -- 角色直接获授仍是其武将技能。保持原查询对限定技等规则的可见性。
-        for _, skill in ipairs(self.derivative_skills[Fk.skills[M.DIRECT]] or {}) do
-          if not skill.name:startsWith("#") then
-            table.insertIfNeed(names, skill:getSkeleton().name)
+        -- 保留角色直接获授和翼从实例所提供的技能供角色规则查询。
+        for _, source in ipairs({ M.DIRECT, Retinues.SOURCE_SKILL }) do
+          for _, skill in ipairs(self.derivative_skills[Fk.skills[source]] or {}) do
+            if not skill.name:startsWith("#") then
+              table.insertIfNeed(names, skill:getSkeleton().name)
+            end
           end
         end
       end

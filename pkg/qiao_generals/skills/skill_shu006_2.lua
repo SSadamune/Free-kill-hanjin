@@ -1,4 +1,5 @@
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu006_2",
@@ -18,11 +19,9 @@ Fk:loadTranslationTable {
   ["#qiao__skill_shu006_2-discard"] = "铁骑：展示并弃置判定花色的所有手牌，否则不能响应此【杀】",
 }
 
-local function positionGeneral(to, pos)
-  if pos == "main" then
-    return to.general ~= "" and (to.general ~= "anjiang" and to.general or to:getMark("__heg_general")) or nil
-  end
-  return to.deputyGeneral ~= "" and (to.deputyGeneral ~= "anjiang" and to.deputyGeneral or to:getMark("__heg_deputy")) or nil
+local function hasGeneralCard(to, pos)
+  local name = Exchange.actualGeneral(to, pos == "deputy")
+  return name ~= "" and name ~= "anjiang" and Fk.generals[name] ~= nil and not Exchange.isSoldier(name)
 end
 
 skill:addEffect(fk.TargetSpecified, {
@@ -34,8 +33,9 @@ skill:addEffect(fk.TargetSpecified, {
   on_cost = function(self, event, target, player, data)
     local to = data.to
     local choices = {}
-    if positionGeneral(to, "main") then table.insert(choices, MAIN) end
-    if positionGeneral(to, "deputy") then table.insert(choices, DEPUTY) end
+    if hasGeneralCard(to, "main") then table.insert(choices, MAIN) end
+    if hasGeneralCard(to, "deputy") then table.insert(choices, DEPUTY) end
+    if #choices == 0 then return false end
     local choice = Selection.askOption(player.room, player, {
       choices = choices,
       all_choices = { MAIN, DEPUTY },
@@ -51,7 +51,7 @@ skill:addEffect(fk.TargetSpecified, {
     local room = player.room
     local to = data.to
     local selected = event:getCostData(self)
-    if positionGeneral(to, selected) then
+    if hasGeneralCard(to, selected) then
       local old = to:getTableMark(POS)
       if type(old) ~= "table" then old = {} end
       if not table.contains(old, selected) then table.insert(old, selected) end

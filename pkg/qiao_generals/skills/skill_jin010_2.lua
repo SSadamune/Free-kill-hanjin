@@ -1,7 +1,7 @@
 -- JIN010 张春华 · 扼绝
 --
 -- 造成伤害时且没有手牌，可以失去自己的一个其他技能，然后令本次伤害 +1。
--- 仅可选其他武将技能，失去时区分武将牌和角色获授来源。
+-- 可选的武将技能按武将牌、翼从实例或角色获授来源分别失去。
 -- 已建立的效果仍按自身时限结算。
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local S = require "packages.qiao.pkg.qiao_generals.util.jin_sources"
@@ -17,7 +17,10 @@ end
 
 local function optionLabel(index, choice)
   local source
-  if choice.general ~= nil then
+  if choice.retinueId ~= nil then
+    source = choice.retinuePosition == "main" and "主将位翼从"
+      or choice.retinuePosition == "deputy" and "副将位翼从" or "翼从"
+  elseif choice.general ~= nil then
     source = (choice.deputy == true and "副将" or "主将")
       .. "：" .. Fk:translate(choice.general)
   elseif choice.source ~= nil then

@@ -72,7 +72,7 @@ end
 function M.decorate(name, label, extra, extraMarker)
   local skel = Fk.skill_skels[name]
   if skel == nil or skel[MARKER] ~= nil then return end
-  SkillSources.registerNonGeneral(name)
+  if label ~= LABELS.RETINUE then SkillSources.registerNonGeneral(name) end
 
   local baseDynamic = skel.dynamicDesc
   local baseGet = rawget(skel, "getDynamicDescription")
@@ -93,8 +93,7 @@ end
 --- @param retinues? table Data.retinues（实际声明的翼从技能来源）
 function M.register(retinues)
   local translations = {}
-  for key, name in pairs(DISPLAY_NAME_SOURCES) do
-    local label = Fk:translate(name, "zh_CN")
+  local function addDisplayName(key, label)
     translations[key] = label
     local skeleton = Fk.skill_skels[key]
     -- The engine snapshots these names before postLoad. They can also show
@@ -103,6 +102,12 @@ function M.register(retinues)
       local previous = Fk:translate(effect, "zh_CN")
       if previous == key or previous == effect then translations[effect] = label end
     end
+  end
+  for key, name in pairs(DISPLAY_NAME_SOURCES) do
+    addDisplayName(key, Fk:translate(name, "zh_CN"))
+  end
+  for _, retinue in ipairs(retinues or {}) do
+    addDisplayName(retinue.skill.id, retinue.name)
   end
   translations[Formation.FEIYING_MARK] = "飞影来源"
   for name in pairs(Flags.flags) do
@@ -157,7 +162,9 @@ function M.register(retinues)
     local skill = data.skill
     if skill ~= nil then M.decorate(skill.id, LABELS.RETINUE) end
   end
-  -- 两个可见的内部派生效果也由翼从产生；不是独立的武将牌技能。
+  -- 已建立的距离与转化效果沿用来源标签，不作为另一项可失去的技能。
+  SkillSources.registerNonGeneral("qiao__retinue_skill_bingzhou_distance")
+  SkillSources.registerNonGeneral("qiao__retinue_skill_bazhenbing_viewas")
   M.decorate("qiao__retinue_skill_bingzhou_distance", LABELS.RETINUE)
   M.decorate("qiao__retinue_skill_bazhenbing_viewas", LABELS.RETINUE)
 end

@@ -118,7 +118,7 @@ function M.countForSkill(player, skillName)
   if checkPlayer(player) then
     local count = 0
     for _, instance in ipairs(M.instances(player)) do
-      if instance.skill == skillName then count = count + 1 end
+      if instance.skill == skillName and not instance.skillLost then count = count + 1 end
     end
     return count
   end
@@ -135,7 +135,7 @@ end
 function M.instancesForSkill(player, skillName)
   local result = {}
   for _, instance in ipairs(M.instances(player)) do
-    if instance.skill == skillName then table.insert(result, instance) end
+    if instance.skill == skillName and not instance.skillLost then table.insert(result, instance) end
   end
   return result
 end
@@ -171,7 +171,7 @@ end
 local function publish(player)
   local counts, skills, total = {}, {}, 0
   for _, instance in ipairs(M.instances(player)) do
-    counts[instance.skill] = (counts[instance.skill] or 0) + 1
+    if not instance.skillLost then counts[instance.skill] = (counts[instance.skill] or 0) + 1 end
     total = total + 1
   end
   for skillName, count in pairs(counts) do
@@ -186,7 +186,7 @@ end
 --- 首个实例负责按实例来源授予技能；已有其他来源的同名技能时只追加本模块的
 --- 导数来源记账，不重复注册触发，也不会覆盖原有来源。
 --- @param player ServerPlayer
---- @param spec table { general: string, skill: string, origin?: "entity"|"granted"|"shared", position?: "main"|"deputy", shared_from?: integer }
+--- @param spec table { general: string, skill: string, origin?: "entity"|"granted"|"shared", position?: "main"|"deputy", shared_from?: integer, skillLost?: boolean }
 --- @return table instance
 function M.grant(player, spec)
   assert(checkPlayer(player), "retinue_instances: player must be in a room")
@@ -216,6 +216,7 @@ function M.grant(player, spec)
     origin = origin,
     position = spec.position,
     shared_from = spec.shared_from,
+    skillLost = spec.skillLost,
     -- 该份实例自身的发动次数；同名其他实例互不影响。
     uses = 0,
   }
@@ -224,13 +225,14 @@ function M.grant(player, spec)
   player.room:setTag(M.TAG, reg)
   Commander.noteRetinueAdmission(player.room, general)
 
-  local source = sourceSkill()
-  local ownedBefore = player:hasSkill(skillName, true, true)
-  player.room:handleAddLoseSkills(player, skillName, source, false, true)
-  if ownedBefore then
-    -- handleAddLoseSkills 在已拥有同名技能时会跳过 addSkill；这里仍按实例来源
-    -- 登记一份导数来源，只做记账（player.lua:1087-1095）。
-    player:addSkill(skillName, source)
+  if not instance.skillLost then
+    local source = sourceSkill()
+    local ownedBefore = player:hasSkill(skillName, true, true)
+    player.room:handleAddLoseSkills(player, skillName, source, false, true)
+    if ownedBefore then
+      -- 引擎对已有技能会跳过授技，另登记这一份独立来源。
+      player:addSkill(skillName, source)
+    end
   end
   publish(player)
   notifyChange(player)
@@ -248,6 +250,33 @@ local function hasOtherSource(player, target, source)
     if key ~= source and table.contains(list, target) then return true end
   end
   return false
+end
+
+local function detachSkill(player, skillName, sendLog, noTrigger)
+  if M.countForSkill(player, skillName) ~= 0 then return end
+  local target = assert(Fk.skills[skillName], "retinue_instances: missing skill " .. skillName)
+  local source = sourceSkill()
+  if hasOtherSource(player, target, source) then
+    -- 引擎的 loseSkill 会连同关联效果一起撤销。只在最后一份来源失去时调用它。
+    local skills = player.derivative_skills[source]
+    if skills then
+      table.removeOne(skills, target)
+      if #skills == 0 then player.derivative_skills[source] = nil end
+    end
+  else
+    player.room:handleAddLoseSkills(player, "-" .. skillName, source, sendLog, noTrigger)
+  end
+end
+
+--- 失去一份翼从技能，保留该实例的实体位置、数量和其他同名技能来源。
+function M.loseSkill(player, id)
+  local instance = M.get(player, id)
+  if instance == nil or instance.skillLost then return false end
+  instance.skillLost = true
+  detachSkill(player, instance.skill, true, false)
+  publish(player)
+  notifyChange(player)
+  return true
 end
 
 --- 移除一份实例。可传实例表或实例 id；只撤销该份来源。
@@ -270,27 +299,7 @@ function M.remove(player, instance)
   local removed = table.remove(list, index)
   local reg = registry(player.room)
   player.room:setTag(M.TAG, reg)
-  if M.countForSkill(player, removed.skill) == 0 then
-    local target = assert(Fk.skills[removed.skill],
-      "retinue_instances: missing skill " .. tostring(removed.skill))
-    local source = sourceSkill()
-    if hasOtherSource(player, target, source) then
-      -- 外部仍有同名技能：只摘掉本模块这条来源映射，不调用 loseSkill。
-      -- Player:loseSkill 会无条件清空 derivative_skills[skill]，连多效果骨架的
-      -- 关联效果一起删掉（player.lua:1128-1131）。
-      local sources = player.derivative_skills[source]
-      if sources ~= nil then
-        table.removeOne(sources, target)
-        if #sources == 0 then player.derivative_skills[source] = nil end
-      end
-    else
-      -- 已无任何其他来源：本模块来源仍登记在案，用来源级失技让引擎完整撤销、
-      -- 清理关联效果并广播。此时不能先摘来源，否则 handleAddLoseSkills 会因
-      -- hasSkill 已为 false 而跳过真正的 loseSkill。
-      player.room:handleAddLoseSkills(player, "-" .. removed.skill,
-        source, false, true)
-    end
-  end
+  if not removed.skillLost then detachSkill(player, removed.skill, false, true) end
   publish(player)
   notifyChange(player)
   return true
@@ -388,7 +397,7 @@ function M.triggerEach(effectSkill, event, target, player, data, eligible)
   event:setSkillData(effectSkill, "cancel_cost", false)
   local broken = false
   for _, instance in ipairs(M.instancesForSkill(player, skillName)) do
-    if not player.dead and M.get(player, instance.id) ~= nil
+    if not player.dead and not instance.skillLost and M.get(player, instance.id) ~= nil
       and (eligible == nil or eligible(instance, event, target, player, data)) then
       -- 每份实例都是独立的一次可选发动；上一份的取消不得阻断下一份。
       event:setSkillData(effectSkill, "cancel_cost", false)
