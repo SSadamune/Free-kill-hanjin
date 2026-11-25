@@ -1,14 +1,14 @@
--- 六势力变包正式数据：4 名普通武将。
+-- 六势力变包正式数据：5 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 4
+M.generalCount = 5
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 7
+M.skillCount = 9
 M.retinueSkillCount = 0
 M.kingdoms = { "han", "wei", "shu" }
 
@@ -133,6 +133,39 @@ M.generals = {
         id = [==[qiao__skill_shu020_1]==],
         name = [==[蒺藜]==],
         text = [==[当你于一回合内使用或打出第X张牌时，你可以摸X张牌（X为你的攻击范围）。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[SHU022]==],
+    id = [==[qiao_heg__shu022]==],
+    name = [==[马谡]==],
+    kingdom = [==[shu]==],
+    title = [==[帷幄经谋]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_shu022_1]==],
+        name = [==[散谣]==],
+        text = [==[出牌阶段限一次，你可以弃置一张牌，对一名体力值或手牌数最大的角色造成1点伤害。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_shu022_2]==],
+        name = [==[制蛮]==],
+        text = [==[当你对其他角色造成伤害时，你可以防止此伤害，然后获得其区域里的一张牌，若其与你势力相同，其可以变更副将（限一次）。]==],
         related = false,
         tags = {  },
       },

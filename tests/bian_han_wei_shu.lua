@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 4)
+  lu.assertEquals(Data.generalCount, 5)
   lu.assertEquals(Data.retinueCount, 0)
   lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 7)
+  lu.assertEquals(Data.skillCount, 9)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -396,6 +396,74 @@ function Testqiao_bian_han_wei_shu:testShu020JiliDynamicAttackRangeAndRespond()
     end)
   end)
   lu.assertEquals(drawnCounts, { 1 }, "回合外打出第 1 张牌且攻击范围 1 应触发蒺藜")
+end
+
+-- SHU022 马谡：散谣（最大体力或最大手牌，客户端过滤）+ 制蛮（防伤取判定区 + 同势力可选变更限一次）
+function Testqiao_bian_han_wei_shu:testShu022SanyaoAndZhimanSameKingdomChange()
+  local room = FkTest.room
+  local masu, ally, richHand = p(1), p(2), p(3)
+  local costCard, judgeCard
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "shu", "shu", "wei", "wu" })
+    skill_test.installDualGenerals(room, masu, {
+      main = "qiao_heg__shu022", deputy = "qiao_test__shu_2", kingdom = "shu", hp = 3,
+    })
+    ally.hp = 4
+    richHand.hp = 2
+    p(4).hp = 2
+    for _, who in ipairs(room.players) do who:throwAllCards("he") end
+    costCard = room:printCard("qiao__jink", Card.Heart, 2)
+    room:obtainCard(masu, costCard, false, fk.ReasonJustMove)
+    for i = 1, 5 do
+      room:obtainCard(richHand, room:printCard("qiao__slash", Card.Spade, i), false, fk.ReasonJustMove)
+    end
+    judgeCard = room:printCard("qiao__indulgence", Card.Heart, 6)
+    room:moveCardTo(judgeCard, Player.Judge, ally, fk.ReasonJustMove, "test", nil, true, ally)
+    masu.phase = Player.Play
+    resetGeneralPool(room, { "qiao_heg__shu001", "qiao_heg__shu002", "qiao_heg__shu003" }, { "shu", "wei", "wu", "han" })
+  end)
+
+  -- 客户端目标筛选：ally 体力最大、richHand 手牌最大均合法，p(4) 不合法；调离者不合法。
+  client_room.run(room, function(clients)
+    local sk = Fk.skills["qiao__skill_shu022_1"]
+    lu.assertTrue(sk:targetFilter(clients[1], clients[2], {}))
+    lu.assertTrue(sk:targetFilter(clients[1], clients[3], {}))
+    lu.assertFalse(sk:targetFilter(clients[1], clients[4], {}))
+  end)
+  inRoom(function() room:setPlayerMark(ally, MarkEnum.PlayerRemoved .. "-turn", 1) end)
+  client_room.run(room, function(clients)
+    local sk = Fk.skills["qiao__skill_shu022_1"]
+    lu.assertFalse(sk:targetFilter(clients[1], clients[2], {}), "被调离的角色不得成为散谣目标")
+  end)
+  inRoom(function() room:setPlayerMark(ally, MarkEnum.PlayerRemoved .. "-turn", 0) end)
+
+  -- 散谣对 richHand 造成 1 点伤害
+  local richHpBefore = richHand.hp
+  inRoom(function()
+    Fk.skills["qiao__skill_shu022_1"]:onUse(room, {
+      from = masu, tos = { richHand }, cards = { costCard.id },
+    })
+  end)
+  lu.assertEquals(richHand.hp, richHpBefore - 1, "散谣应对手牌数最大目标造成 1 点伤害")
+
+  -- 制蛮：对同势力队友造成伤害时防止伤害、获得其判定区【乐不思蜀】、队友变更副将并消耗限一次。
+  local allyHpBefore = ally.hp
+  skill_test.withSkillRequests(room, "qiao__skill_shu022_2", {
+    askToSkillInvoke = function() return true end,
+    askToChooseCard = function() return judgeCard.id end,
+    askToChoice = function() return "changeDeputy" end,
+    askToCustomDialog = function(self, who, params)
+      return { general = params.component.prop.candidates[1] }
+    end,
+  }, function()
+    inRoom(function()
+      room:damage { from = masu, to = ally, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(ally.hp, allyHpBefore, "制蛮应防止本次伤害")
+  lu.assertTrue(table.contains(masu:getCardIds("h"), judgeCard.id), "制蛮应可获得判定区牌")
+  lu.assertNotEquals(ally.deputyGeneral, "qiao_test__shu_2", "同势力目标应成功变更副将")
+  lu.assertFalse(Change.canUseSkillChange(room, masu, "qiao__skill_shu022_2"), "制蛮变更每局限一次")
 end
 
 -- 审阅回归（第 6 项）：心疾暂时无效时桃恢复可用，恢复有效后个人鏖战立即恢复，全局鏖战仍覆盖。
