@@ -2,6 +2,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 Testqiao_adaptation = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 local function use(entries)
@@ -9,6 +10,32 @@ local function use(entries)
   local card = Fk:cloneCard("qiao_test__blank_basic")
   A.setCardEntries(card, entries)
   return UseCardData:new { from = room.players[1], tos = { room.players[2] }, card = card, extra_data = {} }
+end
+
+function Testqiao_adaptation:testChoicePresentationPreservesOriginalReplyValues()
+  local client = QiaoClient:new(ClientInstance.client)
+  local command, payload
+  client.client = { notifyUI = function(_, name, data) command, payload = name, data end }
+  FkTest.runInRoom(function()
+    local short = {
+      A.choiceLabel({ condition = "zhuzhan", effect = "add_target" }, 1),
+      A.choiceLabel({ condition = "zhuzhan", effect = "execute_both" }, 2),
+    }
+    client:notifyUI("AskForChoices", { short, short, { 1, 1 }, false, "test", "", false, true })
+    lu.assertEquals(command, "AskForChoices")
+
+    local long = { "这是一段超过按钮适合显示长度的完整选项说明文字", "Cancel" }
+    client:notifyUI("AskForChoices", { long, long, { 1, 1 }, true, "test", "", true, true })
+    lu.assertEquals(command, "CustomDialog")
+    lu.assertEquals(payload.component.model.prop.choices, long)
+    lu.assertTrue(payload.component.model.prop.detailed)
+
+    local many = { "1", "2", "3", "4", "5", "6", "7" }
+    client:notifyUI("AskForOptions", { many, many, { 1, 1 }, true, "test", "", true })
+    lu.assertEquals(command, "CustomDialog")
+    lu.assertEquals(payload.component.model.prop.choices, many)
+    lu.assertTrue(payload.component.model.prop.single)
+  end)
 end
 
 function Testqiao_adaptation:testVirtualCardWithExplicitConditionsIsAnAdaptationCard()
@@ -69,6 +96,8 @@ function Testqiao_adaptation:testUnspecifiedIgnoreMakesExactlyOneSelection()
   room.askToChoice = function(self, player, params)
     asked = asked + 1
     lu.assertEquals(#params.choices, 2)
+    lu.assertStrContains(params.choices[1], "qiao_condition_")
+    lu.assertStrContains(params.choices[1], "qiao_adaptation_")
     lu.assertFalse(params.cancelable)
     return params.choices[2]
   end

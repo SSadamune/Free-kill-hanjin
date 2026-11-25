@@ -13,6 +13,7 @@ Item {
 
   property var sources: []
   property string currentKey: ""
+  readonly property bool useList: sources.length > 6
   readonly property var scene: Ltk.roomScene
 
   readonly property Item progressItem: scene ? scene.progress : null
@@ -22,6 +23,26 @@ Item {
   width: 0
   height: 0
 
+  ComboBox {
+    parent: root.progressItem ? root.progressItem.parent : root
+    anchors.horizontalCenter: parent === root ? undefined : root.progressItem.horizontalCenter
+    anchors.bottom: parent === root ? undefined : root.progressItem.top
+    anchors.bottomMargin: 8
+    visible: root.visible && root.useList && !!root.progressItem && root.scene.skillInteraction.visible
+    z: 2
+    model: root.useList ? root.sources : []
+    textRole: "label"
+    valueRole: "key"
+    currentIndex: root.useList ? root.sources.findIndex(source => source.key === root.currentKey) : -1
+    onActivated: root.selectSource(currentValue)
+  }
+
+  function selectSource(key) {
+    if (!key || currentKey === key) return;
+    currentKey = key;
+    Lua.updateRequestUI("Interaction", "1", "update", key);
+  }
+
   Flickable {
     id: viewport
     objectName: "qiaoCommanderSources"
@@ -30,7 +51,8 @@ Item {
     anchors.horizontalCenter: sharesProgressParent ? root.progressItem.horizontalCenter : undefined
     anchors.bottom: sharesProgressParent ? root.progressItem.top : undefined
     anchors.bottomMargin: root.progressItem ? Math.max(0, promptMetrics.implicitHeight - root.progressItem.height) + 8 : 0
-    visible: root.visible && root.scene !== null && root.scene.skillInteraction.visible && root.sources.length > 0
+    visible: root.visible && root.scene !== null && root.scene.skillInteraction.visible
+      && root.sources.length > 0 && !root.useList
     z: 2
 
     width: root.scene ? Math.min(sourceRow.implicitWidth, root.scene.progress.width) : 0
@@ -57,18 +79,14 @@ Item {
       spacing: 6
 
       Repeater {
-        model: root.sources
+        model: root.useList ? [] : root.sources
 
         delegate: MetroButton {
           required property var modelData
 
           text: modelData.label
           checked: root.currentKey === modelData.key
-          onClicked: {
-            if (root.currentKey === modelData.key) return;
-            root.currentKey = modelData.key;
-            Lua.updateRequestUI("Interaction", "1", "update", modelData.key);
-          }
+          onClicked: root.selectSource(modelData.key)
         }
       }
     }

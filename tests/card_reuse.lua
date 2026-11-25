@@ -709,7 +709,7 @@ function Testqiao_card_reuse:testBronzeSparrowGrantsAdaptationIgnore()
       askToChoice = function(self, who, params)
         asked = asked + 1
         lu.assertEquals(params.choices, {
-          "qiao__bronze_sparrow_option:1::qiao_adaptation_draw:qiao_condition_kongchao",
+          "qiao_ignore_option:1::qiao_condition_kongchao:qiao_adaptation_draw",
         })
         FkTest.setNextReplies(p, { { params.choices[1] } })
         return askChoice(self, who, params)
@@ -753,7 +753,7 @@ function Testqiao_card_reuse:testBronzeSparrowCancelKeepsTheTurnUse()
       askToChoice = function(self, who, params)
         asked = asked + 1
         lu.assertEquals(params.choices, {
-          "qiao__bronze_sparrow_option_satisfied:1::qiao_adaptation_draw:qiao_condition_canqu",
+          "qiao_ignore_option_satisfied:1::qiao_condition_canqu:qiao_adaptation_draw",
         })
         return askChoice(self, who, params)
       end,
@@ -763,7 +763,7 @@ function Testqiao_card_reuse:testBronzeSparrowCancelKeepsTheTurnUse()
     lu.assertTrue(A.hasEffect(firstData, "draw"))
     -- 之后的应变牌仍可发动铜雀，说明次数没有被取消消耗。
     FkTest.setNextReplies(p, {
-      { "qiao__bronze_sparrow_option:1::qiao_adaptation_draw:qiao_condition_kongchao" },
+      { "qiao_ignore_option:1::qiao_condition_kongchao:qiao_adaptation_draw" },
     })
     FkTest.setNextReplies(t, { "" })
     laterData = UseCardData:new { from = p, tos = { t }, card = second, extra_data = {} }
@@ -796,8 +796,8 @@ function Testqiao_card_reuse:testBronzeSparrowShowsSatisfactionWhenAsked()
       askToChoice = function(self, who, params)
         asked = asked + 1
         lu.assertEquals(params.choices, {
-          "qiao__bronze_sparrow_option_satisfied:1::qiao_adaptation_draw:qiao_condition_canqu",
-          "qiao__bronze_sparrow_option:2::qiao_adaptation_remove_target:qiao_condition_fujia",
+          "qiao_ignore_option_satisfied:1::qiao_condition_canqu:qiao_adaptation_draw",
+          "qiao_ignore_option:2::qiao_condition_fujia:qiao_adaptation_remove_target",
         })
         FkTest.setNextReplies(source, { { "Cancel" }, FkTest.ReplyChoosePlayer({ remove }) })
         return askChoice(self, who, params)
