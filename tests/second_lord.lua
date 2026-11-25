@@ -107,7 +107,7 @@ function Testsecond_lord:testAscensionAndDeputyRevealWaitForBothReplies()
   lu.assertEquals(duringFollowUp, {
     "anjiang", "anjiang", "unknown", "heg_rule", { "qiao_turn_reveal_also_deputy" },
   })
-  lu.assertEquals(actor.general, Versions.lord_version(G.wei_normal.name))
+  lu.assertEquals(actor.general, V.lord_version(G.wei_normal.name))
   lu.assertEquals(actor.deputyGeneral, G.wei_deputy.name)
   lu.assertTrue(A.has_lord(room(), "wei"))
 end
