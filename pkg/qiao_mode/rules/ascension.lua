@@ -474,11 +474,15 @@ function M.on_turn_start(room, player)
   if not kingdoms and revealMain and revealDeputy then
     table.insert(choices, "revealAll")
   end
+  -- AskForOptions has no bot handler in FreeKill 0.5.25. Preserve the old
+  -- random fallback for bots, with Cancel as a legal choice.
+  local isRobot = player.serverplayer:getState() == fk.Player_Robot
+  if isRobot then table.insert(choices, "Cancel") end
   -- The engine broadcasts skill_name as the focus reason. Always use the
   -- same reason and request path, regardless of the hidden general.
   local choice = room:askToOptions(player, {
     options = choices, skill_name = "heg_rule", prompt = "#HegRevealGenerals",
-    min_num = 1, max_num = 1, single = true, cancelable = true,
+    min_num = 1, max_num = 1, single = true, cancelable = not isRobot,
   })[1]
   local kingdom = ascensionChoices[choice]
   if kingdom then
@@ -486,7 +490,7 @@ function M.on_turn_start(room, player)
       M.ascend(room, player, lord, kingdom, { kind = "lord" })
     end
     return "m"
-  elseif choice == revealMain then
+  elseif revealMain and choice == revealMain then
     player:revealGeneral(false)
     return "m"
   elseif revealDeputy and choice == revealDeputy then

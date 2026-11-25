@@ -320,6 +320,30 @@ function Testmode_rules:testRevealPromptAtTurnStartCanRevealBothOrCancel()
   lu.assertEquals(second.deputyGeneral, "anjiang")
 end
 
+function Testmode_rules:testRobotTurnStartUsesRevealFallback()
+  local current, robot = room(), room().players[2]
+  hidden(robot, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
+  robot.serverplayer:setState(fk.Player_Robot)
+
+  -- Let the engine receive the bot's real reply. Fix only the random fallback
+  -- so the regression consistently exercises a legal reveal rather than Cancel.
+  local fallback
+  local pick = current.tableRandomPick
+  current.tableRandomPick = function(self, candidates, count)
+    if table.contains(candidates, "revealAll") then
+      fallback = table.simpleClone(candidates)
+      return { "revealAll" }
+    end
+    return pick(self, candidates, count)
+  end
+  turnStart(robot)
+  lu.assertEquals(fallback, {
+    "revealMain:::qiao_test__wei_1", "revealDeputy:::qiao_test__wei_2", "revealAll", "Cancel",
+  })
+  lu.assertEquals(robot.general, "qiao_test__wei_1")
+  lu.assertEquals(robot.deputyGeneral, "qiao_test__wei_2")
+end
+
 function Testmode_rules:testRevealProhibitionIsRespectedByTheRealPrompt()
   local current, p = room(), room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
@@ -332,11 +356,20 @@ function Testmode_rules:testRevealProhibitionIsRespectedByTheRealPrompt()
     if target == p and params.prompt == "#HegRevealGenerals" then captured = params end
     return original(self, target, params)
   end
-  turnStart(p, { { "Cancel" } })
+  local attemptedReveal = false
+  local reveal = p.revealGeneral
+  p.revealGeneral = function(self, deputy)
+    attemptedReveal = true
+    return reveal(self, deputy)
+  end
+  turnStart(p, { "__cancel" })
+  p.revealGeneral = reveal
   current.askToOptions = original
   lu.assertNotNil(captured)
   lu.assertEquals(captured.options, { "revealDeputy:::qiao_test__wei_2" })
+  lu.assertFalse(attemptedReveal)
   lu.assertEquals(p.general, "anjiang")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
 
   -- Both positions prohibited: there is no actionable reveal request.
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
