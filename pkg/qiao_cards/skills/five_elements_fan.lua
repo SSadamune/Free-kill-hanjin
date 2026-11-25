@@ -103,7 +103,7 @@ end
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = table.concat({
+  pattern = "slash|.|.|.|" .. table.concat({
     RESULT_CARDS.fire, RESULT_CARDS.thunder, RESULT_CARDS.ice,
   }, ","),
   prompt = "#qiao__five_elements_fan-prompt",

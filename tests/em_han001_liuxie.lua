@@ -140,6 +140,8 @@ function Testqiao_em_han001_liuxie:testZhuanpengPayBranchNullifiesRealSlash()
   lu.assertEquals(invokeRequests, 0)
   lu.assertEquals(lord.hp, lord.maxHp, "普通分支付牌后杀应无效")
   lu.assertTrue(table.contains(attacker:getCardIds("he"), pay.id), "应交给使用者一张牌")
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(pay.id, Card.PlayerHand, Card.PlayerHand, { lord, attacker })
 end
 
 local function checkReverseGift(redirectSword)
@@ -187,6 +189,8 @@ local function checkReverseGift(redirectSword)
     lu.assertEquals(lord.hp, lord.maxHp, "反向交牌未送达，【杀】应无效")
   else
     lu.assertEquals(lord.hp, lord.maxHp - 1, "使用者实际交牌后，【杀】继续生效")
+    local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+    assertMoveViews(gift.id, Card.PlayerHand, Card.PlayerHand, { attacker, lord })
   end
 end
 

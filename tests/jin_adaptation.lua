@@ -131,28 +131,83 @@ function Testqiao_jin_adaptation:testLateIgnoreTokenAfterPrepareIsReadByResolve(
 end
 
 -- 通法：同势力使用者交给贾充一张牌，令牌只令本次一个未满足条目成立。
-function Testqiao_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
+local function checkTongfaFromAnotherPlayer(shown, fromEquip)
   local room = prepare("qiao_heg__jin004")
   local jiaChong, user, target = p1(), p2(), p3()
-  local gift = give(room, user, { { "qiao__peach" } })[1]
-  inRoom(function() user.hp = 2 end)
+  local gift = fromEquip and addEquip(room, user, "qiao__crossbow") or give(room, user, { { "qiao__peach" } })[1]
+  inRoom(function()
+    user.hp = 2
+    if not shown then
+      jiaChong:hideGeneral(false)
+      jiaChong:prelightSkill(TONGFA, true)
+    end
+  end)
   local usedCard = Fk:cloneCard("qiao__slash")
   adaptation().setCardEntries(usedCard, {
     { id = "tongfa_canqu", condition = "canqu", effect = "draw" },
   })
 
+  local payer
   skill_test.withSkillRequests(room, TONGFA, {
-    askToCards = function() return { gift } end,
+    askToCards = function(self, who)
+      payer = who.id
+      return { gift }
+    end,
   }, function()
     runTurnStart(room, user, function()
       room:useCard { from = user, tos = { target }, card = usedCard }
     end)
   end)
 
-  -- 初始 1 张：用虚拟杀不耗手牌，交出后 0，令牌令残躯摸 1。
+  -- 交牌后令牌令残躯摸一张。贾充暗置时则保留原有手牌。
   lu.assertEquals(#user:getCardIds("h"), 1)
-  lu.assertTrue(table.contains(jiaChong:getCardIds("h"), gift))
+  lu.assertEquals(payer, shown and user.id or nil)
+  lu.assertEquals(table.contains(jiaChong:getCardIds("h"), gift), shown)
+  if shown then
+    local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+    assertMoveViews(gift, fromEquip and Card.PlayerEquip or Card.PlayerHand, Card.PlayerHand,
+      fromEquip and room.players or { user, jiaChong })
+  end
+  lu.assertEquals(user:usedSkillTimes(TONGFA, Player.HistoryGame), shown and 1 or 0)
+  lu.assertEquals(jiaChong:usedSkillTimes(TONGFA, Player.HistoryGame), 0)
+  lu.assertEquals(jiaChong:hasShownSkill(TONGFA), shown)
+end
+
+function Testqiao_jin_adaptation:testTongfaPaysThenOneEntryTriggers()
+  checkTongfaFromAnotherPlayer(true)
+end
+
+function Testqiao_jin_adaptation:testTongfaEquipmentPaymentVisibleToAll()
+  checkTongfaFromAnotherPlayer(true, true)
+end
+
+function Testqiao_jin_adaptation:testTongfaOtherUserCannotRevealJiaChong()
+  checkTongfaFromAnotherPlayer(false)
+end
+
+function Testqiao_jin_adaptation:testTongfaOwnerCanRevealByPayingForOwnUse()
+  local room = prepare("qiao_heg__jin004")
+  local jiaChong, target = p1(), p3()
+  local cost = give(room, jiaChong, { { "qiao__peach" } })[1]
+  inRoom(function()
+    jiaChong:hideGeneral(false)
+    jiaChong:prelightSkill(TONGFA, true)
+    jiaChong.hp = 2
+  end)
+  local usedCard = Fk:cloneCard("qiao__slash")
+  adaptation().setCardEntries(usedCard, {
+    { id = "tongfa_self_canqu", condition = "canqu", effect = "draw" },
+  })
+
+  FkTest.setNextReplies(jiaChong, { FkTest.ReplyDiscard({ cost }) })
+  runTurnStart(room, jiaChong, function()
+    room:useCard { from = jiaChong, tos = { target }, card = usedCard }
+  end)
+
+  lu.assertEquals(room:getCardArea(cost), Card.DiscardPile)
+  lu.assertEquals(#jiaChong:getCardIds("h"), 1)
   lu.assertEquals(jiaChong:usedSkillTimes(TONGFA, Player.HistoryGame), 1)
+  lu.assertTrue(jiaChong:hasShownSkill(TONGFA))
 end
 
 -- 乘流：伤害牌在本次使用中附富甲条目并改为雷电伤害，结算后可横置实际受伤者。

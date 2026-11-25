@@ -6,6 +6,7 @@
 --   python scripts/test.py --file tests/wu_phases.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
+local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 
 local KEJI = "qiao__skill_wu003_1"
@@ -261,16 +262,23 @@ function Testqiao_wu_phases:testLiuliTransfersSlashToAnotherTarget()
   local cost = give(p1, "qiao_test__blank_basic", Card.Spade)
   give(p1, "qiao_test__blank_basic", Card.Heart)
   local slash = give(p2, "qiao__slash", Card.Spade)
-  FkTest.setNextReplies(p1, { FkTest.ReplyUseSkill("#qiao__skill_wu006_2_select", { near }, { cost }) })
-  inRoom(function()
-    room().current = p2
-    p2.phase = Player.Play
-    room():useCard(UseCardData:new {
-      from = p2,
-      tos = { p1 },
-      card = Fk:getCardById(slash),
-      extra_data = {},
-    })
+  skill_test.withSkillRequests(room(), "#qiao__skill_wu006_2_select", {
+    askToUseActiveSkill = function(self, who, params, original)
+      local reply = client_room.confirmSelection(self, who, params, { cost }, { near })
+      FkTest.setNextReplies(who, { reply })
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function()
+      room().current = p2
+      p2.phase = Player.Play
+      room():useCard(UseCardData:new {
+        from = p2,
+        tos = { p1 },
+        card = Fk:getCardById(slash),
+        extra_data = {},
+      })
+    end)
   end)
   lu.assertEquals(p1.hp, p1.maxHp)
   lu.assertEquals(near.hp, near.maxHp - 1)

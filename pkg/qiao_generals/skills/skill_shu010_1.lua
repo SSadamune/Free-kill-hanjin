@@ -15,7 +15,8 @@ local RECAST = "qiao__skill_shu010_1_recast"
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = IRON_CHAIN,
+  pattern = "iron_chain|.|.|.|" .. IRON_CHAIN,
+  enabled_at_response = function(self, player, response) return not response end,
   prompt = "#qiao__skill_shu010_1-prompt",
   handly_pile = true,
   filter_pattern = {

@@ -37,7 +37,7 @@ skill:addEffect(fk.TurnEnd, {
             }
           end
         elseif #ids > 0 then
-          room:obtainCard(to, ids, true, fk.ReasonPrey, nil,
+          room:obtainCard(to, ids, false, fk.ReasonPrey, nil,
             "qiao__skill_wu020_2")
         end
       end

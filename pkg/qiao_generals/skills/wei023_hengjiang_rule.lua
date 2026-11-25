@@ -1,7 +1,4 @@
 local skill=fk.CreateSkill{name="qiao__wei023_hengjiang_rule"}
-skill:addEffect("maxcards",{
- correct_func=function(self,player) return -(player:getMark("qiao_hengjiang_penalty-turn") or 0) end,
-})
 skill:addEffect(fk.EventPhaseEnd,{
  global=true,
  can_trigger=function(self,event,target,player,data)

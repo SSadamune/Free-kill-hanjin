@@ -328,6 +328,64 @@ function Testqiao_qun_cards:testXiaomengWithPhysicalHandDuelAndPublicDifferentKi
   lu.assertEquals(extra.hp, extra.maxHp - 1)
 end
 
+function Testqiao_qun_cards:testXiaomengWithoutExtraTargetCanOnlyCancel()
+  local user, original, hidden = p(1), p(2), p(3)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), user, {
+      main = "qiao_heg__qun002", deputy = user.deputyGeneral, kingdom = "qun",
+    })
+    room():setCurrent(user)
+    user.phase = Player.Play
+  end)
+  setKingdom(original, "wei")
+  setKingdom(hidden, "unknown")
+  for i = 1, 8 do clearCards(p(i)) end
+  local duel = give(user, "qiao__duel", Card.Spade, 1)
+  local hp = original.hp
+
+  local sentTargets, okEnabled, cancelEnabled, reply
+  skill_test.withSkillRequests(room(), "choose_players_skill", {
+    askToUseActiveSkill = function(self, chooser, params, ask)
+      if params.extra_data.skillName == XIAOMENG then
+        sentTargets = params.extra_data.targets
+        client_room.run(self, function(clientPlayers)
+          local board = Fk:getBoardGame(self:getSettings("gameMode"))
+          local client = board.client_klass:new(ClientInstance.client)
+          local handler = client.request_handlers.AskForUseActiveSkill:new(clientPlayers[chooser.seat], {
+            params.skill_name, params.prompt, params.cancelable, params.extra_data,
+          })
+          local skill = Fk.skills[params.skill_name]
+          local extraData, notify = skill._extra_data, ClientInstance.notifyUI
+          skill._extra_data = params.extra_data
+          ClientInstance.notifyUI = function(_, command, data)
+            if command == "ReplyToServer" then reply = data end
+          end
+          local ok, err = pcall(function()
+            handler:setup()
+            local buttons = handler.scene:getAllItems("Button")
+            okEnabled, cancelEnabled = buttons.OK.enabled, buttons.Cancel.enabled
+            handler:update("Button", "Cancel", "click", {})
+            handler:_finish()
+          end)
+          skill._extra_data, ClientInstance.notifyUI = extraData, notify
+          if not ok then error(err, 0) end
+        end)
+        if reply then FkTest.setNextReplies(chooser, { reply }) end
+      end
+      return ask(self, chooser, params)
+    end,
+  }, function()
+    inRoom(function() support.playCard(room(), user, Fk:getCardById(duel), { original }) end)
+  end)
+
+  lu.assertEquals(sentTargets, {})
+  lu.assertFalse(okEnabled)
+  lu.assertTrue(cancelEnabled)
+  lu.assertEquals(reply, "__cancel")
+  lu.assertEquals(user:usedSkillTimes(XIAOMENG, Player.HistoryTurn), 0)
+  lu.assertEquals(original.hp, hp - 1)
+end
+
 -- 双雄：真实摸牌阶段结束弃红牌，本回合将黑色牌当【决斗】使用；决斗令自己
 -- 受到伤害后，结束阶段收回该伤害牌的实体牌。覆盖转化权限与独立收牌。
 function Testqiao_qun_cards:testShuangxiongConvertDuelAndRetrieveDamageCard()

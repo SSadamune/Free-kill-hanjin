@@ -246,6 +246,61 @@ function Testqiao_jin_sources:testFengwuFreeUseHidesPassiveCardsAndRejectsInject
   end)
 end
 
+local function checkFengwuSlashQuota(ordinaryFirst)
+  local room = prepare("qiao_heg__jin016")
+  local owner, target = p1(), p2()
+  local skillName = "qiao__skill_jin016_2"
+  local ordinary, extra = table.unpack(give(room, owner, {
+    { "qiao__slash", Card.Spade, 5 }, { "qiao__slash", Card.Heart, 7 },
+  }))
+  local selectable
+  local probe = fk.CreateSkill { name = "#qiao_test_fengwu_slash_request" }
+  probe:addEffect(fk.AskForCardUse, {
+    global = true,
+    can_refresh = function(self, event, who, player, data)
+      return who == owner and player == owner and data.skillName == skillName
+    end,
+    on_refresh = function(self, event, who, player, data)
+      withClientRoom(room, function(clients)
+        local handler = ReqUseCard:new(clients[1], { nil, data.pattern, "", true, data.extraData })
+        handler:setup()
+        selectable = handler:cardValidity(extra)
+        handler:_finish()
+      end)
+    end,
+  })
+  inRoom(function()
+    room:addSkill(probe:createSkill())
+    room.current, owner.phase = owner, Player.Play
+    target.hp = 4
+    if ordinaryFirst then support.playCard(room, owner, Fk:getCardById(ordinary), { target }) end
+  end)
+  FkTest.setNextReplies(owner, { FkTest.ReplyCard(Fk:getCardById(extra), { target }) })
+  inRoom(function() room:handleUseCardReply(owner, FkTest.ReplyUseSkill(skillName, { owner }, {})) end)
+  lu.assertTrue(selectable)
+  lu.assertFalse(table.contains(owner:getCardIds("h"), extra))
+  lu.assertEquals(owner:usedCardTimes("slash", Player.HistoryPhase), ordinaryFirst and 1 or 0)
+  if not ordinaryFirst then
+    withClientRoom(room, function(clients)
+      local handler = ReqPlayCard:new(clients[1])
+      handler:setup()
+      lu.assertTrue(handler:cardValidity(ordinary))
+      handler:_finish()
+    end)
+    inRoom(function() support.playCard(room, owner, Fk:getCardById(ordinary), { target }) end)
+  end
+  lu.assertEquals(owner:usedCardTimes("slash", Player.HistoryPhase), 1)
+  lu.assertEquals(target.hp, 2)
+end
+
+function Testqiao_jin_sources:testFengwuCanUseSlashAfterOrdinarySlash()
+  checkFengwuSlashQuota(true)
+end
+
+function Testqiao_jin_sources:testFengwuSlashLeavesOrdinaryQuotaAvailable()
+  checkFengwuSlashQuota(false)
+end
+
 function Testqiao_jin_sources:testFengwuThirdSuitThenFourthDrawsAndRecovers()
   local room = prepare("qiao_heg__jin016")
   local owner, user, other = p1(), p2(), p3()

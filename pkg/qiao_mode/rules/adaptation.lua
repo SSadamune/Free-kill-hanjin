@@ -339,11 +339,10 @@ local function validSupportCard(player, use, reply)
 end
 
 function A.askForSupport(room, use)
+  -- The shared focus notification names participants. Use public eligibility
+  -- here and check the private card type only in each request and its reply.
   local candidates = table.filter(room:getPresentPlayers(), function(p)
-    return p ~= use.from and not table.contains(use.tos or {}, p)
-      and table.find(p:getCardIds("h"), function(id)
-        return Fk:getCardById(id).type == use.card.type and not p:prohibitDiscard(id)
-      end) ~= nil
+    return p ~= use.from and not table.contains(use.tos or {}, p) and not p:isKongcheng()
   end)
   while #candidates > 0 do
     local req = Request:new(candidates, "AskForUseActiveSkill", 1)
@@ -533,7 +532,10 @@ end })
 -- rules, keeps the current target list/use context, and handles cards whose
 -- main targets own an independent sub target.
 A.registerEffect("add_target", { target_change = true, apply = function(room, use, entry)
-  return ExtraTargets.addTarget(room, use, entry)
+  return ExtraTargets.addTarget(room, use, {
+    target_condition = entry.target_condition,
+    excluded_player_id = entry.support and entry.support.player,
+  })
 end })
 A.registerEffect("remove_target", { target_change = true, apply = function(room, use)
   if use.from.dead or #use.tos == 0 then return false end

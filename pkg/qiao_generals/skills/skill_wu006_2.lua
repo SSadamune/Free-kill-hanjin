@@ -12,6 +12,7 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
+local CardTargetSelection = require "packages.qiao.pkg.qiao_generals.util.card_target_selection"
 
 local function candidates(player, data, excludeIds)
   return table.filter(W.currentRoom(player):getPresentPlayers(), function(p)
@@ -39,23 +40,8 @@ end
 
 local SELECT = "#qiao__skill_wu006_2_select"
 
-local function allows(extra, card, to)
-  local targets = extra and extra.targetsByCard[tostring(card)]
-  return targets ~= nil and (to == nil or table.contains(targets, to.id))
-end
-
-skill:addAuxActiveSkill(SELECT, {
-  card_num = 1,
-  target_num = 1,
+CardTargetSelection.add(skill, SELECT, {
   include_equip = true,
-  card_filter = function(self, player, id, selected, targets)
-    return #selected == 0 and allows(self._extra_data, id, targets[1])
-  end,
-  target_filter = function(self, player, to_select, selected, cards)
-    if #selected > 0 then return false end
-    if #cards == 1 then return allows(self._extra_data, cards[1], to_select) end
-    return self._extra_data ~= nil and table.contains(self._extra_data.targets, to_select.id)
-  end,
 })
 
 skill:addEffect(fk.TargetConfirming, {
@@ -77,14 +63,12 @@ skill:addEffect(fk.TargetConfirming, {
       end
     end
     if next(targetsByCard) == nil then return false end
-    local ok, ret = room:askToUseActiveSkill(player, {
+    local cardId, to = CardTargetSelection.ask(room, player, {
       skill_name = SELECT,
       prompt = "#qiao__skill_wu006_2-invoke",
-      cancelable = true,
       extra_data = { skillName = skill.name, targetsByCard = targetsByCard, targets = targetIds },
     })
-    if not ok or not ret or #ret.cards ~= 1 or #ret.targets ~= 1 then return false end
-    local cardId, to = ret.cards[1], ret.targets[1]
+    if cardId == nil then return false end
     if not table.contains(discardableCards(player), cardId)
       or not table.contains(candidates(player, data, { cardId }), to) then return false end
     event:setCostData(self, { card = cardId, to = to })

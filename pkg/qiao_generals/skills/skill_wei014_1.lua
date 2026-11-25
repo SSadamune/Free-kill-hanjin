@@ -34,7 +34,7 @@ skill:addEffect(fk.Death, {
     if who == nil then return end
     local ids = ownCards(who)
     if #ids > 0 then
-      room:obtainCard(player, ids, true, fk.ReasonPrey, player, skill.name)
+      room:obtainCard(player, ids, false, fk.ReasonPrey, player, skill.name)
     elseif player.hp < player.maxHp then
       room:recover {
         who = player,

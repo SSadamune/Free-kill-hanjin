@@ -182,8 +182,13 @@ function Testqiao_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDamage
   local room = prepare("qiao_heg__jin004")
   local p, source = room.players[1], room.players[2]
   local mine = give(room, p, { { "jink", Card.Heart, 4 } })[1]
-  local slash = give(room, source, { { "slash", Card.Spade, 5 } })[1]
-  inRoom(function() p.hp = 4 end)
+  local slash, weapon = table.unpack(give(room, source, {
+    { "qiao__slash", Card.Spade, 5 }, { "qiao__black_chain", Card.Spade, 13 },
+  }))
+  inRoom(function()
+    p.hp = 4
+    room:moveCardIntoEquip(source, weapon, "test", true, source)
+  end)
 
   FkTest.setNextReplies(p, { FkTest.ReplyDiscard({ mine }), "" })
   inRoom(function()
@@ -197,6 +202,7 @@ function Testqiao_jin_reactive:testBeishiCancelsOnlyTargetAndLosesHpWhenNoDamage
   -- 取消目标并取得原牌材料；后续不使用时仍失去1点体力。
   lu.assertTrue(table.contains(p:getCardIds("h"), slash))
   lu.assertEquals(p.hp, 3)
+  lu.assertFalse(p.chained)
 end
 
 return { name = "qiao_jin_reactive" }

@@ -102,7 +102,7 @@ skill:addEffect("active", {
     local id = picked and picked[1]
     if id == nil or not table.contains(target:getCardIds("he"), id) then return end
     room:moveCardTo({ id }, Card.PlayerHand, player, fk.ReasonGive,
-      skill.name, nil, true, target)
+      skill.name, nil, false, target)
   end,
 })
 

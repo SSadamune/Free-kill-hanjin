@@ -69,6 +69,30 @@ function Testqiao_jin_information:testZhaoranVisibilityAndLostLastSuit()
   lu.assertEquals(p:getMark("@qiao_zhaoran-phase"), "♥")
 end
 
+function Testqiao_jin_information:testSnatchTakesOpenHandCardAfterZhaoranSkillLoss()
+  local room = prepare("qiao_heg__jin003")
+  local source, receiver, viewer = table.unpack(room.players, 1, 3)
+  local peach = give(room, source, { { "qiao__peach", Card.Heart }, { "qiao__jink", Card.Heart } })[1]
+  FkTest.setNextReplies(source, { "1" })
+  inRoom(function()
+    room.logic:trigger(fk.EventPhaseStart, source, { phase = Player.Play })
+    room:handleAddLoseSkills(source, "-" .. ZHAORAN, nil, false, true)
+  end)
+  lu.assertFalse(source:hasSkill(ZHAORAN))
+  lu.assertTrue(viewer:cardVisible(peach))
+  skill_test.withSkillRequests(room, "snatch_skill", {
+    askToChooseCard = function() return peach end,
+  }, function()
+    inRoom(function()
+      room:useCard { from = receiver, tos = { source }, card = Fk:cloneCard("qiao__snatch") }
+    end)
+  end)
+  lu.assertEquals(room:getCardOwner(peach).id, receiver.id)
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(peach, Card.PlayerHand, Card.PlayerHand, room.players)
+  lu.assertFalse(viewer:cardVisible(peach))
+end
+
 function Testqiao_jin_information:testShirenHiddenPickThenDeclareAndRevealOne()
   local room = prepare("qiao_heg__jin007")
   local p, p2, p3, p4 = table.unpack(room.players, 1, 4)
