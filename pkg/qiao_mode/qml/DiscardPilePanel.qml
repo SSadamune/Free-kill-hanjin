@@ -89,7 +89,7 @@ Controls.Popup {
         return { cards: recent.concat(earlier), divider: recent.length };
       }
       cellWidth: width / columns
-      cellHeight: 174
+      cellHeight: 162
       model: sections.cards
       Controls.ScrollBar.vertical: Controls.ScrollBar {}
       delegate: Item {
@@ -129,9 +129,13 @@ Controls.Popup {
             cardScale: Math.min(1, parent.width / 93)
             enabled: false
             showDetail: false
-            dataModel: slot.faceUp
-              ? Ltk.createCardModel(slot.modelData.id, { selectable: true })
-              : coveredCard
+            dataModel: {
+              if (!slot.faceUp) return coveredCard;
+              // Use the same on-card mark renderer as the hand area.
+              const marks = (slot.modelData.marks || "").split(" · ").filter(Boolean)
+                .map(name => ({ name, value: "", origName: "" }));
+              return Ltk.createCardModel(slot.modelData.id, { selectable: true, markVisible: true, marks });
+            }
 
             CardModel { id: coveredCard; known: false; selectable: true }
           }
@@ -141,17 +145,9 @@ Controls.Popup {
             elide: Text.ElideRight
             textFormat: Text.PlainText
             text: slot.faceUp ? slot.modelData.name : "未知牌"
-            color: slot.lord ? "#ffe0a4" : "#fff0d1"
+            color: slot.lord ? "#ffd383" : "#fff0d1"
             font.pixelSize: 15
-          }
-          Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: [slot.lord ? "君主装备" : "", slot.modelData?.marks].filter(Boolean).join(" · ")
-            color: "#d9b98b"
-            font.pixelSize: 12
+            font.bold: slot.lord
           }
         }
         HoverHandler { id: hover; enabled: slot.faceUp; cursorShape: Qt.PointingHandCursor }

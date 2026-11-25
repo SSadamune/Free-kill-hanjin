@@ -227,6 +227,11 @@ def run():
     lord = next(card["name"] for card in initial if card["lord"])
     other = after_take[0]["name"]
     assert {lord, other} <= labels()
+    assert "君主装备" not in labels()
+    titles = {item.property("text"): item for item in visible_items(window.contentItem())
+              if item.property("text") in {lord, other}}
+    assert titles[lord].property("font").bold() and not titles[other].property("font").bold()
+    assert titles[lord].property("color") != titles[other].property("color")
     for card in initial:
         face = next(item for item in visible_items(window.contentItem())
                     if item.objectName() == "discardCardFace"
@@ -268,6 +273,9 @@ def run():
                      and js("dataModel.cardId", item) in club_fours]
     assert len(visible_faces) == 2
     assert all(face.property("suit") == "club" and face.property("number") == 4 for face in visible_faces)
+    for face in visible_faces:
+        mark = next(item for item in visible_items(face) if item.property("text") in {"空巢", "孤军"})
+        assert face.mapFromScene(mark.mapToScene(QPointF())).y() < face.height()
     close_panel()
     print("PASS discard faces: original art, suit, rank, and distinct marks for identical ranks")
 
