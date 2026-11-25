@@ -1,14 +1,14 @@
--- 六势力变包正式数据：6 名普通武将。
+-- 六势力变包正式数据：7 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 6
+M.generalCount = 7
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 11
+M.skillCount = 13
 M.retinueSkillCount = 0
 M.kingdoms = { "han", "wei", "shu", "wu" }
 
@@ -201,6 +201,39 @@ M.generals = {
         text = [==[限定技，出牌阶段，你可以依次移动场上至多三张各不同的装备牌。]==],
         related = false,
         tags = { [==[Limited]==] },
+      },
+    },
+  },
+  {
+    number = [==[WU022]==],
+    id = [==[qiao_heg__wu022]==],
+    name = [==[吕范]==],
+    kingdom = [==[wu]==],
+    title = [==[忠笃亮直]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[君孙策、孙策]==],
+    companionNames = { [==[君孙策]==], [==[孙策]==] },
+    companions = { [==[qiao_heg__wu010]==] },
+    companionsUnresolved = { [==[君孙策]==] },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wu022_1]==],
+        name = [==[调度]==],
+        text = [==[准备阶段，你可以获得或移动与你势力相同的角色装备区一张牌。每回合首次有牌置入每名与你势力相同的角色装备区后，其摸一张牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wu022_2]==],
+        name = [==[典财]==],
+        text = [==[其他角色的出牌阶段结束时，若你此阶段失去过的牌数达到X（X为你的体力值），你可以摸牌至体力上限，然后你可以变更副将。]==],
+        related = false,
+        tags = {  },
       },
     },
   },

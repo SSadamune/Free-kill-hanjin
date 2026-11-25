@@ -124,6 +124,97 @@ function Testqiao_bian_wu_qun_jin:testWu021XuanlueAndYongjinThreeDistinctAndDual
   lu.assertEquals(xuanlueCount, 2, "依次移动凌统自己的两件装备应分别即时触发旋略")
 end
 
+-- WU022 吕范：调度（准备收回/移动 + 同势力每回合首次入装备摸牌）+ 典财（不计判定区 + 摸0张仍可变副将）
+function Testqiao_bian_wu_qun_jin:testWu022DiaoduAndDiancaiZeroDrawStillChanges()
+  local room = FkTest.room
+  local lvfan, ally, foe = p(1), p(2), p(3)
+  local eq1, eq2, eq3, judgeCard
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wu", "wu", "wei", "shu" })
+    skill_test.installDualGenerals(room, lvfan, {
+      main = "qiao_heg__wu022", deputy = "qiao_test__wu_2", kingdom = "wu", hp = 1,
+    })
+    lvfan.maxHp = 3
+    for _, who in ipairs(room.players) do who:throwAllCards("he") end
+    eq1 = room:printCard("qiao__chitu", Card.Heart, 5)
+    eq2 = room:printCard("qiao__eight_diagram", Card.Spade, 2)
+    eq3 = room:printCard("qiao__qinggang_sword", Card.Spade, 6)
+    judgeCard = room:printCard("qiao__indulgence", Card.Heart, 7)
+    room:moveCardTo(eq1, Player.Equip, lvfan, fk.ReasonJustMove, "test", nil, true, lvfan)
+    resetGeneralPool(room, { "qiao_heg__wu001", "qiao_heg__wu002", "qiao_heg__wu003" }, { "wu", "wei", "shu", "han" })
+  end)
+
+  -- 调度效果一：准备阶段选择把自己的 eq1 移动到 ally 装备区；同时触发调度效果二令 ally 首次入装备摸 1 张。
+  local allyHandBefore = #ally:getCardIds("h")
+  skill_test.withSkillRequests(room, "qiao__skill_wu022_1", {
+    askToChoosePlayers = function(self, who, params)
+      if params.prompt == "#qiao__skill_wu022_1-choose" then return { lvfan } end
+      return { ally }
+    end,
+    askToChooseCard = function() return eq1.id end,
+    askToChoice = function() return "#qiao__skill_wu022_1-move" end,
+  }, function()
+    inRoom(function()
+      local turn = GameEvent.Turn:create(TurnData:new(lvfan, "game_rule", {}))
+      function turn:main()
+        lvfan.phase = Player.Start
+        room.logic:trigger(fk.EventPhaseStart, lvfan, PhaseData:new { who = lvfan, phase = Player.Start })
+        -- 同回合 ally 第二次置入装备 eq2 不应再摸牌
+        room:moveCardTo(eq2, Player.Equip, ally, fk.ReasonJustMove, "test", nil, true, ally)
+      end
+      turn:exec()
+    end)
+  end)
+  lu.assertTrue(table.contains(ally:getCardIds("e"), eq1.id))
+  lu.assertEquals(#ally:getCardIds("h"), allyHandBefore + 1, "同势力角色每回合仅首次置入装备区摸 1 张")
+
+  -- 典财：1 体力仅拆判定区牌不触发；再拆 1 张手牌（即使此时手牌数已 >= maxHp 摸 0 张）仍允许发动并变更副将！
+  local diancaiAsked = 0
+  inRoom(function()
+    room:moveCardTo(judgeCard, Player.Judge, lvfan, fk.ReasonJustMove, "test", nil, true, lvfan)
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_wu022_2", {
+    askToSkillInvoke = function() diancaiAsked = diancaiAsked + 1; return true end,
+  }, function()
+    inRoom(function()
+      local phase = GameEvent.Phase:create(PhaseData:new { who = foe, phase = Player.Play })
+      function phase:main()
+        foe.phase = Player.Play
+        room:throwCard({ judgeCard.id }, "test", lvfan, foe)
+      end
+      phase:exec()
+    end)
+  end)
+  lu.assertEquals(diancaiAsked, 0, "仅失去判定区牌不计入典财失牌数")
+
+  inRoom(function()
+    for i = 1, 4 do
+      room:obtainCard(lvfan, room:printCard("qiao__jink", Card.Diamond, i), false, fk.ReasonJustMove)
+    end
+    room:obtainCard(lvfan, eq3, false, fk.ReasonJustMove)
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_wu022_2", {
+    askToSkillInvoke = function() diancaiAsked = diancaiAsked + 1; return true end,
+    askToChoice = function() return "changeDeputy" end,
+    askToCustomDialog = function(self, who, params)
+      return { general = params.component.prop.candidates[1] }
+    end,
+  }, function()
+    inRoom(function()
+      local phase = GameEvent.Phase:create(PhaseData:new { who = foe, phase = Player.Play })
+      function phase:main()
+        foe.phase = Player.Play
+        -- 手牌移入装备区不算失去，另丢弃 1 张手牌算 1 张（满足 hp=1），且剩余手牌 3 >= maxHp 3。
+        room:moveCardTo(eq3, Player.Equip, lvfan, fk.ReasonJustMove, "test", nil, true, lvfan)
+        room:throwCard({ lvfan:getCardIds("h")[1] }, "test", lvfan, foe)
+      end
+      phase:exec()
+    end)
+  end)
+  lu.assertEquals(diancaiAsked, 1, "手牌数已 >= 体力上限时仍允许发动典财")
+  lu.assertNotEquals(lvfan.deputyGeneral, "qiao_test__wu_2", "典财摸 0 张后仍可执行变更副将")
+end
+
 -- 审阅回归（第 9 项）：凌统勇进排除已明置【聚宝】保护的宝物牌，避免无合法装备仍可发动消耗限定技。
 function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   local room = FkTest.room
@@ -148,6 +239,59 @@ function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   end)
   lu.assertFalse(canServer, "场上仅有明置聚宝保护的宝物时勇进不可发动（服务端）")
   lu.assertFalse(canClient, "场上仅有明置聚宝保护的宝物时勇进不可发动（客户端）")
+end
+
+-- 复审回归（第 6 项）：吕范调度排除仅有受【聚宝】保护宝物的君孙权，且混有其他装备时仅保留合法装备。
+function Testqiao_bian_wu_qun_jin:testWu022DiaoduSkipsProtectedTreasureKeepsOtherEquip()
+  local room = FkTest.room
+  local lvfan, lordSun = p(1), p(2)
+  local offeredOnlyTreasure, offeredWithWeapon, offeredFlag = false, false, nil
+  local pearl, sword
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wu", "wu", "shu", "wei" })
+    skill_test.installDualGenerals(room, lvfan, {
+      main = "qiao_heg__wu022", deputy = "qiao_test__wu_2", kingdom = "wu", hp = 4,
+    })
+    skill_test.installDualGenerals(room, lordSun, {
+      main = "qiao_heg__em_wu001", deputy = "qiao_test__wu_2", kingdom = "wu", hp = 4,
+    })
+    for _, who in ipairs(room.players) do who:throwAllCards("e") end
+    pearl = room:printCard("qiao__luminous_pearl", Card.Heart, 5)
+    sword = room:printCard("qiao__qinggang_sword", Card.Spade, 6)
+    room:moveCardTo(pearl, Player.Equip, lordSun, fk.ReasonPut, "test", nil, true, lordSun)
+    lvfan.phase = Player.Start
+
+    -- 仅有受保护宝物时，不询问选择君孙权
+    skill_test.withSkillRequests(room, "qiao__skill_wu022_1", {
+      askToChoosePlayers = function(_, _, params)
+        offeredOnlyTreasure = table.contains(params.targets, lordSun)
+        return {}
+      end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, lvfan, PhaseData:new { who = lvfan, phase = Player.Start })
+    end)
+
+    -- 君孙权同时装有宝物和青釭剑时，允许选君孙权且装备候选仅保留青釭剑
+    room:moveCardTo(sword, Player.Equip, lordSun, fk.ReasonPut, "test", nil, true, lordSun)
+    skill_test.withSkillRequests(room, "qiao__skill_wu022_1", {
+      askToChoosePlayers = function(_, _, params)
+        offeredWithWeapon = table.contains(params.targets, lordSun)
+        return { lordSun }
+      end,
+      askToChooseCard = function(_, _, params)
+        offeredFlag = params.flag
+        return sword.id
+      end,
+      askToChoice = function() return "#qiao__skill_wu022_1-obtain" end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, lvfan, PhaseData:new { who = lvfan, phase = Player.Start })
+    end)
+  end)
+  lu.assertFalse(offeredOnlyTreasure, "君孙权仅有受聚宝保护的宝物时，调度不得提供其为目标")
+  lu.assertTrue(offeredWithWeapon, "君孙权同时有其他合法装备时，调度应允许选择君孙权")
+  lu.assertEquals(type(offeredFlag), "table", "混有受保护宝物时应使用过滤后的装备候选表")
+  lu.assertEquals(offeredFlag.card_data[1][2], { sword.id }, "过滤候选应排除宝物、保留普通武器")
+  lu.assertTrue(table.contains(lvfan:getCardIds("h"), sword.id), "应成功获得合法武器青釭剑")
 end
 
 return { name = "qiao_bian_wu_qun_jin" }
