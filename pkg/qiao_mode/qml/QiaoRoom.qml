@@ -2,8 +2,12 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import Fk
+import LunarLtk
+import LunarLtk.Components as LtkComponents
 import LunarLtk.Pages
+import LunarLtk.Pages.InfoPopups as Info
 import "GuestIllustration.js" as GuestIllustration
+import "SkillReferenceLinks.js" as SkillLinks
 
 Room {
   id: room
@@ -20,6 +24,40 @@ Room {
 
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile {} }
+  Component { id: referencePane; SkillReferencePane {} }
+
+  Connections {
+    target: room.infoPopup
+
+    function onItemChanged() {
+      const item = room.infoPopup.item;
+      if (item instanceof Info.PlayerDetail) {
+        const tabs = SkillLinks.findChild(item, child => child instanceof Controls.SwipeView);
+        const viewport = tabs?.itemAt(0);
+        const text = SkillLinks.findChild(viewport, child => child instanceof LtkComponents.DescriptionText);
+        SkillLinks.replaceText(referencePane, viewport, text, {
+          active: Qt.binding(() => room.visible && room.infoPopup.visible && tabs.currentIndex === 0),
+          rootText: (catalog, theme) => {
+            const id = item.dataModel.playerid;
+            if (id === 0 || id === undefined) return "";
+            return SkillLinks.playerText(catalog, theme, Ltk.getPlayerSkills(id), name => Lua.tr(name),
+              name => Lua.evaluate(`Fk:getDescription(${JSON.stringify(name)})`));
+          },
+        });
+      } else if (item instanceof Info.GeneralDetail) {
+        const text = SkillLinks.findChild(item, child => child instanceof LtkComponents.DescriptionText);
+        const viewport = text?.parent?.parent;
+        if (!(viewport instanceof Flickable)) return;
+        SkillLinks.replaceText(referencePane, viewport, text, {
+          active: Qt.binding(() => room.visible && room.infoPopup.visible),
+          rootText: (catalog, theme) => {
+            const groups = Array.from(item.generals, name => ({ name, detail: Ltk.getGeneralDetail(name) }));
+            return SkillLinks.generalText(catalog, theme, groups, name => Lua.tr(name), true);
+          },
+        });
+      }
+    }
+  }
 
   function refreshPileActions() {
     ++pileActionRevision;
