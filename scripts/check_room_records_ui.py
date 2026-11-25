@@ -180,6 +180,7 @@ def run():
     piles = [s["rows"] for s in samples if s["method"] == "pile"]
     results = [s["rows"] for s in samples if s["method"] == "result"]
     initial = next(rows for rows in piles if len(rows) == 2 and any(c["lord"] for c in rows))
+    separated = next(rows for rows in piles if {c.get("thisTurn") for c in rows} == {True, False})
     same_rank = next(rows for rows in piles if {"空巢", "孤军"} <= {c.get("marks") for c in rows})
     after_take = next(rows for rows in piles if len(rows) == 1)
     empty = next(rows for rows in piles if not rows)
@@ -269,6 +270,25 @@ def run():
     assert all(face.property("suit") == "club" and face.property("number") == 4 for face in visible_faces)
     close_panel()
     print("PASS discard faces: original art, suit, rank, and distinct marks for identical ranks")
+
+    js("pileData = " + json.dumps(separated) + "; pile.open()")
+    QTest.qWait(160)
+    line = next(item for item in visible_items(window.contentItem())
+                if item.objectName() == "discardTurnDivider")
+    faces = {js("dataModel.cardId", item): item for item in visible_items(window.contentItem())
+             if item.objectName() == "discardCardFace"}
+    line_y = line.mapToScene(QPointF()).y()
+    assert len(faces) == len(separated)
+    for card in separated:
+        face = faces[card["id"]]
+        top = face.mapToScene(QPointF()).y()
+        assert line.width() > face.width()
+        assert (top + face.height() < line_y) if card["thisTurn"] else (line_y < top)
+    click(window.findChild(QQuickItem, "lordFilter"))
+    QTest.qWait(80)
+    assert not any(item.objectName() == "discardTurnDivider" for item in visible_items(window.contentItem()))
+    close_panel()
+    print("PASS discard divider: distinct unlabelled rows, hidden when only one group matches")
 
     # Scroll partway through the public pile. Insert a row, then remove the first visible card.
     large = [dict(initial[0], id=100+i) for i in range(60)]

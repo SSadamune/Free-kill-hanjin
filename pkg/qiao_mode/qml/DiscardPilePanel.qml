@@ -16,17 +16,20 @@ Controls.Popup {
     if (!visible) return;
     const atTop = grid.atYBeginning;
     const offset = Math.max(0, grid.contentY - grid.originY);
-    const columns = Math.max(1, Math.round(grid.width / grid.cellWidth));
-    const first = Math.floor(offset / grid.cellHeight) * columns;
-    const old = filtered;
+    const first = Math.floor(offset / grid.cellHeight) * grid.columns;
+    const old = grid.sections.cards;
     cards = Array.from(readCards() || []);
     grid.forceLayout();
     if (atTop || !grid.count) { grid.positionViewAtBeginning(); return; }
-    const indices = new Map(filtered.map((card, i) => [card.id, i]));
+    const indices = new Map();
+    grid.sections.cards.forEach((card, index) => {
+      if (card && typeof card.id === "number") indices.set(card.id, index);
+    });
     let nextOffset = offset;
     for (let i = first; i < old.length; i++) {
-      if (old[i].id === undefined || !indices.has(old[i].id)) continue;
-      const rowChange = Math.floor(indices.get(old[i].id) / columns) - Math.floor(i / columns);
+      const id = old[i]?.id;
+      if (!indices.has(id)) continue;
+      const rowChange = Math.floor(indices.get(id) / grid.columns) - Math.floor(i / grid.columns);
       nextOffset += rowChange * grid.cellHeight;
       break;
     }
@@ -76,23 +79,43 @@ Controls.Popup {
       Layout.fillWidth: true
       Layout.fillHeight: true
       clip: true
-      cellWidth: width / Math.max(1, Math.floor(width / 108))
+      readonly property int columns: Math.max(1, Math.floor(width / 108))
+      readonly property var sections: {
+        const recent = panel.filtered.filter(card => card.thisTurn);
+        const earlier = panel.filtered.filter(card => !card.thisTurn);
+        if (!recent.length || !earlier.length) return { cards: panel.filtered, divider: -1 };
+        // Start the older cards on a new row so the divider spans the whole pile.
+        while (recent.length % columns !== 0) recent.push(null);
+        return { cards: recent.concat(earlier), divider: recent.length };
+      }
+      cellWidth: width / columns
       cellHeight: 174
-      model: panel.filtered
+      model: sections.cards
       Controls.ScrollBar.vertical: Controls.ScrollBar {}
       delegate: Item {
         id: slot
         required property var modelData
-        readonly property bool faceUp: typeof modelData.id === "number"
+        required property int index
+        readonly property bool faceUp: typeof modelData?.id === "number"
+        readonly property bool lord: !!modelData?.lord
         width: grid.cellWidth
         height: grid.cellHeight
+        visible: modelData !== null
 
+        Rectangle {
+          objectName: "discardTurnDivider"
+          visible: slot.index === grid.sections.divider
+          x: 4
+          width: grid.width - 12
+          height: 1
+          color: "#a08057"
+        }
         Rectangle {
           anchors.fill: parent
           anchors.margins: 3
           radius: 5
-          color: hover.hovered ? "#514230" : slot.modelData.lord ? "#493626" : "transparent"
-          border.color: slot.modelData.lord ? "#b58a52" : "transparent"
+          color: hover.hovered ? "#514230" : slot.lord ? "#493626" : "transparent"
+          border.color: slot.lord ? "#b58a52" : "transparent"
         }
         Column {
           anchors.horizontalCenter: parent.horizontalCenter
@@ -118,7 +141,7 @@ Controls.Popup {
             elide: Text.ElideRight
             textFormat: Text.PlainText
             text: slot.faceUp ? slot.modelData.name : "未知牌"
-            color: slot.modelData.lord ? "#ffe0a4" : "#fff0d1"
+            color: slot.lord ? "#ffe0a4" : "#fff0d1"
             font.pixelSize: 15
           }
           Text {
@@ -126,7 +149,7 @@ Controls.Popup {
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
             textFormat: Text.PlainText
-            text: [slot.modelData.lord ? "君主装备" : "", slot.modelData.marks].filter(Boolean).join(" · ")
+            text: [slot.lord ? "君主装备" : "", slot.modelData?.marks].filter(Boolean).join(" · ")
             color: "#d9b98b"
             font.pixelSize: 12
           }

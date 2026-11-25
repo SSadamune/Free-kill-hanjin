@@ -20,8 +20,14 @@ function Testqiao_room_records:testDiscardTracksMovesAndShuffle()
   end)
   FkTest.runInClient(function()
     local cards = Client.discardCardsForDisplay(ClientInstance)
-    lu.assertEquals(cards[1], { id = peach.id, marks = "", name = Fk:translate(peach.name), suit = "diamond", rank = "3", lord = false })
-    lu.assertEquals(cards[2], { id = sword.id, marks = "", name = Fk:translate(sword.name), suit = "heart", rank = "9", lord = true })
+    lu.assertEquals(cards[1], {
+      id = peach.id, marks = "", name = Fk:translate(peach.name), suit = "diamond", rank = "3",
+      lord = false, thisTurn = false,
+    })
+    lu.assertEquals(cards[2], {
+      id = sword.id, marks = "", name = Fk:translate(sword.name), suit = "heart", rank = "9",
+      lord = true, thisTurn = false,
+    })
   end)
   FkTest.runInRoom(function() room:obtainCard(room.players[1], sword, true, fk.ReasonPrey) end)
   FkTest.runInClient(function()
@@ -50,6 +56,48 @@ function Testqiao_room_records:testDiscardDistinguishesBothClubFourSlashes()
     end
     lu.assertTrue(marks["空巢"])
     lu.assertTrue(marks["孤军"])
+  end)
+end
+
+function Testqiao_room_records:testDiscardGroupsByLastArrivalInTheCurrentTurn()
+  local room = FkTest.room
+  local player = room.players[1]
+  local old, reused, fresh, snapshot
+  FkTest.runInRoom(function()
+    old = room:printCard("qiao__chixiao_sword", Card.Heart, 9)
+    reused = room:printCard("qiao__slash", Card.Club, 4)
+    fresh = room:printCard("qiao__jink", Card.Heart, 2)
+    room:moveCardTo({ old.id, reused.id }, Card.DiscardPile, nil, fk.ReasonPut, "test", nil, true)
+
+    local move = fk.CreateSkill { name = "#qiao_test_discard_turn" }
+    move:addEffect(fk.EventPhaseStart, {
+      can_refresh = function(self, event, target, actor)
+        return target == player and actor == player and player.phase == Player.Finish
+          and room:getCardArea(fresh.id) == Card.Void
+      end,
+      on_refresh = function()
+        room:obtainCard(player, reused, true, fk.ReasonPrey)
+        room:moveCardTo({ reused.id, fresh.id }, Card.DiscardPile, nil, fk.ReasonPut, "test", nil, true)
+      end,
+    })
+    room:addSkill(move:createSkill())
+    GameEvent.Turn:create(TurnData:new(player, "game_rule", { Player.Finish })):exec()
+    snapshot = room:serialize(player)
+  end)
+
+  lu.assertEquals(cbor.decode(snapshot.banners).qiao_discard_before_turn, { old.id })
+  FkTest.runInClient(function()
+    local cards = Client.discardCardsForDisplay(ClientInstance)
+    lu.assertEquals(table.map(cards, function(card) return { card.id, card.thisTurn } end),
+      { { fresh.id, true }, { reused.id, true }, { old.id, false } })
+  end)
+
+  FkTest.runInRoom(function()
+    GameEvent.Turn:create(TurnData:new(player, "discard_test_extra_turn", { Player.Finish })):exec()
+  end)
+  FkTest.runInClient(function()
+    local cards = Client.discardCardsForDisplay(ClientInstance)
+    lu.assertEquals(table.map(cards, function(card) return card.thisTurn end), { false, false, false })
   end)
 end
 

@@ -7,7 +7,7 @@ Controls.AbstractButton {
   id: button
   required property int count
   text: "弃牌堆"
-  width: 42
+  width: 50
   height: 46
   padding: 0
   hoverEnabled: true
@@ -17,52 +17,55 @@ Controls.AbstractButton {
   Controls.ToolTip.text: Accessible.name
 
   contentItem: Item {
-    Image {
-      x: 5
-      y: 3
-      width: 27
-      height: 36
-      rotation: -13
-      source: SkinBank.searchBuiltinPic("/image/card/", "card-back")
-    }
-    Rectangle {
-      id: front
-      x: 11
-      y: button.down ? 5 : 3
-      width: 28
-      height: 38
-      radius: 3
-      border.color: button.hovered || button.activeFocus ? "#ffda92" : "#8c6447"
-      gradient: Gradient {
-        GradientStop { position: 0; color: "#ead4a8" }
-        GradientStop { position: 0.43; color: "#b88e66" }
-        GradientStop { position: 1; color: "#74513d" }
-      }
+    Repeater {
+      model: [
+        { x: 5, y: 7, angle: -24, pip: "♠", ink: "#573828" },
+        { x: 12, y: 4, angle: -8, pip: "♥", ink: "#8e4637" },
+        { x: 21, y: 5, angle: 11, pip: "♦", ink: "#8e4637" }
+      ]
       Rectangle {
-        anchors.fill: parent
-        anchors.margins: 2
-        radius: 2
-        color: "transparent"
-        border.color: "#88ffebbf"
-      }
-      Rectangle {
-        x: 5; y: 5; width: 4; height: 4
-        rotation: 45
-        color: "#96674c"
-      }
-      Rectangle {
-        x: front.width - 9; y: front.height - 9; width: 4; height: 4
-        rotation: 45
-        color: "#efcc99"
-      }
-      Text {
-        anchors.centerIn: parent
-        text: button.count
-        color: "#fff4dd"
-        font.family: Config.libianName
-        font.pixelSize: button.count < 100 ? 23 : 17
-        style: Text.Outline
-        styleColor: "#39271d"
+        id: card
+        required property var modelData
+        required property int index
+        x: modelData.x
+        y: modelData.y + (button.down ? 2 : 0)
+        width: 25
+        height: 35
+        radius: 3
+        rotation: modelData.angle
+        border.color: button.hovered || button.activeFocus ? "#e9be7e" : "#8c6447"
+        gradient: Gradient {
+          GradientStop { position: 0; color: "#f3deb2" }
+          GradientStop { position: 0.47; color: "#c9a378" }
+          GradientStop { position: 1; color: "#8e6649" }
+        }
+        Rectangle {
+          anchors.fill: parent
+          anchors.margins: 2
+          radius: 2
+          color: "transparent"
+          border.color: "#88ffebbf"
+        }
+        Text {
+          x: 3
+          y: 1
+          text: card.modelData.pip
+          color: card.modelData.ink
+          font.family: Config.libianName
+          font.pixelSize: 9
+        }
+        Text {
+          anchors.centerIn: parent
+          anchors.verticalCenterOffset: 2
+          visible: card.index === 2
+          rotation: -card.rotation
+          text: button.count
+          color: "#fff4dd"
+          font.family: Config.libianName
+          font.pixelSize: button.count < 100 ? 22 : 15
+          style: Text.Outline
+          styleColor: "#39271d"
+        }
       }
     }
   }

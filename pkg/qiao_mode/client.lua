@@ -398,6 +398,9 @@ function QiaoClient:handleSetBanner(data)
   if data[1] == "all_kingdoms" then
     self:notifyUI("QiaoGuestFactionsChanged", {})
   end
+  if data[1] == "qiao_discard_before_turn" then
+    self:notifyUI("QiaoDiscardChanged", {})
+  end
 end
 
 function QiaoClient:guestIllustrationsEnabled()
@@ -419,9 +422,13 @@ end
 function QiaoClient:discardCardsForDisplay()
   local cards = {}
   local lordEquipment = Fk.packages.qiao_cards.qiao.lordEquipment
+  local beforeTurn = self:getBanner("qiao_discard_before_turn")
+  local older = {}
+  for _, id in ipairs(beforeTurn or {}) do older[id] = true end
   for index = #self.discard_pile, 1, -1 do
     local id = self.discard_pile[index]
     local card = Fk:getCardById(id, true)
+    local thisTurn = beforeTurn ~= nil and not older[id]
     if card and Self:cardVisible(id) then
       local marks = table.map(Adaptation.displayEntries(card), function(entry)
         return Fk:translate("qiao_condition_" .. entry.condition)
@@ -431,9 +438,10 @@ function QiaoClient:discardCardsForDisplay()
         id = id, name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
         marks = table.concat(marks, " · "),
         lord = lordEquipment[card.name] ~= nil,
+        thisTurn = thisTurn,
       })
     else
-      table.insert(cards, { name = Fk:translate("unknown_card") })
+      table.insert(cards, { name = Fk:translate("unknown_card"), thisTurn = thisTurn })
     end
   end
   return cards
