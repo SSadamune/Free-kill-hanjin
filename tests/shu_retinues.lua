@@ -37,35 +37,69 @@ local function teardown() Fk.currentResponsePattern = nil; support.clearRoom() e
 
 Testqiao_shu_retinues = { setup = prepare, tearDown = teardown }
 
-function Testqiao_shu_retinues:testBaimaGainsResponderCardOnJink()
-  local p1, p2 = p(1), p(2)
-  grant(p1, BAIMA)
-  clearCards(p1)
-  clearCards(p2)
-  local jink = give(p1, "qiao__jink", Card.Heart, 3)
-  local steal = give(p2, "qiao__peach", Card.Diamond, 4)
-  local slash = give(p2, "qiao__slash", Card.Spade, 8)
+local function checkBaimaTakingPeach(openHand)
+  local r = room()
+  local observer
+  FkTest.runInClient(function() observer = r:getPlayerById(Self.id) end)
+  local receiver = observer:getNextAlive()
+  local source = receiver:getNextAlive()
+  grant(receiver, BAIMA)
+  clearCards(receiver)
+  clearCards(source)
+  local jink = give(receiver, "qiao__jink", Card.Heart, 3)
+  local peach = give(source, "qiao__peach", Card.Diamond, 4)
+  local slash = give(source, "qiao__slash", Card.Diamond, 8)
+  give(source, "qiao__jink", Card.Diamond, 2) -- 保留同花色，避免引入失去最后一张的后续选择。
   inRoom(function()
-    room().current = p2
-    p2.phase = Player.Play
-    p1.hp = p1.maxHp
+    r.current = source
+    source.phase = Player.Play
   end)
-  FkTest.setNextReplies(p1, { FkTest.ReplyCard(Fk:getCardById(jink)) })
-  skill_test.withSkillRequests(room(), BAIMA, {
-    askToSkillInvoke = function() return true end,
-    askToChooseCards = function(self, player, params, original)
-      if params.skill_name == BAIMA then return { steal } end
-      return original(self, player, params)
-    end,
-  }, function()
-    inRoom(function()
-      room():useCard(UseCardData:new { from = p2, tos = { p1 }, card = Fk:getCardById(slash), extra_data = {} })
+  if openHand then
+    grant(source, "qiao__skill_jin003_1")
+    FkTest.setNextReplies(source, { "1" })
+    inRoom(function() r.logic:trigger(fk.EventPhaseStart, source, { phase = Player.Play }) end)
+  end
+  FkTest.runInClient(function() lu.assertEquals(Self:cardVisible(peach), openHand) end)
+
+  -- 由同一旁观座位接收真实的 MoveCards 和紧接着的战报。
+  local client, face, log = ClientInstance, nil, nil
+  local notify = client.notifyUI
+  client.notifyUI = function(self, command, data)
+    if command == "MoveCards" and data[tostring(peach)] ~= nil then
+      face = data[tostring(peach)]
+    elseif command == "GameLog" and face ~= nil and log == nil then
+      log = data
+    end
+    return notify(self, command, data)
+  end
+  local ok, err = pcall(function()
+    FkTest.setNextReplies(receiver, { FkTest.ReplyCard(Fk:getCardById(jink)) })
+    skill_test.withSkillRequests(r, BAIMA, {
+      askToSkillInvoke = function() return true end,
+      askToChooseCards = function() return { peach } end,
+    }, function()
+      inRoom(function() r:useCard { from = source, tos = { receiver }, card = Fk:getCardById(slash) } end)
     end)
   end)
-  lu.assertEquals(p1.hp, p1.maxHp)
-  lu.assertTrue(table.contains(p1:getCardIds("he"), steal))
+  client.notifyUI = notify
+  if not ok then error(err, 0) end
+  lu.assertEquals(receiver.hp, receiver.maxHp)
+  lu.assertEquals(r:getCardOwner(peach).id, receiver.id)
+  lu.assertEquals(face, openHand)
+  lu.assertNotNil(log)
+  lu.assertEquals(log:find(Fk:getCardById(peach):toLogString(), 1, true) ~= nil, openHand)
+  lu.assertEquals(log:find(Fk:translate("unknown_card"), 1, true) ~= nil, not openHand)
+  FkTest.runInClient(function() lu.assertFalse(Self:cardVisible(peach)) end)
   local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
-  assertMoveViews(steal, Card.PlayerHand, Card.PlayerHand, { p1, p2 })
+  assertMoveViews(peach, Card.PlayerHand, Card.PlayerHand, openHand and r.players or { source, receiver })
+end
+
+function Testqiao_shu_retinues:testBaimaGainsResponderCardOnJink()
+  checkBaimaTakingPeach(false)
+end
+
+function Testqiao_shu_retinues:testBaimaTakesZhaoranPeachInFullView()
+  checkBaimaTakingPeach(true)
 end
 
 function Testqiao_shu_retinues:testXiangbingSlashSpawnsOneNanmanOnDamagedTargets()

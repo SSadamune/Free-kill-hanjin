@@ -187,4 +187,27 @@ function Testqiao_han_retinues:testXiyuanjunRevealsLocksAndSourceObtainsAfterDam
   lu.assertEquals(Fk:getCardById(card):getMark(LOCK), 0)
 end
 
+function Testqiao_han_retinues:testXiyuanjunOnlyRevealsMarkedCardInSameTransfer()
+  local room = FkTest.room
+  local source, receiver = room.players[4], p2()
+  grant(p1(), XY)
+  local cards = setHand(room, source, { { "qiao__peach" }, { "qiao__jink" } })
+  FkTest.setNextReplies(p1(), { FkTest.ReplyChoosePlayer({ source }) })
+  skill_test.withSkillRequests(room, XY, {
+    askToChooseCard = function() return cards[1] end,
+  }, function()
+    inRoom(function()
+      room.current = receiver
+      receiver.phase = Player.Play
+      room.logic:trigger(fk.EventPhaseStart, receiver, { phase = Player.Play })
+    end)
+  end)
+  lu.assertTrue(p3():cardVisible(cards[1]))
+  lu.assertFalse(p3():cardVisible(cards[2]))
+  inRoom(function() room:obtainCard(receiver, cards, false, fk.ReasonGive, source) end)
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(cards[1], Card.PlayerHand, Card.PlayerHand, room.players)
+  assertMoveViews(cards[2], Card.PlayerHand, Card.PlayerHand, { source, receiver })
+end
+
 return { name = "qiao_han_retinues" }
