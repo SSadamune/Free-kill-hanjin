@@ -24,6 +24,33 @@ Room {
   property int ownHiddenGeneralsRevision: 0
   property int skillStatusRevision: 0
 
+  Controls.Button {
+    id: discardButton
+    anchors.top: parent.top
+    anchors.topMargin: 36
+    anchors.right: parent.right
+    anchors.rightMargin: 120
+    z: 10
+    text: "弃牌堆"
+    onClicked: discardPanel.open()
+  }
+
+  DiscardPilePanel {
+    id: discardPanel
+    parent: room
+    readCards: () => JSON.parse(Lua.ev("json.encode(ClientInstance:discardCardsForDisplay())"))
+    onInspect: cardId => room.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "CardDetail"), { cardId })
+  }
+
+  PindianDisplay {
+    id: pindianDisplay
+    x: room.tablePile.x
+    y: room.tablePile.y
+    width: room.tablePile.width
+    z: 100
+    cardPicture: name => SkinBank.getCardPicture(name)
+  }
+
   function ciCardsForDisplay(playerId) {
     room.ciRevision;
     const cards = JSON.parse(Lua.ev(`json.encode(ClientInstance:ciCardsForDisplay(${playerId}))`));
@@ -248,6 +275,7 @@ Room {
     function onCardsMoved() {
       ++room.skillStatusRevision;
       Qt.callLater(room.bindPhotoExtras);
+      if (discardPanel.visible) Qt.callLater(discardPanel.refresh);
     }
     function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
   }
@@ -273,6 +301,12 @@ Room {
     roomGeneralAppearance.watch(room);
     addCallback("QiaoGuestFactionsChanged", () => { ++room.guestFactionsRevision; });
     addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
+    addCallback("QiaoPindianStart", () => {
+      pindianDisplay.clear();
+      App.showToast(Lua.tr("Pindian"));
+    });
+    addCallback("QiaoPindianResult", (_, data) => pindianDisplay.present(data));
+    addCallback("QiaoDiscardChanged", () => { if (discardPanel.visible) Qt.callLater(discardPanel.refresh); });
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
