@@ -377,7 +377,7 @@ function Testmode_rules:testNativeLordConversionDoesNotPreemptQiaoAscension()
   turnStart(p, { { "Cancel" } })
   current.askToOptions = original
   lu.assertEquals(prompts, { {
-    "revealMain:::" .. G.wei_normal.name, "revealDeputy:::" .. G.wei_deputy.name, A.ASCEND_ACCEPT,
+    A.ASCEND_ACCEPT, "qiao_turn_reveal:::" .. G.wei_normal.name, "qiao_turn_reveal_deputy:::" .. G.wei_deputy.name,
   } })
   lu.assertEquals(p.general, "anjiang")
   lu.assertFalse(A.has_lord(current, "wei"))

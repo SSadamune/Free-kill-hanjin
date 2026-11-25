@@ -445,23 +445,6 @@ end
 function M.on_turn_start(room, player)
   if player.dead then return "Cancel" end
   local choices, ascensionChoices = {}, {}
-  local revealMain, revealDeputy
-  if player.general == "anjiang" and not player:prohibitReveal() then
-    local main = M.actual_main(player)
-    if main then
-      revealMain = "revealMain:::" .. main
-      table.insert(choices, revealMain)
-    end
-  end
-  if player.deputyGeneral == "anjiang" and not player:prohibitReveal(true) then
-    local deputy = player:getMark("__heg_deputy")
-    if type(deputy) == "string" and deputy ~= "" then
-      revealDeputy = "revealDeputy:::" .. deputy
-      table.insert(choices, revealDeputy)
-    end
-  end
-  if #choices == 0 then return "Cancel" end
-
   local lord, kingdoms = turnAscensionCandidates(room, player)
   if kingdoms then
     for _, kingdom in ipairs(kingdoms) do
@@ -469,7 +452,26 @@ function M.on_turn_start(room, player)
       table.insert(choices, option)
       ascensionChoices[option] = kingdom
     end
-  elseif revealMain and revealDeputy then
+  end
+
+  local revealMain, revealDeputy
+  if player.general == "anjiang" and not player:prohibitReveal() then
+    local main = M.actual_main(player)
+    if main then
+      revealMain = (lord and "qiao_turn_reveal" or "revealMain") .. ":::" .. main
+      table.insert(choices, revealMain)
+    end
+  end
+  if player.deputyGeneral == "anjiang" and not player:prohibitReveal(true) then
+    local deputy = player:getMark("__heg_deputy")
+    if type(deputy) == "string" and deputy ~= "" then
+      revealDeputy = (lord and "qiao_turn_reveal_deputy" or "revealDeputy") .. ":::" .. deputy
+      table.insert(choices, revealDeputy)
+    end
+  end
+  if #choices == 0 then return "Cancel" end
+
+  if not kingdoms and revealMain and revealDeputy then
     table.insert(choices, "revealAll")
   end
   -- The engine broadcasts skill_name as the focus reason. Always use the

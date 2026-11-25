@@ -136,6 +136,8 @@ Fk:loadTranslationTable {
   [A.RULE_SKILL] = "汉晋升变规则",
   [A.ASCEND_ACCEPT] = "君主升变",
   [A.ASCEND_KINGDOM] = "升变为%arg的君主",
+  ["qiao_turn_reveal"] = "明置%arg",
+  ["qiao_turn_reveal_deputy"] = "明置%arg",
   [A.WILD_ASCEND] = "效忠并加入%arg",
   ["#QiaoSecondLordSuccession"] = "君主死亡：你的主将可继位为君主，是否升变？",
   ["#QiaoWildAllegiance"] = "野心家效忠：你的主将可升变为效忠版，是否升变？",

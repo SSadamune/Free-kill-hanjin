@@ -66,8 +66,10 @@ end
 
 function Testsecond_lord:testAscensionAndRevealUseOneTurnStartRequest()
   local actor = player(1)
-  local deputy = "revealDeputy:::" .. G.wei_deputy.name
-  local main = "revealMain:::" .. G.wei_normal.name
+  local deputy = "qiao_turn_reveal_deputy:::" .. G.wei_deputy.name
+  local main = "qiao_turn_reveal:::" .. G.wei_normal.name
+  lu.assertEquals(Fk:translate("qiao_turn_reveal"), "明置%arg")
+  lu.assertEquals(Fk:translate("qiao_turn_reveal_deputy"), "明置%arg")
   FkTest.runInRoom(function() hidden(actor, G.wei_normal.name, G.wei_deputy.name, "wei") end)
   local asks = {}
   FkTest.setRoomBreakpoint(actor, "AskForOptions", function(data)
@@ -76,13 +78,13 @@ function Testsecond_lord:testAscensionAndRevealUseOneTurnStartRequest()
   end)
   triggerTurnStart(actor, deputy)
   lu.assertEquals(asks, { {
-    prompt = "#HegRevealGenerals", choices = { main, deputy, A.ASCEND_ACCEPT },
+    prompt = "#HegRevealGenerals", choices = { A.ASCEND_ACCEPT, main, deputy },
   } })
   lu.assertEquals(actor.general, "anjiang")
   lu.assertEquals(actor.deputyGeneral, G.wei_deputy.name)
   triggerTurnStart(actor, main)
   lu.assertEquals(asks[2], {
-    prompt = "#HegRevealGenerals", choices = { main, A.ASCEND_ACCEPT },
+    prompt = "#HegRevealGenerals", choices = { A.ASCEND_ACCEPT, main },
   })
   lu.assertEquals(#asks, 2)
   lu.assertEquals(actor.general, G.wei_normal.name)
