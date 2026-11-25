@@ -281,14 +281,14 @@ function Testqiao_adaptation:testNoSupportMeansNoEffect()
   lu.assertFalse(A.getResult(data).triggered)
 end
 
-function Testqiao_adaptation:testSupporterCanBeAddedIfStillLegalAfterCost()
+function Testqiao_adaptation:testOnlyThePaidSupportEntryExcludesItsHelper()
   local room = FkTest.room
-  local player, target, helper = room.players[1], room.players[2], room.players[8]
+  local player, target, helper, other = room.players[1], room.players[2], room.players[8], room.players[3]
   FkTest.runInRoom(function() skill_test.installBlankGenerals(room, "jin") end)
   for _, example in ipairs({
-    { name = "qiao__slash", cost = "qiao__jink", eligible = true },
-    { name = "qiao__fire_attack", cost = "qiao__duel", eligible = false },
-    { name = "qiao__fire_attack", cost = "qiao__duel", keepCard = true, eligible = true },
+    { name = "qiao__slash", cost = "qiao__jink", requests = {} },
+    { name = "qiao__fire_attack", cost = "qiao__duel", requests = { false } },
+    { name = "qiao__fire_attack", cost = "qiao__duel", requests = { false, true }, independent = true },
   }) do
     local data, cost
     FkTest.runInRoom(function()
@@ -296,19 +296,33 @@ function Testqiao_adaptation:testSupporterCanBeAddedIfStillLegalAfterCost()
         room:moveCardTo(who:getCardIds("h"), Card.DiscardPile, nil, fk.ReasonJustMove, "test", nil, false)
       end
       local card = Fk:cloneCard(example.name)
-      A.setCardEntries(card, { { condition = "zhuzhan", effect = "add_target" } })
+      local entries = { { condition = "zhuzhan", effect = "add_target" } }
+      if example.independent then table.insert(entries, { condition = "fujia", effect = "add_target" }) end
+      A.setCardEntries(card, entries)
       data = UseCardData:new { from = player, tos = { target }, card = card, extra_data = {} }
       cost = room:printCard(example.cost, Card.Spade, 7)
       room:obtainCard(helper, cost, false, fk.ReasonJustMove)
-      if example.keepCard then
-        room:obtainCard(helper, room:printCard("qiao__jink", Card.Heart, 9), false, fk.ReasonJustMove)
+      if example.name == "qiao__fire_attack" then
+        for _, who in ipairs({ player, helper, other }) do
+          room:obtainCard(who, room:printCard("qiao__jink", Card.Heart, 9), false, fk.ReasonJustMove)
+        end
       end
     end)
+    local requests = {}
     FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({ cost.id }) })
-    FkTest.setNextReplies(player, { FkTest.ReplyChoosePlayer({ helper }) })
-    FkTest.runInRoom(function() A.prepare(room, data); A.resolve(room, data) end)
-    lu.assertEquals(A.getResult(data).entries[1].support.player, helper.id)
-    lu.assertEquals(table.contains(data.tos, helper), example.eligible)
+    skill_test.withSkillRequests(room, "#qiao_adaptation_rule", {
+      askToChoosePlayers = function(self, who, params)
+        table.insert(requests, table.contains(params.targets, helper))
+        return { helper }
+      end,
+    }, function()
+      FkTest.runInRoom(function() A.prepare(room, data); A.resolve(room, data) end)
+    end)
+    local result = A.getResult(data)
+    lu.assertEquals(requests, example.requests)
+    lu.assertEquals(result.entries[1].support.player, helper.id)
+    lu.assertFalse(result.entries[1].triggered)
+    lu.assertEquals(table.contains(data.tos, helper), example.independent == true)
   end
 end
 

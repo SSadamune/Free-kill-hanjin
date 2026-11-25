@@ -532,7 +532,10 @@ end })
 -- rules, keeps the current target list/use context, and handles cards whose
 -- main targets own an independent sub target.
 A.registerEffect("add_target", { target_change = true, apply = function(room, use, entry)
-  return ExtraTargets.addTarget(room, use, entry)
+  return ExtraTargets.addTarget(room, use, {
+    target_condition = entry.target_condition,
+    excluded_player_id = entry.support and entry.support.player,
+  })
 end })
 A.registerEffect("remove_target", { target_change = true, apply = function(room, use)
   if use.from.dead or #use.tos == 0 then return false end

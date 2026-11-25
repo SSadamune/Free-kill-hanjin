@@ -1,5 +1,6 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local CardData = require "packages.qiao.pkg.qiao_cards.data.cards"
 local DEFAULT_KINGDOMS = { "han", "han", "wei", "wei", "shu", "shu", "wu", "wu" }
@@ -252,6 +253,55 @@ function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCar
   lu.assertFalse(table.contains(handAfter, top2))
   lu.assertEquals(bottom, top2)
   lu.assertFalse(A.isAdaptationCard(c))
+end
+
+function Testqiao_card_reuse:testUnexpectationExcludesItsSupporterFromTheClientRequest()
+  local room = FkTest.room
+  local user, target, helper, other = table.unpack(room.players, 1, 4)
+  local useCard = card("qiao__unexpectation", Card.Heart, 3)
+  local cost = card("qiao__dismantlement")
+  local revealed = {}
+  local useData
+  local asked = false
+  FkTest.runInRoom(function()
+    clearAllAreas(room)
+    give(room, user, useCard)
+    give(room, helper, cost)
+    -- 助战者弃牌后仍有手牌，本来符合出其不意的牌面目标条件。
+    give(room, helper, room:printCard("qiao__jink", Card.Heart, 8))
+    for _, who in ipairs({ target, other }) do
+      give(room, who, room:printCard("qiao__jink", Card.Heart, 9))
+    end
+  end)
+  FkTest.setNextReplies(helper, { FkTest.ReplyDiscard({ cost.id }) })
+  skill_test.withSkillRequests(room, "choose_players_skill", {
+    askToUseActiveSkill = function(self, who, params, ask)
+      if params.prompt == "#qiao_adaptation_add_target" then
+        asked = true
+        lu.assertEquals(#helper:getCardIds("h"), 1)
+        lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+        lu.assertEquals(params.extra_data.targets, { other.id })
+        local reply = client_room.confirmSelection(room, who, params, {}, { other }, function(handler)
+          lu.assertFalse(handler:targetValidity(helper.id))
+        end)
+        FkTest.setNextReplies(who, { reply })
+      end
+      return ask(self, who, params)
+    end,
+  }, function()
+    skill_test.withSkillRequests(room, "qiao__unexpectation_skill", {
+      askToChooseCard = function(self, who, params)
+        table.insert(revealed, params.target.id)
+        return params.target:getCardIds("h")[1]
+      end,
+    }, function()
+      FkTest.runInRoom(function() useData = use(room, user, { target }, useCard) end)
+    end)
+  end)
+  lu.assertTrue(asked)
+  lu.assertEquals(A.getResult(useData).entries[1].support.player, helper.id)
+  lu.assertEquals(table.map(useData.tos, Util.IdMapper), { target.id, other.id })
+  lu.assertEquals(revealed, { target.id, other.id })
 end
 
 function Testqiao_card_reuse:testChasingNearRealSupportAtDistanceOneDiscardsThenHasNothingToObtain()
