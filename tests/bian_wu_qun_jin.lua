@@ -304,6 +304,71 @@ function Testqiao_bian_wu_qun_jin:testJin018HuruSelfDamageAndWuduTurnEndSkip()
   lu.assertEquals(chenqian.hp, selfHpBefore, "自伤展示两张同类别基本牌应将 1 点伤害减为 0")
 end
 
+-- JIN020 荀勖：拨律（覆写多条目应变条件 + 重复覆盖 + 跨回合消耗）+ 应政（同势力自选交牌 + 触发应变由荀勖令变副将）
+function Testqiao_bian_wu_qun_jin:testJin020YingzhengAndBoluOverrideAllEntries()
+  local room = FkTest.room
+  local xunxu, ally, foe = p(1), p(2), p(3)
+  local heartCard, spadeCard, adaptSlash
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "jin", "jin", "wei", "wu" })
+    skill_test.installDualGenerals(room, xunxu, {
+      main = "qiao_heg__jin020", deputy = "qiao_test__jin_2", kingdom = "jin", hp = 3,
+    })
+    ally.hp = 1 -- 满足残躯（恰好 1 体力）
+    xunxu:throwAllCards("he")
+    ally:throwAllCards("he")
+    foe:throwAllCards("he")
+    spadeCard = room:printCard("qiao__jink", Card.Spade, 2)
+    heartCard = room:printCard("qiao__jink", Card.Heart, 3)
+    adaptSlash = room:printCard("qiao__slash", Card.Club, 7)
+    -- 给杀挂两条原条件均不满足的应变条目（原条件：空巢+孤军），验证拨律红桃（残躯）一次性全部改写！
+    A.setCardEntries(adaptSlash, {
+      { condition = "kongchao", effect = "draw" },
+      { condition = "gujun", effect = "damage" },
+    })
+    room:obtainCard(xunxu, { spadeCard, heartCard }, false, fk.ReasonJustMove)
+    room:obtainCard(ally, { adaptSlash, room:printCard("qiao__jink", Card.Diamond, 9) }, false, fk.ReasonJustMove)
+    resetGeneralPool(room, { "qiao_heg__jin001", "qiao_heg__jin002", "qiao_heg__jin003" }, { "jin", "wei", "wu", "han" })
+    xunxu.phase = Player.Play
+  end)
+
+  -- 先重铸黑桃（富甲），再重铸红桃（残躯）验证新条件覆盖旧条件。
+  inRoom(function()
+    Fk.skills["qiao__skill_jin020_2"]:onUse(room, { from = xunxu, tos = { ally }, cards = { spadeCard.id } })
+  end)
+  lu.assertEquals(A.boluCondition(ally), "fujia")
+  inRoom(function()
+    Fk.skills["qiao__skill_jin020_2"]:onUse(room, { from = xunxu, tos = { ally }, cards = { heartCard.id } })
+  end)
+  lu.assertEquals(A.boluCondition(ally), "canqu", "未消耗前重复施加拨律应覆盖旧条件")
+
+  -- 跨回合到 ally 回合内使用双条目应变杀：两条均改为残躯并全部触发（摸 1 + 伤害+1），拨律被消耗，
+  -- 且应政由 ally 决定令荀勖获得此杀，再由荀勖决定令 ally 变更副将！
+  local foeHpBefore = foe.hp
+  local allyHandBefore = #ally:getCardIds("h")
+  local invokedBy = {}
+  skill_test.withSkillRequests(room, "qiao__skill_jin020_1", {
+    askToSkillInvoke = function(self, who, params)
+      table.insert(invokedBy, who.id)
+      return true
+    end,
+    askToCustomDialog = function(self, who, params)
+      return { general = params.component.prop.candidates[1] }
+    end,
+  }, function()
+    inRoom(function()
+      room:setCurrent(ally)
+      room:useCard { from = ally, tos = { foe }, card = adaptSlash }
+    end)
+  end)
+  lu.assertNil(A.boluCondition(ally), "使用下一张应变牌后应消耗拨律标记")
+  lu.assertEquals(foe.hp, foeHpBefore - 2, "两条被拨律统一改为残躯的应变条目均应触发（含伤害+1）")
+  lu.assertEquals(#ally:getCardIds("h"), allyHandBefore, "用掉 1 张杀并因第 1 条残躯摸 1 张")
+  lu.assertEquals(invokedBy, { ally.id, xunxu.id }, "应政先由同势力使用者决定给牌，再由荀勖决定是否令其变更副将")
+  lu.assertTrue(table.contains(xunxu:getCardIds("h"), adaptSlash.id), "荀勖应获得该应变牌")
+  lu.assertNotEquals(ally.deputyGeneral, "qiao_test__jin_2", "触发应变后应政应令同势力角色成功变更副将")
+end
+
 -- 审阅回归（第 9 项）：凌统勇进排除已明置【聚宝】保护的宝物牌，避免无合法装备仍可发动消耗限定技。
 function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   local room = FkTest.room

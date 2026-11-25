@@ -1,14 +1,14 @@
--- 六势力变包正式数据：9 名普通武将。
+-- 六势力变包正式数据：10 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 9
+M.generalCount = 10
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 17
+M.skillCount = 19
 M.retinueSkillCount = 0
 M.kingdoms = { "han", "wei", "shu", "wu", "jin" }
 
@@ -298,6 +298,39 @@ M.generals = {
         id = [==[qiao__skill_jin018_2]==],
         name = [==[武督]==],
         text = [==[出牌阶段限一次，你可以弃置一张牌并令一名有手牌的角色选择一项：1.其手牌对所有角色可见直到其回合结束；2.你对其造成1点伤害。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[JIN020]==],
+    id = [==[qiao_heg__jin020]==],
+    name = [==[荀勖]==],
+    kingdom = [==[jin]==],
+    title = [==[翊翊勉事]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[贾充]==],
+    companionNames = { [==[贾充]==] },
+    companions = { [==[qiao_heg__jin004]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_jin020_1]==],
+        name = [==[应政]==],
+        text = [==[与你势力相同的角色回合内限一次，当其使用应变牌后，其可以令你获得此牌，然后若此牌触发应变，你可以令其变更副将（限一次）。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_jin020_2]==],
+        name = [==[拨律]==],
+        text = [==[出牌阶段限一次，你可以选择一名角色并重铸一张手牌，根据花色修改其使用下张应变牌的应变条件：黑桃~富甲；红桃~残躯；梅花~助战；方片~空巢。]==],
         related = false,
         tags = {  },
       },

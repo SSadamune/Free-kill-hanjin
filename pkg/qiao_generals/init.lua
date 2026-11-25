@@ -131,7 +131,7 @@ end
 for _, id in ipairs({
   "qiao_heg__han023", "qiao_heg__han024", "qiao_heg__wei020", "qiao_heg__wei022",
   "qiao_heg__shu020", "qiao_heg__shu022", "qiao_heg__wu021", "qiao_heg__wu022",
-  "qiao_heg__jin018",
+  "qiao_heg__jin018", "qiao_heg__jin020",
   "qiao_heg__em_wu001",
 }) do
   prefixByGeneral[id] = "qiao_prefix_bian"

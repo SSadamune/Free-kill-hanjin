@@ -40,6 +40,7 @@ skill:addEffect(fk.CardUseFinished, {
 
 local translations = {
   ["#qiao_adaptation_rule"] = "汉晋应变",
+  ["@qiao_bolu_condition"] = "拨律",
   ["qiao_condition_fujia"] = "富甲", ["qiao_condition_canqu"] = "残躯",
   ["qiao_condition_zhuzhan"] = "助战", ["qiao_condition_kongchao"] = "空巢", ["qiao_condition_gujun"] = "孤军",
   ["qiao_adaptation_draw"] = "摸一张牌", ["qiao_adaptation_damage"] = "伤害+1",
