@@ -45,6 +45,7 @@ local LordShu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_shu"
 local LordQun = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_qun"
 local LordWu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wu"
 local LordWei = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wei"
+local Bian = require "packages.qiao.pkg.qiao_generals.data.bian"
 
 local sources = {
   { package = zhenshi, data = LordShu },
@@ -63,6 +64,7 @@ local sources = {
   { package = zhenshi, data = Qun },
   { package = zhenshi, data = Wu },
   { package = zhenshi, data = Retinues },
+  { package = zhenshi, data = Bian },
 }
 local packagesById, retinuePackages, Data = {}, {}, {
   generals = {},
@@ -125,8 +127,13 @@ for _, id in ipairs({
 }) do
   prefixByGeneral[id] = "qiao_prefix_shi"
 end
--- 变包君主使用独立角标“变”，不并入阵／势前缀。
-prefixByGeneral["qiao_heg__em_wu001"] = "qiao_prefix_bian"
+-- 变包普通武将与君主使用独立角标“变”，不并入阵／势前缀。
+for _, id in ipairs({
+  "qiao_heg__han023",
+  "qiao_heg__em_wu001",
+}) do
+  prefixByGeneral[id] = "qiao_prefix_bian"
+end
 -- 权包君主使用独立角标“权”。
 prefixByGeneral["qiao_heg__em_wei001"] = "qiao_prefix_quan"
 local prefixByRetinue = {

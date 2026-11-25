@@ -15,9 +15,62 @@ M.EVENT_SKILL = "#new_battle_royal_event&"
 M.UPSTREAM_SKILLS = { "battle_royal&", "new_battle_royal&" }
 M.SOURCE_DEF = "battle_royal"
 M.SOURCE_PREFIX = "battle_royal:"
+M.PERSONAL_TAG = "qiao_personal_battle_royal"
+M.PERSONAL_PREFIX = "battle_royal_personal:"
 
 function M.entered(room)
   return room ~= nil and room:getTag(M.TAG) == true
+end
+
+function M.hasPersonal(room, player)
+  if room == nil or player == nil or type(room.getTag) ~= "function" then return false end
+  local reg = room:getTag(M.PERSONAL_TAG)
+  local mine = type(reg) == "table" and reg[player.id] or nil
+  if type(mine) ~= "table" then return false end
+  for sourceKey in pairs(mine) do
+    if Fk.skills[sourceKey] == nil or player:hasShownSkill(sourceKey) then
+      return true
+    end
+  end
+  return false
+end
+
+function M.inBattleRoyal(room, player)
+  return M.entered(room) or M.hasPersonal(room, player)
+end
+
+--- 同步单个角色的个人鏖战来源（如伍琼&种辑【心疾】），不影响场上其他角色。
+function M.syncPersonal(room, player, sourceKey, active)
+  if room == nil or player == nil or type(room.getTag) ~= "function" then return end
+  assert(type(sourceKey) == "string" and sourceKey ~= "", "Personal battle royal needs a source key")
+  local reg = room:getTag(M.PERSONAL_TAG) or {}
+  local mine = reg[player.id] or {}
+  local uid = M.PERSONAL_PREFIX .. sourceKey .. ":" .. tostring(player.id)
+  if active and not player.dead then
+    mine[sourceKey] = true
+    reg[player.id] = mine
+    room:setTag(M.PERSONAL_TAG, reg)
+    if not player:hasSkill(M.SKILL, true, true) then
+      room:handleAddLoseSkills(player, M.SKILL, nil, false, true)
+    end
+    O.addSource(room, {
+      id = uid,
+      def = M.SOURCE_DEF,
+      holder = player,
+      skill = Fk.skills[sourceKey] and sourceKey or nil,
+      duration = "game",
+      reason = sourceKey,
+    })
+  else
+    mine[sourceKey] = nil
+    if next(mine) == nil then reg[player.id] = nil else reg[player.id] = mine end
+    room:setTag(M.PERSONAL_TAG, reg)
+    O.removeSource(room, uid)
+    if not M.entered(room) and not M.hasPersonal(room, player)
+      and player:hasSkill(M.SKILL, true, true) then
+      room:handleAddLoseSkills(player, "-" .. M.SKILL, nil, false, true)
+    end
+  end
 end
 
 local function isUpstream(name)

@@ -244,6 +244,8 @@ function M.create(base, name)
       self.room:addSkill("qiao__luoshui_rule")
       self.room:addSkill("qiao__removed_player_rule")
       self.room:addSkill("qiao__zhoujun_turn_bonus")
+      self.room:addSkill("qiao__bian_rules")
+      require("packages.qiao.pkg.qiao_mode.rules.only_as").installServer(self.room)
       for _, player in ipairs(self.room.players) do
         player:addFakeSkill("qiao__alliance")
       end
