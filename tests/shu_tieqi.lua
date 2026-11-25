@@ -128,6 +128,22 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   lu.assertTrue(table.contains(owner["qiao_shu_tieqi_private-turn"], "qiao__skill_shu001_1"))
   lu.assertNil(other["qiao_shu_tieqi_private-turn"])
   lu.assertNil(other["qiao_shu_tieqi_public-turn"])
+  inRoom(function()
+    local r, observed = room()
+    local observer = {
+      getId = function() return 999 end,
+      getScreenName = function() return "铁骑旁观" end,
+      doNotify = function(_, command, data)
+        if command == "Observe" then observed = cbor.decode(data) end
+      end,
+    }
+    -- The core uses the first seat as the initial spectator view.
+    r.players[1], r.players[2] = p2, p1
+    local ok, err = pcall(r.tellRoomToObserver, r, observer)
+    r.players[1], r.players[2] = p1, p2
+    if ok then table.remove(r.observers) else error(err, 0) end
+    lu.assertNil(cbor.decode(observed.players[p2.id].mark)["qiao_shu_tieqi_private-turn"])
+  end)
   -- 后续明置仍依据同一位置记录失效。
   inRoom(function() p2.deputyGeneral = "qiao_heg__shu001" end)
   lu.assertFalse(p2:hasSkill("qiao__skill_shu001_1"))

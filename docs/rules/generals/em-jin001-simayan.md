@@ -50,7 +50,7 @@
 
 候选仍须按原文“符合其副将牌面势力”及[客将](../guest-factions.md)／[牌类别](../general-principles.md#武将位置武将牌与士兵牌)核对；本次持有与次数裁定不取消候选条件，也不自动把“赐”对应的牌直接安装为新武将。
 
-持有者在出牌阶段从技能栏发动「赐」，选中一张武将牌后直接点相应的变更或资源按钮。查阅、消费、移去及转交共用赐牌面板，均可点武将牌查阅技能。转交时按势力选中对应的全部武将牌。[实战反馈表第 69、75～77 项](https://docs.qq.com/sheet/DU0pJSW9RY3VESk1E?tab=BB08J2)
+「赐」的操作入口和面板见[实现与验证](../../development/implementation/generals/nu/em-jin001.md#em-jin001-banner)。[实战反馈表第 69、75～77 项](https://docs.qq.com/sheet/DU0pJSW9RY3VESk1E?tab=BB08J2)
 
 ## 採幸
 

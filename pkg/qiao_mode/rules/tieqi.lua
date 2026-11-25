@@ -59,7 +59,11 @@ local function update(room, player, forcePrivate)
   end
   if forcePrivate or not table.isEqual(player.tag.qiaoTieqiHidden or {}, hidden) then
     player.tag.qiaoTieqiHidden = hidden
-    player:doNotify("SetPlayerMark", { player.id, PRIVATE, #hidden > 0 and hidden or 0 })
+    local owner = player._splayer
+    -- ServerPlayer:doNotify also forwards to spectators following this view.
+    if owner:getState() ~= fk.Player_Robot then
+      owner:doNotify("SetPlayerMark", cbor.encode { player.id, PRIVATE, #hidden > 0 and hidden or 0 })
+    end
   end
 end
 
@@ -84,9 +88,10 @@ end
 
 function M.install(room)
   local serialize = room.serialize
+  local observing = false
   function room:serialize(viewer)
     local snapshot = serialize(self, viewer)
-    if viewer and next(viewer:getTableMark(M.POSITIONS)) then
+    if not observing and viewer and next(viewer:getTableMark(M.POSITIONS)) then
       local _, hidden = affected(self, viewer)
       local data = snapshot.players[viewer.id]
       local marks = cbor.decode(data.mark)
@@ -94,6 +99,14 @@ function M.install(room)
       data.mark = cbor.encode(marks)
     end
     return snapshot
+  end
+  -- The core serializes an observed seat as its viewer before setting isObserver.
+  local tellRoomToObserver = room.tellRoomToObserver
+  function room:tellRoomToObserver(observer)
+    observing = true
+    local ok, err = pcall(tellRoomToObserver, self, observer)
+    observing = false
+    if not ok then error(err, 0) end
   end
   local handle = room.handleAddLoseSkills
   function room:handleAddLoseSkills(player, ...)
