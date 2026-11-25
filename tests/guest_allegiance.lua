@@ -496,19 +496,35 @@ function Testqiao_guest_allegiance:testOpeningAscensionHintsFollowTheRoomAndOffe
   local normal, wild = "qiao_heg__jin001", "qiao_test__wild_2"
   local deputy, unrelated = "qiao_test__jin_1", "qiao_test__han_1"
   local lord = assert(Versions.lord_version(normal))
-  for _, settings in ipairs({
-    { qiao_guest_replacement = false, qiao_wild_count = 8 },
-    { qiao_guest_replacement = true, qiao_wild_count = 8 },
-    { qiao_guest_replacement = false, qiao_wild_count = 8, disabledGenerals = { lord } },
+  -- Keep the offered wild general eligible independently of the random pool cap.
+  local otherWild = {}
+  for name, general in pairs(Fk.generals) do
+    if name ~= wild and general.kingdom == "wild" then table.insert(otherWild, name) end
+  end
+  for _, scenario in ipairs({
+    { guestReplacement = false, lordBanned = false },
+    { guestReplacement = true, lordBanned = false },
+    { guestReplacement = false, lordBanned = true },
   }) do
-    local room = create { settings = settings }
+    local disabled = table.simpleClone(otherWild)
+    if scenario.lordBanned then table.insert(disabled, lord) end
+    local room = create { settings = {
+      qiao_guest_replacement = scenario.guestReplacement,
+      qiao_wild_count = 1,
+      disabledGenerals = disabled,
+    } }
     FkTest.runInRoom(function()
+      lu.assertTrue(Fk:canUseGeneral(wild))
       local component = Selection.askData(room, { normal, wild, deputy, unrelated }).component
       local hints = component.model.prop.extraData.ascensions
-      lu.assertEquals(hints[normal], settings.disabledGenerals == nil and true or nil)
+      if scenario.lordBanned then
+        lu.assertNil(hints[normal])
+      else
+        lu.assertTrue(hints[normal])
+      end
       lu.assertTrue(hints[wild])
       lu.assertNil(hints[deputy])
-      lu.assertEquals(component.url, settings.qiao_guest_replacement and Selection.redraw_url or Selection.ascension_url)
+      lu.assertEquals(component.url, scenario.guestReplacement and Selection.redraw_url or Selection.ascension_url)
       local noPartner = Selection.askData(room, { wild, unrelated }).component.model.prop.extraData.ascensions
       lu.assertNil(noPartner[wild])
     end)

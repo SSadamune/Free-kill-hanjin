@@ -110,14 +110,19 @@ local function discardWithHuyuan(room, player, owner, recipient, reply)
       return { owner }
     end,
     askToChooseCard = function(self, who, params, original)
+      lu.assertIs(who, player)
       lu.assertIs(params.target, owner)
       flag = params.flag
       client_room.run(room, function(_, clientRoom)
-        Client.askForCardChosen({
+        local oldSelf = Self
+        Self = clientRoom:getPlayerById(who.id)
+        local ok, err = pcall(Client.askForCardChosen, {
           notifyUI = function(_, command, data)
             if command == "AskForCardChosen" then uiData = data end
           end,
         }, { clientRoom:getPlayerById(params.target.id), params.flag, params.prompt })
+        Self = oldSelf
+        if not ok then error(err, 0) end
       end)
       FkTest.setNextReplies(who, { reply })
       return original(self, who, params)
@@ -153,6 +158,7 @@ function Testqiao_wei018_caohong:testHuyuanUsesNativeZonesAndCanDiscardAnothersP
   local flag, ui = discardWithHuyuan(room, player, owner, player, hand)
   lu.assertEquals(flag, "hej")
   lu.assertEquals(ui.card_data, { { "$Hand", { hand } }, { "$Equip", { equip } }, { "$Judge", { judge } } })
+  lu.assertNotNil(ui.visible_data)
   lu.assertFalse(ui.visible_data[tostring(hand)])
   lu.assertNotEquals(ui.visible_data[tostring(judge)], false)
   lu.assertEquals(room:getCardArea(hand), Card.DiscardPile)
@@ -181,7 +187,7 @@ function Testqiao_wei018_caohong:testHuyuanFiltersOwnCardsWithoutFlatteningZones
 
   local _, ui = discardWithHuyuan(room, player, player, recipient, judge)
   lu.assertEquals(ui.card_data, { { "$Hand", { hand } }, { "$Equip", { equip } }, { "$Judge", { judge } } })
-  lu.assertNotEquals(ui.visible_data[tostring(hand)], false)
+  lu.assertNotEquals((ui.visible_data or {})[tostring(hand)], false)
   lu.assertEquals(room:getCardArea(judge), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(prohibited), Card.PlayerHand)
 end
