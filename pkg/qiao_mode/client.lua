@@ -369,10 +369,24 @@ function QiaoClient:handleSetBanner(data)
   if data[1] == Han.TRICK_BANNER then
     self:notifyUI("QiaoPileActionChanged", {})
   end
+  if data[1] == "all_kingdoms" then
+    self:notifyUI("QiaoGuestFactionsChanged", {})
+  end
 end
 
 function QiaoClient:guestIllustrationsEnabled()
   return self.settings ~= nil and Guest.replacementEnabled(self)
+end
+
+function QiaoClient:guestCardFactions()
+  local allowed = self:getBanner("all_kingdoms")
+  if not self:guestIllustrationsEnabled() or not allowed then return {} end
+  local factions = {}
+  for name, registered in pairs(Guest.guests) do
+    local entry = Guest.resolve(name, allowed)
+    if entry and entry.guest then factions[name] = registered end
+  end
+  return factions
 end
 
 function QiaoClient:mountDistanceLabels()
@@ -470,7 +484,8 @@ function QiaoClient:notifyUI(command, data)
     data = stripRichText(data)
   end
   if command == "CustomDialog" and data.component
-    and data.component.url == "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml"
+    and (data.component.url == "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml"
+      or data.component.url == "packages/hegemony/qml/KnownBothBox.qml")
     and isQiaoMode() then
     data = table.simpleClone(data)
     data.component = table.simpleClone(data.component)

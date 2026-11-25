@@ -228,12 +228,11 @@ GraphicsBox {
       draggable: !root.draggingCard || root.draggingCard === this
 
       readonly property var factions: root.displayFactions(dataModel.name)
-      cardFrontSource: GuestIllustration.picture(dataModel.name,
-        root.dataModel.extraData.guestIllustrations ?? GuestIllustration.enabledInRoom()) ?? dataModel.frontSkin
       readonly property var factionColors: ({ wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
                                                qun: "#92959a", han: "#aa832e", jin: "#845ba8" })
-      GuestFactionBadges {
+      GuestCardAppearance {
         card: card
+        enabledInContext: root.dataModel.extraData.guestIllustrations ?? GuestIllustration.enabledInRoom()
         factions: card.factions
       }
 

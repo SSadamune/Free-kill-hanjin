@@ -13,6 +13,12 @@ Room {
   id: room
   property var mountDistanceLabels: ({})
   property bool guestIllustrations: false
+  property int guestFactionsRevision: 0
+  readonly property var guestCardFactions: {
+    guestFactionsRevision;
+    return guestIllustrations
+      ? JSON.parse(Lua.ev("json.encode(ClientInstance:guestCardFactions())") ?? "{}") : ({});
+  }
   property int pileActionRevision: 0
   property int ciRevision: 0
   property int ownHiddenGeneralsRevision: 0
@@ -27,6 +33,12 @@ Room {
   Component { id: ciPile; CiPile {} }
   Component { id: referencePane; SkillReferencePane {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
+
+  GeneralCardPresentation {
+    id: roomGeneralAppearance
+    enabledInContext: room.guestIllustrations
+    factions: room.guestCardFactions
+  }
 
   function bindOwnHiddenGenerals(item) {
     if (item.dataModel.playerid !== room.dataModel.dashboardId) return;
@@ -62,6 +74,7 @@ Room {
 
     function onItemChanged() {
       const item = room.infoPopup.item;
+      roomGeneralAppearance.watch(item);
       if (item instanceof Info.PlayerDetail) {
         room.bindOwnHiddenGenerals(item);
         const tabs = SkillLinks.findChild(item, child => child instanceof Controls.SwipeView);
@@ -78,12 +91,15 @@ Room {
         });
       } else if (item instanceof Info.GeneralDetail) {
         const text = SkillLinks.findChild(item, child => child instanceof LtkComponents.DescriptionText);
-        const viewport = text?.parent?.parent;
-        if (!(viewport instanceof Flickable)) return;
-        SkillLinks.replaceText(referencePane, viewport, text, {
+        if (!text) return;
+        SkillLinks.replaceText(referencePane, item, text, {
+          width: Qt.binding(() => Math.max(0, item.width - 40)),
+          x: 20,
           active: Qt.binding(() => room.visible && room.infoPopup.visible),
           rootText: (catalog, theme) => {
-            const groups = Array.from(item.generals, name => ({ name, detail: Ltk.getGeneralDetail(name) }));
+            const groups = Array.from(item.generals, name => ({
+              name, detail: Ltk.getGeneralDetail(name), factions: room.guestCardFactions[name],
+            }));
             return SkillLinks.generalText(catalog, theme, groups, name => Lua.tr(name), true);
           },
         });
@@ -178,42 +194,10 @@ Room {
     DualMountRow {}
   }
 
-  Component {
-    id: guestPortrait
-    Image {
-      required property Item portrait
-      required property Item photo
-      required property bool deputy
-      anchors.fill: portrait
-      fillMode: Image.PreserveAspectCrop
-      source: {
-        const name = deputy ? photo.deputyGeneral : photo.general;
-        if (!name || name === "anjiang") return "";
-        const skin = deputy ? photo.deputySkinSource : photo.skinSource;
-        if (!Config.banChangeSkin && skin?.name) return "";
-        return GuestIllustration.picture(name, room.guestIllustrations) ?? "";
-      }
-      visible: status === Image.Ready
-    }
-  }
-
-  function bindGuestPortraits(photo) {
-    if (!photo) return;
-    // Reuse PhotoBase's masked art layer so names, dimming and other UI stay above it.
-    const art = photo.children.find(child => child.maskSource === photo.photoMask)?.source;
-    if (!art || art.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
-    const portraits = art.children.filter(child => child instanceof Image);
-    if (portraits.length !== 2) return;
-    portraits.forEach((portrait, index) => guestPortrait.createObject(art, {
-      objectName: "qiaoGuestPortrait", portrait, photo, deputy: index === 1,
-    }));
-  }
-
   function bindPhotoExtras() {
     guestIllustrations = !!GuestIllustration.enabledInRoom();
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
-      bindGuestPortraits(photo);
       const marks = photo?.picMarkArea;
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {
@@ -270,6 +254,8 @@ Room {
   }
 
   Component.onCompleted: {
+    roomGeneralAppearance.watch(room);
+    addCallback("QiaoGuestFactionsChanged", () => { ++room.guestFactionsRevision; });
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);

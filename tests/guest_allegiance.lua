@@ -84,8 +84,13 @@ function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   lu.assertFalse(client:guestIllustrationsEnabled())
   client.settings = { gameMode = "qiao_heg_mode" }
   lu.assertTrue(client:guestIllustrationsEnabled())
+  client.banners.all_kingdoms = { "wu", "qun", "han", "jin" }
+  local factions = client:guestCardFactions()
+  lu.assertEquals(factions.qiao_heg__shu001, { "han", "qun", "wei", "wu" })
+  lu.assertNil(factions.qiao_heg__han001)
   client.settings.qiao_guest_replacement = false
   lu.assertFalse(client:guestIllustrationsEnabled())
+  lu.assertEquals(client:guestCardFactions(), {})
 end
 
 function Testqiao_guest_allegiance:testSkillGeneralPopupKeepsUtilityReplyModel()
@@ -102,13 +107,19 @@ function Testqiao_guest_allegiance:testSkillGeneralPopupKeepsUtilityReplyModel()
   client.client = {
     notifyUI = function(_, name, payload) command, data = name, payload end,
   }
-  FkTest.runInRoom(function()
-    client:notifyUI("CustomDialog", { component = component })
-  end)
-  lu.assertEquals(command, "CustomDialog")
-  lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml")
-  lu.assertIs(data.component.model, component.model)
-  lu.assertEquals(component.url, "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml")
+  for _, path in ipairs({
+    "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml",
+    "packages/hegemony/qml/KnownBothBox.qml",
+  }) do
+    component.url = path
+    FkTest.runInRoom(function()
+      client:notifyUI("CustomDialog", { component = component })
+    end)
+    lu.assertEquals(command, "CustomDialog")
+    lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml")
+    lu.assertIs(data.component.model, component.model)
+    lu.assertEquals(component.url, path)
+  end
   support.clearRoom()
 end
 

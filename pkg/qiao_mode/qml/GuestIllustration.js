@@ -3,7 +3,7 @@
 .import Fk.Base 1.0 as Fk
 
 function picture(name, guest) {
-  return guest && name ? Fk.SkinBank.getGeneralExtraPic(name, "guest/") : undefined;
+  return guest && name && name !== "anjiang" ? Fk.SkinBank.getGeneralExtraPic(name, "guest/") : undefined;
 }
 
 function enabledInRoom() {

@@ -46,10 +46,10 @@
 
 - `GuestRedrawBox.qml` 读取请求中的 `extraData.guestIllustrations`，候选、确认区与重抽沿用同一张卡片。只要房间开关开启，即使本次没有可重抽的客将也使用这个选将框。`extraData.guestFactions` 提供启用客籍武将的完整登记客籍，供牌面和边框渲染。`GuestFactionBorder.qml` 从上边中点逆时针按周长等分。禁用蜀、群时，刘备显示汉、魏、吴、群。常规配将的 `pairing` 和初始势力选择使用本局允许的客籍。
 - 开启自由选将及客将替换规则时，请求也包含候选外可换入的客将在资料上登记的全部客籍。重抽资格继续来自原始候选。
-- `QiaoRoom.qml` 通过 `QiaoClient:guestIllustrationsEnabled` 读取客户端的房间开关，按 `Photo` 当前显示的主将和副将程序 ID 分别取图。重连时房间摘要恢复设置和武将属性，暗将沿用引擎占位。
-- `GuestIllustration.js` 在选将、局内和图鉴共用 `SkinBank.getGeneralExtraPic(name, "guest/")`。缺图时选将和图鉴沿用原卡面，局内沿用引擎原头像。局内客将图放在 `PhotoBase` 的头像遮罩内，保留分栏和叠加效果。
+- `QiaoRoom.qml` 使用 `GeneralCardPresentation.qml` 处理房间及详情弹窗中创建的原生武将牌、缩略牌、武将图牌面和 `PhotoBase` 头像。房间开关和公开的本局允许势力决定显示。暗将占位与缺图回退沿用原组件，主、副将分别按当前可见身份取图。
+- `GuestIllustration.js` 与 `GuestCardAppearance.qml` 提供选将、对局与图鉴共用的取图和卡面势力徽记。对局的头像图留在原遮罩内，保留皮肤、分栏和叠加效果。私看武将牌沿用 utility 回包，技能详情可以同时查看本次提供的武将及其势力。
 - 房间挂接头像时读取客将插画开关，座位与牌面状态更新后重新检查挂接。主副将已选用的皮肤优先显示。祸水等使用 utility 通用武将选择请求的技能和「赐」共用 `QiaoGeneralCard.qml`，从房间已公开的武将位置取势力和皮肤。缺少场上对应位置时按该武将的资料显示势力。祸水保留上游候选限制与回包；该显示入口只从当前头像读取明置身份。
-- 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。「客将势力」开关读取 `Guest.registeredInPackage` 返回的程序 ID 与势力表。一到两种势力沿用原卡片样式，三种以上由 `GuestFactionBadges.qml` 统一大小并在卡面左上角错行排列。三种近似三角形，四种近似平行四边形，五种按上二下三排列。点击牌面沿用原详情入口。
+- 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。「客将势力」开关对原生图鉴网格和详情预览应用同一份客将登记。登记由武将数据提供，一到两种势力用原卡面样式，三种以上由 `GuestFactionBadges.qml` 错行排列。各包的显示、搜索与原详情入口可继续使用。
 
 **已裁定。** 禁选前候选集 `C` 由房主预先选择，默认六势力；仅作为客将势力出现的势力不参与 `C` 的推断。客将、主势力和效忠版势力都只在 `C` 的允许集内可选；候选外不可选。候选数不超过房主允许上限时无额外禁选；超过上限时按[势力禁选](../../rules/faction-ban.md)的跨局必禁/必留规则随机到上限。
 

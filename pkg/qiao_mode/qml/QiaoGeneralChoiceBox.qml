@@ -39,7 +39,7 @@ GraphicsBox {
       required property string modelData
       generalName: modelData
       scene: root.parent
-      selectable: !root.dataModel.disable_cards.includes(modelData)
+      selectable: root.dataModel.max > 0 && !root.dataModel.disable_cards.includes(modelData)
       autoBack: false
 
       onSelectedChanged: {
@@ -64,6 +64,14 @@ GraphicsBox {
     anchors.bottomMargin: 10
     anchors.horizontalCenter: parent.horizontalCenter
     spacing: 8
+
+    MetroButton {
+      visible: root.dataModel.max === 0 && root.dataModel.cards.length > 0
+      text: Lua.tr("Show General Detail")
+      onClicked: root.parent.showInfoPopup(
+        Qt.createComponent("LunarLtk.Pages.InfoPopups", "GeneralDetail"),
+        { generals: Array.from(root.dataModel.cards) })
+    }
 
     TextField {
       id: search

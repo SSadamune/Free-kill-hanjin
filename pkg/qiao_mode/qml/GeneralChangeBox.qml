@@ -7,7 +7,6 @@ import Fk.Components.Common
 import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Pages.Popups
-import "GuestIllustration.js" as GuestIllustration
 
 GraphicsBox {
   id: root
@@ -94,17 +93,12 @@ GraphicsBox {
         readonly property var factions: root.factionsFor(generalName)
         dataModel: {
           const properties = { heg: true, inPosition: root.isDeputy ? -1 : 1 };
-          if (factions.length > 0) {
-            properties.kingdom = factions[0];
-            properties.subkingdom = factions[1] ?? "";
-          }
           properties.hasCompanion = root.matchesPartner(generalName);
           return Ltk.createGeneralCardModel(generalName, properties);
         }
-        cardFrontSource: GuestIllustration.picture(generalName, root.guestIllustrations) ?? dataModel.frontSkin
-
-        GuestFactionBadges {
+        GuestCardAppearance {
           card: card
+          enabledInContext: root.guestIllustrations
           factions: card.factions
         }
         GuestFactionBorder {

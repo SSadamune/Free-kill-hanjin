@@ -151,7 +151,7 @@ function playerText(catalog, theme, visibleSkills, tr, describe) {
 
 function generalText(catalog, theme, groups, tr, showSummary) {
   const rows = [];
-  for (const { name, detail, title } of groups) {
+  for (const { name, detail, title, factions } of groups) {
     if (showSummary) {
       const hegemony = name.startsWith("hs__") || name.startsWith("ld__") || name.includes("heg__");
       let hp = detail.hp + "/" + detail.maxHp;
@@ -163,7 +163,8 @@ function generalText(catalog, theme, groups, tr, showSummary) {
             : detail.hp / 2;
         }
       }
-      rows.push(escapeText(tr(detail.kingdom) + " " + (title ?? tr(name)) + " " + hp));
+      const kingdoms = (factions?.length ? factions : [detail.kingdom]).map(tr).join("／");
+      rows.push(escapeText(kingdoms + " " + (title ?? tr(name)) + " " + hp));
     }
     if (detail.headnote) rows.push('<font color="lightslategrey">' + tr(detail.headnote) + "</font>");
     if (detail.companions.length > 0) {
