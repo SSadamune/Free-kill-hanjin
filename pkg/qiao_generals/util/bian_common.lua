@@ -1,9 +1,17 @@
 -- 六势力变包共用辅助。
 -- 客户端可达查询统一使用 Fk:currentRoom() 与公开标记，不访问服务端 room tag 或私有字段。
+local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local WuLord = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
 local M = {}
+
+M.FEIXIONG_SKILL = "qiao__retinue_skill_feixiongjun"
+M.LIMITED_RETINUE_MARK = "qiao_bian_retinue_limited"
+
+local function isServerPlayer(player)
+  return player ~= nil and player.room ~= nil and type(player.id) == "number"
+end
 
 ---------------------------------------------------------------------------
 -- 装备移动与双副类别坐骑空栏校验（两端共用）
@@ -83,6 +91,83 @@ function M.movableEquipGroups(one, two, excludedIds, mover)
   collect(two, one)
   return groups
 end
+
+---------------------------------------------------------------------------
+-- 限定翼从（如飞熊军）逐实例整局计次与公开摘要同步
+---------------------------------------------------------------------------
+
+local LIMITED_RETINUE_SKILLS = {
+  [M.FEIXIONG_SKILL] = true,
+}
+
+function M.isLimitedRetinueSkill(skillName)
+  return LIMITED_RETINUE_SKILLS[skillName] == true
+end
+
+function M.publishLimitedRetinues(player)
+  if not isServerPlayer(player) then return end
+  local data = {}
+  for skillName in pairs(LIMITED_RETINUE_SKILLS) do
+    local list = {}
+    for _, instance in ipairs(R.instancesForSkill(player, skillName)) do
+      table.insert(list, instance.uses or 0)
+    end
+    if #list > 0 then data[skillName] = list end
+  end
+  player.room:setPlayerMark(player, M.LIMITED_RETINUE_MARK, next(data) ~= nil and data or 0)
+end
+
+function M.availableLimitedRetinues(player, skillName)
+  if not isServerPlayer(player) then return {} end
+  local result = {}
+  for _, instance in ipairs(R.instancesForSkill(player, skillName)) do
+    if (instance.uses or 0) == 0 then table.insert(result, instance) end
+  end
+  return result
+end
+
+function M.usedLimitedRetinues(player, skillName)
+  if not isServerPlayer(player) then return {} end
+  local result = {}
+  for _, instance in ipairs(R.instancesForSkill(player, skillName)) do
+    if (instance.uses or 0) > 0 then table.insert(result, instance) end
+  end
+  return result
+end
+
+--- 两端共用：是否存在尚未发动过的该限定翼从实例。
+function M.canUseLimitedRetinue(player, skillName)
+  if player == nil then return false end
+  if isServerPlayer(player) then
+    return #M.availableLimitedRetinues(player, skillName) > 0
+  end
+  local total = R.countForSkill(player, skillName)
+  if total <= 0 then return false end
+  local mark = player:getMark(M.LIMITED_RETINUE_MARK)
+  local list = type(mark) == "table" and mark[skillName] or nil
+  for i = 1, total do
+    if (type(list) == "table" and list[i] or 0) == 0 then return true end
+  end
+  return false
+end
+
+function M.spendLimitedRetinue(player, instance, skillName)
+  if not isServerPlayer(player) or instance == nil then return false end
+  R.recordUse(instance)
+  M.publishLimitedRetinues(player)
+  return true
+end
+
+function M.resetOneLimitedRetinue(player, skillName)
+  if not isServerPlayer(player) then return false end
+  local used = M.usedLimitedRetinues(player, skillName)
+  if #used == 0 then return false end
+  used[1].uses = 0
+  M.publishLimitedRetinues(player)
+  return true
+end
+
+R.addChangeListener(function(player) M.publishLimitedRetinues(player) end)
 
 -- 武将交换完成监听：同步伍琼&种辑个人鏖战状态。
 Exchange.addCompletionListener(function(room, context)

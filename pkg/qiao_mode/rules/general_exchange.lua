@@ -512,6 +512,22 @@ function M.recordSkillEffect(player, data)
   end
 end
 
+--- 重置某角色所持技能对应的随牌整局次数账本（供【凶算】等复原限定技使用）。
+function M.resetSkillGameHistory(room, player, skillName)
+  if room == nil or player == nil or type(skillName) ~= "string" then return end
+  local owner = M.skillOwner(player, skillName)
+  if not owner then return end
+  local entry = cardLedger(room, owner, false)
+  if not entry then return end
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local root = sameName.canonicalHistoryKey(skillName)
+  for _, key in ipairs({ root, "#" .. root .. "_main_skill" }) do
+    if entry.history and entry.history[key] then
+      entry.history[key][Player.HistoryGame] = 0
+    end
+  end
+end
+
 --- Reset one engine history scope in every per-card ledger.  The recorder
 -- skill calls this at the same points as `Room:clearHistory`.
 ---@param room Room

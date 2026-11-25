@@ -215,6 +215,126 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduAndDiancaiZeroDrawStillChanges(
   lu.assertNotEquals(lvfan.deputyGeneral, "qiao_test__wu_2", "典财摸 0 张后仍可执行变更副将")
 end
 
+-- QUN022A 李傕：凶算（对自己发动并回合末复原凶算自身循环）+ 挠袭（不同目标复用 / 无新目标禁止发动）
+function Testqiao_bian_wu_qun_jin:testQun022aXiongsuanSelfLoopAndNaoxiDisjointTargets()
+  local room = FkTest.room
+  local lijue, targetA, targetB = p(1), p(2), p(3)
+  local handCard, dismantle, foresight
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, lijue, {
+      main = "qiao_heg__qun022a", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    for _, who in ipairs(room.players) do who:throwAllCards("he") end
+    handCard = room:printCard("qiao__jink", Card.Heart, 2)
+    dismantle = room:printCard("qiao__dismantlement", Card.Spade, 3)
+    foresight = room:printCard("qiao__foresight", Card.Heart, 7)
+    room:obtainCard(lijue, { handCard, dismantle, foresight }, false, fk.ReasonJustMove)
+    room:obtainCard(targetA, room:printCard("qiao__slash", Card.Club, 4), false, fk.ReasonJustMove)
+    room:obtainCard(targetB, room:printCard("qiao__slash", Card.Club, 5), false, fk.ReasonJustMove)
+    lijue.phase = Player.Play
+  end)
+
+  -- 凶算对自己发动：弃 1 手牌、自伤 1 点、摸 3 张，回合结束时复原【凶算】自身。
+  local handBefore = #lijue:getCardIds("h")
+  inRoom(function()
+    lijue:addSkillUseHistory("qiao__skill_qun022a_1", 1)
+    Fk.skills["qiao__skill_qun022a_1"]:onUse(room, {
+      from = lijue, tos = { lijue }, cards = { handCard.id },
+    })
+  end)
+  lu.assertEquals(lijue.hp, 3)
+  lu.assertEquals(#lijue:getCardIds("h"), handBefore - 1 + 3)
+  lu.assertEquals(lijue:usedSkillTimes("qiao__skill_qun022a_1", Player.HistoryGame), 1)
+
+  inRoom(function()
+    room.logic:trigger(fk.TurnEnd, lijue, TurnData:new(lijue, "game_rule", {}))
+  end)
+  lu.assertEquals(lijue:usedSkillTimes("qiao__skill_qun022a_1", Player.HistoryGame), 0,
+    "凶算对自己发动时回合结束应允许复原凶算自身")
+
+  -- 挠袭使用【洞烛先机】（固定目标仅自己）：无不含原目标的新目标，应禁止发动、不扣体力上限。
+  local naoxiAsked = 0
+  skill_test.withSkillRequests(room, "qiao__skill_qun022a_2", {
+    askToSkillInvoke = function() naoxiAsked = naoxiAsked + 1; return true end,
+  }, function()
+    inRoom(function()
+      room:useCard { from = lijue, tos = { lijue }, card = foresight }
+    end)
+  end)
+  lu.assertEquals(naoxiAsked, 0, "固定目标仅自己的洞烛先机无新合法目标，挠袭应禁止发动")
+  lu.assertEquals(lijue.maxHp, 4)
+
+  -- 挠袭使用【过河拆桥】拆 targetA 后，减 1 体力上限视为对 targetB 再用【过河拆桥】（exclusive_targets 不含 targetA）。
+  local observedExclusive
+  skill_test.withSkillRequests(room, "qiao__skill_qun022a_2", {
+    askToSkillInvoke = function() return true end,
+    askToUseVirtualCard = function(self, who, params)
+      observedExclusive = params.extra_data and params.extra_data.exclusive_targets
+      local c = Fk:cloneCard(params.name)
+      c.skillName = params.skill_name
+      self:useCard { from = who, tos = { targetB }, card = c, extraUse = true }
+      return true
+    end,
+  }, function()
+    inRoom(function()
+      room:useCard { from = lijue, tos = { targetA }, card = dismantle }
+    end)
+  end)
+  lu.assertNotNil(observedExclusive)
+  lu.assertFalse(table.contains(observedExclusive, targetA.id), "挠袭新目标不得包含原目标 targetA")
+  lu.assertTrue(table.contains(observedExclusive, targetB.id), "targetB 应为合法新目标")
+  lu.assertEquals(lijue.maxHp, 3, "挠袭发动应减 1 点体力上限")
+  lu.assertEquals(#targetB:getCardIds("h"), 0, "targetB 的手牌应被第二次过河拆桥弃置")
+end
+
+-- 飞熊军翼从：同名两份独立限定次数 + 无视距离依次顺手牵羊和杀 + 凶算可复原飞熊军实例
+function Testqiao_bian_wu_qun_jin:testFeixiongjunMultiInstanceLimitedAndBypassDistance()
+  local room = FkTest.room
+  local holder, farEnemy = p(1), p(4)
+  local enemyCard
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "wu", "shu", "han", "jin", "wei", "wu" })
+    holder.hp = 3
+    farEnemy.hp = 3
+    p(2).hp = 4
+    farEnemy:throwAllCards("he")
+    enemyCard = room:printCard("qiao__peach", Card.Heart, 4)
+    room:obtainCard(farEnemy, enemyCard, false, fk.ReasonJustMove)
+    -- 授予两份独立飞熊军实例
+    Retinues.grant(holder, { general = "qiao_heg__retinue_feixiongjun", skill = Bian.FEIXIONG_SKILL, origin = "granted" })
+    Retinues.grant(holder, { general = "qiao_heg__retinue_feixiongjun", skill = Bian.FEIXIONG_SKILL, origin = "granted" })
+    holder.phase = Player.Play
+  end)
+
+  lu.assertTrue(holder:distanceTo(farEnemy) > 1, "目标距离应大于 1 以验证无视距离")
+  lu.assertTrue(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder))
+  lu.assertTrue(Fk.skills[Bian.FEIXIONG_SKILL]:targetFilter(holder, farEnemy, {}))
+  lu.assertFalse(Fk.skills[Bian.FEIXIONG_SKILL]:targetFilter(holder, p(2), {}), "体力值不同者不合法")
+
+  -- 发动第一份实例：无视距离顺走 enemyCard 并出一张无视距离的杀。
+  inRoom(function()
+    Fk.skills[Bian.FEIXIONG_SKILL]:onUse(room, { from = holder, tos = { farEnemy }, cards = {} })
+  end)
+  lu.assertTrue(table.contains(holder:getCardIds("h"), enemyCard.id), "飞熊军应无视距离顺走目标牌")
+  lu.assertEquals(farEnemy.hp, 2, "飞熊军应无视距离继续对目标使用【杀】造成伤害")
+  lu.assertTrue(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder), "第二份同名飞熊军实例仍应有独立限定机会")
+
+  -- 发动第二份实例（令同体力=2 且目标无牌：跳过顺手牵羊仍出杀）
+  inRoom(function()
+    holder.hp = 2
+    Fk.skills[Bian.FEIXIONG_SKILL]:onUse(room, { from = holder, tos = { farEnemy }, cards = {} })
+  end)
+  lu.assertEquals(farEnemy.hp, 1, "目标无牌时跳过顺手牵羊仍应视为使用【杀】")
+  lu.assertFalse(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder), "两份实例均用尽后按钮不可用")
+
+  -- 验证凶算复位接口可复原一份已用的飞熊军实例
+  inRoom(function()
+    lu.assertTrue(Bian.resetOneLimitedRetinue(holder, Bian.FEIXIONG_SKILL))
+  end)
+  lu.assertTrue(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder), "复原一份实例后飞熊军应再次可用")
+end
+
 -- JIN018 陈骞：忽辱（全权挑牌同花色且同类别双生效 + 自伤不重问）+ 武督（可选自己 + 叠置跳过回合顺延清除）
 function Testqiao_bian_wu_qun_jin:testJin018HuruSelfDamageAndWuduTurnEndSkip()
   local room = FkTest.room
@@ -395,6 +515,91 @@ function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   lu.assertFalse(canClient, "场上仅有明置聚宝保护的宝物时勇进不可发动（客户端）")
 end
 
+-- 审阅回归（第 3、5 项）：挠袭排除被【谦逊】取消的原目标；凶算复原【激诏】【鼎沸】独立已用标记后可实际再次发动。
+function Testqiao_bian_wu_qun_jin:testQun022aNaoxiCancelledTargetAndXiongsuanCustomLimitedReset()
+  local room = FkTest.room
+  local lijue, luxun, other = p(1), p(2), p(3)
+  local allowedTargets
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wu", "wei", "shu" })
+    skill_test.installDualGenerals(room, lijue, {
+      main = "qiao_heg__qun022a", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    skill_test.installDualGenerals(room, luxun, {
+      main = "qiao_heg__wu007", deputy = "qiao_test__wu_2", kingdom = "wu", hp = 3,
+    })
+    local trick = room:printCard("qiao__dismantlement", Card.Spade, 3)
+    room:obtainCard(lijue, trick, false, fk.ReasonJustMove)
+    room:obtainCard(luxun, room:printCard("qiao__slash", Card.Spade, 8), false, fk.ReasonJustMove)
+    room:obtainCard(other, room:printCard("qiao__slash", Card.Club, 8), false, fk.ReasonJustMove)
+    skill_test.withSkillRequests(room, "qiao__skill_qun022a_2", {
+      askToSkillInvoke = function() return true end,
+      askToUseVirtualCard = function(self, who, params)
+        allowedTargets = params.extra_data and params.extra_data.exclusive_targets
+      end,
+    }, function()
+      room:useCard { from = lijue, card = trick, tos = { luxun } }
+    end)
+  end)
+  lu.assertNotNil(allowedTargets)
+  lu.assertFalse(table.contains(allowedTargets, luxun.id), "被谦逊取消的原目标仍不得进入挠袭可选列表")
+  lu.assertTrue(table.contains(allowedTargets, other.id), "未曾指定过的合法角色应仍可选")
+
+  -- 凶算复原君刘备【激诏】与君司马炎【鼎沸】后，两者独立已用标记清零且实际可再次发动
+  local jizhaoRetriggered, dingfeiRetriggered = 0, 0
+  inRoom(function()
+    local lordShu, lordJin = p(2), p(3)
+    skill_test.installDualGenerals(room, lordShu, {
+      main = "qiao_heg__em_shu001", deputy = "qiao_test__shu_2", kingdom = "shu", hp = 4,
+    })
+    skill_test.installDualGenerals(room, lordJin, {
+      main = "qiao_heg__em_jin001", deputy = "qiao_test__jin_2", kingdom = "jin", hp = 4,
+    })
+    lordShu:addSkillUseHistory("qiao__skill_em_shu001_3", 1)
+    room:setPlayerMark(lordShu, "qiao__skill_em_shu001_3-used", 1)
+    lordJin:addSkillUseHistory("qiao__skill_em_jin001_3", 1)
+    room:setPlayerMark(lordJin, "qiao_jin001_dingfei_used", 1)
+    room:setTag("qiao_qun022a_xiongsuan_pending", {
+      { source_id = lijue.id, target_id = lordShu.id },
+      { source_id = lijue.id, target_id = lordJin.id },
+    })
+    room:setCurrent(lijue)
+    room.logic:trigger(fk.TurnEnd, lijue, TurnData:new(lijue, "game_rule", {}))
+
+    lu.assertEquals(lordShu:getMark("qiao__skill_em_shu001_3-used"), 0, "激诏独立已用标记应清零")
+    lu.assertEquals(lordJin:getMark("qiao_jin001_dingfei_used"), 0, "鼎沸独立已用标记应清零")
+
+    -- 实测【激诏】再次进入濒死可实际触发
+    skill_test.withSkillRequests(room, "qiao__skill_em_shu001_3", {
+      askToSkillInvoke = function(self, who, params)
+        if params.prompt == "#qiao__skill_em_shu001_3-invoke" then
+          jizhaoRetriggered = jizhaoRetriggered + 1
+          return true
+        end
+        return false
+      end,
+    }, function()
+      lordShu.hp = 1
+      room:loseHp(lordShu, 1, "test")
+    end)
+
+    -- 实测【鼎沸】结束阶段（晋势力已损体力之和 > 体力之和）可实际再次触发
+    lordJin.maxHp = 4
+    lordJin.hp = 1
+    lordJin.phase = Player.Finish
+    skill_test.withSkillRequests(room, "qiao__skill_em_jin001_3", {
+      askToSkillInvoke = function()
+        dingfeiRetriggered = dingfeiRetriggered + 1
+        return true
+      end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, lordJin, PhaseData:new { who = lordJin, phase = Player.Finish })
+    end)
+  end)
+  lu.assertEquals(jizhaoRetriggered, 1, "凶算复原后君刘备【激诏】应能实际再次发动")
+  lu.assertEquals(dingfeiRetriggered, 1, "凶算复原后君司马炎【鼎沸】应能实际再次发动")
+end
+
 -- 审阅回归（第 12 项）：陈骞忽辱双方各亮一张手牌时合并为单次 fk.CardShown({2}) 且各自牌主准确。
 function Testqiao_bian_wu_qun_jin:testJin018HuruSimultaneousSingleCardShown()
   local room = FkTest.room
@@ -480,6 +685,71 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduSkipsProtectedTreasureKeepsOthe
   lu.assertEquals(type(offeredFlag), "table", "混有受保护宝物时应使用过滤后的装备候选表")
   lu.assertEquals(offeredFlag.card_data[1][2], { sword.id }, "过滤候选应排除宝物、保留普通武器")
   lu.assertTrue(table.contains(lvfan:getCardIds("h"), sword.id), "应成功获得合法武器青釭剑")
+end
+
+-- 复审回归（第 4 项）：挠袭对固定目标牌按完整固定集合判重（有重叠整张禁用，完全不重叠才允许复用）。
+function Testqiao_bian_wu_qun_jin:testQun022aNaoxiCannotSplitFixedTargetsButAllowsDisjoint()
+  local room = FkTest.room
+  local li = p(1)
+  local first = li:getNextAlive()
+  local joining = first:getNextAlive()
+  local promptsOverlap, promptsDisjoint = 0, 0
+  local repeatTargetsDisjoint = {}
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "qun", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, li, {
+      main = "qiao_heg__qun022a", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    room:changeKingdom(first, "wei")
+    room:changeKingdom(joining, "wu")
+    for _, who in ipairs(room.players) do who:throwAllCards("he") end
+    local trick1 = room:printCard("qiao__burning_camps", Card.Club, 11)
+    room:obtainCard(li, trick1, false, fk.ReasonJustMove)
+    room:setCurrent(li)
+    li.phase = Player.Play
+    local initial = trick1:getAvailableTargets(li)
+
+    -- 场景 1：结算期间下家队列扩大为 {first, joining}，与原目标 {first} 重叠 -> 整张禁用，不得拆分只烧 joining。
+    local oldTrigger = room.logic.trigger
+    room.logic.trigger = function(this, ev, target, data, ...)
+      if ev == fk.CardUseFinished and target == li and data.card == trick1 then
+        room:changeKingdom(joining, "wei")
+      end
+      return oldTrigger(this, ev, target, data, ...)
+    end
+    skill_test.withSkillRequests(room, "qiao__skill_qun022a_2", {
+      askToSkillInvoke = function() promptsOverlap = promptsOverlap + 1; return true end,
+    }, function()
+      room:useCard { from = li, tos = initial, card = trick1 }
+    end)
+    room.logic.trigger = oldTrigger
+
+    -- 场景 2：下家阵亡后新下家固定目标完全不重叠 -> 允许发动挠袭对新队列使用。
+    room:changeKingdom(joining, "wu")
+    local trick2 = room:printCard("qiao__burning_camps", Card.Heart, 11)
+    room:obtainCard(li, trick2, false, fk.ReasonJustMove)
+    local initial2 = trick2:getAvailableTargets(li)
+    local prevTrigger = room.logic.trigger
+    room.logic.trigger = function(this, ev, target, data, ...)
+      if ev == fk.CardUseFinished and target == li and data.card == trick2 then
+        first.dead = true
+        table.removeOne(room.alive_players, first)
+      end
+      if ev == fk.CardUsing and target == li and data.card.skillName == "qiao__skill_qun022a_2" then
+        repeatTargetsDisjoint = table.map(data.tos, Util.IdMapper)
+      end
+      return prevTrigger(this, ev, target, data, ...)
+    end
+    skill_test.withSkillRequests(room, "qiao__skill_qun022a_2", {
+      askToSkillInvoke = function() promptsDisjoint = promptsDisjoint + 1; return true end,
+    }, function()
+      room:useCard { from = li, tos = initial2, card = trick2 }
+    end)
+    room.logic.trigger = prevTrigger
+  end)
+  lu.assertEquals(promptsOverlap, 0, "固定目标队列扩大后与原目标重叠时不得拆分使用挠袭")
+  lu.assertEquals(promptsDisjoint, 1, "固定目标集合与原目标完全不重叠时仍应允许发动挠袭")
+  lu.assertEquals(repeatTargetsDisjoint, { joining.id }, "完全不重叠时应对完整新固定目标生效")
 end
 
 return { name = "qiao_bian_wu_qun_jin" }

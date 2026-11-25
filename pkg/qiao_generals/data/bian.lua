@@ -1,16 +1,16 @@
--- 六势力变包正式数据：10 名普通武将。
+-- 六势力变包正式数据：11 名普通武将、飞熊军及其统领来源。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 10
-M.retinueCount = 0
-M.commanderCount = 0
-M.skillCount = 19
-M.retinueSkillCount = 0
-M.kingdoms = { "han", "wei", "shu", "wu", "jin" }
+M.generalCount = 11
+M.retinueCount = 1
+M.commanderCount = 1
+M.skillCount = 21
+M.retinueSkillCount = 1
+M.kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }
 
 M.generals = {
   {
@@ -271,6 +271,47 @@ M.generals = {
     },
   },
   {
+    number = [==[QUN022A]==],
+    id = [==[qiao_heg__qun022a]==],
+    name = [==[李傕]==],
+    kingdom = [==[qun]==],
+    title = [==[劫舆的凶狼、奸谋恶勇]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[han]==] },
+    companionText = [==[贾诩]==],
+    companionNames = { [==[贾诩]==] },
+    companions = { [==[qiao_heg__qun007]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    commander = {
+      retinue = [==[qiao_heg__retinue_feixiongjun]==],
+      retinueName = [==[飞熊军]==],
+      card = [==[qiao__fire_attack]==],
+      cardText = [==[火攻]==],
+      sourceText = [==[飞熊军 | 火攻]==],
+      limited = false,
+    },
+    skills = {
+      {
+        id = [==[qiao__skill_qun022a_1]==],
+        name = [==[凶算]==],
+        text = [==[限定技，出牌阶段，你可以弃置一张手牌并对一名与你势力相同的角色造成1点伤害，然后摸三张牌，回合结束时复原其一个限定技。]==],
+        related = false,
+        tags = { [==[Limited]==] },
+      },
+      {
+        id = [==[qiao__skill_qun022a_2]==],
+        name = [==[挠袭]==],
+        text = [==[每回合限一次，当你使用普通锦囊牌后，你可以减1点体力上限并视为再使用一张同牌名的牌（不能包含相同的目标）。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
     number = [==[JIN018]==],
     id = [==[qiao_heg__jin018]==],
     name = [==[陈骞]==],
@@ -339,9 +380,31 @@ M.generals = {
 }
 
 M.retinues = {
+  {
+    id = [==[qiao_heg__retinue_feixiongjun]==],
+    name = [==[飞熊军]==],
+    limited = false,
+    title = [==[李傕｜火攻]==],
+    skill = {
+      id = [==[qiao__retinue_skill_feixiongjun]==],
+      name = [==[飞熊军]==],
+      text = [==[限定技，出牌阶段，你可以选择一名体力值与你相同的其他角色，依次视为对其使用一张【顺手牵羊】和一张【杀】。]==],
+      tags = { [==[Limited]==] },
+    },
+  },
 }
 
 M.commanders = {
+  {
+    general = [==[qiao_heg__qun022a]==],
+    number = [==[QUN022A]==],
+    name = [==[李傕]==],
+    retinue = [==[qiao_heg__retinue_feixiongjun]==],
+    retinueName = [==[飞熊军]==],
+    card = [==[qiao__fire_attack]==],
+    cardText = [==[火攻]==],
+    sourceText = [==[飞熊军 | 火攻]==],
+  },
 }
 
 return M

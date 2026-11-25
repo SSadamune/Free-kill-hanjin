@@ -3,12 +3,15 @@ local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
+local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
 
 local skill = fk.CreateSkill { name = "qiao__bian_rules" }
 
 local CHUJIAN_TARGET = "qiao_han023_chujian-phase"
 local CHUJIAN_DELAY = "qiao_han023_chujian_delay-phase"
 local YUEJIAN_MARK = "qiao_wei022_yuejian-turn"
+local XIONGSUAN_TAG = "qiao_qun022a_xiongsuan_pending"
 
 local function inQiao(room)
   return room ~= nil and type(room.getSettings) == "function" and Modes.inRoom(room)
@@ -154,9 +157,131 @@ skill:addEffect(fk.TurnEnd, {
   end,
 })
 
+-- 5. 凶算：当前回合结束时复原目标一个已发动过的明置限定技（含独立已用标记与限定翼从实例）。
+local function customLimitedUsedMarks(name)
+  local skel = Fk.skill_skels[name]
+  if skel ~= nil and type(skel.qiao_limited_used_marks) == "table" then
+    return skel.qiao_limited_used_marks
+  end
+  return nil
+end
+
+local function hasCustomLimitedUsed(target, name)
+  local marks = customLimitedUsedMarks(name)
+  if marks == nil then return false end
+  for _, mark in ipairs(marks) do
+    local val = target:getMark(mark)
+    if type(val) == "number" and val > 0 then return true end
+    if type(val) == "table" and next(val) ~= nil then return true end
+    if type(val) == "string" and val ~= "" then return true end
+  end
+  return false
+end
+
+local function usedLimitedSkills(target)
+  local choices, retinueSet = {}, {}
+  if target == nil or target.dead then return choices, retinueSet end
+  for _, s in ipairs(target.player_skills) do
+    local skel = s:getSkeleton()
+    local name = skel and skel.name or s.name
+    if s:hasTag(Skill.Limited) and target:hasShownSkill(name)
+      and (target:usedSkillTimes(name, Player.HistoryGame) > 0 or hasCustomLimitedUsed(target, name)) then
+      table.insertIfNeed(choices, name)
+    end
+  end
+  if #Bian.usedLimitedRetinues(target, Bian.FEIXIONG_SKILL) > 0 then
+    table.insertIfNeed(choices, Bian.FEIXIONG_SKILL)
+    retinueSet[Bian.FEIXIONG_SKILL] = true
+  end
+  return choices, retinueSet
+end
+
+skill:addEffect(fk.TurnEnd, {
+  global = true,
+  is_delay_effect = true,
+  mute = true,
+  can_trigger = function(self, event, target, player, data)
+    if target ~= player then return false end
+    local pending = player.room:getTag(XIONGSUAN_TAG)
+    return type(pending) == "table" and #pending > 0
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local pending = room:getTag(XIONGSUAN_TAG)
+    room:setTag(XIONGSUAN_TAG, nil)
+    if type(pending) ~= "table" then return end
+    for _, rec in ipairs(pending) do
+      local source = room:getPlayerById(rec.source_id)
+      local dest = room:getPlayerById(rec.target_id)
+      if source ~= nil and not source.dead and dest ~= nil and not dest.dead then
+        local choices, retinueSet = usedLimitedSkills(dest)
+        if #choices > 0 then
+          local chosen = #choices == 1 and choices[1] or room:askToChoice(source, {
+            choices = choices,
+            skill_name = "qiao__skill_qun022a_1",
+            prompt = "#qiao__skill_qun022a_1-reset::" .. dest.id,
+            cancelable = false,
+          })
+          if chosen ~= nil and table.contains(choices, chosen) then
+            if retinueSet[chosen] then
+              Bian.resetOneLimitedRetinue(dest, chosen)
+              dest:setSkillUseHistory(chosen, 0, Player.HistoryGame)
+              room:updateAllLimitSkillUI(dest)
+            else
+              dest:setSkillUseHistory(chosen, 0, Player.HistoryGame)
+              Exchange.resetSkillGameHistory(room, dest, chosen)
+              local marks = customLimitedUsedMarks(chosen)
+              if marks ~= nil then
+                for _, mark in ipairs(marks) do
+                  room:setPlayerMark(dest, mark, 0)
+                end
+              end
+              room:updateAllLimitSkillUI(dest)
+            end
+          end
+        end
+      end
+    end
+  end,
+})
+
+-- 5b. 挠袭历史目标记录：记录每张牌曾指定过的全部目标（含随后被【谦逊】等取消的目标）。
+local function recordEverTargets(use, targets)
+  if use == nil then return end
+  use.extra_data = use.extra_data or {}
+  use.extra_data.qiao_ever_targets = use.extra_data.qiao_ever_targets or {}
+  for _, p in ipairs(targets or {}) do
+    if p ~= nil and p.id ~= nil then
+      use.extra_data.qiao_ever_targets[p.id] = true
+    end
+  end
+end
+
+skill:addEffect(fk.AfterCardTargetDeclared, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and inQiao(player.room) and data ~= nil and data.tos ~= nil
+  end,
+  on_refresh = function(self, event, target, player, data)
+    recordEverTargets(data, data.tos)
+  end,
+})
+
+skill:addEffect(fk.TargetSpecifying, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and inQiao(player.room) and data ~= nil and data.use ~= nil and data.to ~= nil
+  end,
+  on_refresh = function(self, event, target, player, data)
+    recordEverTargets(data.use, { data.to })
+  end,
+})
+
 Fk:loadTranslationTable {
   ["qiao__bian_rules"] = "变包规则",
   ["@qiao_jin018_wudu"] = "武督明牌",
+  ["#qiao__skill_qun022a_1-reset"] = "凶算：选择复原 %dest 的一个限定技",
 }
 
 return skill

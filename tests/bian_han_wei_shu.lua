@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 10)
-  lu.assertEquals(Data.retinueCount, 0)
-  lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 19)
+  lu.assertEquals(Data.generalCount, 11)
+  lu.assertEquals(Data.retinueCount, 1)
+  lu.assertEquals(Data.commanderCount, 1)
+  lu.assertEquals(Data.skillCount, 21)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -63,10 +63,20 @@ function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests(
   lu.assertTrue(Fk.generals["qiao_heg__wei022"]:isCompanionWith(Fk.generals["qiao_heg__em_wei001"]))
   lu.assertTrue(Fk.generals["qiao_heg__wu021"]:isCompanionWith(Fk.generals["qiao_heg__wu002"]))
   lu.assertTrue(Fk.generals["qiao_heg__wu022"]:isCompanionWith(Fk.generals["qiao_heg__wu010"]))
+  lu.assertTrue(Fk.generals["qiao_heg__qun022a"]:isCompanionWith(Fk.generals["qiao_heg__qun007"]))
   lu.assertTrue(Fk.generals["qiao_heg__jin018"]:isCompanionWith(Fk.generals["qiao_heg__jin015"]))
   lu.assertTrue(Fk.generals["qiao_heg__jin020"]:isCompanionWith(Fk.generals["qiao_heg__jin004"]))
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__wei020"), { "han" })
+  lu.assertEquals(Guest.guestKingdoms("qiao_heg__qun022a"), { "han" })
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__shu020"), {})
+  -- 翼从与统领核对
+  local feixiong = assert(Fk.generals["qiao_heg__retinue_feixiongjun"])
+  lu.assertEquals(feixiong.package.name, "qiao_zhenshi")
+  lu.assertEquals(feixiong.prefix, "qiao_prefix_bian")
+  lu.assertTrue(Commander.isRetinue(feixiong.name))
+  lu.assertFalse(Commander.retinues[feixiong.name].limited)
+  lu.assertTrue(Commander.isCommander("qiao_heg__qun022a"))
+  lu.assertEquals(Commander.commanders["qiao_heg__qun022a"].card, "qiao__fire_attack")
 end
 
 -- HAN023 伍琼&种辑：除奸（无距离/无次数且不计次 + 阶段末延时伤害不因暗置撤销）
