@@ -5,19 +5,33 @@ Testqiao_translation_completeness = {}
 function Testqiao_translation_completeness:testSkillReferenceCatalog()
   local references = require "packages.qiao.pkg.qiao_mode.skill_references"
   local catalog = references.catalog()
-  local skills = {}
+  local skills, byId = {}, {}
   for _, skill in ipairs(catalog.skills) do
     skills[skill.title] = skill
+    byId[skill.id] = skill
   end
 
-  local lu = require "luaunit"
-  lu.assertEquals(skills["缘江烽火图"].description, Fk:getDescription(skills["缘江烽火图"].id))
+  local banner = byId.qiao__skill_em_wu001_flag
+  lu.assertEquals(banner.description, Fk:getDescription(banner.id))
+  lu.assertEquals(banner.page, "banner")
+  lu.assertNil(skills["诏书"].page)
   lu.assertStrContains(skills["烽火"].description, "缘江烽火图")
   lu.assertEquals(skills["统领能力"].description, Fk:translate(":qiao_commander_ability"))
   lu.assertEquals(skills["野心家"].description, Fk:translate(":@!!wild"))
   lu.assertEquals(catalog.cards["杀"].id, "qiao__slash")
   lu.assertEquals(catalog.cards["赤霄剑"].description, Fk:translate(":qiao__chixiao_sword"))
   lu.assertNotNil(catalog.cards["洛水之誓"])
+  lu.assertEquals(catalog.cards["挟天子"].id, "qiao__threaten_emperor")
+  lu.assertEquals(catalog.cards["赋礼"].description, Fk:translate(":battle_royal_fuli"))
+  lu.assertNotNil(skills["军令三"])
+  lu.assertStrContains(catalog.variants["雷杀·孤军"][1].description, "应变·孤军")
+  lu.assertStrContains(catalog.variants["挟天子以令诸侯·合纵"][1].description, "合纵")
+  local pages = {}
+  for _, entry in ipairs(catalog.generals) do
+    pages[entry.title] = entry.page
+  end
+  lu.assertEquals(pages["并州狼骑"], "retinue")
+  lu.assertEquals(pages["司马师"], "general")
 end
 
 local PUBLIC_SKILLS = {

@@ -1,6 +1,8 @@
 -- Public description data for the skill detail views. No room or player state
 -- is required, so the same references can be used before entering a room.
 local M = {}
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 
 -- The titles without a skill skeleton describe rules that already have a
 -- client-facing meaning. Descriptions keyed here reuse the installed text.
@@ -9,6 +11,8 @@ local terms = {
   ["阴阳鱼"] = { key = ":@!!yinyangfish" },
   ["珠联璧合"] = { key = ":@!!companion" },
   ["野心家"] = { key = ":@!!wild" },
+  ["创"] = { text = "因“不屈”置于武将牌上的牌。每种花色保留一张，同花色的其余“创”按“不屈”的效果移去。" },
+  ["合"] = { text = "带有此标记的牌可用于“合纵”。", bare = false },
   ["君主大旗"] = { text = "由对应君主技能获得。点击下列大旗名称可查看各自的说明：霸者求贤状、六师率义旗、缘江烽火图、黄巾天兵符、诸王敕封册。", bare = true },
   ["烽火"] = { text = "以“缘江烽火图”置于旗上的牌，称为“烽火”。旗上的烽火可用于执行该旗的效果。", bare = true },
   ["应变"] = { text = "一张牌可以有一个或多个“条件→效果”条目。使用此牌时逐项检查条件，满足时执行对应效果。", bare = true },
@@ -27,6 +31,22 @@ local terms = {
   ["客将"] = { text = "启用客将替换时，主势力均被禁用的武将牌可以按客将规则以允许的势力出场。", bare = true },
   ["势力锦囊"] = { text = "不在默认牌堆中，通过特殊手段加入本局。部分牌面效果取决于使用者是否为牌上指定的势力。", bare = true },
   ["移出游戏"] = { text = "移出游戏期间，角色不能参与通常的用牌及结算。需要统计人数时仍按对应规则判断。", bare = true },
+  ["只能当"] = { text = "受此效果限制的实体牌不能以原牌名直接使用或打出，可以按效果列出的用途和对应操作转换。其他技能仍可按各自的规则使用该实体牌作为转化材料。" },
+  ["军令"] = { text = "发起者从随机给出的两项军令中选一项，目标选择是否执行。可执行的军令有军令一、军令二、军令三、军令四、军令五、军令六。", bare = true },
+  ["奇珍牌"] = { key = ":rare_treasure", bare = true },
+}
+
+for n, title in ipairs({ "军令一", "军令二", "军令三", "军令四", "军令五", "军令六" }) do
+  terms[title] = { key = ":command" .. n, bare = true }
+end
+
+local historicalCards = {
+  "battle_royal_bujinzetui", "battle_royal_fuli", "battle_royal_luoshi",
+  "battle_royal_shengzheweiwang", "battle_royal_huoqi", "battle_royal_jili",
+}
+
+local adaptationTitles = {
+  fujia = "富甲", canqu = "残躯", zhuzhan = "助战", kongchao = "空巢", gujun = "孤军",
 }
 
 local aliases = {
@@ -47,8 +67,49 @@ local function addAliases(entry)
   return entry
 end
 
+local function cardVariants()
+  local variants = {}
+  local deck = Fk.packages.qiao_cards.qiao_cards
+  for _, position in ipairs(deck.allPositions) do
+    local conditions = position.extra.qiao_adaptation or {}
+    if position.heji or #conditions > 0 then
+      local card = Fk:cloneCard(position.card, position.suit, position.number)
+      deck.stamp(card, position.id)
+      local name, description = Fk:translate(card.name), card:getDynamicDescription()
+      local function add(qualifier)
+        local title = name .. "·" .. qualifier
+        local entries = variants[title] or {}
+        if not table.find(entries, function(entry) return entry.description == description end) then
+          entries[#entries + 1] = { id = card.name, title = title, description = description }
+        end
+        variants[title] = entries
+      end
+      if position.heji then
+        add("合纵")
+        variants[name .. "·合"] = variants[name .. "·合纵"]
+      end
+      if #conditions > 0 then add("应变") end
+      for _, condition in ipairs(conditions) do add(adaptationTitles[condition.condition] or condition.condition) end
+    end
+  end
+  local full = Fk:translate("qiao__threaten_emperor")
+  variants["挟天子·合"] = variants[full .. "·合"]
+  return variants
+end
+
 function M.catalog()
-  local skills, cards = {}, {}
+  local skills, cards, generals = {}, {}, {}
+  for id, general in pairs(Fk.generals) do
+    if general.package.extensionName == "qiao" then
+      local title = translated(id)
+      if title and (not general.total_hidden or Commander.isRetinue(id)) then
+        generals[#generals + 1] = addAliases {
+          id = id, title = title, variant = translated(general.prefix or ""),
+          page = Commander.isRetinue(id) and "retinue" or "general", bare = true,
+        }
+      end
+    end
+  end
   for id, skeleton in pairs(Fk.skill_skels) do
     if id:startsWith("qiao_") then
       local title, description = translated(id), translated(":" .. id)
@@ -56,6 +117,7 @@ function M.catalog()
         skills[#skills + 1] = addAliases {
           id = id, title = title, description = Fk:getDescription(id),
           related = skeleton.related_skills,
+          page = Flags.flags[id] and "banner" or nil,
           bare = title:find("旗", 1, true) ~= nil or title == "诏书"
             or title == "霸者求贤状" or title == "缘江烽火图" or title == "黄巾天兵符"
             or title == "诸王敕封册" or title == "阵法召唤" or title == "鏖战",
@@ -82,8 +144,17 @@ function M.catalog()
       end
     end
   end
+  for _, id in ipairs(historicalCards) do
+    local title, description = translated(id), translated(":" .. id)
+    if title and description and not cards[title] then
+      cards[title] = { id = id, title = title, description = description }
+    end
+  end
+  local threatenEmperor = translated("qiao__threaten_emperor")
+  if threatenEmperor then cards["挟天子"] = cards[threatenEmperor] end
   table.sort(skills, function(a, b) return a.id < b.id end)
-  return { skills = skills, cards = cards }
+  table.sort(generals, function(a, b) return a.id < b.id end)
+  return { skills = skills, cards = cards, generals = generals, variants = cardVariants() }
 end
 
 return M
