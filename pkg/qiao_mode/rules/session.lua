@@ -16,7 +16,7 @@ end
 
 function M.finish(room, winners)
   local data = room:getSessionData()
-  if not Modes.inRoom(room) then
+  if not Modes.inRoom(room) or room:getTag("qiao_locked_start_rejected") then
     data[key] = nil
   else
     local kingdoms = {}
@@ -25,8 +25,8 @@ function M.finish(room, winners)
         table.insertIfNeed(kingdoms, p.kingdom)
       end
     end
-    data[key] = { version = 1, winners = kingdoms,
-      banned = table.simpleClone(room:getBanner("qiao_banned_kingdoms") or {}) }
+    local banned = room:getTag("qiao_rotation_banned_kingdoms") or room:getBanner("qiao_banned_kingdoms") or {}
+    data[key] = { version = 1, winners = kingdoms, banned = table.simpleClone(banned) }
   end
   room:setSessionData(data)
 end

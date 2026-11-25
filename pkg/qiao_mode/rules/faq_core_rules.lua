@@ -24,7 +24,22 @@ local function isUnknown(kingdom)
   return kingdom == nil or kingdom == "" or kingdom == "unknown"
 end
 
+local function lockedThree(room)
+  return room and room.players and #room.players == 3 and type(room.getSettings) == "function"
+    and room:getSettings("gameMode") == Modes.locked
+end
+
+local function lockedFarmerKingdom(room, player)
+  if lockedThree(room) and player.seat >= 2 then
+    local kingdom = player:getMark("__heg_kingdom")
+    if type(kingdom) == "string" and not isUnknown(kingdom) and kingdom ~= "wild" then
+      return kingdom
+    end
+  end
+end
+
 function M.max_kingdom_players(room)
+  if lockedThree(room) then return 2 end
   local total = room and room.players and #room.players or 0
   return math.min(total // 2, M.MAX_KINGDOM_PLAYERS)
 end
@@ -97,6 +112,14 @@ local function installRevealOverflowGuard()
       revealWasUnknownDepth[self] = stack
     end
     stack[#stack + 1] = isUnknown(self.kingdom)
+    if stack[#stack] and (isDeputy and self.deputyGeneral or self.general) == "anjiang" then
+      local kingdom = lockedFarmerKingdom(room, self)
+      if kingdom then
+        -- The upstream reveal treats an already determined kingdom as exempt
+        -- from its hard-coded half-table limit. Only the reveal publishes it.
+        self.kingdom = kingdom
+      end
+    end
     local ok, result = pcall(original, self, isDeputy, no_trigger)
     stack[#stack] = nil
     if #stack == 0 then revealWasUnknownDepth[self] = nil end
@@ -202,7 +225,7 @@ local function installSeatLuckCard()
 
     data.who = data.who or room.alive_players
     local mode = room:getGameMode()
-    local collection = mode.name == Modes.collection
+    local collection = mode.name == Modes.collection or mode.name == Modes.locked
     local seatLuckEnabled = #room.players >= M.BONUS_LUCK_MIN_PLAYERS
       and (collection or room:getSettings(M.seatLuckSetting) == M.seatLuckCard)
     local baseLuck = collection and 0 or math.max(0, room:getSettings("luckTime") or 0)
@@ -267,6 +290,14 @@ function M.install()
   if M._installed then return end
   M._installed = true
   installYinyangCap()
+  local compareExpected = H.compareExpectedKingdomWith
+  H.compareExpectedKingdomWith = function(from, to, diff, ...)
+    if from ~= to and isUnknown(from.kingdom) and not isUnknown(to.kingdom) then
+      local kingdom = lockedFarmerKingdom(Fk:currentRoom(), from)
+      if kingdom then return (kingdom == H.getKingdom(to)) ~= (diff == true) end
+    end
+    return compareExpected(from, to, diff, ...)
+  end
 end
 
 -- 沿用国战标记原有的询问、支付、优先级和收益，只在汉晋房间放宽弃牌阶段的门槛。

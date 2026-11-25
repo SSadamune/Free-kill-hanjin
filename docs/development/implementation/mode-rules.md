@@ -1,12 +1,26 @@
 # 汉晋模式公共接线
 
-两种房间从[模式入口](../../../pkg/qiao_mode/init.lua)进入[公共构造器](../../../pkg/qiao_mode/mode.lua)。这里记录已登记的流程与验证入口。当前验证基线见[开发状态](../status.md#当前验收基线)。
+三个模式从[模式入口](../../../pkg/qiao_mode/init.lua)进入[公共构造器](../../../pkg/qiao_mode/mode.lua)。当前验证基线见[开发状态](../status.md#当前验收基线)。
 
 ## 房间与开局
 
 - 大合集和自由模式由同一模式构造器分流。大合集读取模式设置的候选数和选将时长，时长缺省为 90 秒。被覆盖的通用游戏设置在[客户端设置入口](skill-ui.md)置灰，自由模式保留可编辑的上游设置。服务端以 [selection.lua](../../../pkg/qiao_mode/rules/selection.lua) 过滤禁将、候选和非法配将。关联查找见[势力禁选](faction-ban.md)与[客将](guest-factions.md)。
 - [faq_core_rules.lua](../../../pkg/qiao_mode/rules/faq_core_rules.lua) 在 `GameEvent.DrawInitial` 处理后置位手气卡。大合集按 0 次通用手气卡计算，7 人及以上从 7 号位各发一次。自由模式在房间通用次数之外按「后置位补偿」设置发放。每次换手牌后更新发牌结束事件里的实际初始手牌，供应变等后续入口读取。
 - [房间规则回归](../../../tests/qiao_rules.lua#L191)验证两模式设置、联动选项存在或缺失、选将请求执行和时长。[FAQ 专项](../../../tests/faq_core_rules.lua#L160)验证座位、自由模式开关、重抽牌和事件。设置页离屏覆盖与人工边界见[开发状态](../status.md#最近验证记录)。
+
+### 锁定势力
+
+「游戏规则」在「模式设置」首项，默认斗地主。正式扩展的 [LockedGameRuleRow.qml](../../../pkg/qiao_mode/qml/LockedGameRuleRow.qml) 将选择映射为建房容量 3 或 4，并锁定通用设置中的人数控件。创房可行性检查和服务端开局都校验规则与人数一致。建房页读取当前禁将方案，检查房主配置的候选势力中是否至少存在一组可发足最低配额的两方。服务端再按实际跨局禁选结果和将池确认。缺少规则键的旧设置仍可按 3 或 4 人开局。锁定势力的客户端与服务端均固定关闭自由选将。3／4 人局只使用可入池的效忠版，隐藏无效的原版野心家数量设置。
+
+[模式规则](../../rules/faction-ban.md#锁定势力)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。按实际可用的牌为每席匹配候选。每人的基础候选数统一为 2 至 5 张，地主加两张。优先满足房主设置，候选不足时统一下调基础张数。最低配额也无法满足时，提示原因并取消开局。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
+
+开局双将体力计算后增加斗地主 1 号位的体力与上限，按上游欢乐斗地主的默认接线授予引擎的 `m_feiyang` 和 `m_bahu`。其实现分别位于 FreeKill v0.5.25 的 `standard/pkg/skills/feiyang.lua` 与 `standard/pkg/skills/bahu.lua`。二对二通过 `getAdjustedProperty` 在 `DrawInitialCards` 前调整发牌数。[Gitee 斗地主模式](https://gitee.com/qsgs-fans/gamemode/blob/fd19e8863c9507f710e937db9fabccbdffed840d/pkg/gamemodes/1v2.lua)
+
+[鏖战入口](../../../pkg/qiao_mode/rules/battle_royal.lua)根据锁定势力的房间开关决定是否进入。开关缺省关闭，开启后使用国战回合开始条件，三人全暗开局时首回合即进入鏖战。该开关作用于汉晋和上游的进入入口。
+
+选将提示复用引擎的座次翻译。三人局显示身份、座次和获配势力，四人局显示座次和获配势力。[开局专项用例](../../../tests/locked_factions.lua)覆盖两种提示、候选数量、鏖战开关、跨局禁选、客将与同名替换、三人场明置与模式技能，以及四人场队列／围攻及发牌。
+
+有 PySide6 和锁定版开发运行时的核心检出时，可运行 `python scripts/check_locked_factions_ui.py`。该离屏回归使用原生建房与模式设置页，验证规则切换、人数请求和禁将方案更新。
 
 ## 势力与身份
 

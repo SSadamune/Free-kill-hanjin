@@ -1,12 +1,13 @@
 local M = {
   collection = "qiao_heg_mode",
   free = "qiao_free_mode",
+  locked = "qiao_locked_mode",
 }
 
-M.names = { M.collection, M.free }
+M.names = { M.collection, M.free, M.locked }
 
 function M.isHanjin(name)
-  return name == M.collection or name == M.free
+  return table.contains(M.names, name)
 end
 
 function M.inRoom(room)
