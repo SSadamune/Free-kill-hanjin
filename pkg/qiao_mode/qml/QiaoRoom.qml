@@ -65,37 +65,45 @@ Room {
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
   Component {
     id: focusedSeat
-    Rectangle {
-      id: badge
+    Text {
+      id: seat
       objectName: "qiaoFocusedSeat"
       required property Item photo
+      readonly property bool ownPhoto: photo.playerid === room.dataModel.dashboardId
+      readonly property bool inFocus: photo.progressBar.visible || photo.progressTip !== ""
       readonly property Item normalSeat: photo.children.find(child => child instanceof GlowText
         && child.anchors.bottomMargin === -24) ?? null
-      anchors.right: photo.photoMask.right
-      anchors.bottom: photo.photoMask.bottom
-      anchors.margins: 5
-      width: Math.max(22, number.implicitWidth + 8)
-      height: 22
-      radius: 4
-      color: "#db222123"
-      border.color: "#ad9068"
+      // The core exposes the text value as progressTip. Its visual item is
+      // inside the scaled image attached directly below the progress bar.
+      readonly property Item focusTip: photo.children.find(child => child instanceof Image
+        && /\/control\/tip(?:\.[a-z]+)?$/i.test(child.source.toString())) ?? null
+      readonly property Item focusText: focusTip?.children.find(child => child instanceof Text) ?? null
+      readonly property var numerals: ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"]
+      readonly property string numeral: numerals[photo.seatNumber - 1] ?? ""
+      text: numeral === "" ? "" : numeral + "号位"
+      x: {
+        if (ownPhoto) return photo.photoMask.x + (photo.photoMask.width - width) / 2;
+        if (focusText) return focusTip.x + (focusText.x + focusText.width / 2) * focusTip.scale - width / 2;
+        return (photo.width - width) / 2;
+      }
+      y: {
+        if (ownPhoto) return photo.photoMask.y - height - 4;
+        if (focusText) return focusTip.y + (focusText.y + focusText.height) * focusTip.scale + 2;
+        return photo.progressBar.y + photo.progressBar.height + 2;
+      }
       z: 5
-      visible: photo.playerid !== 0 && photo.playerid !== -1
-        && (photo.progressBar.visible || photo.progressTip !== "")
+      visible: photo.playerid !== 0 && photo.playerid !== -1 && numeral !== "" && inFocus
+      color: "#fff2ce"
+      font.family: Config.libianName
+      font.pixelSize: 15
+      style: Text.Outline
+      styleColor: "#352a21"
 
       Binding {
-        target: badge.normalSeat
+        target: seat.normalSeat
         property: "visible"
-        when: badge.normalSeat !== null && (badge.photo.progressBar.visible || badge.photo.progressTip !== "")
+        when: seat.normalSeat !== null && seat.visible
         value: false
-      }
-      Text {
-        id: number
-        anchors.centerIn: parent
-        text: badge.photo.seatNumber
-        color: "#fff2ce"
-        font.pixelSize: 16
-        font.bold: true
       }
     }
   }
