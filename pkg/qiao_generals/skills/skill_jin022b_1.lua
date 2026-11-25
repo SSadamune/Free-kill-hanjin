@@ -29,14 +29,15 @@ skill:addEffect("active", {
     if lost > 0 then
       local add = 1
       if lost > 1 then
-        local choices = {}
-        for value = 1, lost do table.insert(choices, tostring(value)) end
-        add = tonumber(room:askToChoice(player, {
-          choices = choices,
-          skill_name = skill.name,
+        -- Reuse the number control while keeping the minimum on timeout.
+        local _, reply = room:askToUseActiveSkill(player, {
+          skill_name = "spin_skill",
           prompt = "#qiao__skill_jin022b_1-range:::" .. lost,
           cancelable = false,
-        })) or 1
+          extra_data = { min = 1, max = lost, skillName = skill.name },
+        })
+        local selected = reply and math.tointeger(reply.interaction)
+        if selected and selected >= 1 and selected <= lost then add = selected end
       end
       room:addPlayerMark(player, U.RANGE, add)
     end

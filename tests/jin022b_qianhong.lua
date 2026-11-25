@@ -170,12 +170,14 @@ end
 
 function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
   local me, target = p(1), p(2)
+  local name = "qiao__skill_jin022b_1"
   inRoom(function()
     local A = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
     local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
-    FkTest.room:handleAddLoseSkills(me, "qiao__skill_jin022b_1", nil, false, true)
+    FkTest.room:handleAddLoseSkills(me, name, nil, false, true)
+    me.hp = me.maxHp - 1
     local oldSelect, oldUse = C.selectVirtualCard, C.useCard
-    local observed
+    local observed, reply
     C.selectVirtualCard = function()
       return { from = me, tos = { target }, card = Fk:cloneCard("qiao__fire__slash"), extra_data = {} }
     end
@@ -185,17 +187,27 @@ function Testqiao_jin022b_qianhong:testLieRongMainFlowUsesFireSlash()
     end
     local before = target.hp
     local ok, err = pcall(function()
-      skill_test.withSkillRequests(FkTest.room, "qiao__skill_jin022b_1", {
-        askToChoice = function() return "1" end,
+      skill_test.withSkillRequests(FkTest.room, "spin_skill", {
+        askToUseActiveSkill = function(room, who, params, original)
+          lu.assertEquals(params.extra_data, { min = 1, max = 2, skillName = name })
+          lu.assertFalse(params.cancelable)
+          reply = client_room.confirmSelection(room, who, params, {}, {}, function(handler)
+            handler:update("Interaction", "1", "update", 2)
+          end)
+          FkTest.setNextReplies(who, { reply })
+          return original(room, who, params)
+        end,
       }, function()
-        Fk.skills["qiao__skill_jin022b_1"]:onUse(FkTest.room, { from = me })
+        Fk.skills[name]:onUse(FkTest.room, { from = me })
       end)
     end)
     C.selectVirtualCard, C.useCard = oldSelect, oldUse
     if not ok then error(err, 0) end
     lu.assertNotNil(observed)
     lu.assertEquals(observed.card.name, "qiao__fire__slash")
-    lu.assertEquals(me:getMark(U.RANGE), 1)
+    lu.assertNotNil(reply)
+    lu.assertEquals(reply.interaction_data, 2)
+    lu.assertEquals(me:getMark(U.RANGE), 2)
     lu.assertTrue(target.hp < before, "真实火杀使用入口应实际结算伤害")
     lu.assertTrue(A.isAdaptationCard(observed.card, observed))
     lu.assertTrue(table.find(A.getEntries(observed.card, observed), function(entry)
@@ -223,14 +235,24 @@ function Testqiao_jin022b_qianhong:testLieRongAddsAcrossPlayPhases()
       if used == 2 then bonus = me:getMark(limit.RANGE) end
     end,
   })
-  skill_test.withSkillRequests(room, skillName, { askToChoice = function() return "1" end }, function()
+  local timedOut = 0
+  skill_test.withSkillRequests(room, "spin_skill", {
+    askToUseActiveSkill = function(self, who, params, original)
+      lu.assertEquals(params.extra_data.skillName, skillName)
+      timedOut = timedOut + 1
+      FkTest.setNextReplies(who, { "" })
+      return original(self, who, params)
+    end,
+  }, function()
     inRoom(function()
       room:handleAddLoseSkills(me, skillName, nil, false, true)
+      me.hp = me.maxHp
       room:addSkill(skeleton:createSkill())
       GameEvent.Turn:create(TurnData:new(me, "game_rule", { Player.Play, Player.Play })):exec()
     end)
   end)
   lu.assertEquals(used, 2)
+  lu.assertEquals(timedOut, 1)
   lu.assertEquals(bonus, 2, "同回合两次增加攻击范围应累计")
   lu.assertTrue(U.RANGE:startsWith("@"), "累计加成需通过公开标记显示")
   lu.assertEquals(me:getMark(U.RANGE), 0, "回合结束清除公开加成")
