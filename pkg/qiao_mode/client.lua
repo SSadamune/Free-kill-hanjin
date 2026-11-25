@@ -355,6 +355,7 @@ end
 
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
+  self.lockedPairing = nil
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
@@ -363,6 +364,13 @@ end
 function QiaoClient:playCard(data)
   self.qiaoCiActions = type(data) == "table" and data.qiaoCiActions or nil
   return BaseClient.playCard(self, data)
+end
+
+function QiaoClient:getSettings(key)
+  if key == "enableFreeAssign" and BaseClient.getSettings(self, "gameMode") == Modes.locked then
+    return false
+  end
+  return BaseClient.getSettings(self, key)
 end
 
 function QiaoClient:canUsePileAction(holderId, action)
@@ -484,6 +492,17 @@ function LtkUI:getCardData(id, filterCard)
   return data
 end
 
+local getSameGenerals = LtkUI.getSameGenerals
+function LtkUI:getSameGenerals(name)
+  local names = getSameGenerals(self, name)
+  local room = Fk:currentRoom()
+  local pairing = room and room.lockedPairing
+  if pairing then
+    return table.filter(names, function(alternative) return pairing[alternative] ~= nil end)
+  end
+  return names
+end
+
 function QiaoClient:virtualCardPicture(name)
   local formal = "qiao__" .. name
   if Fk.all_card_types[formal] and Fk.all_card_types[formal].package.extensionName == "qiao" then
@@ -511,6 +530,16 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if self.settings and self:getSettings("gameMode") == Modes.locked then
+    if command == "CustomDialog" then
+      local model = data.component and data.component.model
+      local extra = model and model.prop and model.prop.extraData
+      self.lockedPairing = extra and extra.locked and extra.pairing or nil
+    elseif command == "CancelRequest" or command == "GameStart" or command == "GameOver"
+      or command == "ChangeSelf" then
+      self.lockedPairing = nil
+    end
+  end
   if command == "SetPlayerMark" and SkillStatus.watches(data[2]) and isQiaoMode() then
     return
   end
