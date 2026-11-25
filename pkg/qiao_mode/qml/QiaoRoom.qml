@@ -12,6 +12,38 @@ Room {
   property int pileActionRevision: 0
   property int ciRevision: 0
 
+  Row {
+    id: recordsButtons
+    anchors.top: parent.top
+    anchors.topMargin: 36
+    anchors.right: parent.right
+    anchors.rightMargin: 120
+    z: 10
+    spacing: 4
+    Controls.Button {
+      text: "弃牌堆"
+      onClicked: discardPanel.open()
+    }
+    Controls.Button {
+      text: "拼点记录"
+      onClicked: pindianPanel.openHistory()
+    }
+  }
+
+  DiscardPilePanel {
+    id: discardPanel
+    parent: room
+    readCards: () => JSON.parse(Lua.ev("json.encode(ClientInstance:discardCardsForDisplay())"))
+  }
+
+  PindianPanel {
+    id: pindianPanel
+    anchors.fill: parent
+    z: 11
+    readHistory: () => JSON.parse(Lua.ev("json.encode(ClientInstance:pindianHistory())"))
+    translate: key => Lua.tr(key)
+  }
+
   function ciCardsForDisplay(playerId) {
     room.ciRevision;
     const cards = JSON.parse(Lua.ev(`json.encode(ClientInstance:ciCardsForDisplay(${playerId}))`));
@@ -178,7 +210,10 @@ Room {
 
   Connections {
     target: room.dataModel
-    function onCardsMoved() { Qt.callLater(room.bindPhotoExtras); }
+    function onCardsMoved() {
+      Qt.callLater(room.bindPhotoExtras);
+      if (discardPanel.visible) Qt.callLater(discardPanel.refresh);
+    }
     function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
   }
 
@@ -200,6 +235,8 @@ Room {
   }
 
   Component.onCompleted: {
+    addCallback("QiaoPindianResult", (_, data) => pindianPanel.present(data));
+    addCallback("QiaoDiscardChanged", () => { if (discardPanel.visible) Qt.callLater(discardPanel.refresh); });
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));

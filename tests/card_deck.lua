@@ -240,6 +240,41 @@ function Testqiao_card_deck:testUnavailableBothWeiAndJinRemovesCrownWithoutRepla
   lu.assertEquals(#cards, Cards.baseSlotCount - 2)
 end
 
+function Testqiao_card_deck:testClientKeepsServerIdsAfterPrintingADeckReplacement()
+  local room = create {
+    settings = { qiao_candidate_kingdoms = { "wei", "shu" }, qiao_kingdom_limit = 2 },
+    configure = function(server)
+      -- The native fixture skips EnterRoom. Use the actual mode and enabled packs
+      -- for the client's PrepareDrawPile callback, just as a connected client does.
+      local prepare = ClientInstance.callbacks.PrepareDrawPile
+      ClientInstance.callbacks.PrepareDrawPile = function(client, draw)
+        local settings, packs = client.settings, client.disabled_packs
+        client.settings, client.disabled_packs = server.settings, server.disabled_packs
+        local ok, err = pcall(prepare, client, draw)
+        client.settings, client.disabled_packs = settings, packs
+        assert(ok, err)
+      end
+    end,
+  }
+  local replacement = assert(findCard(roomCards(room), "过河拆桥", Card.Spade, 4))
+  lu.assertTrue(replacement.id < 0)
+  local sword, peach
+  FkTest.runInRoom(function()
+    sword = room:printCard("qiao__chixiao_sword", Card.Heart, 9)
+    peach = room:printCard("qiao__peach", Card.Diamond, 3)
+    room:moveCardTo({ sword.id, peach.id }, Card.DiscardPile, nil, fk.ReasonPut, "", nil, true)
+    room:obtainCard(room.players[1], sword, true, fk.ReasonPrey)
+  end)
+  FkTest.runInClient(function()
+    lu.assertEquals(ClientInstance.next_print_card_id, room.next_print_card_id)
+    lu.assertEquals(Fk:getCardById(replacement.id, true).extra_data, replacement.extra_data)
+    lu.assertEquals(Fk:getCardById(sword.id, true).name, sword.name)
+    lu.assertEquals(Fk:getCardById(peach.id, true).name, peach.name)
+    lu.assertEquals(ClientInstance:getCardArea(peach.id), Card.DiscardPile)
+    lu.assertEquals(ClientInstance:getCardOwner(sword.id).id, room.players[1].id)
+  end)
+end
+
 function Testqiao_card_deck:testAdaptationMetadataOnActualCardsMatchesTheTable()
   local room = create()
   local groups = {}
