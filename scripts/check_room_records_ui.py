@@ -19,13 +19,16 @@ from PySide6.QtTest import QTest
 
 
 CAPTURE = """local Client = require "packages.qiao.pkg.qiao_mode.client"
-for _, method in ipairs({ "discardCardsForDisplay", "pindianHistory" }) do
-  local original = Client[method]
-  Client[method] = function(self)
-    local data = original(self)
-    print("ROOM_PANEL " .. json.encode({ method = method, rows = data }))
-    return data
-  end
+local discard = Client.discardCardsForDisplay
+function Client:discardCardsForDisplay()
+  local rows = discard(self)
+  print("ROOM_PANEL " .. json.encode({ method = "pile", rows = rows }))
+  return rows
+end
+local broadcast = Room.doBroadcastNotify
+function Room:doBroadcastNotify(cmd, data, ...)
+  if cmd == "QiaoPindianResult" then print("ROOM_PANEL " .. json.encode({ method = "result", rows = data })) end
+  return broadcast(self, cmd, data, ...)
 end
 return __dofile("../../../tests/room_records.lua")
 """
@@ -35,15 +38,21 @@ import QtQuick
 import QtQuick.Controls
 ApplicationWindow {
   id: app
-  visible: true; width: 700; height: 500
+  visible: true; width: 960; height: 540
   property var pileData: []
-  property var historyData: []
-  DiscardPilePanel { id: pile; parent: app.contentItem; readCards: () => app.pileData }
-  PindianPanel {
-    id: results; anchors.fill: parent
-    readHistory: () => app.historyData
-    translate: key => key
+  property int selectedSeat: 0
+  property int inspected: 0
+  Repeater {
+    model: 7
+    Rectangle {
+      required property int index
+      x: 120 + index * 90; y: 260; width: 88; height: 105
+      MouseArea { anchors.fill: parent; onClicked: app.selectedSeat = parent.index + 1 }
+    }
   }
+  DiscardPilePanel { id: pile; parent: app.contentItem; readCards: () => app.pileData; onInspect: id => app.inspected = id }
+  PindianDisplay { id: results; x: 144; y: 244; width: 672; cardPicture: name => "" }
+
 }
 """
 
@@ -70,13 +79,13 @@ def visible_items(root):
 
 def run():
     samples = capture()
-    piles = [s["rows"] for s in samples if s["method"] == "discardCardsForDisplay"]
-    histories = [s["rows"] for s in samples if s["method"] == "pindianHistory"]
-    pair = next(rows for rows in histories if rows[0]["reason"] == "first")
-    joint = next(rows for rows in histories if rows[0]["joint"])
-    initial = next(rows for rows in piles if len(rows) == 2)
+    piles = [s["rows"] for s in samples if s["method"] == "pile"]
+    results = [s["rows"] for s in samples if s["method"] == "result"]
+    initial = next(rows for rows in piles if len(rows) == 2 and any(c["lord"] for c in rows))
     after_take = next(rows for rows in piles if len(rows) == 1)
     empty = next(rows for rows in piles if not rows)
+    pair = [r for r in results if not r["joint"]]
+    joint = [r for r in results if r["joint"]]
 
     app = QGuiApplication(sys.argv)
     engine = QQmlApplicationEngine()
@@ -112,6 +121,9 @@ def run():
     lord = next(card["name"] for card in initial if card["lord"])
     other = after_take[0]["name"]
     assert {lord, other} <= labels()
+    first_card = next(item for item in visible_items(window.contentItem()) if item.property("text") == lord)
+    click(first_card)
+    assert js("inspected") == next(c["id"] for c in initial if c["lord"])
     click(window.findChild(QQuickItem, "lordFilter"))
     assert lord in labels() and other not in labels()
     search = window.findChild(QObject, "discardSearch")
@@ -127,31 +139,51 @@ def run():
     close_panel()
     print("PASS discard: search, lord filter, removed card, shuffle")
 
-    js("historyData = " + json.dumps(pair) + "; results.present(historyData[0]); results.present(historyData[1])")
-    assert {"第 1 次拼点 · first", "♥6 → 9点", "平点", "另有 1 名角色，点开查看",
-            f"{pair[0]['source']['seat']}号胜"} <= labels()
-    assert js("results.pending.length") == 1
-    QTest.qWait(6200)
-    assert "第 2 次拼点 · second" in labels() and js("results.pending.length") == 0
-    title = next(item for item in visible_items(window.contentItem())
-                 if item.property("text") == "第 2 次拼点 · second")
-    click(title)
-    assert {"拼点记录", "第 1 次拼点 · first", "第 2 次拼点 · second",
-            f"{pair[0]['targets'][2]['seat']}号胜"} <= labels()
-    assert js("results.records.map(r => r.sequence).join(',')") == "2,1"
-    close_panel()
-    print("PASS pindian: multi-target, changed points, tie, timed sequence, history click")
+    # Scroll partway through the public pile. Insert a row, then remove the first visible card.
+    large = [dict(initial[0], id=100+i) for i in range(60)]
+    js("pileData = " + json.dumps(large) + "; pile.open()")
+    QTest.qWait(200)
+    grid = window.findChild(QQuickItem, "discardGrid")
+    grid.setProperty("contentY", grid.property("originY") + 5 * grid.property("cellHeight") + 9)
+    engine.rootContext().setContextProperty("testedGrid", grid)
 
-    js("historyData = " + json.dumps(joint[:1]) + "; results.openHistory()")
-    assert {"第 1 次共同拼点 · joint", f"{joint[0]['winner']}号位获胜"} <= labels()
-    js("historyData = " + json.dumps(joint) + "; results.present(historyData[1])")
-    assert {"第 2 次共同拼点 · joint", "无人获胜"} <= labels()
+    def first_visible():
+        return js("testedGrid.model[testedGrid.indexAt(2, testedGrid.contentY + 1)].id")
+    first = first_visible()
+    updated = [dict(initial[0], id=i) for i in range(4)] + large
+    js("pileData = " + json.dumps(updated) + "; pile.refresh()")
+    QTest.qWait(80)
+    assert first_visible() == first
+    js("pileData = pileData.filter(c => c.id !== " + str(int(first)) + "); pile.refresh()")
+    QTest.qWait(80)
+    assert first_visible() == first + 1
+    grid.setProperty("contentY", grid.property("originY"))
+    js("pileData = [{id:999,name:'测试'}].concat(pileData); pile.refresh()")
+    assert first_visible() == 999
     close_panel()
-    js("results.openHistory()")
-    assert js("results.records.length") == 2 and "无人获胜" in labels()
-    close_panel()
+    print("PASS discard viewport: insert, removed anchor, follow newest at top")
+
+    def present(result):
+        js("results.present(" + json.dumps(result) + ")")
+    present(pair[0])
+    assert {"6 → 9", "双方都没赢"} <= {t.lstrip("♥") for t in labels()}
+    assert {str(c["seat"]) + " 号位" for c in pair[0]["cards"]} <= labels()
+    QTest.mouseClick(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPointF(464, 290).toPoint())
+    assert js("selectedSeat") == 4
+    js("results.clear()")
+    assert not js("results.visible")
+    present(pair[1])
+    assert str(pair[1]["cards"][1]["winner"]) + " 号位赢得拼点" in labels()
+    present(joint[0])
+    assert str(joint[0]["winner"]) + " 号位赢得拼点" in labels()
+    present(joint[1])
+    assert "无人获胜" in labels()
+    QTest.qWait(2650)
+    assert js("results.visible")
+    QTest.qWait(520)
+    assert not js("results.visible")
     assert not warnings, warnings
-    print("PASS joint pindian: winner, tied leaders, live update, reopen")
+    print("PASS pindian: seat and points, winners and ties, click through, replace and expire")
 
 
 if __name__ == "__main__":

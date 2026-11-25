@@ -20,8 +20,8 @@ function Testqiao_room_records:testDiscardTracksMovesAndShuffle()
   end)
   FkTest.runInClient(function()
     local cards = Client.discardCardsForDisplay(ClientInstance)
-    lu.assertEquals(cards[1], { name = Fk:translate(peach.name), suit = "diamond", rank = "3", lord = false })
-    lu.assertEquals(cards[2], { name = Fk:translate(sword.name), suit = "heart", rank = "9", lord = true })
+    lu.assertEquals(cards[1], { id = peach.id, marks = "", name = Fk:translate(peach.name), suit = "diamond", rank = "3", lord = false })
+    lu.assertEquals(cards[2], { id = sword.id, marks = "", name = Fk:translate(sword.name), suit = "heart", rank = "9", lord = true })
   end)
   FkTest.runInRoom(function() room:obtainCard(room.players[1], sword, true, fk.ReasonPrey) end)
   FkTest.runInClient(function()
@@ -32,6 +32,42 @@ function Testqiao_room_records:testDiscardTracksMovesAndShuffle()
   FkTest.runInClient(function() lu.assertEquals(Client.discardCardsForDisplay(ClientInstance), {}) end)
 end
 
+function Testqiao_room_records:testDiscardDistinguishesBothClubFourSlashes()
+  local room = FkTest.room
+  local ids = {}
+  FkTest.runInRoom(function()
+    for _, card in ipairs(Fk.packages.qiao_cards.cards) do
+      if card.name == "qiao__slash" and card.suit == Card.Club and card.number == 4 then
+        table.insert(ids, card.id)
+      end
+    end
+    room:moveCardTo(ids, Card.DiscardPile, nil, fk.ReasonPut, "test", nil, true)
+  end)
+  FkTest.runInClient(function()
+    local marks = {}
+    for _, row in ipairs(Client.discardCardsForDisplay(ClientInstance)) do
+      if table.contains(ids, row.id) then marks[row.marks] = true end
+    end
+    lu.assertTrue(marks["空巢"])
+    lu.assertTrue(marks["孤军"])
+  end)
+end
+
+local function watchPindian(room)
+  local trace = { commands = {}, results = {}, logs = {} }
+  local broadcast = room.doBroadcastNotify
+  function room:doBroadcastNotify(command, data, ...)
+    if command == "QiaoPindianStart" or command == "QiaoPindianResult" then
+      table.insert(trace.commands, command)
+      if command == "QiaoPindianResult" then table.insert(trace.results, data) end
+    elseif command == "GameLog" then
+      table.insert(trace.logs, data)
+    end
+    return broadcast(self, command, data, ...)
+  end
+  return trace
+end
+
 local function giveCard(room, player, name, number)
   local card = room:printCard(name, Card.Heart, number)
   room:obtainCard(player, card, false, fk.ReasonJustMove)
@@ -40,6 +76,7 @@ end
 
 function Testqiao_room_records:testMultiTargetThenConsecutivePindian()
   local room = FkTest.room
+  local trace = watchPindian(room)
   local a, b, c, d = table.unpack(room.players, 1, 4)
   FkTest.runInRoom(function()
     local bonus = fk.CreateSkill { name = "#qiao_test_panel_points" }
@@ -65,44 +102,18 @@ function Testqiao_room_records:testMultiTargetThenConsecutivePindian()
       results = { [a] = { toCard = giveCard(room, a, "qiao__slash", 13) } },
     }
   end)
-  FkTest.runInClient(function()
-    local records = Client.pindianHistory(ClientInstance)
-    lu.assertEquals(#records, 2)
-    local first, second = records[1], records[2]
-    lu.assertEquals({ first.sequence, first.reason, first.joint, #first.targets }, { 1, "first", false, 3 })
-    lu.assertEquals(first.source, { seat = a.seat, name = "qiao__slash", rank = "6", suit = "heart", points = 9 })
-    lu.assertEquals({ first.targets[1].seat, first.targets[1].winner }, { b.seat, a.seat })
-    lu.assertEquals({ first.targets[2].seat, first.targets[2].winner }, { c.seat, 0 })
-    lu.assertEquals({ first.targets[3].seat, first.targets[3].winner }, { d.seat, d.seat })
-    lu.assertEquals({ second.sequence, second.source.seat, second.reason, second.targets[1].winner },
-      { 2, b.seat, "second", a.seat })
-  end)
-  local snapshot
-  FkTest.runInRoom(function() snapshot = room:serialize(a) end)
-  FkTest.runInClient(function()
-    local before = Client.pindianHistory(ClientInstance)
-    ClientInstance:setBanner("qiao_pindian_record_1", 0)
-    ClientInstance:setBanner("qiao_pindian_record_2", 0)
-    ClientInstance:deserialize(snapshot)
-    lu.assertEquals(Client.pindianHistory(ClientInstance), before)
-
-    local board = Fk:getBoardGame(snapshot.settings.gameMode)
-    local otherClient = board.client_klass:new(FkTest.createFakeClient())
-    local displayed = {}
-    function otherClient:notifyUI(command, data)
-      lu.assertEquals(command, "QiaoPindianResult")
-      lu.assertEquals(self:getBanner("qiao_pindian_record_" .. data.sequence), data)
-      table.insert(displayed, data)
-    end
-    for _, record in ipairs(before) do
-      otherClient.callbacks.SetBanner(otherClient, { "qiao_pindian_record_" .. record.sequence, record })
-    end
-    lu.assertEquals(displayed, before)
-  end)
+  lu.assertEquals(trace.commands, { "QiaoPindianStart", "QiaoPindianResult", "QiaoPindianStart", "QiaoPindianResult" })
+  local first, second = trace.results[1], trace.results[2]
+  lu.assertEquals(first.cards[1], { seat = a.seat, name = "qiao__slash", rank = "6", number = 6, suit = "heart", points = 9 })
+  lu.assertEquals({ first.cards[2].winner, first.cards[3].winner, first.cards[4].winner }, { a.seat, 0, d.seat })
+  lu.assertEquals({ second.cards[1].seat, second.cards[2].winner }, { b.seat, a.seat })
+  lu.assertNotNil(table.find(trace.logs, function(log) return log.type == "#QiaoPindianTie" and log.to[1] == c.id end))
+  lu.assertNotNil(table.find(trace.logs, function(log) return log.type == "#QiaoPindianWinner" and log.arg == d.seat end))
 end
 
 function Testqiao_room_records:testJointPindianWinnerAndTiedLeaders()
   local room = FkTest.room
+  local trace = watchPindian(room)
   local a, b, c = table.unpack(room.players, 1, 3)
   local U = require "packages.utility.utility"
   for _, lastNumber in ipairs({ 7, 12 }) do
@@ -115,12 +126,13 @@ function Testqiao_room_records:testJointPindianWinnerAndTiedLeaders()
       U.jointPindian(a, { b, c }, "joint", fromCard)
     end)
   end
-  FkTest.runInClient(function()
-    local records = Client.pindianHistory(ClientInstance)
-    lu.assertEquals(#records, 2)
-    lu.assertEquals({ records[1].joint, records[1].winner, #records[1].targets }, { true, b.seat, 2 })
-    lu.assertEquals({ records[2].joint, records[2].winner, #records[2].targets }, { true, 0, 2 })
-  end)
+  lu.assertEquals(#trace.results, 2)
+  for i, record in ipairs(trace.results) do
+    lu.assertEquals({ record.joint, record.winner, #record.cards }, { true, i == 1 and b.seat or 0, 3 })
+  end
+  lu.assertNotNil(table.find(trace.logs, function(log) return log.type == "#ShowJointPindianWinner" end))
+  lu.assertNotNil(table.find(trace.logs, function(log) return log.type == "#JointPindianNoWinner" end))
+  lu.assertNil(table.find(trace.logs, function(log) return log.type == "#QiaoPindianTie" end))
 end
 
 return { name = "qiao_room_records" }

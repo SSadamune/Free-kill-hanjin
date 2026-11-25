@@ -12,36 +12,31 @@ Room {
   property int pileActionRevision: 0
   property int ciRevision: 0
 
-  Row {
-    id: recordsButtons
+  Controls.Button {
+    id: discardButton
     anchors.top: parent.top
     anchors.topMargin: 36
     anchors.right: parent.right
     anchors.rightMargin: 120
     z: 10
-    spacing: 4
-    Controls.Button {
-      text: "弃牌堆"
-      onClicked: discardPanel.open()
-    }
-    Controls.Button {
-      text: "拼点记录"
-      onClicked: pindianPanel.openHistory()
-    }
+    text: "弃牌堆"
+    onClicked: discardPanel.open()
   }
 
   DiscardPilePanel {
     id: discardPanel
     parent: room
     readCards: () => JSON.parse(Lua.ev("json.encode(ClientInstance:discardCardsForDisplay())"))
+    onInspect: cardId => room.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "CardDetail"), { cardId })
   }
 
-  PindianPanel {
-    id: pindianPanel
-    anchors.fill: parent
-    z: 11
-    readHistory: () => JSON.parse(Lua.ev("json.encode(ClientInstance:pindianHistory())"))
-    translate: key => Lua.tr(key)
+  PindianDisplay {
+    id: pindianDisplay
+    x: room.tablePile.x
+    y: room.tablePile.y
+    width: room.tablePile.width
+    z: 100
+    cardPicture: name => SkinBank.getCardPicture(name)
   }
 
   function ciCardsForDisplay(playerId) {
@@ -235,7 +230,11 @@ Room {
   }
 
   Component.onCompleted: {
-    addCallback("QiaoPindianResult", (_, data) => pindianPanel.present(data));
+    addCallback("QiaoPindianStart", () => {
+      pindianDisplay.clear();
+      App.showToast(Lua.tr("Pindian"));
+    });
+    addCallback("QiaoPindianResult", (_, data) => pindianDisplay.present(data));
     addCallback("QiaoDiscardChanged", () => { if (discardPanel.visible) Qt.callLater(discardPanel.refresh); });
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);

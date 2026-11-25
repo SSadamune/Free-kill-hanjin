@@ -12,7 +12,7 @@ local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_sele
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
-local PindianRecords = require "packages.qiao.pkg.qiao_mode.rules.pindian_records"
+local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
@@ -351,13 +351,7 @@ function QiaoClient:handleSetBanner(data)
   -- The base client forwards only visible (@) banners to QML.
   if data[1] == Han.TRICK_BANNER then
     self:notifyUI("QiaoPileActionChanged", {})
-  elseif data[1]:startsWith(PindianRecords.prefix) and type(data[2]) == "table" then
-    self:notifyUI("QiaoPindianResult", data[2])
   end
-end
-
-function QiaoClient:pindianHistory()
-  return PindianRecords.history(self)
 end
 
 function QiaoClient:guestIllustrationsEnabled()
@@ -372,8 +366,13 @@ function QiaoClient:discardCardsForDisplay()
     local id = self.discard_pile[index]
     local card = Fk:getCardById(id, true)
     if card and Self:cardVisible(id) then
+      local marks = table.map(Adaptation.displayEntries(card), function(entry)
+        return Fk:translate("qiao_condition_" .. entry.condition)
+      end)
+      if Fk.packages.qiao_cards.qiao_cards.isHeji(card) then table.insert(marks, "合纵") end
       table.insert(cards, {
-        name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
+        id = id, name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
+        marks = table.concat(marks, " · "),
         lord = lordEquipment[card.name] ~= nil,
       })
     else
