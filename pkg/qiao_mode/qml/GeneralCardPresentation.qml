@@ -9,34 +9,47 @@ QtObject {
   required property bool enabledInContext
   required property var factions
   property bool onlyRegistered: false
-  readonly property var attached: new WeakSet()
-
   // Core and utility create their delegates dynamically. Attach once at the
   // room's visual roots, including the separate overlay used by info popups.
   function watch(item) {
-    if (!(item instanceof Item) || attached.has(item)) return;
-    attached.add(item);
+    if (!(item instanceof Item) || item.objectName === "qiaoAppearanceWatcher") return;
     if (item instanceof Ltk.GeneralCardItem) {
       if (!item.children.some(child => child instanceof GuestCardAppearance))
         fullCard.createObject(item, { card: item });
     } else if (item instanceof Ltk.CompactGeneralCardItem) {
+      if (item.children.some(child => child.objectName === "qiaoCompactGeneralArtwork")) return;
       const art = item.children.find(child => child instanceof Image && "useSmallPic" in child);
       if (art) compactCard.createObject(item, { card: item, art });
     } else if (item instanceof Ltk.PhotoBase) {
       const layer = item.children.find(child => child.maskSource === item.photoMask)?.source;
+      if (layer?.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
       const portraits = layer?.children.filter(child => child instanceof Image) ?? [];
       if (portraits.length === 2)
         portraits.forEach((art, index) => portrait.createObject(layer, { photo: item, art, deputy: index === 1 }));
     } else if (item instanceof Ltk.CardItem) {
-      generalAsCard.createObject(item, { card: item });
+      if (!item.children.some(child => child.objectName === "qiaoGeneralCardArtwork"))
+        generalAsCard.createObject(item, { card: item });
     } else if (!(item instanceof Image || item instanceof Text)) {
-      item.childrenChanged.connect(() => Qt.callLater(watchChildren, item));
+      if (!item.children.some(child => child.objectName === "qiaoAppearanceWatcher"))
+        containerWatcher.createObject(item);
       watchChildren(item);
     }
   }
 
   function watchChildren(item) {
     for (const child of item?.children ?? []) watch(child);
+  }
+
+  readonly property Component containerWatcher: Component {
+    Item {
+      id: watcher
+      objectName: "qiaoAppearanceWatcher"
+      function scan() { root.watchChildren(parent); }
+      Connections {
+        target: watcher.parent
+        function onChildrenChanged() { Qt.callLater(watcher.scan); }
+      }
+    }
   }
 
   readonly property Component fullCard: Component {
@@ -48,8 +61,9 @@ QtObject {
   }
 
   readonly property Component compactCard: Component {
-    QtObject {
+    Item {
       id: compact
+      objectName: "qiaoCompactGeneralArtwork"
       required property Item card
       required property Image art
       readonly property var picture: card.dataModel?.known
@@ -77,6 +91,7 @@ QtObject {
 
   readonly property Component portrait: Component {
     Image {
+      objectName: "qiaoGuestPortrait"
       required property Item photo
       required property Image art
       required property bool deputy
@@ -91,15 +106,19 @@ QtObject {
   }
 
   readonly property Component generalAsCard: Component {
-    Binding {
+    Item {
+      id: illustration
+      objectName: "qiaoGeneralCardArtwork"
       required property Item card
       readonly property string graphic: card.dataModel?.picName ?? ""
       readonly property var picture: card.dataModel?.known && graphic.startsWith("general:")
         ? GuestIllustration.picture(graphic.slice(8), root.enabledInContext) : undefined
-      target: card
-      property: "cardFrontSource"
-      when: !!picture
-      value: picture
+      Binding {
+        target: illustration.card
+        property: "cardFrontSource"
+        when: !!illustration.picture
+        value: illustration.picture
+      }
     }
   }
 }
