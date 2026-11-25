@@ -100,7 +100,7 @@ skill:addEffect(fk.Death, {
       local cards = target:getCardIds("he")
       if #cards > 0 then
         room:moveCardTo(cards, Card.PlayerHand, to, fk.ReasonPrey,
-          skill.name, nil, true, target)
+          skill.name, nil, false, target)
       end
     elseif cost.choice == OPT_DRAW then
       to:drawCards(3, skill.name)

@@ -117,7 +117,7 @@ skill:addEffect("active", {
     end
     if card == nil then return end
 
-    room:moveCardTo({ card }, Card.PlayerHand, target, fk.ReasonGive, skill.name, nil, true, player)
+    room:moveCardTo({ card }, Card.PlayerHand, target, fk.ReasonGive, skill.name, nil, false, player)
     if player.dead then return end
 
     room:addTableMarkIfNeed(player, USED_TARGETS, target.id)

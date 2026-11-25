@@ -6,6 +6,7 @@
 -- 不能使用/打出，其受到伤害后来源获得之。牌离开手牌即清理禁用约束；回合末
 -- 清理公开与限制。
 local Invoke = require "packages.qiao.pkg.qiao_generals.util.invoke_targets"
+local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_xiyuanjun",
 }
@@ -135,15 +136,9 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
--- 公开：所有角色均可看到带标记的牌。只有明确带标记时才返回 true；
--- 未命中必须返回 nil 交还引擎（false 会把该牌对所有人强制隐藏）。
-skill:addEffect("visibility", {
-  card_visible = function(self, player, card)
-    if card == nil then return nil end
-    if card:getMark(VISIBLE_MARK) > 0 then return true end
-    return nil
-  end,
-})
+skill:addEffect("visibility", Visibility.atLocation(function(viewer, owner, area, card)
+  return card and card:getMark(VISIBLE_MARK) > 0
+end))
 
 -- 持有者不能使用或打出该牌；弃置、给予等其他操作不受限。
 skill:addEffect("prohibit", {

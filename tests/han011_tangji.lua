@@ -171,6 +171,9 @@ function Testqiao_han011:testJuebieOtherSameKingdomGetsAllCardsBeforeBury()
   for _, id in ipairs(cards) do lu.assertTrue(table.contains(hand, id)) end
   lu.assertTrue(table.contains(hand, equip))
   lu.assertEquals(room:getCardArea(equip), Card.PlayerHand)
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(cards[1], Card.PlayerHand, Card.PlayerHand, { p3(), p1() })
+  assertMoveViews(equip, Card.PlayerEquip, Card.PlayerHand, room.players)
 end
 
 function Testqiao_han011:testJuebieOwnerDeathAlsoAppliesAndBeneficiaryDrawsThree()

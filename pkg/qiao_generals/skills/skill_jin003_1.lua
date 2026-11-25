@@ -6,12 +6,13 @@
 -- 与可见按 -phase 标记清理；同花色已失去事实不因重新获得而重开。
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin003_1",
 }
 
-local OPEN = "qiao_jin003_1_open-phase"
+local OPEN = Visibility.ZHAORAN_OPEN
 local DISPLAY = "@qiao_zhaoran-phase"
 local LOST = "qiao_jin003_1_lost_suits-phase"
 local OPT_DRAW = "qiao__skill_jin003_1-draw"
@@ -69,17 +70,7 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
--- 持续可见：只按“当前在所有者手牌区”判断，因此之后获得的手牌也自动可见。
-skill:addEffect("visibility", {
-  card_visible = function(self, viewer, card)
-    local room = Fk:currentRoom()
-    if room == nil or card == nil then return nil end
-    local owner = room:getCardOwner(card.id)
-    if owner ~= nil and owner:getMark(OPEN) > 0
-      and room:getCardArea(card.id) == Card.PlayerHand then return true end
-    return nil
-  end,
-})
+skill:addEffect("visibility", Visibility.zhaoran)
 
 skill:addEffect(fk.AfterCardsMove, {
   anim_type = "drawcard",
