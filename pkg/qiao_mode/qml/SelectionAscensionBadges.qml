@@ -31,7 +31,10 @@ QtObject {
 
       anchors.right: parent.right
       anchors.rightMargin: 1
-      y: 59
+      anchors.bottom: parent.bottom
+      // Native companion art begins at y=80 and crosses the lower corner.
+      // Otherwise leave 16 pixels for the package badge and a 2-pixel gap.
+      anchors.bottomMargin: card.dataModel?.hasCompanion ? card.height - 78 : 18
       z: 2
       visible: !!hint.card.dataModel && root.eligible[hint.card.dataModel.name] === true
       width: label.implicitWidth + 24
