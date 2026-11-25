@@ -297,7 +297,6 @@ end
 
 local pileActions = {
   QiaoEdict = Han.CONSUME,
-  QiaoCi = Ci.CONSUME,
 }
 
 local pileActionUpdates = {
@@ -313,7 +312,7 @@ local pileActionUpdates = {
 function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
-    and (skill == Ci.CONSUME or self.player:hasSkill(skill)) and self:skillButtonValidity(skill)
+    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
@@ -322,17 +321,12 @@ function QiaoPlayCard:update(elemType, id, action, data)
     return ReqPlayCard.update(self, elemType, id, action, data)
   end
   if action ~= "click" or not self:canUsePileAction(id, skill) then return false end
-  local chosenCi = elemType == "QiaoCi" and data and data.general
-  if elemType == "QiaoCi" and not Ci.canChoose(self.player, chosenCi) then return false end
   self:selectSkill(skill, { selected = true })
   if not self:feasible() then
     self:doCancelButton()
     return false
   end
-  if chosenCi then Fk.skills[skill].interaction.data = chosenCi end
-  local accepted = ReqPlayCard.update(self, "Button", "OK", action, data)
-  if chosenCi then Fk.skills[skill].interaction.data = nil end
-  return accepted
+  return ReqPlayCard.update(self, "Button", "OK", action, data)
 end
 
 function QiaoClient:initialize(client)
@@ -351,11 +345,6 @@ end
 
 function QiaoClient:canConsumeEdict(holderId)
   return self:canUsePileAction(holderId, "QiaoEdict")
-end
-
-function QiaoClient:canConsumeCi(holderId, general)
-  return self:canUsePileAction(holderId, "QiaoCi")
-    and Ci.canChoose(self.current_request_handler.player, general)
 end
 
 function QiaoClient:ciCardsForDisplay(holderId)

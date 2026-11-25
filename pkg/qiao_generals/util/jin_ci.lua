@@ -9,7 +9,7 @@ local M = {
 
 function M.cards(holder)
   local mark = holder:getMark(M.MARK)
-  if type(mark) == "table" then return mark end
+  if type(mark) == "table" then return table.simpleClone(mark) end
   -- 旧房间的公开标记只保存数量，实体将牌名单存在持有人身上的旗名标记里。
   return holder:getTableMark(M.SKILL)
 end
@@ -29,10 +29,14 @@ function M.save(room, holder, list)
   local value = #list > 0 and list or (holder:isAlive() and holder:hasShownSkill(M.SKILL, true) and 1 or 0)
   if holder:getMark(M.SKILL) ~= 0 then room:setPlayerMark(holder, M.SKILL, 0) end
   if holder:getMark(M.MARK) ~= value then room:setPlayerMark(holder, M.MARK, value) end
+  local hasCards = #list > 0
+  if hasCards ~= holder:hasSkill(M.CONSUME, true) then
+    room:handleAddLoseSkills(holder, hasCards and M.CONSUME or "-" .. M.CONSUME, nil, false, true)
+  end
 end
 
 function M.refreshMark(room, holder)
-  if type(holder:getMark(M.MARK)) ~= "table" then M.save(room, holder, M.cards(holder)) end
+  M.save(room, holder, M.cards(holder))
 end
 
 function M.consume(room, holder, chosen)

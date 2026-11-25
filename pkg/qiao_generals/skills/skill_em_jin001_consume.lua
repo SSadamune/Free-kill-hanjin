@@ -40,10 +40,20 @@ skill:addEffect("active", {
   prompt = "#qiao__jin001_banner-active",
   target_num = 0,
   card_num = 0,
-  -- 只承接赐列表提交的武将 ID，无需创建额外的技能交互组件。
-  interaction = function() end,
+  interaction = function(self, player)
+    return {
+      type = "custom",
+      qml = {
+        url = "packages/qiao/pkg/qiao_mode/qml/CiSelection.qml",
+        prop = { cardNames = Ci.cards(player) },
+      },
+    }
+  end,
   can_use = function(self, player)
     return Ci.canSpend(player)
+  end,
+  feasible = function(self, player, targets, cards)
+    return #targets == 0 and #cards == 0 and Ci.canChoose(player, self.interaction.data)
   end,
   on_use = function(self, room, effect)
     local player = effect.from
@@ -91,8 +101,6 @@ skill:addEffect("active", {
     end
   end,
 })
-
-Fk:addPostLoadFunc(function() Fk.skills[Ci.CONSUME].visible = false end)
 
 Fk:loadTranslationTable {
   [Ci.CONSUME] = "赐",

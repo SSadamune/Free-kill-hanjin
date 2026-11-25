@@ -204,7 +204,7 @@ Room {
           cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
         });
         button.clicked.connect(() => room.showInfoPopup(ciPile, {
-          holderId: photo.playerid, name: "@[qiao_ci]",
+          name: "@[qiao_ci]",
           cardNames: Qt.binding(() => button.cards ?? []),
         }));
       }

@@ -4,24 +4,17 @@ import QtQuick
 import QtQuick.Layouts
 import Fk
 import Fk.Components.Common
-import LunarLtk
 import LunarLtk.Components
 
 ColumnLayout {
   id: root
   anchors.fill: parent
 
-  required property int holderId
+  objectName: "qiaoCiPile"
   property string name
   property list<string> cardNames
   property string selectedCi: ""
-  readonly property var scene: Ltk.roomScene
-  readonly property bool isHolder: !Config.observing && !Config.replaying && Cpp.self.id === holderId
-
-  function canConsume() {
-    return root.cardNames.includes(root.selectedCi) &&
-      Lua.ev(`ClientInstance:canConsumeCi(${holderId}, ${JSON.stringify(root.selectedCi)})`);
-  }
+  property var chooseCard
 
   BigGlowText {
     Layout.fillWidth: true
@@ -42,28 +35,19 @@ ColumnLayout {
       required property string modelData
       autoBack: false
       generalName: modelData
-      scene: root.scene
+      selectable: !!root.chooseCard
       chosenInBox: root.selectedCi === modelData
       onClicked: {
-        if (root.isHolder) root.selectedCi = root.selectedCi === modelData ? "" : modelData;
+        if (root.chooseCard) root.selectedCi = root.selectedCi === modelData ? "" : modelData;
       }
     }
   }
 
   MetroButton {
     Layout.alignment: Qt.AlignHCenter
-    text: Lua.tr("qiao__ci_consume")
-    visible: root.isHolder
-    enabled: {
-      // The Lua query itself has no QML change signal.
-      root.scene?.pileActionRevision;
-      return visible && root.scene?.progress.visible && root.canConsume();
-    }
-
-    onClicked: {
-      if (!root.canConsume()) return;
-      root.scene.closeInfoPopup();
-      Lua.updateRequestUI("QiaoCi", root.holderId, "click", { general: root.selectedCi });
-    }
+    text: Lua.tr("OK")
+    visible: !!root.chooseCard
+    enabled: root.cardNames.includes(root.selectedCi)
+    onClicked: root.chooseCard(root.selectedCi)
   }
 }

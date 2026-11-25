@@ -728,7 +728,8 @@ local function useTransferredCiAfter(changeLord)
   withClientRoom(room, function(clients)
     local me = clients[2]
     lu.assertNil(me.room)
-    lu.assertFalse(Fk.skills[CONSUME].visible, "消费按钮应只放在赐列表内")
+    lu.assertTrue(me:hasSkill(CONSUME))
+    lu.assertTrue(Fk.skills[CONSUME].visible, "持有者的技能栏应显示赐")
     local board = assert(Fk:getBoardGame("qiao_heg_mode"))
     local client = board.client_klass:new(ClientInstance.client)
     client.players = clients
@@ -736,31 +737,33 @@ local function useTransferredCiAfter(changeLord)
     lu.assertFalse(client:ciCardsForDisplay(clients[4].id))
     local play = client.request_handlers.PlayCard:new(me)
     client.current_request_handler = play
-    lu.assertFalse(client:canConsumeCi(clients[1].id, stored))
+    play:setup()
     me.phase = Player.Finish
-    lu.assertFalse(client:canConsumeCi(me.id, stored))
+    lu.assertFalse(play:skillButtonValidity(CONSUME))
     me.phase = Player.Play
-    lu.assertFalse(client:canConsumeCi(me.id))
-    lu.assertFalse(client:canConsumeCi(me.id, "qiao_heg__wei001"))
-    lu.assertTrue(client:canConsumeCi(me.id, stored))
+    lu.assertTrue(play:skillButtonValidity(CONSUME))
 
     local originalNotify = ClientInstance.notifyUI
     ClientInstance.notifyUI = function(_, cmd, data)
       if cmd == "ReplyToServer" then reply = data end
     end
     local ok, err = pcall(function()
-      lu.assertFalse(play:update("QiaoCi", me.id, "click", {}))
-      lu.assertNil(reply)
-      play:update("QiaoCi", me.id, "click", { general = stored })
+      play:update("SkillButton", CONSUME, "click", { selected = true })
+      lu.assertEquals(play.skill_name, CONSUME)
+      lu.assertFalse(play:feasible())
+      play:update("Interaction", "1", "update", "qiao_heg__wei001")
+      lu.assertFalse(play:feasible())
+      play:update("Interaction", "1", "update", stored)
+      lu.assertTrue(play:feasible())
+      play:update("Button", "OK", "click")
     end)
     ClientInstance.notifyUI = originalNotify
     if not ok then error(err, 0) end
-    lu.assertNotNil(reply, "点击列表按钮应产生标准技能回包")
+    lu.assertNotNil(reply, "从技能栏选择赐并确认应产生标准技能回包")
     lu.assertEquals(reply.card.skill, CONSUME)
     lu.assertEquals(reply.card.subcards, {})
     lu.assertEquals(reply.targets, {})
     lu.assertEquals(reply.interaction_data, stored)
-    lu.assertFalse(client:canConsumeCi(me.id, stored), "提交后不可重复点击")
     play:_finish()
   end)
   inRoom(function()

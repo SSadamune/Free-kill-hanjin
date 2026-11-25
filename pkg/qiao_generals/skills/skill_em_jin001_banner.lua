@@ -202,7 +202,7 @@ skill:addEffect(fk.EventPhaseSkipping, {
   end,
 })
 
--- 旗和消费都从面板展示。
+-- 大旗的公开资料仍由角色面板显示；出牌阶段的消耗属于持有者技能。
 Fk:addPostLoadFunc(function()
   Fk.skills[skill.name].visible = false
 end)
@@ -215,6 +215,7 @@ Fk:loadTranslationTable {
     .. "\n当你即将跳过一个阶段时，你可以移去你的一枚〖赐〗并防止之。",
   [CI_MARK] = "赐",
   ["qiao__ci_consume"] = "消耗一枚赐",
+  ["qiao__ci_select"] = "选择一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
   ["#qiao__jin001_banner-transfer"] = "诸王敕封册：请选择一个势力，将该势力的所有“赐”交给%dest",
