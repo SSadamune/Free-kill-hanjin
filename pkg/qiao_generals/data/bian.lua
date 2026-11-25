@@ -1,16 +1,16 @@
--- 六势力变包正式数据：2 名普通武将。
+-- 六势力变包正式数据：3 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 2
+M.generalCount = 3
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 4
+M.skillCount = 6
 M.retinueSkillCount = 0
-M.kingdoms = { "han" }
+M.kingdoms = { "han", "wei" }
 
 M.generals = {
   {
@@ -74,6 +74,39 @@ M.generals = {
         id = [==[qiao__skill_han024_2]==],
         name = [==[焚心]==],
         text = [==[当你杀死角色后，你可以变更副将，此次变更额外获得三张其副将牌面势力的备选武将牌。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[WEI020]==],
+    id = [==[qiao_heg__wei020]==],
+    name = [==[荀攸]==],
+    kingdom = [==[wei]==],
+    title = [==[真贤去恶、曹魏的谋主]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[han]==] },
+    companionText = [==[荀彧、伍琼&种辑]==],
+    companionNames = { [==[荀彧]==], [==[伍琼&种辑]==] },
+    companions = { [==[qiao_heg__wei013]==], [==[qiao_heg__han023]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wei020_1]==],
+        name = [==[奇策]==],
+        text = [==[出牌阶段限一次，你可以将所有手牌当任意一种普通锦囊牌使用（不能为目标数大于转化所用牌数的牌或【挟天子以令诸侯】），然后你可以变更副将。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wei020_2]==],
+        name = [==[智愚]==],
+        text = [==[当你受到伤害后，你可以摸一张牌，展示所有手牌，若颜色均相同，来源弃置一张手牌。]==],
         related = false,
         tags = {  },
       },

@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 2)
+  lu.assertEquals(Data.generalCount, 3)
   lu.assertEquals(Data.retinueCount, 0)
   lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 4)
+  lu.assertEquals(Data.skillCount, 6)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -57,6 +57,9 @@ function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests(
     end
   end
   -- 珠联与客将核对
+  lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__wei013"]))
+  lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__han023"]))
+  lu.assertEquals(Guest.guestKingdoms("qiao_heg__wei020"), { "han" })
 end
 
 -- HAN023 伍琼&种辑：除奸（无距离/无次数且不计次 + 阶段末延时伤害不因暗置撤销）
@@ -253,6 +256,83 @@ function Testqiao_bian_han_wei_shu:testHan024JieyuanAndFenxinExtraPool()
   lu.assertEquals(secondAsk, 0, "焚心伪限定次数耗尽后再次击杀不应再询问")
 end
 
+-- WEI020 荀攸：智愚（同色令来源弃手牌 / 混色不弃牌）
+function Testqiao_bian_han_wei_shu:testWei020ZhiyuSameAndMixedColor()
+  local room = FkTest.room
+  local xunyou, attacker = p(1), p(2)
+  local r1, r2, b1, aHand
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wu", "shu", "han" })
+    skill_test.installDualGenerals(room, xunyou, {
+      main = "qiao_heg__wei020", deputy = "qiao_test__wei_2", kingdom = "wei", hp = 3,
+    })
+    xunyou:throwAllCards("he")
+    attacker:throwAllCards("he")
+    r1 = room:printCard("qiao__jink", Card.Heart, 2)
+    r2 = room:printCard("qiao__peach", Card.Diamond, 3)
+    b1 = room:printCard("qiao__slash", Card.Spade, 4)
+    aHand = room:printCard("qiao__slash", Card.Club, 5)
+    room:obtainCard(xunyou, r1, false, fk.ReasonJustMove)
+    room:obtainCard(attacker, aHand, false, fk.ReasonJustMove)
+    -- 牌堆顶放红牌 r2，使智愚摸完后手牌全红。
+    room:moveCardTo(r2, Card.DrawPile, nil, fk.ReasonJustMove, "test", nil, true)
+  end)
+
+  skill_test.withSkillRequests(room, "qiao__skill_wei020_2", {
+    askToSkillInvoke = function() return true end,
+    askToDiscard = function(self, who, params)
+      local id = who:getCardIds("h")[1]
+      self:throwCard({ id }, "qiao__skill_wei020_2", who, who)
+      return { id }
+    end,
+  }, function()
+    inRoom(function()
+      room:damage { from = attacker, to = xunyou, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(#xunyou:getCardIds("h"), 2, "智愚应摸一张牌")
+  lu.assertEquals(#attacker:getCardIds("h"), 0, "全红手牌应令伤害来源弃置一张手牌")
+
+  -- 牌堆顶放黑牌 b1，摸完混色，来源不应弃牌。
+  local aHand2
+  inRoom(function()
+    aHand2 = room:printCard("qiao__jink", Card.Heart, 9)
+    room:obtainCard(attacker, aHand2, false, fk.ReasonJustMove)
+    room:moveCardTo(b1, Card.DrawPile, nil, fk.ReasonJustMove, "test", nil, true)
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_wei020_2", {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function()
+      room:damage { from = attacker, to = xunyou, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(#attacker:getCardIds("h"), 1, "手牌混色时伤害来源不应弃牌")
+
+  -- 核对正式变包荀攸（qiao_heg__wei020）复用【奇策】并按自身武将牌记录变更副将。
+  inRoom(function()
+    xunyou:throwAllCards("he")
+    room:obtainCard(xunyou, room:printCard("qiao__slash", Card.Spade, 10), false, fk.ReasonJustMove)
+    room:setCurrent(xunyou)
+    xunyou.phase = Player.Play
+    resetGeneralPool(room, { "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei006" }, { "wei", "wu", "shu", "han" })
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_wei020_1", {
+    askToChoice = function() return "changeDeputy" end,
+    askToCustomDialog = function(self, who, params)
+      return { general = params.component.prop.candidates[1] }
+    end,
+  }, function()
+    inRoom(function()
+      local reply = FkTest.ReplyUseSkill("qiao__skill_wei020_1", {}, {})
+      reply.interaction_data = "qiao__foresight"
+      room:handleUseCardReply(xunyou, reply)
+    end)
+  end)
+  lu.assertNotEquals(xunyou.deputyGeneral, "qiao_test__wei_2", "正式荀攸奇策应支持变更副将")
+  lu.assertTrue(room:getTag("qiao_qice_change_used_qiao_heg__wei020") == true, "奇策变更应随荀攸武将牌独立记账")
+end
+
 -- 审阅回归（第 6 项）：心疾暂时无效时桃恢复可用，恢复有效后个人鏖战立即恢复，全局鏖战仍覆盖。
 function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidationRestoreAndGlobalBattleRoyal()
   local room = FkTest.room
@@ -327,6 +407,34 @@ function Testqiao_bian_han_wei_shu:testHan024FenxinWildExtraPoolAndSelfDeputySou
   end)
   lu.assertTrue(changedOk)
   lu.assertTrue(room:getTag(originalKey) == true, "副将换走自己时应记账到发动前的旧副将来源键")
+end
+
+-- 复审回归（第 3 项）：心疾暂时无效期间获得其他技能，恢复有效后个人鏖战必须立即恢复。
+function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidAcquireSkillThenRestore()
+  local room = FkTest.room
+  local han = p(1)
+  local before, whileInvalid, activeAfter, globalEntered, after
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "han", "wei", "shu", "wu" })
+    skill_test.installDualGenerals(room, han, {
+      main = "qiao_heg__han023", deputy = "qiao_test__han_2", kingdom = "han", hp = 4,
+    })
+    local peach = room:printCard("qiao__peach", Card.Heart, 6)
+    room:obtainCard(han, peach, false, fk.ReasonJustMove)
+    before = O.isForbidden(han, peach)
+    room:invalidateSkill(han, "qiao__skill_han023_2", "", "test")
+    room:handleAddLoseSkills(han, "qiao__skill_wei020_2")
+    whileInvalid = O.isForbidden(han, peach)
+    room:validateSkill(han, "qiao__skill_han023_2", "", "test")
+    activeAfter = han:hasShownSkill("qiao__skill_han023_2")
+    globalEntered = BattleRoyal.entered(room)
+    after = O.isForbidden(han, peach)
+  end)
+  lu.assertTrue(before)
+  lu.assertFalse(whileInvalid)
+  lu.assertTrue(activeAfter)
+  lu.assertFalse(globalEntered)
+  lu.assertTrue(after, "心疾失效期间获得新技能后，恢复心疾时个人鏖战仍应恢复")
 end
 
 return { name = "qiao_bian_han_wei_shu" }
