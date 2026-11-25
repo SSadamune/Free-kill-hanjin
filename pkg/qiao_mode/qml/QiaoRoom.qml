@@ -24,6 +24,7 @@ Room {
   property int ciRevision: 0
   property int ownHiddenGeneralsRevision: 0
   property int skillStatusRevision: 0
+  property int discardCount: 0
 
   TextMetrics {
     id: choiceMetrics
@@ -48,14 +49,13 @@ Room {
     }
   }
 
-  Controls.Button {
-    id: discardButton
+  DiscardPileButton {
     anchors.top: parent.top
-    anchors.topMargin: 36
+    anchors.topMargin: 32
     anchors.right: parent.right
     anchors.rightMargin: 120
     z: 10
-    text: "弃牌堆"
+    count: room.discardCount
     onClicked: discardPanel.open()
   }
 
@@ -64,6 +64,11 @@ Room {
     parent: room
     readCards: () => JSON.parse(Lua.ev("json.encode(ClientInstance:discardCardsForDisplay())"))
     onInspect: cardId => room.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "CardDetail"), { cardId })
+  }
+
+  function refreshDiscard() {
+    discardCount = Lua.ev("ClientInstance and ClientInstance.discard_pile and #ClientInstance.discard_pile or 0");
+    discardPanel.refresh();
   }
 
   PindianDisplay {
@@ -349,7 +354,7 @@ Room {
     function onCardsMoved() {
       ++room.skillStatusRevision;
       Qt.callLater(room.bindPhotoExtras);
-      if (discardPanel.visible) Qt.callLater(discardPanel.refresh);
+      Qt.callLater(room.refreshDiscard);
     }
     function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
   }
@@ -383,7 +388,7 @@ Room {
       App.showToast(Lua.tr("Pindian"));
     });
     addCallback("QiaoPindianResult", (_, data) => pindianDisplay.present(data));
-    addCallback("QiaoDiscardChanged", () => { if (discardPanel.visible) Qt.callLater(discardPanel.refresh); });
+    addCallback("QiaoDiscardChanged", () => Qt.callLater(room.refreshDiscard));
     addCallback("QiaoSingleChoice", room.showSingleChoice);
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
@@ -415,5 +420,6 @@ Room {
     });
     Qt.callLater(bindPhotoExtras);
     Qt.callLater(refreshSkillButtonLabels);
+    Qt.callLater(refreshDiscard);
   }
 }
