@@ -209,6 +209,11 @@ def run():
         return {item.property("text") for item in visible_items(window.contentItem())
                 if isinstance(item.property("text"), str)}
 
+    def card_faces():
+        QTest.qWait(60)
+        return {js("dataModel.cardId", item): item for item in visible_items(window.contentItem())
+                if item.objectName() == "discardCardFace"}
+
     def click(item):
         point = item.mapToScene(QPointF(item.width() / 2, item.height() / 2))
         QTest.mouseClick(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point.toPoint())
@@ -224,42 +229,42 @@ def run():
     button = next(item for item in visible_items(window.contentItem())
                   if item.property("text") == "弃牌堆")
     click(button)
-    lord = next(card["name"] for card in initial if card["lord"])
+    lord = next(card["id"] for card in initial if card["lord"])
     other = after_take[0]["name"]
-    assert {lord, other} <= labels()
-    assert "君主装备" not in labels()
-    titles = {item.property("text"): item for item in visible_items(window.contentItem())
-              if item.property("text") in {lord, other}}
-    assert titles[lord].property("font").bold() and not titles[other].property("font").bold()
-    assert titles[lord].property("color") != titles[other].property("color")
+    other_id = after_take[0]["id"]
+    assert not ({"君主装备", *(card["name"] for card in initial)} & labels())
+    faces = card_faces()
+    assert set(faces) == {lord, other_id}
     for card in initial:
-        face = next(item for item in visible_items(window.contentItem())
-                    if item.objectName() == "discardCardFace"
-                    and js("dataModel.cardId", item) == card["id"])
+        face = faces[card["id"]]
         assert face.property("known") and face.property("suit") == card["face"]["suit"]
         assert face.property("number") == card["face"]["number"]
         image_path = face.property("cardFrontSource").toLocalFile()
         assert Path(image_path) == ROOT / "image/card" / (card["face"]["name"] + ".png")
-    first_card = next(item for item in visible_items(window.contentItem()) if item.property("text") == lord)
-    click(first_card)
-    assert js("inspected") == next(c["id"] for c in initial if c["lord"])
-    click(window.findChild(QQuickItem, "lordFilter"))
-    assert lord in labels() and other not in labels()
+    click(faces[lord])
+    assert js("inspected") == lord
+    filter_box = window.findChild(QQuickItem, "lordFilter")
+    click(filter_box)
+    assert set(card_faces()) == {lord}
     search = window.findChild(QObject, "discardSearch")
+    assert search.property("placeholderTextColor").name() == "#f4dfa7"
+    assert js("background.border.color.toString()", search) == "#f4dfa7"
+    assert js("indicator.border.color.toString()", filter_box) == "#f4dfa7"
+    assert js("contentItem.color.toString()", filter_box) == "#f4dfa7"
     search.setProperty("text", other)
     assert "没有符合条件的牌" in labels()
-    click(window.findChild(QQuickItem, "lordFilter"))
-    assert other in labels() and lord not in labels()
+    click(filter_box)
+    assert set(card_faces()) == {other_id}
     search.setProperty("text", "")
     js("pileData = " + json.dumps(after_take) + "; pile.refresh()")
     assert js("discardButton.count") == 1
-    assert other in labels() and lord not in labels()
+    assert set(card_faces()) == {other_id}
     js("pileData = pileData.concat([{name:'未知牌'}]); pile.refresh()")
-    assert "未知牌" in labels()
-    covered = next(item for item in visible_items(window.contentItem())
-                   if item.objectName() == "discardCardFace" and not item.property("known"))
+    assert "未知牌" not in labels()
+    covered = card_faces()[0]
+    assert not covered.property("known")
     click(covered)
-    assert js("inspected") == next(c["id"] for c in initial if c["lord"])
+    assert js("inspected") == lord
     js("pileData = " + json.dumps(empty) + "; pile.refresh()")
     assert "弃牌堆为空" in labels()
     close_panel()

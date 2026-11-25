@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtQuick.Controls as Controls
+import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import LunarLtk
 import LunarLtk.Components
@@ -10,6 +11,7 @@ Controls.Popup {
   required property var readCards
   signal inspect(int cardId)
   property var cards: []
+  readonly property color filterInk: "#f4dfa7"
   readonly property var filtered: cards.filter(card =>
     (!onlyLord.checked || card.lord) && card.name.includes(search.text.trim()))
   function refresh() {
@@ -66,12 +68,52 @@ Controls.Popup {
     }
     RowLayout {
       Layout.fillWidth: true
-      Controls.TextField { id: search; objectName: "discardSearch"; placeholderText: "搜索牌名"; Layout.fillWidth: true }
-      Controls.CheckBox {
+      Basic.TextField {
+        id: search
+        objectName: "discardSearch"
+        Layout.fillWidth: true
+        placeholderText: "搜索牌名"
+        color: panel.filterInk
+        placeholderTextColor: panel.filterInk
+        selectionColor: "#a67c48"
+        selectedTextColor: "#fff6db"
+        padding: 11
+        background: Rectangle {
+          implicitHeight: 40
+          radius: 4
+          color: "#241d17"
+          border.color: panel.filterInk
+          border.width: search.activeFocus ? 2 : 1
+        }
+      }
+      Basic.CheckBox {
         id: onlyLord
         objectName: "lordFilter"
         text: "仅君主装备"
-        palette.windowText: "#fff0d1"
+        indicator: Rectangle {
+          implicitWidth: 18
+          implicitHeight: 18
+          x: onlyLord.leftPadding
+          anchors.verticalCenter: parent.verticalCenter
+          radius: 2
+          color: "#241d17"
+          border.color: panel.filterInk
+          border.width: onlyLord.activeFocus ? 2 : 1
+          Rectangle {
+            anchors.fill: parent
+            anchors.margins: 4
+            radius: 1
+            visible: onlyLord.checked
+            color: panel.filterInk
+          }
+        }
+        contentItem: Text {
+          leftPadding: onlyLord.indicator.width + onlyLord.spacing
+          text: onlyLord.text
+          font: onlyLord.font
+          color: panel.filterInk
+          verticalAlignment: Text.AlignVCenter
+        }
       }
     }
     GridView {
@@ -89,7 +131,7 @@ Controls.Popup {
         return { cards: recent.concat(earlier), divider: recent.length };
       }
       cellWidth: width / columns
-      cellHeight: 162
+      cellHeight: 142
       model: sections.cards
       Controls.ScrollBar.vertical: Controls.ScrollBar {}
       delegate: Item {
@@ -114,44 +156,34 @@ Controls.Popup {
           anchors.fill: parent
           anchors.margins: 3
           radius: 5
-          color: hover.hovered ? "#514230" : slot.lord ? "#493626" : "transparent"
+          color: hitArea.containsMouse ? "#514230" : slot.lord ? "#493626" : "transparent"
           border.color: slot.lord ? "#b58a52" : "transparent"
         }
-        Column {
-          anchors.horizontalCenter: parent.horizontalCenter
+        CardItem {
+          objectName: "discardCardFace"
+          anchors.horizontalCenter: slot.horizontalCenter
           y: 6
-          width: parent.width - 12
-          spacing: 2
-
-          CardItem {
-            objectName: "discardCardFace"
-            anchors.horizontalCenter: parent.horizontalCenter
-            cardScale: Math.min(1, parent.width / 93)
-            enabled: false
-            showDetail: false
-            dataModel: {
-              if (!slot.faceUp) return coveredCard;
-              // Use the same on-card mark renderer as the hand area.
-              const marks = (slot.modelData.marks || "").split(" · ").filter(Boolean)
-                .map(name => ({ name, value: "", origName: "" }));
-              return Ltk.createCardModel(slot.modelData.id, { selectable: true, markVisible: true, marks });
-            }
-
-            CardModel { id: coveredCard; known: false; selectable: true }
+          cardScale: Math.min(1, (slot.width - 12) / 93)
+          enabled: false
+          showDetail: false
+          dataModel: {
+            if (!slot.faceUp) return coveredCard;
+            // Use the same on-card mark renderer as the hand area.
+            const marks = (slot.modelData.marks || "").split(" · ").filter(Boolean)
+              .map(name => ({ name, value: "", origName: "" }));
+            return Ltk.createCardModel(slot.modelData.id, { selectable: true, markVisible: true, marks });
           }
-          Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: slot.faceUp ? slot.modelData.name : "未知牌"
-            color: slot.lord ? "#ffd383" : "#fff0d1"
-            font.pixelSize: 15
-            font.bold: slot.lord
-          }
+
+          CardModel { id: coveredCard; known: false; selectable: true }
         }
-        HoverHandler { id: hover; enabled: slot.faceUp; cursorShape: Qt.PointingHandCursor }
-        TapHandler { enabled: slot.faceUp; onTapped: panel.inspect(slot.modelData.id) }
+        MouseArea {
+          id: hitArea
+          anchors.fill: parent
+          enabled: slot.faceUp
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: panel.inspect(slot.modelData.id)
+        }
       }
       Controls.Label {
         anchors.centerIn: parent
