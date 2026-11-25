@@ -23,6 +23,17 @@ function Testqiao_adaptation:testChoiceRequestsKeepTheirNativePresentation()
     lu.assertEquals(command, "AskForChoices")
     lu.assertEquals(payload, choiceRequest)
 
+    local compact = { { "attack", "Cancel" }, { "attack", "draw", "Cancel" },
+      { 1, 1 }, true, "qiao__skill_jin010_1", "", false, true }
+    client:notifyUI("AskForChoices", compact)
+    lu.assertEquals(command, "QiaoSingleChoice")
+    lu.assertEquals(payload, compact)
+
+    local multiple = { compact[1], compact[2], { 1, 2 }, true, "test", "", false, false }
+    client:notifyUI("AskForChoices", multiple)
+    lu.assertEquals(command, "AskForChoices")
+    lu.assertEquals(payload, multiple)
+
     local many = { "1", "2", "3", "4", "5", "6", "7" }
     local optionRequest = { many, many, { 1, 1 }, true, "test", "", true }
     client:notifyUI("AskForOptions", optionRequest)

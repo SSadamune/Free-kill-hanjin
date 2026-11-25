@@ -217,7 +217,7 @@ Fk:loadTranslationTable {
   ["#qiao__jin001_banner-active"] = "选择一枚「赐」消耗",
   ["#qiao__jin001_banner-transfer"] = "选一个势力，把该势力的「赐」全交给%dest",
   ["#qiao__jin001_banner-prevent-skip"] = "移去一枚「赐」，防止跳过%arg",
-  ["qiao_ci_give_faction"] = "选择%arg赐",
+  ["qiao_ci_give_faction"] = "选择%arg「赐」",
   ["qiao_ci_give"] = "交出",
   ["qiao_ci_remove"] = "移去",
 }

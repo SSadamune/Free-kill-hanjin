@@ -18,8 +18,6 @@ Controls.AbstractButton {
   Controls.ToolTip {
     visible: button.visible && button.hovered
     delay: 300
-    width: 340
-    x: (button.width - width) / 2
     text: Lua.tr(":@[qiao_ci]")
   }
 

@@ -548,6 +548,11 @@ function QiaoClient:notifyUI(command, data)
     -- picture-mark row owns the button, so omit the default text mark.
     return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
   end
+  if command == "AskForChoices" and data[8] and not data[7]
+    and data[3][1] == 1 and data[3][2] == 1 and isQiaoMode() then
+    -- Keep the server request and its AI strategy. Let the room choose where to display it.
+    return BaseClient.notifyUI(self, "QiaoSingleChoice", data)
+  end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
     and isQiaoMode() and not SkillPrelight.canPrelight(data[2]) then
     if command == "AddSkill" then

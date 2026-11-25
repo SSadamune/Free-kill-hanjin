@@ -25,6 +25,29 @@ Room {
   property int ownHiddenGeneralsRevision: 0
   property int skillStatusRevision: 0
 
+  TextMetrics {
+    id: choiceMetrics
+    font.pixelSize: 20
+    font.weight: Font.Medium
+  }
+
+  function showSingleChoice(sender, request) {
+    const [choices, allChoices, limits, cancelable, skill, prompt, , single] = request;
+    const separateCancel = cancelable && !allChoices.includes("Cancel");
+    const labels = separateCancel ? [...allChoices, "Cancel"] : allChoices;
+    const buttonWidth = labels.reduce((total, label) => {
+      choiceMetrics.text = Lua.tr(Ltk.processPrompt(label)).replace(/<[^>]*>/g, "");
+      return total + choiceMetrics.advanceWidth + 16;
+    }, 0);
+    if (labels.length && buttonWidth + 24 <= room.width) {
+      dataModel.askForOptions(sender, [
+        choices, allChoices, limits, separateCancel, skill, prompt || `#AskForChoice:::${skill}`, single,
+      ]);
+    } else {
+      dataModel.askForChoices(sender, request);
+    }
+  }
+
   Controls.Button {
     id: discardButton
     anchors.top: parent.top
@@ -60,6 +83,7 @@ Room {
 
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
+  Component { id: markTooltips; PortraitMarkTooltips {} }
   Component { id: referencePane; SkillReferencePane {} }
   Component { id: stateButton; SkillStatusButton {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
@@ -277,6 +301,8 @@ Room {
       if (!photo.children.some(child => child.objectName === "qiaoFocusedSeat"))
         focusedSeat.createObject(photo, { photo });
       const marks = photo?.picMarkArea;
+      if (marks && !marks.children.some(child => child.objectName === "qiaoPortraitMarkTooltips"))
+        markTooltips.createObject(marks);
       if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
         stateButton.createObject(marks, {
           states: Qt.binding(() => {
@@ -358,6 +384,7 @@ Room {
     });
     addCallback("QiaoPindianResult", (_, data) => pindianDisplay.present(data));
     addCallback("QiaoDiscardChanged", () => { if (discardPanel.visible) Qt.callLater(discardPanel.refresh); });
+    addCallback("QiaoSingleChoice", room.showSingleChoice);
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
