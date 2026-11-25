@@ -55,14 +55,15 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
     p2.hp = p2.maxHp
     room():moveCardTo(room():printCard("qiao__jink", Card.Heart, 6), Card.DrawPile)
   end)
-  FkTest.setNextReplies(p1, { TIEQI })
+  local options
+  FkTest.setRoomBreakpoint(p1, "AskForOptions", function(data)
+    if data[5] == TIEQI then options = table.simpleClone(data[1]) end
+    return false
+  end)
+  FkTest.setNextReplies(p1, { { "#qiao__skill_shu006_2-main" } })
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
-      return original(self, player, params)
-    end,
     askToDiscard = function(self, player, params, original)
       if params.skill_name == TIEQI then
         lu.assertTrue(params.skip)
@@ -77,6 +78,7 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
       })
     end)
   end)
+  lu.assertEquals(options, { "#qiao__skill_shu006_2-main", "#qiao__skill_shu006_2-deputy" })
   lu.assertEquals(p2.hp, p2.maxHp) -- 弃干净后仍可用黑桃闪响应
   lu.assertFalse(p2:hasSkill("qiao__skill_shu014_2")) -- 主将再起失效
   lu.assertTrue(p2:hasSkill("qiao__skill_shu014_1")) -- 锁定祸首不受影响
@@ -98,8 +100,8 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   FkTest.setNextReplies(p1, { TIEQI })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-deputy" end
+    askToOptions = function(self, player, params, original)
+      if params.skill_name == TIEQI then return { "#qiao__skill_shu006_2-deputy" } end
       return original(self, player, params)
     end,
     askToDiscard = function(self, player, params, original)
@@ -134,8 +136,8 @@ function Testqiao_shu_tieqi:testTieqiNoMatchingCardCannotRespond()
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
+    askToOptions = function(self, player, params, original)
+      if params.skill_name == TIEQI then return { "#qiao__skill_shu006_2-main" } end
       return original(self, player, params)
     end,
   }, function()

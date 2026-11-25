@@ -39,6 +39,7 @@ skill:addEffect(fk.TargetSpecified, {
     local choice = Selection.askOption(player.room, player, {
       choices = choices,
       all_choices = { MAIN, DEPUTY },
+      buttons = true,
       skill_name = skill.name,
       prompt = "#qiao__skill_shu006_2-ask::" .. to.id,
     })

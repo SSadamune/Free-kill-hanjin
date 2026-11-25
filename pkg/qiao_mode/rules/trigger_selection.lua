@@ -89,7 +89,6 @@ function M.validDirectOption(skill, player, reply)
 end
 
 Fk:loadTranslationTable {
-  ["qiao_choice_number"] = "选项 %arg",
   ["qiao_option_pair"] = "%arg＋%arg2",
   ["qiao_option_triple"] = "%arg＋%arg2＋%arg3",
 }

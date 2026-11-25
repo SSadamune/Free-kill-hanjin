@@ -510,45 +510,9 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
   return text
 end
 
-local function choiceDialog(command, data)
-  local choices, all, limits, cancelable, name, prompt = table.unpack(data, 1, 6)
-  local detailed = command == "AskForChoices" and data[7] == true
-  local single = command == "AskForChoices" and data[8] or command == "AskForOptions" and data[7]
-  local count = 0
-  local long = false
-  for _, choice in ipairs(all) do
-    if choice ~= "Cancel" then
-      count = count + 1
-      local fields = choice:split(":")
-      local label = Fk:translate(fields[1]):gsub("%%arg(%d*)", function(index)
-        return Fk:translate(fields[3 + (tonumber(index) or 1)] or "")
-      end):gsub("<[^>]*>", "")
-      long = long or (utf8.len(label) or #label) > 18
-    end
-  end
-  if not long and count <= 6 and prompt ~= "#QiaoSecondLordConvert" then return end
-  return {
-    component = {
-      url = "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesBox.qml",
-      model = {
-        url = "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesModel.qml",
-        prop = {
-          choices = choices, allChoices = all, minNum = limits[1], maxNum = limits[2],
-          cancelable = cancelable, skillName = name, prompt = prompt,
-          detailed = detailed, single = not not single,
-        },
-      },
-    },
-  }
-end
-
 function QiaoClient:notifyUI(command, data)
   if command == "SetPlayerMark" and SkillStatus.watches(data[2]) and isQiaoMode() then
     return
-  end
-  if (command == "AskForChoices" or command == "AskForOptions") and isQiaoMode() then
-    local dialog = choiceDialog(command, data)
-    if dialog then return BaseClient.notifyUI(self, "CustomDialog", dialog) end
   end
   if command == "SetPlayerMark" and data[2] == Ci.MARK and isQiaoMode() then
     -- Both live updates and the rejoin snapshot take this path. The room's

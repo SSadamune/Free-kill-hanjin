@@ -12,30 +12,22 @@ local function use(entries)
   return UseCardData:new { from = room.players[1], tos = { room.players[2] }, card = card, extra_data = {} }
 end
 
-function Testqiao_adaptation:testChoicePresentationPreservesOriginalReplyValues()
+function Testqiao_adaptation:testChoiceRequestsKeepTheirNativePresentation()
   local client = QiaoClient:new(ClientInstance.client)
   local command, payload
   client.client = { notifyUI = function(_, name, data) command, payload = name, data end }
   FkTest.runInRoom(function()
-    local short = {
-      A.choiceLabel({ condition = "zhuzhan", effect = "add_target" }, 1),
-      A.choiceLabel({ condition = "zhuzhan", effect = "execute_both" }, 2),
-    }
-    client:notifyUI("AskForChoices", { short, short, { 1, 1 }, false, "test", "", false, true })
-    lu.assertEquals(command, "AskForChoices")
-
     local long = { "这是一段超过按钮适合显示长度的完整选项说明文字", "Cancel" }
-    client:notifyUI("AskForChoices", { long, long, { 1, 1 }, true, "test", "", true, true })
-    lu.assertEquals(command, "CustomDialog")
-    lu.assertEquals(payload.component.model.url, "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesModel.qml")
-    lu.assertEquals(payload.component.model.prop.choices, long)
-    lu.assertTrue(payload.component.model.prop.detailed)
+    local choiceRequest = { long, long, { 1, 1 }, true, "test", "", true, true }
+    client:notifyUI("AskForChoices", choiceRequest)
+    lu.assertEquals(command, "AskForChoices")
+    lu.assertEquals(payload, choiceRequest)
 
     local many = { "1", "2", "3", "4", "5", "6", "7" }
-    client:notifyUI("AskForOptions", { many, many, { 1, 1 }, true, "test", "", true })
-    lu.assertEquals(command, "CustomDialog")
-    lu.assertEquals(payload.component.model.prop.choices, many)
-    lu.assertTrue(payload.component.model.prop.single)
+    local optionRequest = { many, many, { 1, 1 }, true, "test", "", true }
+    client:notifyUI("AskForOptions", optionRequest)
+    lu.assertEquals(command, "AskForOptions")
+    lu.assertEquals(payload, optionRequest)
   end)
 end
 
