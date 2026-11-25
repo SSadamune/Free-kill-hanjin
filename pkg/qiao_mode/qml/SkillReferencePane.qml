@@ -109,7 +109,7 @@ Column {
   Button {
     objectName: "qiaoSkillReferenceBack"
     visible: root.pages.length > 0
-    text: Lua.tr("Back")
+    text: Lua.hasTranslate("qiao_skill_reference_back") ? Lua.tr("qiao_skill_reference_back") : Lua.tr("Back")
     onClicked: root.goBack()
   }
 

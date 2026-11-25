@@ -66,6 +66,7 @@ Fk:loadTranslationTable {
   ["qiao_collection_luck_help"] = "7 人及以上对局中，7 号位起各有 1 次开局手气卡。",
   ["qiao_collection_deputy_help"] = "大合集使用主将和副将。",
   ["qiao_mode"] = "国战平行时空",
+  ["qiao_skill_reference_back"] = "后退",
   ["han"] = "汉",
   [Modes.collection] = "大合集",
   [":" .. Modes.collection] = "魏、蜀、吴、群固定纳入备选势力。可设置是否纳入汉、晋，以及是否禁用势力和启用客将替换规则。",
