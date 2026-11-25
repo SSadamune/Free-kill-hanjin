@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 8)
+  lu.assertEquals(Data.generalCount, 9)
   lu.assertEquals(Data.retinueCount, 0)
   lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 15)
+  lu.assertEquals(Data.skillCount, 17)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -59,6 +59,8 @@ function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests(
   -- 珠联与客将核对
   lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__wei013"]))
   lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__han023"]))
+  lu.assertTrue(Fk.generals["qiao_heg__wei022"]:isCompanionWith(Fk.generals["qiao_heg__wei001"]))
+  lu.assertTrue(Fk.generals["qiao_heg__wei022"]:isCompanionWith(Fk.generals["qiao_heg__em_wei001"]))
   lu.assertTrue(Fk.generals["qiao_heg__wu021"]:isCompanionWith(Fk.generals["qiao_heg__wu002"]))
   lu.assertTrue(Fk.generals["qiao_heg__wu022"]:isCompanionWith(Fk.generals["qiao_heg__wu010"]))
   lu.assertTrue(Fk.generals["qiao_heg__jin018"]:isCompanionWith(Fk.generals["qiao_heg__jin015"]))
@@ -337,6 +339,67 @@ function Testqiao_bian_han_wei_shu:testWei020ZhiyuSameAndMixedColor()
   lu.assertTrue(room:getTag("qiao_qice_change_used_qiao_heg__wei020") == true, "奇策变更应随荀攸武将牌独立记账")
 end
 
+-- WEI022 卞夫人：挽危（一次挡下同势力多张失牌改为自己 1 张）+ 约俭（手牌上限初值叠加与弃牌末摸牌）
+function Testqiao_bian_han_wei_shu:testWei022WanweiBlocksMultipleCardsAndYuejianStacks()
+  local room = FkTest.room
+  local bian, ally, enemy = p(1), p(2), p(3)
+  local allyC1, allyC2, bianC1, bianC2
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, bian, {
+      main = "qiao_heg__wei022", deputy = "qiao_test__wei_2", kingdom = "wei", hp = 3,
+    })
+    ally.maxHp = 4
+    ally.hp = 1
+    bian:throwAllCards("he")
+    ally:throwAllCards("he")
+    allyC1 = room:printCard("qiao__slash", Card.Spade, 2)
+    allyC2 = room:printCard("qiao__jink", Card.Heart, 3)
+    bianC1 = room:printCard("qiao__slash", Card.Club, 4)
+    bianC2 = room:printCard("qiao__jink", Card.Diamond, 5)
+    room:obtainCard(ally, { allyC1, allyC2 }, false, fk.ReasonJustMove)
+    room:obtainCard(bian, { bianC1, bianC2 }, false, fk.ReasonJustMove)
+  end)
+
+  -- 敌方一次弃置队友 2 张手牌：卞夫人挽危全部挡下，改为弃置卞夫人的 1 张牌。
+  skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+    askToCards = function() return { bianC1.id } end,
+  }, function()
+    inRoom(function()
+      room:throwCard({ allyC1.id, allyC2.id }, "test", ally, enemy)
+    end)
+  end)
+  lu.assertEquals(#ally:getCardIds("h"), 2, "挽危应挡下同势力队友全部 2 张原定弃牌")
+  lu.assertFalse(table.contains(bian:getCardIds("h"), bianC1.id), "改为弃置卞夫人所选的 1 张牌")
+  lu.assertEquals(#bian:getCardIds("h"), 1)
+
+  -- 约俭：队友体力 1 / 上限 4，准备阶段发动后手牌上限初值变为 4，且叠加 +2 标记应为 6；弃牌阶段未弃牌摸 1 张。
+  skill_test.withSkillRequests(room, "qiao__skill_wei022_2", {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function()
+      room:setCurrent(ally)
+      ally.phase = Player.Start
+      room.logic:trigger(fk.EventPhaseStart, ally, PhaseData:new { who = ally, phase = Player.Start })
+    end)
+  end)
+  local maxBase, maxStacked
+  inRoom(function()
+    maxBase = ally:getMaxCards()
+    room:addPlayerMark(ally, MarkEnum.AddMaxCardsInTurn, 2)
+    maxStacked = ally:getMaxCards()
+  end)
+  lu.assertEquals(maxBase, 4, "约俭应将手牌上限初值设为体力上限 4")
+  lu.assertEquals(maxStacked, 6, "约俭不阻止后续手牌上限加减效果叠加（4 + 2 = 6）")
+
+  local allyHandBefore = #ally:getCardIds("h")
+  inRoom(function()
+    ally.phase = Player.Discard
+    GameEvent.Phase:create(PhaseData:new { who = ally, phase = Player.Discard }):exec()
+  end)
+  lu.assertEquals(#ally:getCardIds("h"), allyHandBefore + 1, "弃牌阶段未弃置牌时约俭应摸 1 张牌")
+end
+
 -- SHU020 沙摩柯：蒺藜（动态攻击范围连续触发 + 回合外打出触发）
 function Testqiao_bian_han_wei_shu:testShu020JiliDynamicAttackRangeAndRespond()
   local room = FkTest.room
@@ -545,6 +608,152 @@ function Testqiao_bian_han_wei_shu:testHan024FenxinWildExtraPoolAndSelfDeputySou
   lu.assertTrue(room:getTag(originalKey) == true, "副将换走自己时应记账到发动前的旧副将来源键")
 end
 
+-- 审阅回归（第 1、2 项）：挽危覆盖巧变格式敌方获得、排除队友拿牌、替代暗手牌不泄露给无关座位且保留本已明牌。
+function Testqiao_bian_han_wei_shu:testWei022WanweiQiaobianTeammateAndPrivateVisibility()
+  local room = FkTest.room
+  local bian, ally, enemy, viewer = p(1), p(2), p(3), p(4)
+  local allyCard, allyCard2, bianPrivate, bianPublic, armor, cost
+  local asks = 0
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wei", "qun", "shu" })
+    skill_test.installDualGenerals(room, bian, {
+      main = "qiao_heg__wei022", deputy = "qiao_test__wei_2", kingdom = "wei", hp = 3,
+    })
+    skill_test.installDualGenerals(room, enemy, {
+      main = "qiao_heg__em_qun010", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+    })
+    allyCard = room:printCard("qiao__slash", Card.Spade, 7)
+    allyCard2 = room:printCard("qiao__slash", Card.Club, 8)
+    bianPrivate = room:printCard("qiao__jink", Card.Diamond, 9)
+    bianPublic = room:printCard("qiao__peach", Card.Heart, 6)
+    armor = room:printCard("qiao__peace_spell", Card.Heart, 8)
+    cost = room:printCard("qiao__peach", Card.Heart, 5)
+    room:obtainCard(ally, { allyCard, allyCard2 }, false, fk.ReasonJustMove)
+    room:obtainCard(bian, { bianPrivate, bianPublic }, false, fk.ReasonJustMove)
+    room:moveCardTo(armor, Player.Equip, ally, fk.ReasonPut, "test", nil, true, ally)
+    room:obtainCard(enemy, cost, false, fk.ReasonJustMove)
+  end)
+
+  -- 1. 队友拿队友牌不触发挽危
+  skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+    askToCards = function() asks = asks + 1; return { bianPrivate.id } end,
+  }, function()
+    inRoom(function()
+      room:obtainCard(bian, allyCard2.id, false, fk.ReasonPrey, ally, "test")
+    end)
+  end)
+  lu.assertEquals(asks, 0, "同势力队友之间拿牌不应触发挽危")
+
+  -- 2. 敌方按【巧变】格式（proposer=原持有者, to=敌方）拿队友牌，应触发挽危
+  skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+    askToCards = function() asks = asks + 1; return { bianPublic.id } end,
+  }, function()
+    inRoom(function()
+      room:obtainCard(enemy, allyCard.id, false, fk.ReasonPrey, ally, "qiao__skill_wei009_1")
+    end)
+  end)
+  lu.assertEquals(asks, 1, "巧变格式敌方获得应触发挽危")
+
+  -- 3. 新回合：君张角【问道】拿队友装备区【太平要术】，挽危改付暗手牌时第四座位不可见
+  local privateVisible, publicVisible
+  inRoom(function()
+    local turn = GameEvent.Turn:create(TurnData:new(enemy, "game_rule", {}))
+    function turn:main()
+      enemy.phase = Player.Play
+      local oldTrigger = room.logic.trigger
+      room.logic.trigger = function(this, ev, target, data, ...)
+        if ev == fk.AfterCardsMove then
+          for _, move in ipairs(data or {}) do
+            for _, info in ipairs(move.moveInfo or {}) do
+              if info.cardId == bianPrivate.id and move.to == enemy then
+                privateVisible = viewer:cardVisible(bianPrivate.id, move)
+              end
+            end
+          end
+        end
+        return oldTrigger(this, ev, target, data, ...)
+      end
+      skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+        askToCards = function() return { bianPrivate.id } end,
+      }, function()
+        skill_test.withSkillRequests(room, "qiao__skill_em_qun010_3", {
+          askToDiscard = function()
+            room:throwCard({ cost.id }, "qiao__skill_em_qun010_3", enemy, enemy)
+            return { cost.id }
+          end,
+        }, function()
+          local sk = Fk.skills["qiao__skill_em_qun010_3"]
+          local use = { from = enemy, tos = {}, cards = {} }
+          room:useSkill(enemy, sk, function() sk:onUse(room, use) end, use)
+        end)
+      end)
+      room.logic.trigger = oldTrigger
+    end
+    turn:exec()
+  end)
+  lu.assertFalse(privateVisible, "挽危替代暗手牌不得被无关第四座位看到牌面")
+
+  -- 4. 若卞夫人手牌本就处于【武督】公开状态，替代牌仍应保持公开可见
+  inRoom(function()
+    local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
+    local openCard = room:printCard("qiao__jink", Card.Heart, 4)
+    room:obtainCard(bian, openCard, false, fk.ReasonJustMove)
+    room:setPlayerMark(bian, Visibility.WUDU_OPEN, 1)
+    local turn = GameEvent.Turn:create(TurnData:new(viewer, "game_rule", {}))
+    function turn:main()
+      local oldTrigger = room.logic.trigger
+      room.logic.trigger = function(this, ev, target, data, ...)
+        if ev == fk.AfterCardsMove then
+          for _, move in ipairs(data or {}) do
+            for _, info in ipairs(move.moveInfo or {}) do
+              if info.cardId == openCard.id and move.to == enemy then
+                publicVisible = viewer:cardVisible(openCard.id, move)
+              end
+            end
+          end
+        end
+        return oldTrigger(this, ev, target, data, ...)
+      end
+      skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+        askToCards = function() return { openCard.id } end,
+      }, function()
+        room:obtainCard(enemy, allyCard.id, false, fk.ReasonPrey, enemy, "test")
+      end)
+      room.logic.trigger = oldTrigger
+    end
+    turn:exec()
+  end)
+  lu.assertTrue(publicVisible, "本就处于明牌状态的替代手牌仍应保持公开可见")
+end
+
+-- 审阅回归（第 10 项）：约俭弃牌阶段被他人弃牌不算自己弃牌，阶段结束仍应摸 1 张。
+function Testqiao_bian_han_wei_shu:testWei022YuejianOpponentDiscardStillDraws()
+  local room = FkTest.room
+  local ally, foe = p(1), p(2)
+  local handCountAfter
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wu", "shu", "han" })
+    room:setCurrent(ally)
+    ally:throwAllCards("he")
+    local card = room:printCard("qiao__jink", Card.Heart, 7)
+    room:obtainCard(ally, card, false, fk.ReasonJustMove)
+    room:setPlayerMark(ally, "qiao_wei022_yuejian-turn", 1)
+    local oldTrigger = room.logic.trigger
+    local fired = false
+    room.logic.trigger = function(this, ev, target, ...)
+      if ev == fk.EventPhaseStart and target == ally and ally.phase == Player.Discard and not fired then
+        fired = true
+        room:throwCard({ card.id }, "test", ally, foe)
+      end
+      return oldTrigger(this, ev, target, ...)
+    end
+    GameEvent.Phase:create(PhaseData:new { who = ally, phase = Player.Discard }):exec()
+    room.logic.trigger = oldTrigger
+    handCountAfter = ally:getHandcardNum()
+  end)
+  lu.assertEquals(handCountAfter, 1, "弃牌阶段仅被他人弃置手牌不算自己弃牌，阶段结束应摸 1 张")
+end
+
 -- 复审回归（第 3 项）：心疾暂时无效期间获得其他技能，恢复有效后个人鏖战必须立即恢复。
 function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidAcquireSkillThenRestore()
   local room = FkTest.room
@@ -571,6 +780,158 @@ function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidAcquireSkillThenRestore
   lu.assertTrue(activeAfter)
   lu.assertFalse(globalEntered)
   lu.assertTrue(after, "心疾失效期间获得新技能后，恢复心疾时个人鏖战仍应恢复")
+end
+
+-- 复审回归（第 1 项）：卞夫人挽危覆盖祝融【烈刃】与【白马义从】从对方处获得牌。
+function Testqiao_bian_han_wei_shu:testWei022WanweiLierenAndBaimaPrey()
+  local room = FkTest.room
+  local bian, ally, zhu = p(1), p(2), p(3)
+  local askedLieren, askedBaima = 0, 0
+  local lootOwnerAfterLieren, lootOwnerAfterBaima
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wei", "shu", "wu" })
+    skill_test.installDualGenerals(room, bian, {
+      main = "qiao_heg__wei022", deputy = "qiao_test__wei_2", kingdom = "wei", hp = 4,
+    })
+    skill_test.installDualGenerals(room, zhu, {
+      main = "qiao_heg__shu015", deputy = "qiao_test__shu_2", kingdom = "shu", hp = 4,
+    })
+    ally:throwAllCards("he")
+    zhu:throwAllCards("he")
+    local pay1 = room:printCard("qiao__jink", Card.Diamond, 6)
+    local pay2 = room:printCard("qiao__jink", Card.Diamond, 7)
+    local loot = room:printCard("qiao__slash", Card.Club, 2)
+    local slash = room:printCard("qiao__slash", Card.Spade, 10)
+    room:obtainCard(bian, { pay1, pay2 }, false, fk.ReasonJustMove)
+    room:obtainCard(ally, loot, false, fk.ReasonJustMove)
+    room:obtainCard(zhu, { slash, room:printCard("qiao__jink", Card.Heart, 12) }, false, fk.ReasonJustMove)
+    room:setCurrent(zhu)
+    zhu.phase = Player.Play
+    local origPindian = zhu.pindian
+    zhu.pindian = function() return { results = { [ally] = { winner = zhu } } } end
+    skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+      askToCards = function() askedLieren = askedLieren + 1; return { pay1.id } end,
+    }, function()
+      skill_test.withSkillRequests(room, "qiao__skill_shu015_2", {
+        askToSkillInvoke = function() return true end,
+        askToChooseCards = function() return { loot.id } end,
+      }, function()
+        room:useCard { from = zhu, tos = { ally }, card = slash }
+      end)
+    end)
+    zhu.pindian = origPindian
+    local owner1 = room:getCardOwner(loot.id)
+    lootOwnerAfterLieren = owner1 and owner1.id
+
+    -- 新回合：【白马义从】因使用【闪】获得魏队友手牌时，同样触发挽危。
+    room:handleAddLoseSkills(zhu, "qiao__retinue_skill_baima_yicong", nil, false, true)
+    local turn = GameEvent.Turn:create(TurnData:new(ally, "game_rule", {}))
+    function turn:main()
+      skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+        askToCards = function() askedBaima = askedBaima + 1; return { pay2.id } end,
+      }, function()
+        skill_test.withSkillRequests(room, "qiao__retinue_skill_baima_yicong", {
+          askToSkillInvoke = function() return true end,
+          askToChooseCards = function() return { loot.id } end,
+        }, function()
+          room.logic:trigger(fk.CardUsing, zhu, {
+            card = Fk:cloneCard("qiao__jink"),
+            responseToEvent = { from = ally },
+          })
+        end)
+      end)
+    end
+    turn:exec()
+    local owner2 = room:getCardOwner(loot.id)
+    lootOwnerAfterBaima = owner2 and owner2.id
+  end)
+  lu.assertEquals(askedLieren, 1, "祝融烈刃拼点赢获得魏方手牌应触发挽危")
+  lu.assertEquals(lootOwnerAfterLieren, ally.id, "魏队友原手牌应被挽危保下（烈刃）")
+  lu.assertEquals(askedBaima, 1, "白马义从获得魏方手牌应触发挽危")
+  lu.assertEquals(lootOwnerAfterBaima, ally.id, "魏队友原手牌应被挽危保下（白马义从）")
+end
+
+-- 复审回归（第 5 项）：挽危不把局部可见（buddy）提升为全局公开，且【武督】明牌遵守旁观开关。
+function Testqiao_bian_han_wei_shu:testWei022WanweiPartialVisibilityAndObserverWudu()
+  local room = FkTest.room
+  local bian, ally, taker, allowed, denied = p(1), p(2), p(3), p(4), p(5)
+  local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
+  local allowedBefore, deniedBefore, deniedAfter, observerWudu, normalWudu
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "wei", "wei", "qun", "wu", "shu" })
+    skill_test.installDualGenerals(room, bian, {
+      main = "qiao_heg__wei022", deputy = "qiao_test__wei_2", kingdom = "wei", hp = 4,
+    })
+    local pay1 = room:printCard("qiao__peach", Card.Heart, 6)
+    local pay2 = room:printCard("qiao__jink", Card.Heart, 7)
+    local loot = room:printCard("qiao__slash", Card.Spade, 9)
+    room:obtainCard(bian, { pay1, pay2 }, false, fk.ReasonJustMove)
+    room:obtainCard(ally, loot, false, fk.ReasonJustMove)
+
+    -- 仅 allowed 与卞夫人互通可见，denied 无查看权限：替代后 denied 仍不可见。
+    allowed:addBuddy(bian)
+    allowedBefore = allowed:cardVisible(pay1.id)
+    deniedBefore = denied:cardVisible(pay1.id)
+    local oldTrigger = room.logic.trigger
+    room.logic.trigger = function(this, ev, target, data, ...)
+      if ev == fk.AfterCardsMove then
+        for _, move in ipairs(data or {}) do
+          for _, info in ipairs(move.moveInfo or {}) do
+            if info.cardId == pay1.id and move.to == taker then
+              deniedAfter = denied:cardVisible(pay1.id, move)
+            end
+          end
+        end
+      end
+      return oldTrigger(this, ev, target, data, ...)
+    end
+    skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+      askToCards = function() return { pay1.id } end,
+    }, function()
+      room:obtainCard(taker, loot, false, fk.ReasonPrey, taker, "test")
+    end)
+    room.logic.trigger = oldTrigger
+    allowed:removeBuddy(bian)
+
+    -- 新回合：【武督】公开手牌下，普通在场角色可见，关闭旁观查看手牌时旁观视角不可见。
+    room:setPlayerMark(bian, Visibility.WUDU_OPEN, 1)
+    local turn = GameEvent.Turn:create(TurnData:new(taker, "game_rule", {}))
+    function turn:main()
+      local prevTrigger = room.logic.trigger
+      room.logic.trigger = function(this, ev, target, data, ...)
+        if ev == fk.AfterCardsMove then
+          for _, move in ipairs(data or {}) do
+            for _, info in ipairs(move.moveInfo or {}) do
+              if info.cardId == pay2.id and move.to == taker then
+                normalWudu = denied:cardVisible(pay2.id, move)
+                local prevObs, prevSettings = room.observing, room.getSettings
+                room.observing = true
+                room.getSettings = function(self, key, ...)
+                  if key == "enableObserverViewCard" then return false end
+                  return prevSettings(self, key, ...)
+                end
+                observerWudu = denied:cardVisible(pay2.id, move)
+                room.getSettings, room.observing = prevSettings, prevObs
+              end
+            end
+          end
+        end
+        return prevTrigger(this, ev, target, data, ...)
+      end
+      skill_test.withSkillRequests(room, "qiao__skill_wei022_1", {
+        askToCards = function() return { pay2.id } end,
+      }, function()
+        room:obtainCard(taker, loot, false, fk.ReasonPrey, taker, "test")
+      end)
+      room.logic.trigger = prevTrigger
+    end
+    turn:exec()
+  end)
+  lu.assertTrue(allowedBefore)
+  lu.assertFalse(deniedBefore)
+  lu.assertFalse(deniedAfter, "局部可见权限不得因挽危提升为全局公开")
+  lu.assertTrue(normalWudu, "正常在场角色仍应可见武督公开手牌")
+  lu.assertFalse(observerWudu, "关闭旁观查看手牌时，旁观视角不应看到武督替代手牌")
 end
 
 return { name = "qiao_bian_han_wei_shu" }

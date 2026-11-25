@@ -1,14 +1,14 @@
--- 六势力变包正式数据：8 名普通武将。
+-- 六势力变包正式数据：9 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 8
+M.generalCount = 9
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 15
+M.skillCount = 17
 M.retinueSkillCount = 0
 M.kingdoms = { "han", "wei", "shu", "wu", "jin" }
 
@@ -107,6 +107,39 @@ M.generals = {
         id = [==[qiao__skill_wei020_2]==],
         name = [==[智愚]==],
         text = [==[当你受到伤害后，你可以摸一张牌，展示所有手牌，若颜色均相同，来源弃置一张手牌。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[WEI022]==],
+    id = [==[qiao_heg__wei022]==],
+    name = [==[卞夫人]==],
+    kingdom = [==[wei]==],
+    title = [==[奕世之雍容]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[君曹操、曹操]==],
+    companionNames = { [==[君曹操]==], [==[曹操]==] },
+    companions = { [==[qiao_heg__em_wei001]==], [==[qiao_heg__wei001]==] },
+    companionsUnresolved = {  },
+    gender = "female",
+    skills = {
+      {
+        id = [==[qiao__skill_wei022_1]==],
+        name = [==[挽危]==],
+        text = [==[每回合限一次，当确定与你势力相同的角色因其他势力角色的获得或弃置而移动的牌时，你可以将此次移动的牌改为你的一张牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wei022_2]==],
+        name = [==[约俭]==],
+        text = [==[轮次技，与你势力相同的角色准备阶段，你可令其本回合手牌上限为X（X为其体力上限），弃牌阶段结束时若其未弃置牌，其摸一张牌。]==],
         related = false,
         tags = {  },
       },

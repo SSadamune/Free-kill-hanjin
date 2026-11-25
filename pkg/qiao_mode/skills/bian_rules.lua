@@ -8,6 +8,7 @@ local skill = fk.CreateSkill { name = "qiao__bian_rules" }
 
 local CHUJIAN_TARGET = "qiao_han023_chujian-phase"
 local CHUJIAN_DELAY = "qiao_han023_chujian_delay-phase"
+local YUEJIAN_MARK = "qiao_wei022_yuejian-turn"
 
 local function inQiao(room)
   return room ~= nil and type(room.getSettings) == "function" and Modes.inRoom(room)
@@ -100,6 +101,45 @@ for _, ev in ipairs({
 }) do
   skill:addEffect(ev, xinjiSyncSpec)
 end
+
+-- 3. 约俭：修改本回合手牌上限初值为体力上限；弃牌阶段结束时未弃牌摸 1 张。
+skill:addEffect("maxcards", {
+  fixed_func = function(self, player)
+    if player ~= nil and player:getMark(YUEJIAN_MARK) > 0 then
+      return player.maxHp
+    end
+  end,
+})
+
+skill:addEffect(fk.EventPhaseEnd, {
+  global = true,
+  is_delay_effect = true,
+  mute = true,
+  can_trigger = function(self, event, target, player, data)
+    if target ~= player or player.phase ~= Player.Discard or player.dead or player:isRemoved() then
+      return false
+    end
+    if player:getMark(YUEJIAN_MARK) <= 0 then return false end
+    local discarded = false
+    player.room.logic:getEventsOfScope(GameEvent.MoveCards, 1, function(e)
+      for _, move in ipairs(e.data or {}) do
+        -- 依 rulebook/terms/card-op-terms/discard.md：按弃置操作的实际执行者判断（他人弃置其牌不算其弃置牌）。
+        if move.proposer == player and move.moveReason == fk.ReasonDiscard and #(move.moveInfo or {}) > 0 then
+          discarded = true
+          return true
+        end
+      end
+      return false
+    end, Player.HistoryPhase)
+    return not discarded
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    if RemovedTargets.isPresent(player) then
+      player:drawCards(1, "qiao__skill_wei022_2")
+    end
+  end,
+})
 
 -- 4. 武督：手牌对所有角色可见，直至目标角色实际回合结束时清除（叠置跳过回合自动顺延）。
 skill:addEffect("visibility", Visibility.wudu)
