@@ -29,7 +29,7 @@ local function giveToAllies(room, target)
       prompt = "#qiao__skill_wei032_2-give:" .. receiver.id,
     })[1]
     if id == nil or id == -1 or not table.contains(target:getCardIds("h"), id) then break end
-    room:obtainCard(receiver, id, true, fk.ReasonGive, target, skill.name)
+    room:obtainCard(receiver, id, false, fk.ReasonGive, target, skill.name)
   end
 end
 

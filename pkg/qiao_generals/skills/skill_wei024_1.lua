@@ -64,7 +64,7 @@ skill:addEffect(fk.EventPhaseStart, {
     if target ~= player or player.dead or not player:hasSkill(skill.name) then return end
     if card == nil or not isLegalTarget(player, to) then return end
     if not table.contains(player:getCardIds(Player.Hand), card) then return end
-    room:obtainCard(to, card, true, fk.ReasonGive, player, skill.name)
+    room:obtainCard(to, card, false, fk.ReasonGive, player, skill.name)
     local executed = H.askToCommand(player, {
       tos = { to },
       skill_name = skill.name,
