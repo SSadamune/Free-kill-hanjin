@@ -22,6 +22,7 @@ from PySide6.QtTest import QTest
 
 
 CAPTURE = """local Client = require "packages.qiao.pkg.qiao_mode.client"
+local Ltk = require "packages.freekill-core.ltk.client.util"
 local function emit(method, rows)
   -- FreeKill's Windows console may use a locale encoding when stdout is piped.
   local payload = json.encode({ method = method, rows = rows })
@@ -35,6 +36,14 @@ function Client:discardCardsForDisplay()
     if row.id then
       local card = Fk:getCardById(row.id, true)
       sample.face = { name = card.name, suit = card:getSuitString(), number = card.number }
+      local function displayMark(mark)
+        return { name = Fk:translate(mark.k), origName = mark.k,
+          value = type(mark.v) == "table" and table.concat(table.map(mark.v, function(key)
+            return Fk:translate(key)
+          end), " ") or "" }
+      end
+      sample.face.marks = table.map(Ltk:getCardData(row.id).mark, displayMark)
+      sample.fallbackLabels = table.map(row.markFallbacks, displayMark)
     end
     return sample
   end))
@@ -58,7 +67,10 @@ ApplicationWindow {
   property var pileData: []
   onPileDataChanged: {
     for (const card of pileData) {
-      if (card.face) Ltk.cards[card.id] = card.face;
+      if (card.face) {
+        Ltk.cards[card.id] = card.face;
+        for (const mark of card.fallbackLabels ?? []) Ltk.markLabels[mark.origName] = mark;
+      }
     }
   }
   property int selectedSeat: 0
@@ -135,6 +147,10 @@ import QtQuick
 import LunarLtk.Models
 QtObject {
   property var cards: ({})
+  property var markLabels: ({})
+  function setMark(marks, key, value) {
+    marks.push(markLabels[key]);
+  }
   function createCardModel(id, props) {
     const card = cards[id];
     return Qt.createComponent("LunarLtk.Models", "CardModel").createObject(null,
@@ -181,7 +197,10 @@ def run():
     results = [s["rows"] for s in samples if s["method"] == "result"]
     initial = next(rows for rows in piles if len(rows) == 2 and any(c["lord"] for c in rows))
     separated = next(rows for rows in piles if {c.get("thisTurn") for c in rows} == {True, False})
-    same_rank = next(rows for rows in piles if {"空巢", "孤军"} <= {c.get("marks") for c in rows})
+    conditions = {"空巢", "孤军"}
+    same_rank = next(rows for rows in piles if conditions <= {
+        mark["name"] for card in rows for mark in card.get("fallbackLabels", [])
+    })
     after_take = next(rows for rows in piles if len(rows) == 1)
     empty = next(rows for rows in piles if not rows)
     pair = [r for r in results if not r["joint"]]
@@ -274,15 +293,21 @@ def run():
     print("PASS discard: search, lord filter, removed card, shuffle")
 
     js("pileData = " + json.dumps(same_rank) + "; pile.open()")
-    assert {"空巢", "孤军"} <= labels()
-    club_fours = {card["id"] for card in same_rank if card["marks"] in {"空巢", "孤军"}}
+    assert "测试标记" in labels()
+    club_fours = {
+        card["id"]: [mark["name"] + " " + mark["value"] for mark in card["fallbackLabels"]
+                     if mark["name"] in conditions]
+        for card in same_rank
+    }
+    assert all(label in labels() for labels_for_card in club_fours.values() for label in labels_for_card)
     visible_faces = [item for item in visible_items(window.contentItem())
                      if item.objectName() == "discardCardFace"
                      and js("dataModel.cardId", item) in club_fours]
     assert len(visible_faces) == 2
     assert all(face.property("suit") == "club" and face.property("number") == 4 for face in visible_faces)
     for face in visible_faces:
-        mark = next(item for item in visible_items(face) if item.property("text") in {"空巢", "孤军"})
+        mark = next(item for item in visible_items(face)
+                    if item.property("text") in club_fours[js("dataModel.cardId", face)])
         assert face.mapFromScene(mark.mapToScene(QPointF())).y() < face.height()
     close_panel()
     print("PASS discard faces: original art, suit, rank, and distinct marks for identical ranks")

@@ -1,6 +1,9 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skillTest = __dofile("../../../tests/support/skill_test.lua")
 local Client = require "packages.qiao.pkg.qiao_mode.client"
+local Ltk = require "packages.freekill-core.ltk.client.util"
+
+Fk:loadTranslationTable { ["@qiao_test_discard_public"] = "测试标记" }
 
 Testqiao_room_records = {
   setup = function()
@@ -21,11 +24,11 @@ function Testqiao_room_records:testDiscardTracksMovesAndShuffle()
   FkTest.runInClient(function()
     local cards = Client.discardCardsForDisplay(ClientInstance)
     lu.assertEquals(cards[1], {
-      id = peach.id, marks = "", name = Fk:translate(peach.name), suit = "diamond", rank = "3",
+      id = peach.id, markFallbacks = {}, name = Fk:translate(peach.name),
       lord = false, thisTurn = false,
     })
     lu.assertEquals(cards[2], {
-      id = sword.id, marks = "", name = Fk:translate(sword.name), suit = "heart", rank = "9",
+      id = sword.id, markFallbacks = {}, name = Fk:translate(sword.name),
       lord = true, thisTurn = false,
     })
   end)
@@ -48,14 +51,20 @@ function Testqiao_room_records:testDiscardDistinguishesBothClubFourSlashes()
       end
     end
     room:moveCardTo(ids, Card.DiscardPile, nil, fk.ReasonPut, "test", nil, true)
+    room:setCardMark(Fk:getCardById(ids[1]), "@qiao_test_discard_public", 1)
   end)
   FkTest.runInClient(function()
     local marks = {}
     for _, row in ipairs(Client.discardCardsForDisplay(ClientInstance)) do
-      if table.contains(ids, row.id) then marks[row.marks] = true end
+      if table.contains(ids, row.id) then
+        for _, mark in ipairs(row.markFallbacks) do marks[mark.k] = mark.v end
+      end
     end
-    lu.assertTrue(marks["空巢"])
-    lu.assertTrue(marks["孤军"])
+    lu.assertNotNil(marks["@qiao_adaptation_1_kongchao"])
+    lu.assertNotNil(marks["@qiao_adaptation_1_gujun"])
+    lu.assertNotNil(table.find(Ltk:getCardData(ids[1]).mark, function(mark)
+      return mark.k == "@qiao_test_discard_public" and mark.v == 1
+    end))
   end)
 end
 

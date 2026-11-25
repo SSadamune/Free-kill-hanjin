@@ -14,6 +14,7 @@ local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
@@ -282,6 +283,8 @@ function QiaoClient:sendDataToUI(data)
   BaseClient.sendDataToUI(self, data)
   self:notifyUI("QiaoSkillStatusChanged", {})
   self:notifyUI("QiaoGuestFactionsChanged", {})
+  self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
+  self:notifyUI("QiaoDiscardChanged", {})
 end
 
 function QiaoClient:skillStates(playerId)
@@ -430,13 +433,19 @@ function QiaoClient:discardCardsForDisplay()
     local card = Fk:getCardById(id, true)
     local thisTurn = beforeTurn ~= nil and not older[id]
     if card and Self:cardVisible(id) then
-      local marks = table.map(Adaptation.displayEntries(card), function(entry)
-        return Fk:translate("qiao_condition_" .. entry.condition)
-      end)
-      if Fk.packages.qiao_cards.qiao_cards.isHeji(card) then table.insert(marks, "合纵") end
+      local fallback = {}
+      -- 直接弃置的可见牌可能未经过手牌／处理区的应变显示同步。
+      for index, entry in ipairs(Adaptation.displayEntries(card)) do
+        local key = Adaptation.markKey(index, entry.condition)
+        if card:getMark(key) == 0 then
+          table.insert(fallback, { k = key, v = Adaptation.markValue(entry) })
+        end
+      end
+      if Cards.isHeji(card) and not Cards.hasAllianceMark(card) then
+        table.insert(fallback, { k = Cards.ALLIANCE_PUBLIC, v = 1 })
+      end
       table.insert(cards, {
-        id = id, name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
-        marks = table.concat(marks, " · "),
+        id = id, name = Fk:translate(card.name), markFallbacks = fallback,
         lord = lordEquipment[card.name] ~= nil,
         thisTurn = thisTurn,
       })
@@ -445,6 +454,13 @@ function QiaoClient:discardCardsForDisplay()
     end
   end
   return cards
+end
+
+function QiaoClient:setCardMark(data)
+  BaseClient.setCardMark(self, data)
+  if data[2]:startsWith("@") and self:getCardArea(data[1]) == Card.DiscardPile then
+    self:notifyUI("QiaoDiscardChanged", {})
+  end
 end
 
 function QiaoClient:handleShuffleDrawPile(data)

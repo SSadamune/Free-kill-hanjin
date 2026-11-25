@@ -140,9 +140,30 @@ Controls.Popup {
         required property int index
         readonly property bool faceUp: typeof modelData?.id === "number"
         readonly property bool lord: !!modelData?.lord
+        property CardModel faceModel: null
         width: grid.cellWidth
         height: grid.cellHeight
         visible: modelData !== null
+
+        function updateFace() {
+          if (faceModel) faceModel.destroy();
+          if (typeof modelData?.id !== "number") {
+            faceModel = null;
+            return;
+          }
+          const model = Ltk.createCardModel(modelData.id, { selectable: true, markVisible: true });
+          const fallback = modelData.markFallbacks ?? [];
+          if (fallback.length) {
+            const marks = [...model.marks];
+            for (const { k, v } of fallback) Ltk.setMark(marks, k, v);
+            model.marks = marks;
+          }
+          faceModel = model;
+        }
+
+        onModelDataChanged: updateFace()
+        Component.onCompleted: if (!faceModel) updateFace()
+        Component.onDestruction: if (faceModel) faceModel.destroy()
 
         Rectangle {
           objectName: "discardTurnDivider"
@@ -164,13 +185,7 @@ Controls.Popup {
           glow.glowRadius: 7
           glow.spread: 0.22
           glow.opacity: slot.lord ? 0.85 : 0
-          dataModel: {
-            if (!slot.faceUp) return coveredCard;
-            // Use the same on-card mark renderer as the hand area.
-            const marks = (slot.modelData.marks || "").split(" · ").filter(Boolean)
-              .map(name => ({ name, value: "", origName: "" }));
-            return Ltk.createCardModel(slot.modelData.id, { selectable: true, markVisible: true, marks });
-          }
+          dataModel: slot.faceModel ?? coveredCard
 
           CardModel { id: coveredCard; known: false; selectable: true }
         }
