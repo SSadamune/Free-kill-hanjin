@@ -7,8 +7,6 @@ local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 
-local CI_MARK_DESCRIPTION = "〖赐〗是一种国战标记："
-
 -- The titles without a skill skeleton describe rules that already have a
 -- client-facing meaning. Descriptions keyed here reuse the installed text.
 local terms = {
@@ -75,17 +73,15 @@ end
 local function detailOmissions()
   local omissions = {}
   local function register(parent, target, fragments)
-    local rule = { target = target, fragments = fragments }
-    omissions[parent] = rule
-    omissions[SameName.instanceName(parent)] = rule
+    omissions[parent] = { target = target, fragments = fragments }
   end
 
   -- Derive the fragments from the standalone descriptions. If either text
   -- changes, the renderer leaves any fragment that no longer matches intact.
-  local ci = translated(":" .. Ci.CONSUME)
+  local ci = translated(":" .. Ci.MARK)
   if ci then
     register(Ci.SKILL, Ci.CONSUME, {
-      "\n（" .. CI_MARK_DESCRIPTION .. ci .. "）",
+      "\n（" .. ci .. "）",
       "<br/><b>〔赐〕</b> 本技能另有“赐”的消耗入口。",
     })
   end
@@ -133,7 +129,7 @@ local function cardVariants()
 end
 
 function M.catalog()
-  local skills, cards, generals = {}, {}, {}
+  local skills, cards, generals, skillAliases = {}, {}, {}, {}
   for id, general in pairs(Fk.generals) do
     if general.package.extensionName == "qiao" then
       local title = translated(id)
@@ -146,11 +142,15 @@ function M.catalog()
     end
   end
   for id, skeleton in pairs(Fk.skill_skels) do
-    if id:startsWith("qiao_") then
+    local original = SameName.canonicalHistoryKey(id)
+    if original ~= id then
+      -- Runtime copies have their own history but share the original's reference entry.
+      skillAliases[id] = original
+    elseif id:startsWith("qiao_") then
       local title, description = translated(id), translated(":" .. id)
       if title and description then
         local display = Fk:getDescription(id)
-        if id == Ci.CONSUME and title == "赐" then display = CI_MARK_DESCRIPTION .. display end
+        if id == Ci.CONSUME then display = translated(":" .. Ci.MARK) or display end
         skills[#skills + 1] = addAliases {
           id = id, title = title, description = display,
           related = skeleton.related_skills,
@@ -192,7 +192,7 @@ function M.catalog()
   table.sort(skills, function(a, b) return a.id < b.id end)
   table.sort(generals, function(a, b) return a.id < b.id end)
   return { skills = skills, cards = cards, generals = generals, variants = cardVariants(),
-    omissions = detailOmissions() }
+    omissions = detailOmissions(), skillAliases = skillAliases }
 end
 
 return M

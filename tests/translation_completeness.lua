@@ -4,12 +4,17 @@ Testqiao_translation_completeness = {}
 
 function Testqiao_translation_completeness:testSkillReferenceCatalog()
   local references = require "packages.qiao.pkg.qiao_mode.skill_references"
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
   local catalog = references.catalog()
   local skills, byId = {}, {}
   for _, skill in ipairs(catalog.skills) do
+    lu.assertEquals(sameName.canonicalHistoryKey(skill.id), skill.id)
     skills[skill.title] = skill
     byId[skill.id] = skill
   end
+  lu.assertEquals(catalog.skillAliases[sameName.instanceName(ci.CONSUME)], ci.CONSUME)
+  lu.assertEquals(byId[ci.CONSUME].description, Fk:translate(":" .. ci.MARK))
 
   local banner = byId.qiao__skill_em_wu001_flag
   lu.assertEquals(banner.description, Fk:getDescription(banner.id))
@@ -59,6 +64,11 @@ function Testqiao_translation_completeness:testEmbeddedDescriptionsAreRegistered
     lu.assertStrContains(byId[target].description, Fk:translate(":" .. target))
   end
   lu.assertStrContains(byId[ci.CONSUME].description, "〖赐〗是一种国战标记：")
+  local bannerTip = Fk:translate(":@!!" .. ci.SKILL)
+  lu.assertNotStrContains(bannerTip, Fk:translate(":" .. ci.MARK))
+  lu.assertStrContains(bannerTip, "置为“赐”")
+  lu.assertStrContains(bannerTip, "交给其")
+  lu.assertStrContains(bannerTip, "并防止之")
 end
 
 local PUBLIC_SKILLS = {

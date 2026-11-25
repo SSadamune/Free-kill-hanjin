@@ -21,6 +21,9 @@ function createCatalog(raw) {
       names.get(name).push(entry);
     }
   }
+  for (const [alias, original] of Object.entries(raw.skillAliases ?? {})) {
+    if (skills.has(original)) skills.set(alias, skills.get(original));
+  }
   const variants = raw.variants ?? {};
   const words = Array.from(new Set([...names.keys(), ...Object.keys(raw.cards), ...Object.keys(variants)]));
   words.sort((a, b) => b.length - a.length);
@@ -91,6 +94,7 @@ function renderLinks(catalog, description, source, theme) {
 }
 
 function render(catalog, description, source, theme) {
+  source = catalog.skills.get(source)?.id ?? source;
   const omission = catalog.omissions[source];
   const target = omission && catalog.skills.get(omission.target);
   if (target && lookup(catalog, target.title, source, false).some(entry => entry.id === target.id)) {
@@ -103,10 +107,12 @@ function render(catalog, description, source, theme) {
 }
 
 function lookup(catalog, name, source, page) {
-  const eligible = (catalog.names.get(name) ?? []).filter(entry => entry.id !== source && !!entry.page === page);
+  const sourceSkill = catalog.skills.get(source);
+  const sourceId = sourceSkill?.id ?? source;
+  const eligible = (catalog.names.get(name) ?? []).filter(entry => entry.id !== sourceId && !!entry.page === page);
   const exact = eligible.filter(entry => entry.title === name);
   const candidates = exact.length > 0 ? exact : eligible;
-  const related = Array.from(catalog.skills.get(source)?.related ?? []);
+  const related = Array.from(sourceSkill?.related ?? [], id => catalog.skills.get(id)?.id ?? id);
   const linked = candidates.filter(entry => related.includes(entry.id));
   const results = linked.length > 0 ? linked : candidates;
   return results.filter((entry, index) => (
