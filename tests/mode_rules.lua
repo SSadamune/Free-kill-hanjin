@@ -293,7 +293,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealMain()
   local p = room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealMain:::qiao_test__wei_1" } })
+  turnStart(p, { { "revealMain:::qiao_test__wei_1" }, "__cancel" })
   lu.assertEquals(p.general, "qiao_test__wei_1")
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
@@ -301,7 +301,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealDeputy()
   local p = room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealDeputy:::qiao_test__wei_2" } })
+  turnStart(p, { { "revealDeputy:::qiao_test__wei_2" }, "__cancel" })
   lu.assertEquals(p.general, "anjiang")
   lu.assertEquals(p.deputyGeneral, "qiao_test__wei_2")
 end
@@ -309,7 +309,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealBothOrCancel()
   local current, p = room(), room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealAll" } })
+  turnStart(p, { { "revealMain:::qiao_test__wei_1" }, { "qiao_turn_reveal_also_deputy" } })
   lu.assertEquals(p.general, "qiao_test__wei_1")
   lu.assertEquals(p.deputyGeneral, "qiao_test__wei_2")
 
@@ -327,19 +327,20 @@ function Testmode_rules:testRobotTurnStartUsesRevealFallback()
 
   -- Let the engine receive the bot's real reply. Fix only the random fallback
   -- so the regression consistently exercises a legal reveal rather than Cancel.
-  local fallback
+  local fallbacks = {}
+  local main = "revealMain:::qiao_test__wei_1"
+  local deputy = "revealDeputy:::qiao_test__wei_2"
+  local alsoDeputy = "qiao_turn_reveal_also_deputy"
   local pick = current.tableRandomPick
   current.tableRandomPick = function(self, candidates, count)
-    if table.contains(candidates, "revealAll") then
-      fallback = table.simpleClone(candidates)
-      return { "revealAll" }
+    if table.contains(candidates, main) or table.contains(candidates, alsoDeputy) then
+      table.insert(fallbacks, table.simpleClone(candidates))
+      return { candidates[1] }
     end
     return pick(self, candidates, count)
   end
   turnStart(robot)
-  lu.assertEquals(fallback, {
-    "revealMain:::qiao_test__wei_1", "revealDeputy:::qiao_test__wei_2", "revealAll", "Cancel",
-  })
+  lu.assertEquals(fallbacks, { { main, deputy, "Cancel" }, { alsoDeputy, "Cancel" } })
   lu.assertEquals(robot.general, "qiao_test__wei_1")
   lu.assertEquals(robot.deputyGeneral, "qiao_test__wei_2")
 end

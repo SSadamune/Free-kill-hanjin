@@ -442,6 +442,25 @@ local function turnAscensionCandidates(room, player)
   return lord, kingdoms
 end
 
+local function turnRevealName(player, deputy)
+  local current = player[deputy and "deputyGeneral" or "general"]
+  if current ~= "anjiang" or player:prohibitReveal(deputy) then return end
+  if deputy then return M.actual_deputy(player) end
+  return M.actual_main(player)
+end
+
+local function askTurnReveal(room, player, options, prompt)
+  -- FreeKill 0.5.25 has no bot handler for AskForOptions. Preserve the
+  -- random fallback for bots, with Cancel as a legal choice.
+  local isRobot = player.serverplayer:getState() == fk.Player_Robot
+  if isRobot then table.insert(options, "Cancel") end
+  -- Both requests have the same public focus; prompts and options are private.
+  return room:askToOptions(player, {
+    options = options, skill_name = "heg_rule", prompt = prompt,
+    min_num = 1, max_num = 1, single = true, cancelable = not isRobot,
+  })[1]
+end
+
 function M.on_turn_start(room, player)
   if player.dead then return "Cancel" end
   local choices, ascensionChoices = {}, {}
@@ -454,51 +473,52 @@ function M.on_turn_start(room, player)
     end
   end
 
+  local main, deputy = turnRevealName(player, false), turnRevealName(player, true)
   local revealMain, revealDeputy
-  if player.general == "anjiang" and not player:prohibitReveal() then
-    local main = M.actual_main(player)
-    if main then
-      revealMain = (lord and "qiao_turn_reveal" or "revealMain") .. ":::" .. main
-      table.insert(choices, revealMain)
-    end
+  if main then
+    revealMain = (lord and "qiao_turn_reveal" or "revealMain") .. ":::" .. main
+    table.insert(choices, revealMain)
   end
-  if player.deputyGeneral == "anjiang" and not player:prohibitReveal(true) then
-    local deputy = player:getMark("__heg_deputy")
-    if type(deputy) == "string" and deputy ~= "" then
-      revealDeputy = (lord and "qiao_turn_reveal_deputy" or "revealDeputy") .. ":::" .. deputy
-      table.insert(choices, revealDeputy)
-    end
+  if deputy then
+    revealDeputy = (lord and "qiao_turn_reveal_deputy" or "revealDeputy") .. ":::" .. deputy
+    table.insert(choices, revealDeputy)
   end
   if #choices == 0 then return "Cancel" end
 
-  if not kingdoms and revealMain and revealDeputy then
-    table.insert(choices, "revealAll")
-  end
-  -- AskForOptions has no bot handler in FreeKill 0.5.25. Preserve the old
-  -- random fallback for bots, with Cancel as a legal choice.
-  local isRobot = player.serverplayer:getState() == fk.Player_Robot
-  if isRobot then table.insert(choices, "Cancel") end
-  -- The engine broadcasts skill_name as the focus reason. Always use the
-  -- same reason and request path, regardless of the hidden general.
-  local choice = room:askToOptions(player, {
-    options = choices, skill_name = "heg_rule", prompt = "#HegRevealGenerals",
-    min_num = 1, max_num = 1, single = true, cancelable = not isRobot,
-  })[1]
+  local choice = askTurnReveal(room, player, choices, "#HegRevealGenerals")
   local kingdom = ascensionChoices[choice]
+  local showMain = kingdom ~= nil or (revealMain ~= nil and choice == revealMain)
+  local showDeputy = revealDeputy ~= nil and choice == revealDeputy
+  if player.dead or not (showMain or showDeputy) then return "Cancel" end
+
+  -- Collect the optional second decision while both positions are still hidden.
+  if showMain and deputy and turnRevealName(player, true) == deputy then
+    local option = "qiao_turn_reveal_also_deputy"
+    showDeputy = askTurnReveal(room, player, { option }, "#QiaoTurnRevealAlso") == option
+  elseif showDeputy and main and turnRevealName(player, false) == main then
+    local option = "qiao_turn_reveal_also_main"
+    showMain = askTurnReveal(room, player, { option }, "#QiaoTurnRevealAlso") == option
+  end
+
+  if player.dead then return "Cancel" end
+  showMain = showMain and turnRevealName(player, false) == main
+  showDeputy = showDeputy and turnRevealName(player, true) == deputy
   if kingdom then
-    if not M.has_lord(room, kingdom) and not M.population_blocks(room, player, kingdom) then
-      M.ascend(room, player, lord, kingdom, { kind = "lord" })
+    local currentLord, currentKingdoms = turnAscensionCandidates(room, player)
+    showMain = showMain and currentLord == lord and currentKingdoms
+      and table.contains(currentKingdoms, kingdom)
+      and M.ascend(room, player, lord, kingdom, { kind = "lord" })
+    if showDeputy and not player.dead and turnRevealName(player, true) == deputy then
+      player:revealGeneral(true)
+      return showMain and "md" or "d"
     end
-    return "m"
-  elseif revealMain and choice == revealMain then
-    player:revealGeneral(false)
-    return "m"
-  elseif revealDeputy and choice == revealDeputy then
-    player:revealGeneral(true)
-    return "d"
-  elseif choice == "revealAll" and not kingdoms and revealMain and revealDeputy then
+    return showMain and "m" or "Cancel"
+  elseif showMain and showDeputy then
     player:revealGenerals()
     return "md"
+  elseif showMain or showDeputy then
+    player:revealGeneral(showDeputy)
+    return showDeputy and "d" or "m"
   end
   return "Cancel"
 end
