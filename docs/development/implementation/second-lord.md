@@ -16,7 +16,7 @@
 | 模式规则技能 | `pkg/qiao_mode/skills/ascension_rule.lua`：`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
 | 模式接线 | `pkg/qiao_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
 
-版本登记使用显式对应关系，不依赖同名替换或上游 `HegUtil.lordGenerals`。君主版程序名不得包含 `lord`，并且登记时设置 `general.is_lord`；这样可以避开上游 `new_hegemony_mode.lua` 死亡奖惩与 `hegemony_rule.lua` 明置处理中只按名字识别的君主特例，汉晋自己接管继位、转野和胜负。汉晋首回合符合普通升变资格时，在国战规则的回合开始询问中列出君主升变、可明置的暗将及取消。升变排在最上方，任一选择只处理一次。没有升变资格时沿用国战询问。死亡继位在 `fk.BeforeGameOverJudge` 执行，先于标准游戏结束判定，候选人按当前回合角色起逆时针询问并在提交时复核。暗将候选只发给本人。
+版本登记使用显式对应关系，不依赖同名替换或上游 `HegUtil.lordGenerals`。君主版程序名不得包含 `lord`，并且登记时设置 `general.is_lord`；这样可以避开上游 `new_hegemony_mode.lua` 死亡奖惩与 `hegemony_rule.lua` 明置处理中只按名字识别的君主特例，汉晋自己接管继位、转野和胜负。回合开始使用原生选项栏询问一次，含可明置的暗将、可用升变及取消。原实现把只有能升变时才出现的规则名广播为公开焦点，其他玩家可据此推断暗将。现在不同升变资格共用同一公开焦点、座位和读条时长，暗将与升变候选只发给操作玩家。死亡继位在 `fk.BeforeGameOverJudge` 执行，先于标准游戏结束判定，候选人按当前回合角色起逆时针询问并在提交时复核。
 
 开局选将根据版本登记和房间允许的势力、禁将设置计算「可升变」提示。君主版遵循人数限制，野心家原版还需有可配合效忠的候选副将。徽标跟随普通选将、同名替换和客将重抽后的候选卡，位于「珠联璧合」上方。局中发出升变询问时仍按当时的场上状态检查资格。
 

@@ -327,32 +327,30 @@ function Testmode_rules:testRevealProhibitionIsRespectedByTheRealPrompt()
     current:setPlayerMark(p, "RevealProhibited", { "m" })
   end)
   local captured
-  local original = current.askToChoice
-  current.askToChoice = function(self, target, params)
+  local original = current.askToOptions
+  current.askToOptions = function(self, target, params)
     if target == p and params.prompt == "#HegRevealGenerals" then captured = params end
     return original(self, target, params)
   end
   turnStart(p, { { "Cancel" } })
-  current.askToChoice = original
+  current.askToOptions = original
   lu.assertNotNil(captured)
-  lu.assertFalse(table.contains(captured.choices, "revealMain:::qiao_test__wei_1"))
-  lu.assertTrue(table.contains(captured.choices, "revealDeputy:::qiao_test__wei_2"))
+  lu.assertEquals(captured.options, { "revealDeputy:::qiao_test__wei_2" })
   lu.assertEquals(p.general, "anjiang")
 
-  -- Both positions prohibited: the upstream prompt offers no reveal option.
+  -- Both positions prohibited: there is no actionable reveal request.
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   FkTest.runInRoom(function()
     current:setPlayerMark(p, "RevealProhibited", { "m", "d" })
   end)
   local prohibited
-  current.askToChoice = function(self, target, params)
+  current.askToOptions = function(self, target, params)
     if target == p and params.prompt == "#HegRevealGenerals" then prohibited = params end
     return original(self, target, params)
   end
   turnStart(p, nil)
-  current.askToChoice = original
-  lu.assertNotNil(prohibited)
-  lu.assertEquals(prohibited.choices, { "Cancel" })
+  current.askToOptions = original
+  lu.assertNil(prohibited)
   lu.assertEquals(p.general, "anjiang")
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
@@ -369,18 +367,18 @@ function Testmode_rules:testNativeLordConversionDoesNotPreemptQiaoAscension()
     end
   end)
   local prompts = {}
-  local original = current.askToChoice
-  current.askToChoice = function(self, target, params)
-    if target == p and table.contains({
-      "#QiaoSecondLordConvert", "#HegRevealGenerals", "#HegPrepareConvertLord",
-    }, params.prompt) then
-      table.insert(prompts, params.prompt)
+  local original = current.askToOptions
+  current.askToOptions = function(self, target, params)
+    if target == p and params.prompt == "#HegRevealGenerals" then
+      table.insert(prompts, table.simpleClone(params.options))
     end
     return original(self, target, params)
   end
   turnStart(p, { { "Cancel" } })
-  current.askToChoice = original
-  lu.assertEquals(prompts, { "#QiaoSecondLordConvert" })
+  current.askToOptions = original
+  lu.assertEquals(prompts, { {
+    "revealMain:::" .. G.wei_normal.name, "revealDeputy:::" .. G.wei_deputy.name, A.ASCEND_ACCEPT,
+  } })
   lu.assertEquals(p.general, "anjiang")
   lu.assertFalse(A.has_lord(current, "wei"))
 end

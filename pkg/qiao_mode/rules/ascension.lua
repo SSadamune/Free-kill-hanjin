@@ -423,7 +423,7 @@ function M.reset(room)
   end
 end
 
-function M.on_turn_start(room, player)
+local function turnAscensionCandidates(room, player)
   if not M.allows_lord_ascension(room) then return end
   if player.dead or not M.is_first_turn(player) or player.general ~= "anjiang" then return end
   local main = M.actual_main(player)
@@ -439,31 +439,45 @@ function M.on_turn_start(room, player)
   local initial = player:getMark("__heg_kingdom")
   if table.contains(kingdoms, initial) then kingdoms = { initial } end
   if #kingdoms == 0 then return end
+  return lord, kingdoms
+end
 
+function M.on_turn_start(room, player)
+  if player.dead then return "Cancel" end
   local choices, ascensionChoices = {}, {}
-  if #kingdoms == 1 then
-    choices[1] = M.ASCEND_ACCEPT
-    ascensionChoices[M.ASCEND_ACCEPT] = kingdoms[1]
-  else
-    for _, kingdom in ipairs(kingdoms) do
-      local option = M.ASCEND_KINGDOM .. ":::" .. kingdom
-      table.insert(choices, option)
-      ascensionChoices[option] = kingdom
+  local revealMain, revealDeputy
+  if player.general == "anjiang" and not player:prohibitReveal() then
+    local main = M.actual_main(player)
+    if main then
+      revealMain = "revealMain:::" .. main
+      table.insert(choices, revealMain)
     end
   end
-  local revealMain = "qiao_turn_reveal:::" .. main
-  local revealDeputy
-  table.insert(choices, revealMain)
   if player.deputyGeneral == "anjiang" and not player:prohibitReveal(true) then
     local deputy = player:getMark("__heg_deputy")
     if type(deputy) == "string" and deputy ~= "" then
-      revealDeputy = "qiao_turn_reveal_deputy:::" .. deputy
+      revealDeputy = "revealDeputy:::" .. deputy
       table.insert(choices, revealDeputy)
     end
   end
-  local choice = room:askToChoice(player, {
-    choices = choices, skill_name = M.RULE_SKILL, prompt = "#QiaoSecondLordConvert", cancelable = true,
-  })
+  if #choices == 0 then return "Cancel" end
+
+  local lord, kingdoms = turnAscensionCandidates(room, player)
+  if kingdoms then
+    for _, kingdom in ipairs(kingdoms) do
+      local option = #kingdoms == 1 and M.ASCEND_ACCEPT or M.ASCEND_KINGDOM .. ":::" .. kingdom
+      table.insert(choices, option)
+      ascensionChoices[option] = kingdom
+    end
+  elseif revealMain and revealDeputy then
+    table.insert(choices, "revealAll")
+  end
+  -- The engine broadcasts skill_name as the focus reason. Always use the
+  -- same reason and request path, regardless of the hidden general.
+  local choice = room:askToOptions(player, {
+    options = choices, skill_name = "heg_rule", prompt = "#HegRevealGenerals",
+    min_num = 1, max_num = 1, single = true, cancelable = true,
+  })[1]
   local kingdom = ascensionChoices[choice]
   if kingdom then
     if not M.has_lord(room, kingdom) and not M.population_blocks(room, player, kingdom) then
@@ -476,6 +490,9 @@ function M.on_turn_start(room, player)
   elseif revealDeputy and choice == revealDeputy then
     player:revealGeneral(true)
     return "d"
+  elseif choice == "revealAll" and not kingdoms and revealMain and revealDeputy then
+    player:revealGenerals()
+    return "md"
   end
   return "Cancel"
 end
@@ -489,8 +506,7 @@ function M.installTurnReveal()
   function H.askToRevealGenerals(player, params)
     -- The upstream TurnStart rule is the only caller that requests lord conversion.
     if params.skill_name == "heg_rule" and params.lord_convert and Modes.inRoom(player.room) then
-      local result = M.on_turn_start(player.room, player)
-      if result then return result end
+      return M.on_turn_start(player.room, player)
     end
     return reveal(player, params)
   end

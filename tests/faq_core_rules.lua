@@ -309,6 +309,11 @@ function Testfaq_core_rules:testFourPlayerBlocksFirstShowVanguardAndLordAscensio
   -- 4 人局：单亮首亮不获先驱；主动技能授先驱不受影响；禁止君主普通升变与死亡继位
   local room = createQiaoRoomWithPlayers(4)
   local p = room.players
+  FkTest.setNextReplies(p[1], { { "Cancel" } })
+  FkTest.setRoomBreakpoint(p[1], "AskForOptions", function(data)
+    lu.assertFalse(table.contains(data[1], A.ASCEND_ACCEPT))
+    return false
+  end)
   FkTest.runInRoom(function()
     setupAllHidden(room, "han")
     content.setupHidden(room, p[1], "qiao_heg__han001", "qiao_test__han_2", "han")
@@ -318,7 +323,7 @@ function Testfaq_core_rules:testFourPlayerBlocksFirstShowVanguardAndLordAscensio
     lu.assertFalse(FaqRules.allows_lord_ascension(room))
     lu.assertFalse(FaqRules.allows_first_show_vanguard(room))
 
-    -- 首回合普通君主升变入口不得询问，不得升变为君刘协
+    -- 四人局只询问明置，不提供君主升变
     A.on_turn_start(room, p[1])
     lu.assertEquals(p[1].general, "anjiang", "4 人局不得触发普通君主升变")
     -- 死亡继位候选必须为空，直接调用 ascend(lord/succession) 亦被拒绝
