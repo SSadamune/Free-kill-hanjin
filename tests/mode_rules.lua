@@ -371,14 +371,16 @@ function Testmode_rules:testNativeLordConversionDoesNotPreemptQiaoAscension()
   local prompts = {}
   local original = current.askToChoice
   current.askToChoice = function(self, target, params)
-    if target == p then table.insert(prompts, params.prompt) end
+    if target == p and table.contains({
+      "#QiaoSecondLordConvert", "#HegRevealGenerals", "#HegPrepareConvertLord",
+    }, params.prompt) then
+      table.insert(prompts, params.prompt)
+    end
     return original(self, target, params)
   end
-  turnStart(p, { { "Cancel" }, { "Cancel" } })
+  turnStart(p, { { "Cancel" } })
   current.askToChoice = original
-  lu.assertTrue(table.contains(prompts, "#QiaoSecondLordConvert"))
-  lu.assertTrue(table.contains(prompts, "#HegRevealGenerals"))
-  lu.assertFalse(table.contains(prompts, "#HegPrepareConvertLord"))
+  lu.assertEquals(prompts, { "#QiaoSecondLordConvert" })
   lu.assertEquals(p.general, "anjiang")
   lu.assertFalse(A.has_lord(current, "wei"))
 end

@@ -512,7 +512,7 @@ local function choiceDialog(command, data)
       long = long or (utf8.len(label) or #label) > 18
     end
   end
-  if not long and count <= 6 then return end
+  if not long and count <= 6 and prompt ~= "#QiaoSecondLordConvert" then return end
   return {
     component = {
       url = "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesBox.qml",

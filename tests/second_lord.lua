@@ -59,11 +59,33 @@ end
 
 local function triggerTurnStart(p, firstChoice)
   FkTest.cleanNextReplies(p)
-  -- The first reply belongs to the HanJin ascension prompt (when offered); the
-  -- second cancels the upstream national-war reveal prompt that still follows.
-  FkTest.setNextReplies(p, { { firstChoice or "Cancel" }, { "Cancel" } })
+  FkTest.setNextReplies(p, { { firstChoice or "Cancel" } })
   FkTest.runInRoom(function() room().logic:trigger(fk.TurnStart, p, {}) end)
   FkTest.cleanNextReplies(p)
+end
+
+function Testsecond_lord:testAscensionAndRevealUseOneTurnStartRequest()
+  local actor = player(1)
+  local deputy = "qiao_turn_reveal_deputy:::" .. G.wei_deputy.name
+  local main = "qiao_turn_reveal:::" .. G.wei_normal.name
+  FkTest.runInRoom(function() hidden(actor, G.wei_normal.name, G.wei_deputy.name, "wei") end)
+  local asks = {}
+  FkTest.setRoomBreakpoint(actor, "AskForChoices", function(data)
+    table.insert(asks, { prompt = data[6], choices = table.simpleClone(data[1]) })
+    return false
+  end)
+  triggerTurnStart(actor, deputy)
+  lu.assertEquals(asks, { {
+    prompt = "#QiaoSecondLordConvert", choices = { A.ASCEND_ACCEPT, main, deputy, "Cancel" },
+  } })
+  lu.assertEquals(actor.general, "anjiang")
+  lu.assertEquals(actor.deputyGeneral, G.wei_deputy.name)
+  triggerTurnStart(actor, main)
+  lu.assertEquals(asks[2], {
+    prompt = "#QiaoSecondLordConvert", choices = { A.ASCEND_ACCEPT, main, "Cancel" },
+  })
+  lu.assertEquals(#asks, 2)
+  lu.assertEquals(actor.general, G.wei_normal.name)
 end
 
 --- Record ascension prompts so a blocked target can be distinguished from a

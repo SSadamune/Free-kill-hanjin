@@ -768,26 +768,43 @@ function Testqiao_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurnEn
   lu.assertFalse(p(2):hasSkill(HAOSHI))
 end
 
--- 缔盟：ClientPlayer 无 room 时可安全计算；手牌数相等不能支付零张弃置
-function Testqiao_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
+-- 缔盟：真实客户端可提交零张弃牌，服务端交换两手实体牌。
+function Testqiao_wu_damage:testDimengClientAllowsZeroDiff()
   local room = FkTest.room
   grant(p(1), DIMENG)
   local cost = setHand(room, p(1), {
     { "qiao__peach", Card.Heart, 2 },
     { "qiao__jink", Card.Diamond, 3 },
   })
+  local hands = {}
   for i = 2, 8 do
-    setHand(room, p(i), {
+    hands[i] = setHand(room, p(i), {
       { "qiao__slash", Card.Spade, 4 },
       { "qiao__jink", Card.Heart, 5 },
     })
   end
 
+  local reply
   asClient(room, function(clients)
     local me = clients[1]
     lu.assertNil(me.room)
-    -- 所有其他角色手牌数相等，差为 0，不能支付“弃置零张牌”的消耗。
-    lu.assertFalse(Fk.skills[DIMENG]:canUse(me))
+    local play = require("ltk.core.request_type.play_card"):new(me)
+    play:setup()
+    lu.assertTrue(play:skillButtonValidity(DIMENG))
+    play:selectSkill(DIMENG, { selected = true })
+    play:selectTarget(clients[2].id, { selected = true })
+    lu.assertTrue(play:targetValidity(clients[3].id))
+    play:selectTarget(clients[3].id, { selected = true })
+    lu.assertFalse(play:cardValidity(cost[1]))
+    lu.assertTrue(play:feasible())
+    local notify = ClientInstance.notifyUI
+    ClientInstance.notifyUI = function(client, command, data)
+      if command == "ReplyToServer" then reply = data else notify(client, command, data) end
+    end
+    local ok, err = pcall(play.doOKButton, play)
+    ClientInstance.notifyUI = notify
+    play:_finish()
+    if not ok then error(err, 0) end
   end)
 
   setHand(room, p(2), {
@@ -821,6 +838,21 @@ function Testqiao_wu_damage:testDimengClientCanUseAndRejectsZeroDiff()
     lu.assertTrue(handler:feasible())
     handler:_finish()
   end)
+
+  lu.assertNotNil(reply)
+  lu.assertEquals(reply.card.subcards, {})
+  setHand(room, p(2), {})
+  setHand(room, p(3), {})
+  inRoom(function()
+    room:obtainCard(p(2), hands[2], false, fk.ReasonJustMove)
+    room:obtainCard(p(3), hands[3], false, fk.ReasonJustMove)
+  end)
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(3) }), "1" })
+  inRoom(function() room:handleUseCardReply(p(1), reply) end)
+  lu.assertEquals(p(1):getCardIds("h"), cost)
+  lu.assertItemsEquals(p(2):getCardIds("h"), hands[3])
+  lu.assertItemsEquals(p(3):getCardIds("h"), hands[2])
+  lu.assertTrue(p(3):hasSkill(HAOSHI))
 end
 
 -- 锦帆军：弃置他人牌后按颜色弃牌并摸两张，颜色次数记录 ------------------

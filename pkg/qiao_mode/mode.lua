@@ -201,6 +201,7 @@ function M.create(base, name)
       TriggerSelection.install(self.room)
       MandatoryCards.install(self.room)
       FaqRules.installServer(self.room)
+      Ascension.installTurnReveal()
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。

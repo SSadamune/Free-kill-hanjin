@@ -13,10 +13,10 @@
 | 显式版本登记 | `pkg/qiao_mode/rules/general_versions.lua`：`Versions.register { normal, lord, loyalty }`、`lord_version`、`lord_kingdoms`、`is_lord`、`selectable` |
 | 升变通则 | `pkg/qiao_mode/rules/ascension.lua`：`pair_max_hp`、`population_blocks`、`ascend`、`flip_lord_for_death`、`death_succession`、`convert_to_wild`、`get_winner` |
 | 配将体力贡献 | `pkg/qiao_mode/rules/pair_hp.lua`：开局与 `ascension.pair_max_hp` 共用，包含应期修正；接线和专项见[配将体力说明](mode-rules.md#配将体力) |
-| 模式规则技能 | `pkg/qiao_mode/skills/ascension_rule.lua`：`fk.TurnStart` 普通升变、`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
+| 模式规则技能 | `pkg/qiao_mode/skills/ascension_rule.lua`：`fk.BeforeGameOverJudge` 死亡继位、`fk.GameOverJudge` 胜负 |
 | 模式接线 | `pkg/qiao_mode/mode.lua`：`winner_getter = Ascension.get_winner`；其余选将池逻辑由 `Versions.plan` → `Pool.resolve` 使用 |
 
-版本登记使用显式对应关系，不依赖同名替换或上游 `HegUtil.lordGenerals`。君主版程序名不得包含 `lord`，并且登记时设置 `general.is_lord`；这样可以避开上游 `new_hegemony_mode.lua` 死亡奖惩与 `hegemony_rule.lua` 明置处理中只按名字识别的君主特例，汉晋自己接管继位、转野和胜负。普通升变在角色首个回合的 `fk.TurnStart` 提供，先于上游同回合的亮将询问；死亡继位在 `fk.BeforeGameOverJudge` 执行，先于标准游戏结束判定，候选人按当前回合角色起逆时针询问并在提交时复核。涉及暗将时由服务端私下校验和询问，不向全场展示候选名单。
+版本登记使用显式对应关系，不依赖同名替换或上游 `HegUtil.lordGenerals`。君主版程序名不得包含 `lord`，并且登记时设置 `general.is_lord`；这样可以避开上游 `new_hegemony_mode.lua` 死亡奖惩与 `hegemony_rule.lua` 明置处理中只按名字识别的君主特例，汉晋自己接管继位、转野和胜负。汉晋首回合符合普通升变资格时，在国战规则的回合开始询问中列出君主升变、可明置的暗将及取消。升变排在最上方，任一选择只处理一次。没有升变资格时沿用国战询问。死亡继位在 `fk.BeforeGameOverJudge` 执行，先于标准游戏结束判定，候选人按当前回合角色起逆时针询问并在提交时复核。暗将候选只发给本人。
 
 开局选将根据版本登记和房间允许的势力、禁将设置计算「可升变」提示。君主版遵循人数限制，野心家原版还需有可配合效忠的候选副将。徽标跟随普通选将、同名替换和客将重抽后的候选卡，位于「珠联璧合」上方。局中发出升变询问时仍按当时的场上状态检查资格。
 
