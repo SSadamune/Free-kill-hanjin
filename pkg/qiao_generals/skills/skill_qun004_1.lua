@@ -32,7 +32,7 @@ end
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = ARCHERY,
+  pattern = "archery_attack|.|.|.|" .. ARCHERY,
   prompt = "#qiao__skill_qun004_1-prompt",
   card_filter = function(self, player, to_select, selected)
     if #selected >= 2 then return false end
@@ -64,7 +64,9 @@ skill:addEffect("viewas", {
   enabled_at_play = function(self, player)
     return player.phase == Player.Play and #usableHand(player) >= 2
   end,
-  enabled_at_response = function() return false end,
+  enabled_at_response = function(self, player, response)
+    return not response and #usableHand(player) >= 2
+  end,
 })
 
 Fk:loadTranslationTable {

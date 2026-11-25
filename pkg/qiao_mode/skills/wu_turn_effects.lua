@@ -107,7 +107,7 @@ skill:addEffect(fk.AfterDrawNCards, {
     end
     if #give ~= count then return end
     room:moveCardTo(give, Card.PlayerHand, to, fk.ReasonGive,
-      "qiao__skill_wu014_1", nil, true, player)
+      "qiao__skill_wu014_1", nil, false, player)
   end,
 })
 

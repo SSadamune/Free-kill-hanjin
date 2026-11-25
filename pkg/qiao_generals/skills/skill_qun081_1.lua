@@ -4,6 +4,7 @@
 -- 然后只令此牌对该目标伤害+1。加伤绑定本次 UseCardData 与所选目标，
 -- 不改整张牌的全目标伤害。
 local J = require "packages.qiao.pkg.qiao_generals.util.jin_adaptation"
+local CardTargetSelection = require "packages.qiao.pkg.qiao_generals.util.card_target_selection"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_qun081_1",
@@ -38,23 +39,8 @@ local function eligibleTargets(player, use)
   end)
 end
 
-local function allows(extra, id, to)
-  local targets = extra and extra.targetsByCard[tostring(id)]
-  return targets ~= nil and (to == nil or table.contains(targets, to.id))
-end
-
-skill:addAuxActiveSkill(SELECT, {
-  card_num = 1,
-  target_num = 1,
+CardTargetSelection.add(skill, SELECT, {
   expand_pile = function(self) return self._extra_data and self._extra_data.otherEquips or {} end,
-  card_filter = function(self, player, id, selected, targets)
-    return #selected == 0 and allows(self._extra_data, id, targets[1])
-  end,
-  target_filter = function(self, player, to, selected, cards)
-    if #selected > 0 then return false end
-    if #cards > 0 then return allows(self._extra_data, cards[1], to) end
-    return self._extra_data ~= nil and table.contains(self._extra_data.targets, to.id)
-  end,
 })
 
 skill:addEffect(fk.TargetSpecified, {
@@ -83,17 +69,15 @@ skill:addEffect(fk.TargetSpecified, {
         end
       end
     end
-    local ok, ret = room:askToUseActiveSkill(player, {
+    local id, to = CardTargetSelection.ask(room, player, {
       skill_name = SELECT,
       prompt = "#qiao__skill_qun081_1-invoke",
-      cancelable = true,
       extra_data = {
         skillName = skill.name, targets = targetIds,
         targetsByCard = targetsByCard, otherEquips = otherEquips,
       },
     })
-    if not ok or not ret or #ret.targets ~= 1 or #ret.cards ~= 1 then return false end
-    local to, id = ret.targets[1], ret.cards[1]
+    if id == nil then return false end
     if not table.contains(eligibleTargets(player, use), to) then return false end
     local owner = room:getCardOwner(id)
     if (owner ~= player and owner ~= to) or not table.contains(eligibleEquipments(owner), id) then

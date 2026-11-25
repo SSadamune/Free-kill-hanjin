@@ -211,4 +211,42 @@ function Testqiao_wei032_guohuai:testPrelightJingceAtAnotherPlayersTurnEnd()
   lu.assertEquals(owner:getHandcardNum(), hand + 2)
 end
 
+function Testqiao_wei032_guohuai:testPigongRespectsEachViewersHandVisibility()
+  local room, guohuai, giver, first, second = FkTest.room, p(1), p(2), p(3), p(4)
+  inRoom(function()
+    skill_test.installDualGenerals(room, guohuai, {
+      main = "qiao_heg__wei032", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    for _, ally in ipairs({ giver, first, second }) do
+      skill_test.installDualGenerals(room, ally, {
+        main = "qiao_test__shu_1", deputy = "qiao_test__shu_2", kingdom = "shu",
+      })
+    end
+    room:setCurrent(guohuai)
+    p(5):addBuddy(first)
+    guohuai.hp = guohuai.maxHp - 1
+  end)
+  local peach = give(guohuai, "qiao__peach", Card.Heart, 6)
+  local jink = give(giver, "qiao__jink", Card.Heart, 2)
+  local duel = give(giver, "qiao__duel", Card.Spade, 1)
+  local replies = { [first.id] = jink, [second.id] = duel }
+  skill_test.withSkillRequests(room, PIGONG, {
+    askToChoosePlayers = function() return { giver } end,
+    askToCards = function(_, who, params)
+      lu.assertIs(who, giver)
+      local receiver = tonumber(params.prompt:match(":(%-?%d+)$"))
+      return { assert(replies[receiver], "疲攻询问了错误的收牌角色") }
+    end,
+  }, function()
+    inRoom(function()
+      room:useCard { from = guohuai, tos = { guohuai }, card = Fk:getCardById(peach) }
+    end)
+  end)
+  lu.assertIs(room:getCardOwner(jink), first)
+  lu.assertIs(room:getCardOwner(duel), second)
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(jink, Card.PlayerHand, Card.PlayerHand, { giver, first, p(5) })
+  assertMoveViews(duel, Card.PlayerHand, Card.PlayerHand, { giver, second })
+end
+
 return { name = "qiao_wei032_guohuai" }

@@ -3,6 +3,7 @@
 local F = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 
 local CAOHONG = "qiao_heg__wei018"
 local HUYUAN = "qiao__skill_wei018_1"
@@ -87,47 +88,108 @@ function Testqiao_wei018_caohong:testFormalRegistration()
   inRoom(function() lu.assertTrue(Fk:canUseGeneral(CAOHONG)) end)
 end
 
-function Testqiao_wei018_caohong:testHuyuanDiscardsAreaCardAtDistanceOne()
-  -- p2/p3 在曹洪队列中已有飞影，距离不再为1；p8为相邻异势力角色。
-  local room, player, second, third = FkTest.room, p(1), p(8), p(3)
-  local victimCard = give(second, "qiao__jink", Card.Heart, 2)
-  give(third, "qiao__jink", Card.Heart, 3)
-  inRoom(function()
-    room.current = player
-    player.phase = Player.Play
-    room:setBanner("RoundCount", 1)
-    lu.assertTrue(player:hasShownSkill(HUYUAN), "护援来源应已明置")
-    lu.assertEquals(player:distanceTo(second), 1, "被弃牌者须实际距被装备者1")
-  end)
-  local equip = give(player, "qiao__eight_diagram", Card.Spade, 2)
-
-  local chosenPlayer, chosenCard
-  skill_test.withSkillRequests(room, HUYUAN, {
-    askToSkillInvoke = function(self, who, params, original)
-      if params.skill_name == HUYUAN then return true end
-      return original(self, who, params)
+local function installDiscardProhibition(room, owner, ids)
+  local skeleton = fk.CreateSkill { name = "#qiao_test_huyuan_prohibit" }
+  skeleton:addEffect("prohibit", {
+    prohibit_discard = function(_, player, card)
+      return player == owner and table.contains(ids, card.id)
     end,
-    askToChoosePlayers = function(self, who, params, original)
-      if params.skill_name ~= HUYUAN then return original(self, who, params) end
-      chosenPlayer = table.find(params.targets, function(candidate) return candidate == second end) or params.targets[1]
-      return { chosenPlayer }
+  })
+  local skill = skeleton:createSkill()
+  Fk.skills[skill.name] = skill
+  room:addSkill(skill)
+end
+
+local function discardWithHuyuan(room, player, owner, recipient, reply)
+  local equip = give(player, "qiao__eight_diagram")
+  local flag, uiData
+  skill_test.withSkillRequests(room, HUYUAN, {
+    askToChoosePlayers = function(_, who, params)
+      lu.assertIs(who, player)
+      lu.assertTrue(table.contains(params.targets, owner))
+      return { owner }
     end,
     askToChooseCard = function(self, who, params, original)
-      if params.skill_name ~= HUYUAN then return original(self, who, params) end
-      chosenPlayer = params.target
-      chosenCard = params.target:getCardIds("h")[1]
-      return chosenCard
+      lu.assertIs(who, player)
+      lu.assertIs(params.target, owner)
+      flag = params.flag
+      client_room.run(room, function(_, clientRoom)
+        local oldSelf = Self
+        Self = clientRoom:getPlayerById(who.id)
+        local ok, err = pcall(Client.askForCardChosen, {
+          notifyUI = function(_, command, data)
+            if command == "AskForCardChosen" then uiData = data end
+          end,
+        }, { clientRoom:getPlayerById(params.target.id), params.flag, params.prompt })
+        Self = oldSelf
+        if not ok then error(err, 0) end
+      end)
+      FkTest.setNextReplies(who, { reply })
+      return original(self, who, params)
     end,
   }, function()
     inRoom(function()
-      room:moveCardIntoEquip(player, equip, "test", true, player)
+      room:moveCardIntoEquip(recipient, equip, "test", true, player)
     end)
   end)
 
-  lu.assertIs(chosenPlayer, second)
-  lu.assertNotNil(chosenCard)
-  lu.assertEquals(room:getCardArea(victimCard), Card.DiscardPile)
-  lu.assertEquals(#player:getCardIds("e"), 1)
+  lu.assertNotNil(uiData, "护援应实际打开选牌请求")
+  return flag, uiData
+end
+
+function Testqiao_wei018_caohong:testHuyuanUsesNativeZonesAndCanDiscardAnothersProhibitedCard()
+  local room, player, owner = FkTest.room, p(1), p(8)
+  local hand = give(owner, "qiao__jink")
+  local equip = give(owner, "qiao__eight_diagram")
+  local judge = give(owner, "qiao__indulgence")
+  inRoom(function()
+    room.current = owner
+    room:moveCardIntoEquip(owner, equip, "test", true, owner)
+    room:moveCardTo(judge, Card.PlayerJudge, owner, fk.ReasonPut, "test")
+    installDiscardProhibition(room, owner, { hand, equip, judge })
+    lu.assertTrue(table.every(owner:getCardIds("hej"), function(id) return owner:prohibitDiscard(id) end))
+    lu.assertFalse(player:prohibitDiscard(hand))
+    room.current = player
+    player.phase = Player.Play
+    room:setBanner("RoundCount", 1)
+    lu.assertEquals(player:distanceTo(owner), 1)
+  end)
+
+  local flag, ui = discardWithHuyuan(room, player, owner, player, hand)
+  lu.assertEquals(flag, "hej")
+  lu.assertEquals(ui.card_data, { { "$Hand", { hand } }, { "$Equip", { equip } }, { "$Judge", { judge } } })
+  lu.assertNotNil(ui.visible_data)
+  lu.assertFalse(ui.visible_data[tostring(hand)])
+  lu.assertNotEquals(ui.visible_data[tostring(judge)], false)
+  lu.assertEquals(room:getCardArea(hand), Card.DiscardPile)
+end
+
+function Testqiao_wei018_caohong:testHuyuanFiltersOwnCardsWithoutFlatteningZones()
+  local room, player, recipient = FkTest.room, p(1), p(8)
+  local hand = give(player, "qiao__jink")
+  local prohibited = give(player, "qiao__peach")
+  local equip = give(player, "qiao__eight_diagram")
+  local judge = give(player, "qiao__indulgence")
+  inRoom(function()
+    room.current = recipient
+    room:moveCardIntoEquip(player, equip, "test", true, player)
+    room:moveCardTo(judge, Card.PlayerJudge, player, fk.ReasonPut, "test")
+    installDiscardProhibition(room, player, { prohibited })
+    lu.assertTrue(player:prohibitDiscard(prohibited))
+    -- 鹤翼增加别人到曹洪的距离。此用例固定为被装备者距曹洪 1。
+    room:handleAddLoseSkills(player, "-" .. HEYI, nil, false, true)
+    F.refreshFormationSources(room)
+    lu.assertEquals(recipient:distanceTo(player), 1)
+    room.current = player
+    player.phase = Player.Play
+    room:setBanner("RoundCount", 1)
+  end)
+
+  local _, ui = discardWithHuyuan(room, player, player, recipient, judge)
+  lu.assertEquals(ui.card_data, { { "$Hand", { hand } }, { "$Equip", { equip } }, { "$Judge", { judge } } })
+  lu.assertNotEquals((ui.visible_data or {})[tostring(hand)], false)
+  lu.assertEquals(room:getCardArea(judge), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(prohibited), Card.PlayerHand)
 end
 
 function Testqiao_wei018_caohong:testHeyiGrantsRealFeiyingAndKeepsOtherSources()

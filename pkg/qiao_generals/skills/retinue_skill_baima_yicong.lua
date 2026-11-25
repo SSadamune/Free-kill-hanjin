@@ -20,14 +20,13 @@ Fk:loadTranslationTable {
   ["#qiao__retinue_skill_baima_yicong-card"] = "白马义从：选择获得%src的一张牌",
 }
 
-skill:addEffect(fk.CardUsing, {
+local takeCard = {
   anim_type = "support",
   on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     if data.card == nil or data.card.trueName ~= "jink" then return false end
-    local respond = data.responseToEvent
-    local from = respond and respond.from or nil
+    local from = data.responseToEvent and data.responseToEvent.from
     return from ~= nil and from ~= player and from:isAlive()
   end,
   on_cost = function(self, event, target, player, data)
@@ -52,45 +51,12 @@ skill:addEffect(fk.CardUsing, {
     })
     local id = chosen and chosen[1]
     if id ~= nil then
-      room:obtainCard(player, id, true, fk.ReasonJustMove, player)
+      room:obtainCard(player, id, false, fk.ReasonJustMove, player)
     end
   end,
-})
+}
 
-skill:addEffect(fk.CardResponding, {
-  anim_type = "support",
-  on_trigger = triggerEach,
-  can_trigger = function(self, event, target, player, data)
-    if target ~= player or not player:hasSkill(skill.name) then return false end
-    if data.card == nil or data.card.trueName ~= "jink" then return false end
-    local from = data.responseToEvent and data.responseToEvent.from
-    return from ~= nil and from ~= player and from:isAlive()
-  end,
-  on_cost = function(self, event, target, player, data)
-    local from = data.responseToEvent and data.responseToEvent.from
-    return player.room:askToSkillInvoke(player, {
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_baima_yicong-invoke:" .. from.id,
-    })
-  end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    local from = data.responseToEvent and data.responseToEvent.from
-    if from == nil or from.dead or #from:getCardIds("he") == 0 then return end
-    local chosen = room:askToChooseCards(player, {
-      target = from,
-      flag = "he",
-      min = 1,
-      max = 1,
-      skill_name = skill.name,
-      prompt = "#qiao__retinue_skill_baima_yicong-card:" .. from.id,
-      cancelable = false,
-    })
-    local id = chosen and chosen[1]
-    if id ~= nil then
-      room:obtainCard(player, id, true, fk.ReasonJustMove, player)
-    end
-  end,
-})
+skill:addEffect(fk.CardUsing, takeCard)
+skill:addEffect(fk.CardResponding, takeCard)
 
 return skill

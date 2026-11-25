@@ -32,7 +32,7 @@ end
 
 skill:addEffect("viewas", {
   anim_type = "offensive",
-  pattern = DUEL,
+  pattern = "duel|.|.|.|" .. DUEL,
   prompt = "#qiao__qun_cards_state-prompt",
   include_equip = true,
   card_filter = function(self, player, to_select, selected)

@@ -24,7 +24,6 @@ skill:addEffect(fk.AfterCardTargetDeclared, {
     return data.from == player and data.card.trueName == "duel" and player:hasSkill(skill.name)
       and player:usedSkillTimes(skill.name, Player.HistoryTurn) == 0
       and canChoose(player.room.current)
-      and #ExtraTargets.candidates(player.room, data, TARGETS) > 0
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
@@ -33,16 +32,17 @@ skill:addEffect(fk.AfterCardTargetDeclared, {
     local chooser = room.current
     if not canChoose(chooser) then return false end
     local tos = ExtraTargets.candidates(room, data, TARGETS)
-    if #tos == 0 then return false end
+    -- 空候选也展示同一询问。至少选一人才可确认，空列表只能取消。
     local chosen = room:askToChoosePlayers(chooser, {
       min_num = 1,
-      max_num = math.min(2, #tos),
+      max_num = math.max(1, math.min(2, #tos)),
       targets = tos,
       skill_name = skill.name,
       prompt = "#qiao__skill_qun002_2-extra",
       cancelable = true,
+      show_when_empty = true,
     })
-    if chosen == nil or #chosen == 0 then return false end
+    if #tos == 0 or chosen == nil or #chosen == 0 then return false end
     event:setCostData(self, { tos = chosen })
     return true
   end,

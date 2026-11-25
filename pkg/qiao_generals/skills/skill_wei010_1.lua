@@ -13,7 +13,8 @@ local skill = fk.CreateSkill {
 local SUPPLY_SHORTAGE = "qiao__supply_shortage"
 
 skill:addEffect("viewas", {
-  pattern = SUPPLY_SHORTAGE,
+  pattern = "supply_shortage|.|.|.|" .. SUPPLY_SHORTAGE,
+  enabled_at_response = function(self, player, response) return not response end,
   prompt = "#qiao__skill_wei010_1-prompt",
   handly_pile = true,
   filter_pattern = {

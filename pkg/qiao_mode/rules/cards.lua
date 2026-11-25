@@ -485,9 +485,36 @@ local function matching(draw, name, suit, number, skip)
   end
 end
 
+local function stampReplacement(printed, spec)
+  local prototype = assert(Fk.all_card_types[spec.replacement],
+    "Missing independent replacement: " .. spec.replacement)
+  assert(prototype.package.extensionName == "qiao", "Replacement must be an independent HanJin card")
+  local packageApi = Fk.packages.qiao_cards and Fk.packages.qiao_cards.qiao_cards
+  if packageApi and spec.slotId then
+    packageApi.stamp(printed, spec.slotId)
+  else
+    local template = table.find(prototype.package.cards, function(candidate)
+      return candidate.name == spec.replacement and candidate.suit == printed.suit
+        and candidate.number == printed.number
+    end) or prototype
+    if template.extra_data then printed.extra_data = table.simpleClone(template.extra_data) end
+  end
+end
+
 function M.apply(room, draw, void, unavailable, options)
   M.installCardMetadata()
   unavailable = toSet(unavailable)
+  local syncedBans, syncedReplacements
+  if room == ClientInstance then
+    -- Only the server chooses which equipment to remove and which copy takes its place.
+    local banned = room:getBanner("qiao_banned_cards")
+    if not banned then return draw, void end
+    syncedBans = toSet(banned)
+    syncedReplacements = {}
+    for _, entry in ipairs(room:getBanner("qiao_card_replacements") or {}) do
+      syncedReplacements[entry.from] = entry.to
+    end
+  end
   options = options or {}
   local includedTricks = toSet(options.include_tricks)
   local result, removed, replacements = {}, {}, {}
@@ -503,6 +530,10 @@ function M.apply(room, draw, void, unavailable, options)
   local function addVoid(id)
     if not table.contains(void, id) then table.insert(void, id) end
   end
+  local function equipmentAllowed(id, spec)
+    if syncedBans then return not syncedBans[id] end
+    return M.equipmentAllowed(spec, unavailable)
+  end
 
   -- An available lord equipment replaces the ordinary card printed in the same
   -- position. Only that one matching physical copy is removed, never all cards
@@ -510,7 +541,7 @@ function M.apply(room, draw, void, unavailable, options)
   for _, id in ipairs(draw) do
     local card = Fk:getCardById(id)
     local spec = M.equipment[card.name]
-    if spec and spec.replacement and M.equipmentAllowed(spec, unavailable) then
+    if spec and spec.replacement and equipmentAllowed(id, spec) then
       local ordinary = matching(draw, spec.replacement, card.suit, card.number, suppressed)
       if ordinary then
         suppressed[ordinary] = true
@@ -530,53 +561,26 @@ function M.apply(room, draw, void, unavailable, options)
       addVoid(id)
     else
       local spec = M.equipment[card.name]
-      if spec and not M.equipmentAllowed(spec, unavailable) then
+      if spec and not equipmentAllowed(id, spec) then
         addVoid(id)
         table.insert(removed, id)
         if spec.replacement then
           local replacement
-          -- Prefer the matching ordinary card already in the draw pile. If a
-          -- custom deck omits it, print a room-local copy of the independent
-          -- card with the same suit and number.
-          replacement = matching(draw, spec.replacement, card.suit, card.number, used)
-          if replacement then
-            used[replacement] = true
-            addResult(replacement)
+          if syncedReplacements then
+            replacement = assert(syncedReplacements[id], "Missing synced replacement for " .. card.name)
+            if replacement < 0 then stampReplacement(room.printed_cards[replacement], spec) end
           else
-            replacement = table.find(void, function(candidate)
-              if used[candidate] then return false end
-              local c = Fk:getCardById(candidate)
-              return c.name == spec.replacement and c.suit == card.suit and c.number == card.number
-            end)
-            if replacement then
-              table.removeOne(void, replacement)
-            else
-              local prototype = assert(Fk.all_card_types[spec.replacement],
-                "Missing independent replacement: " .. spec.replacement)
-              assert(prototype.package.extensionName == "qiao",
-                "Replacement must be an independent HanJin card")
-              local packageApi = Fk.packages.qiao_cards
-                and Fk.packages.qiao_cards.qiao_cards
-              local printed
-              if packageApi and packageApi.printCard and spec.slotId then
-                -- Let the card package stamp the replacement slot's own metadata
-                -- (adaptation and 合纵), not the replaced card's metadata.
-                printed = packageApi.printCard(room, spec.replacement, card.suit, card.number, spec.slotId)
-              else
-                printed = room:printCard(spec.replacement, card.suit, card.number)
-                local template = table.find(prototype.package.cards, function(candidate)
-                  return candidate.name == spec.replacement and candidate.suit == card.suit
-                    and candidate.number == card.number
-                end) or prototype
-                if template and template.extra_data then
-                  printed.extra_data = table.simpleClone(template.extra_data)
-                end
-              end
+            replacement = matching(draw, spec.replacement, card.suit, card.number, used)
+              or matching(void, spec.replacement, card.suit, card.number, used)
+            if not replacement then
+              local printed = room:printCard(spec.replacement, card.suit, card.number)
+              stampReplacement(printed, spec)
               replacement = printed.id
             end
-            used[replacement] = true
-            addResult(replacement)
           end
+          table.removeOne(void, replacement)
+          used[replacement] = true
+          addResult(replacement)
           table.insert(replacements, { from = id, to = replacement })
         end
       else
@@ -585,8 +589,10 @@ function M.apply(room, draw, void, unavailable, options)
     end
   end
 
-  room:setBanner("qiao_banned_cards", removed)
-  room:setBanner("qiao_card_replacements", replacements)
+  if room ~= ClientInstance then
+    room:setBanner("qiao_banned_cards", removed)
+    room:setBanner("qiao_card_replacements", replacements)
+  end
   return result, void
 end
 

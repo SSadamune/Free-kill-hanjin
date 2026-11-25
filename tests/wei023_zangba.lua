@@ -1,5 +1,6 @@
 local support=__dofile("../../../tests/support/hegemony.lua")
 local fixture=__dofile("../../../tests/support/skill_test.lua")
+local H = require "packages.hegemony.util"
 local SKILL="qiao__skill_wei023_1"
 local function inRoom(fn) FkTest.runInRoom(fn) end
 Testqiao_zangba={
@@ -27,7 +28,7 @@ function Testqiao_zangba:testEachDamagePointAndFollowupSurvivesLoss()
   inRoom(function() room:damage{from=current,to=me,damage=2} end)
  end)
  lu.assertEquals(asks,2)
- lu.assertEquals(current:getMark("qiao_hengjiang_penalty-turn"),2)
+ lu.assertEquals(current:getMark(MarkEnum.MinusMaxCardsInTurn),2)
  lu.assertEquals(#current:getTableMark("qiao_hengjiang_follow-turn"),2)
  inRoom(function()
   room:handleAddLoseSkills(me,"-"..SKILL,nil,false,true)
@@ -35,5 +36,30 @@ function Testqiao_zangba:testEachDamagePointAndFollowupSurvivesLoss()
   room.logic:trigger(fk.EventPhaseEnd,current,PhaseData:new{who=current,phase=Player.Discard})
  end)
  lu.assertEquals(#me:getCardIds("h"),me.maxHp)
+end
+
+function Testqiao_zangba:testHengjiangSubtractsBeforeAndAfterYinyangfish()
+ local room=FkTest.room
+ local me,current=room.players[1],room.players[5]
+ inRoom(function()
+  me.hp=4
+  current.hp=3
+  H.addHegMark(current,"yinyangfish",1)
+ end)
+ FkTest.setNextReplies(me,{"1","1"})
+ local beforeFish,afterFish
+ inRoom(function()
+  room:damage{from=current,to=me,damage=2}
+  beforeFish=current:getMaxCards()
+ end)
+ FkTest.setNextReplies(current,{"1"})
+ inRoom(function()
+  current.phase=Player.Discard
+  room.logic:trigger(fk.EventPhaseStart,current,PhaseData:new{who=current,phase=Player.Discard})
+  afterFish=current:getMaxCards()
+ end)
+ lu.assertEquals(beforeFish,1)
+ lu.assertEquals(afterFish,3)
+ lu.assertEquals(current:getMark("@!!yinyangfish"),0)
 end
 return {name="qiao_zangba"}

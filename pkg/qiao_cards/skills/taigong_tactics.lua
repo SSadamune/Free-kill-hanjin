@@ -1,3 +1,5 @@
+local StateToggle = require "packages.qiao.pkg.qiao_mode.rules.state_toggle"
+
 local skill = fk.CreateSkill {
   name = "qiao__taigong_tactics_skill",
   attached_equip = "qiao__taigong_tactics",
@@ -16,18 +18,10 @@ skill:addEffect(fk.EventPhaseStart, {
       and not player:isRemoved() and player.phase == Player.Play
   end,
   on_cost = function(self, event, target, player)
-    local room = player.room
-    -- 移出游戏的角色视为不存在，不能成为“一名角色”的候选。
-    local targets = table.filter(room:getPresentPlayers(), function(p)
-      return not p:isRemoved()
-    end)
-    local to = room:askToChoosePlayers(player, {
-      min_num = 1,
+    local to = StateToggle.ask(player, {
       max_num = 1,
-      targets = targets,
       skill_name = skill.name,
       prompt = "#qiao__taigong_tactics-choose",
-      cancelable = true,
     })
     if #to > 0 then
       event:setCostData(self, { tos = to })
@@ -35,9 +29,7 @@ skill:addEffect(fk.EventPhaseStart, {
     end
   end,
   on_use = function(self, event, target, player)
-    local to = event:getCostData(self).tos[1]
-    if to == nil or to.dead or to:isRemoved() then return end
-    to:setChainState(not to.chained)
+    StateToggle.chain(event:getCostData(self).tos[1])
   end,
 })
 

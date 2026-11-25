@@ -15,7 +15,7 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 skill:addEffect("viewas", {
-  pattern = UNEXPECTATION,
+  pattern = "unexpectation|.|.|.|" .. UNEXPECTATION,
   prompt = "#qiao__skill_jin006_2-prompt",
   include_equip = false,
   card_filter = function(self, player, to_select, selected)

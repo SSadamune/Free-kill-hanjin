@@ -93,7 +93,7 @@ skill:addEffect(fk.TargetConfirmed, {
       prompt = "#qiao__danggu_zhihuo-give",
     })[1]
     if card == nil or not table.contains(target:getCardIds("he"), card) then return end
-    room:obtainCard(user, card, true, fk.ReasonGive, target)
+    room:obtainCard(user, card, false, fk.ReasonGive, target)
     -- 只有本次实际交给用牌者，才令此牌仅对该目标无效。
     if room:getCardOwner(card) ~= user then return end
     data:setNullified(target)

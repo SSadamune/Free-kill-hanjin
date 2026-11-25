@@ -12,6 +12,7 @@ local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_sele
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
@@ -126,7 +127,7 @@ local function selectUniqueTarget(request, skill, user)
 end
 
 local function withoutAutoTarget(data)
-  if not data or not data.autoTarget then return data end
+  if type(data) ~= "table" or not data.autoTarget then return data end
   data = table.simpleClone(data)
   data.autoTarget = false
   return data
@@ -363,6 +364,40 @@ end
 
 function QiaoClient:guestIllustrationsEnabled()
   return self.settings ~= nil and Guest.replacementEnabled(self)
+end
+
+-- 读取客户端同步的实体弃牌堆。桌面动画消失时，这些牌可能仍在堆中。
+function QiaoClient:discardCardsForDisplay()
+  local cards = {}
+  local lordEquipment = Fk.packages.qiao_cards.qiao.lordEquipment
+  for index = #self.discard_pile, 1, -1 do
+    local id = self.discard_pile[index]
+    local card = Fk:getCardById(id, true)
+    if card and Self:cardVisible(id) then
+      local marks = table.map(Adaptation.displayEntries(card), function(entry)
+        return Fk:translate("qiao_condition_" .. entry.condition)
+      end)
+      if Fk.packages.qiao_cards.qiao_cards.isHeji(card) then table.insert(marks, "合纵") end
+      table.insert(cards, {
+        id = id, name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
+        marks = table.concat(marks, " · "),
+        lord = lordEquipment[card.name] ~= nil,
+      })
+    else
+      table.insert(cards, { name = Fk:translate("unknown_card") })
+    end
+  end
+  return cards
+end
+
+function QiaoClient:handleShuffleDrawPile(data)
+  BaseClient.handleShuffleDrawPile(self, data)
+  if Modes.inRoom(self) then self:notifyUI("QiaoDiscardChanged", {}) end
+end
+
+function QiaoClient:handleChangeCardArea(data)
+  BaseClient.handleChangeCardArea(self, data)
+  if Modes.inRoom(self) then self:notifyUI("QiaoDiscardChanged", {}) end
 end
 
 function QiaoClient:mountDistanceLabels()
