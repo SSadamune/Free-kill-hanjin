@@ -16,7 +16,7 @@ end
 
 function M.finish(room, winners)
   local data = room:getSessionData()
-  if not Modes.inRoom(room) then
+  if not Modes.inRoom(room) or room:getTag("qiao_locked_start_rejected") then
     data[key] = nil
   else
     local kingdoms = {}

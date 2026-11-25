@@ -11,7 +11,7 @@ local LtkUI = require "packages.freekill-core.ltk.client.util"
 
 Testlocked_factions = { tearDown = support.clearRoom }
 
-local function startRoom(count, alternate, modeSettings, previous)
+local function startRoom(count, alternate, modeSettings, previous, blankDraft)
   local ids = {}
   for id = 1, count do table.insert(ids, id) end
   -- The engine test client starts in an eight-seat lobby.
@@ -50,6 +50,16 @@ local function startRoom(count, alternate, modeSettings, previous)
     },
     configure = function(current)
       if previous then current:setSessionData { qiao_faction_ban_v1 = previous } end
+      if blankDraft then
+        local makePile = current.makeGeneralPile
+        function current:makeGeneralPile()
+          makePile(self)
+          -- Opening-hand assertions measure the mode's base draw, with no skill altering it.
+          self.general_pile = table.filter(self.general_pile, function(name)
+            return name:match("^qiao_test__[a-z]+_%d+$") ~= nil
+          end)
+        end
+      end
       local shuffle = current.shuffleTable
       function current:shuffleTable(list)
         if #list == 4 and Ban.isKnown(list[1]) and Ban.isKnown(list[4]) then
@@ -128,8 +138,62 @@ function Testlocked_factions:testRoomRuleSelectsCapacity()
   lu.assertTrue(mode:feasible(settings(4)))
 end
 
+function Testlocked_factions:testDraftKeepsEqualFarmerOffersAndTwoExtraLandlordOffers()
+  __dofile("../../../tests/support/qiao_content.lua")
+  local players = { {}, {}, {} }
+  local room = {
+    players = players,
+    getSettings = function(_, key)
+      if key == Locked.ruleKey then return Locked.rules[1] end
+      if key == Guest.settingKey then return false end
+    end,
+    shuffleTable = function() end,
+  }
+  local function plan(cardsPerFaction)
+    local kept = {}
+    for _, kingdom in ipairs({ "wei", "shu" }) do
+      for i = 1, cardsPerFaction do
+        table.insert(kept, ("qiao_test__%s_%d"):format(kingdom, i))
+      end
+    end
+    return { kept = kept, allowed = { "wei", "shu" }, candidates = { "wei", "shu" },
+      banned = {}, excluded = {} }
+  end
+
+  local offers, assigned, count = Locked.deal(room, plan(5), 5)
+  lu.assertEquals(count, 2)
+  lu.assertEquals({ #offers[players[1]], #offers[players[2]], #offers[players[3]] }, { 4, 2, 2 })
+  lu.assertEquals(assigned[players[2]], assigned[players[3]])
+  lu.assertNotEquals(assigned[players[1]], assigned[players[2]])
+  lu.assertNil(Locked.deal(room, plan(3), 5))
+end
+
+function Testlocked_factions:testServerRejectsRuleThatDoesNotMatchActualSeats()
+  for id = 4, 8 do ClientInstance:removePlayer({ id }) end
+  local room, message
+  local ok, errorMessage = pcall(support.createRoom, {
+    mode = Modes.locked,
+    backend = FkTest.createFakeRoom({ 1, 2, 3 }),
+    realSelection = true,
+    settings = { _mode = { [Locked.ruleKey] = Locked.rules[2] } },
+    configure = function(current)
+      room = current
+      local original = room.sendLog
+      function current:sendLog(log, ...)
+        if log.type == "#QiaoLockedWrongPlayerCount" then message = log end
+        return original(self, log, ...)
+      end
+    end,
+  })
+  lu.assertFalse(ok)
+  lu.assertStrContains(errorMessage, "National-war setup did not reach the test loop")
+  lu.assertNotNil(message)
+  lu.assertTrue(room.game_finished)
+  lu.assertNil(room:getTag("qiao_test_ready"))
+end
+
 function Testlocked_factions:testThreePlayerSeatsAndLandlordSkills()
-  local room = startRoom(3)
+  local room = startRoom(3, nil, nil, nil, true)
   local first, second, third = table.unpack(room.players)
   lu.assertEquals(second:getMark("__heg_kingdom"), third:getMark("__heg_kingdom"))
   lu.assertNotEquals(first:getMark("__heg_kingdom"), second:getMark("__heg_kingdom"))
@@ -174,7 +238,7 @@ end
 
 function Testlocked_factions:testFourPlayerFormationAndSiege()
   for _, alternate in ipairs({ false, true }) do
-    local room = startRoom(4, alternate)
+    local room = startRoom(4, alternate, nil, nil, true)
     local first, second, third, fourth = table.unpack(room.players)
     local teammate, opponent = alternate and third or second, alternate and second or third
     FkTest.runInRoom(function()

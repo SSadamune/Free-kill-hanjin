@@ -10,9 +10,9 @@
 
 ### 锁定势力
 
-「游戏规则」在「模式设置」首项，默认斗地主。正式扩展的 [LockedGameRuleRow.qml](../../../pkg/qiao_mode/qml/LockedGameRuleRow.qml) 将选择映射为建房容量 3 或 4，并锁定通用设置中的人数控件。模式可行性检查校验规则与人数一致。缺少规则键的旧设置仍可按 3 或 4 人开局。锁定势力的客户端与服务端均关闭自由选将。
+「游戏规则」在「模式设置」首项，默认斗地主。正式扩展的 [LockedGameRuleRow.qml](../../../pkg/qiao_mode/qml/LockedGameRuleRow.qml) 将选择映射为建房容量 3 或 4，并锁定通用设置中的人数控件。创房可行性检查和服务端开局都校验规则与人数一致。缺少规则键的旧设置仍可按 3 或 4 人开局。锁定势力的客户端与服务端均关闭自由选将。
 
-[模式规则](../../rules/faction-ban.md#锁定势力)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。先为每个座位预留两张互不重复的合法武将牌，再从各自势力补齐待选牌。每人的基础候选数为 2 至 5 张。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
+[模式规则](../../rules/faction-ban.md#锁定势力)由 [locked_factions.lua](../../../pkg/qiao_mode/rules/locked_factions.lua) 在大合集的禁选步骤结束后分配。按实际可用的牌为每席匹配候选。每人的基础候选数统一为 2 至 5 张，地主加两张。优先满足房主设置，候选不足时统一下调基础张数。最低配额也无法满足时，提示原因并取消开局。三人局为地主再补两张同势力候选，选将提示包含本人身份、座次和获配势力。服务端按候选与分配势力复核选将及同名替换。启用客将替换时，请求照常发送客籍与插画数据，重抽资格列表为空，服务端拒绝重抽。
 
 开局双将体力计算后增加斗地主 1 号位的体力与上限，按上游欢乐斗地主的默认接线授予引擎的 `m_feiyang` 和 `m_bahu`。其实现分别位于 FreeKill v0.5.25 的 `standard/pkg/skills/feiyang.lua` 与 `standard/pkg/skills/bahu.lua`。二对二通过 `getAdjustedProperty` 在 `DrawInitialCards` 前调整发牌数。[Gitee 斗地主模式](https://gitee.com/qsgs-fans/gamemode/blob/master/pkg/gamemodes/1v2.lua)
 

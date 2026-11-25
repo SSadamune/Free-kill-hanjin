@@ -81,9 +81,24 @@ function M.create(base, name)
   local maxOffers = locked and 5 or MAX_OFFERS
   local collection = name == Modes.collection or locked
   local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
+  local function rejectLockedStart(room, message)
+    room:setTag("qiao_locked_start_rejected", true)
+    room:sendLog { type = message, toast = true }
+    room:gameOver("")
+  end
   local function getLogic()
     local parent = base.logic()
     local logic = parent:subclass("QiaoHegLogic")
+    if locked then
+      function logic:run()
+        local room = self.room
+        if not Locked.matchesPlayerCount(#room.players, room:getSettings(Locked.ruleKey)) then
+          Session.consume(room)
+          return rejectLockedStart(room, "#QiaoLockedWrongPlayerCount")
+        end
+        return parent.run(self)
+      end
+    end
     function logic:chooseGenerals()
       local room = self.room
       Variants.apply(room)
@@ -112,7 +127,14 @@ function M.create(base, name)
       local count = offerCount(room:getSettings("qiao_offer_count"), minOffers, maxOffers)
       local offers, assigned
       if locked then
-        offers, assigned = Locked.deal(room, plan, count)
+        local actualCount
+        offers, assigned, actualCount = Locked.deal(room, plan, count)
+        if not offers then
+          return rejectLockedStart(room, "#QiaoLockedInsufficientGenerals")
+        end
+        if actualCount < count then
+          room:sendLog { type = "#QiaoLockedFewerOffers", arg = tostring(actualCount) }
+        end
         room:setTag("qiao_rotation_banned_kingdoms", plan.rotationBans)
       end
       room:setBanner("all_kingdoms", plan.allowed)
@@ -448,9 +470,8 @@ function M.create(base, name)
         if settings._game and settings._game[key] ~= nil then return settings._game[key] end
         return settings[key]
       end
-      if locked then
-        local rule = getSetting(Locked.ruleKey)
-        if rule ~= nil and Locked.roomSizes[rule] ~= settings.playerNum then return false end
+      if locked and not Locked.matchesPlayerCount(settings.playerNum, getSetting(Locked.ruleKey)) then
+        return false
       end
       if not pcall(resolveSettings, getSetting) then return false end
       local generals, cards = 0, 0
