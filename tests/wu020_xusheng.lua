@@ -183,11 +183,20 @@ function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
   end)
   lu.assertEquals(room:getCardArea(first), Card.Void)
   lu.assertEquals(room:getCardArea(second), Card.Void)
+  local returnedLabel
+  local sendLog = room.sendLog
+  room.sendLog = function(self, log, ...)
+    if log.type == "#InvokeSkill" and log.arg == "qiao__wu020_pojun_rule" then
+      returnedLabel = Fk:translate(log.arg, "zh_CN")
+    end
+    return sendLog(self, log, ...)
+  end
   inRoom(function()
     room.logic:trigger(fk.TurnEnd, player, TurnData:new(player, "game_rule", { Player.Start }))
   end)
   lu.assertEquals(room:getCardArea(first), Card.PlayerHand)
   lu.assertEquals(room:getCardArea(second), Card.PlayerHand)
+  lu.assertEquals(returnedLabel, "破军")
 end
 
 return { name = "qiao_wu020_xusheng" }

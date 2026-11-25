@@ -29,11 +29,20 @@ function Testqiao_zangba:testEachDamagePointAndFollowupSurvivesLoss()
  lu.assertEquals(asks,2)
  lu.assertEquals(current:getMark("qiao_hengjiang_penalty-turn"),2)
  lu.assertEquals(#current:getTableMark("qiao_hengjiang_follow-turn"),2)
+ local followupLabel
+ local sendLog = room.sendLog
+ room.sendLog = function(self, log, ...)
+  if log.type == "#InvokeSkill" and log.arg == "qiao__wei023_hengjiang_rule" then
+   followupLabel = Fk:translate(log.arg, "zh_CN")
+  end
+  return sendLog(self, log, ...)
+ end
  inRoom(function()
   room:handleAddLoseSkills(me,"-"..SKILL,nil,false,true)
   current.phase=Player.Discard
   room.logic:trigger(fk.EventPhaseEnd,current,PhaseData:new{who=current,phase=Player.Discard})
  end)
  lu.assertEquals(#me:getCardIds("h"),me.maxHp)
+ lu.assertEquals(followupLabel, "横江")
 end
 return {name="qiao_zangba"}

@@ -68,6 +68,7 @@ Fk:loadTranslationTable {
   ["qiao_mode"] = "国战平行时空",
   ["qiao_skill_reference_back"] = "后退",
   ["han"] = "汉",
+  ["jin"] = "晋",
   [Modes.collection] = "大合集",
   [":" .. Modes.collection] = "魏、蜀、吴、群固定纳入备选势力。可设置是否纳入汉、晋，以及是否禁用势力和启用客将替换规则。",
   [Modes.free] = "自由模式",

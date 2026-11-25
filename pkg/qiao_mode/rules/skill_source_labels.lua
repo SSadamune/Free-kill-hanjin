@@ -11,6 +11,7 @@ local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local Dying = require "packages.qiao.pkg.qiao_generals.util.qun_dying"
+local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 
 local M = {}
 
@@ -21,6 +22,20 @@ local LABELS = {
   RETINUE = "翼从",
 }
 M.LABELS = LABELS
+
+-- The engine writes the callback's actual skill ID into logs and broadcasts
+-- it to the room. Delayed effects keep their IDs and display their source name.
+local DISPLAY_NAME_SOURCES = {
+  ["#qiao_jin017_cruise"] = "qiao__skill_jin017_2",
+  qiao__han019_1_rule = "qiao__skill_han019_1",
+  [Wu.RULE] = Wu.FLAG,
+  qiao__wei023_hengjiang_rule = "qiao__skill_wei023_1",
+  qiao__wu020_pojun_rule = "qiao__skill_wu020_2",
+  qiao__wu_turn_effects = "qiao__skill_wu014_1",
+  ["@@qiao_bazhen_viewas"] = "qiao__retinue_skill_bazhenbing_viewas",
+  ["@[qiao_bingzhou_pairs]"] = "qiao__retinue_skill_bingzhou_distance",
+  [Formation.FEIYING_LAYERS_MARK] = Formation.FEIYING_SKILL,
+}
 
 -- 用于幂等：并行维护处若已经给同一骨架加过标签，不重复包裹。
 local MARKER = "qiaoSourceLabel"
@@ -75,6 +90,18 @@ end
 --- @param retinues? table Data.retinues（实际声明的翼从技能来源）
 function M.register(retinues)
   local translations = {}
+  for key, name in pairs(DISPLAY_NAME_SOURCES) do
+    local label = Fk:translate(name, "zh_CN")
+    translations[key] = label
+    local skeleton = Fk.skill_skels[key]
+    -- The engine snapshots these names before postLoad. They can also show
+    -- up in the trigger-order chooser when two effects can resolve together.
+    for _, effect in ipairs(skeleton and skeleton.effect_names or {}) do
+      local previous = Fk:translate(effect, "zh_CN")
+      if previous == key or previous == effect then translations[effect] = label end
+    end
+  end
+  translations[Formation.FEIYING_MARK] = "飞影来源"
   for name in pairs(Flags.flags) do
     local mark = "@!!" .. name
     translations[mark] = Fk:translate(name, "zh_CN")
