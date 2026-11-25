@@ -1,16 +1,16 @@
--- 六势力变包正式数据：7 名普通武将。
+-- 六势力变包正式数据：8 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 7
+M.generalCount = 8
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 13
+M.skillCount = 15
 M.retinueSkillCount = 0
-M.kingdoms = { "han", "wei", "shu", "wu" }
+M.kingdoms = { "han", "wei", "shu", "wu", "jin" }
 
 M.generals = {
   {
@@ -232,6 +232,39 @@ M.generals = {
         id = [==[qiao__skill_wu022_2]==],
         name = [==[典财]==],
         text = [==[其他角色的出牌阶段结束时，若你此阶段失去过的牌数达到X（X为你的体力值），你可以摸牌至体力上限，然后你可以变更副将。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[JIN018]==],
+    id = [==[qiao_heg__jin018]==],
+    name = [==[陈骞]==],
+    kingdom = [==[jin]==],
+    title = [==[武成德渊]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[石苞]==],
+    companionNames = { [==[石苞]==] },
+    companions = { [==[qiao_heg__jin015]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_jin018_1]==],
+        name = [==[忽辱]==],
+        text = [==[每回合限一次，当你造成或受到伤害时，你可以同时展示来源和受伤角色各一张手牌，若：花色相同，你获得之；类别相同，此伤害-1。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_jin018_2]==],
+        name = [==[武督]==],
+        text = [==[出牌阶段限一次，你可以弃置一张牌并令一名有手牌的角色选择一项：1.其手牌对所有角色可见直到其回合结束；2.你对其造成1点伤害。]==],
         related = false,
         tags = {  },
       },

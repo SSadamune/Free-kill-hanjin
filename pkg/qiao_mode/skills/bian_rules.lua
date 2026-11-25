@@ -2,6 +2,7 @@
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
+local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
 
 local skill = fk.CreateSkill { name = "qiao__bian_rules" }
 
@@ -100,8 +101,22 @@ for _, ev in ipairs({
   skill:addEffect(ev, xinjiSyncSpec)
 end
 
+-- 4. 武督：手牌对所有角色可见，直至目标角色实际回合结束时清除（叠置跳过回合自动顺延）。
+skill:addEffect("visibility", Visibility.wudu)
+
+skill:addEffect(fk.TurnEnd, {
+  global = true,
+  can_refresh = function(self, event, target, player)
+    return target == player and player:getMark(Visibility.WUDU_OPEN) > 0
+  end,
+  on_refresh = function(self, event, target, player)
+    player.room:setPlayerMark(player, Visibility.WUDU_OPEN, 0)
+  end,
+})
+
 Fk:loadTranslationTable {
   ["qiao__bian_rules"] = "变包规则",
+  ["@qiao_jin018_wudu"] = "武督明牌",
 }
 
 return skill

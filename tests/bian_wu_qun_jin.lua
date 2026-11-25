@@ -215,6 +215,95 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduAndDiancaiZeroDrawStillChanges(
   lu.assertNotEquals(lvfan.deputyGeneral, "qiao_test__wu_2", "典财摸 0 张后仍可执行变更副将")
 end
 
+-- JIN018 陈骞：忽辱（全权挑牌同花色且同类别双生效 + 自伤不重问）+ 武督（可选自己 + 叠置跳过回合顺延清除）
+function Testqiao_bian_wu_qun_jin:testJin018HuruSelfDamageAndWuduTurnEndSkip()
+  local room = FkTest.room
+  local chenqian, foe = p(1), p(2)
+  local c1, c2, f1, eq1
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "jin", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, chenqian, {
+      main = "qiao_heg__jin018", deputy = "qiao_test__jin_2", kingdom = "jin", hp = 3,
+    })
+    chenqian:throwAllCards("he")
+    foe:throwAllCards("he")
+    c1 = room:printCard("qiao__slash", Card.Heart, 4)
+    c2 = room:printCard("qiao__jink", Card.Spade, 5)
+    f1 = room:printCard("qiao__peach", Card.Heart, 9) -- 同红桃 + 同基本牌
+    eq1 = room:printCard("qiao__chitu", Card.Heart, 5)
+    room:obtainCard(chenqian, { c1 }, false, fk.ReasonJustMove)
+    room:moveCardTo(eq1, Player.Equip, chenqian, fk.ReasonJustMove, "test", nil, true, chenqian)
+    room:obtainCard(foe, { f1 }, false, fk.ReasonJustMove)
+    chenqian.phase = Player.Play
+  end)
+
+  -- 武督：陈骞仅 1 手牌 + 1 装备时，弃唯一手牌不能选自己，弃装备可以选自己！
+  client_room.run(room, function(clients)
+    local sk = Fk.skills["qiao__skill_jin018_2"]
+    lu.assertFalse(sk:feasible(clients[1], { clients[1] }, { c1.id }), "弃唯一手牌时不能选自己")
+    lu.assertTrue(sk:feasible(clients[1], { clients[1] }, { eq1.id }), "弃装备保留手牌时可选自己")
+  end)
+
+  -- 对 foe 发动武督，foe 选选项 1 公开手牌；叠置跳过回合不清除，真正 TurnEnd 才清除。
+  skill_test.withSkillRequests(room, "qiao__skill_jin018_2", {
+    askToChoice = function() return "#qiao__skill_jin018_2-open" end,
+  }, function()
+    inRoom(function()
+      Fk.skills["qiao__skill_jin018_2"]:onUse(room, {
+        from = chenqian, tos = { foe }, cards = { eq1.id },
+      })
+    end)
+  end)
+  lu.assertEquals(foe:getMark(Visibility.WUDU_OPEN), 1, "武督选项 1 应立明牌标记")
+  lu.assertTrue(chenqian:cardVisible(f1.id), "明牌期间其他角色应可见目标手牌")
+
+  -- 忽辱：同时展示红桃基本牌 c1 与红桃基本牌 f1 -> 同时获得 f1 且此 2 点伤害 -1 为 1。
+  local foeHpBefore = foe.hp
+  skill_test.withSkillRequests(room, "qiao__skill_jin018_1", {
+    askToSkillInvoke = function() return true end,
+    askToCards = function() return { c1.id } end,
+    askToChooseCard = function() return f1.id end,
+  }, function()
+    inRoom(function()
+      room:damage { from = chenqian, to = foe, damage = 2, skillName = "test" }
+    end)
+  end)
+  lu.assertTrue(table.contains(chenqian:getCardIds("h"), f1.id), "花色相同应获得对方展示的手牌")
+  lu.assertEquals(foe.hp, foeHpBefore - 1, "类别相同应令 2 点伤害减为 1 点")
+
+  -- 模拟 foe 回合被叠置跳过（不触发 TurnEnd）：明牌标记顺延保留；下一个真正 TurnEnd 清除。
+  inRoom(function()
+    room.logic:trigger(fk.TurnEnd, chenqian, TurnData:new(chenqian, "game_rule", {}))
+  end)
+  lu.assertEquals(foe:getMark(Visibility.WUDU_OPEN), 1, "他人回合结束不清除 foe 的明牌")
+  inRoom(function()
+    room.logic:trigger(fk.TurnEnd, foe, TurnData:new(foe, "game_rule", {}))
+  end)
+  lu.assertEquals(foe:getMark(Visibility.WUDU_OPEN), 0, "目标真正回合结束时应清除明牌")
+
+  -- 忽辱自伤验证：开启新回合刷新每回合限一次，陈骞持有 2 张基本牌对自己造成 1 点伤害，仅询问 1 次并防止此伤害。
+  local selfAskCount = 0
+  local selfHpBefore = chenqian.hp
+  inRoom(function()
+    chenqian:throwAllCards("he")
+    local sA = room:printCard("qiao__slash", Card.Spade, 2)
+    local sB = room:printCard("qiao__jink", Card.Club, 3)
+    room:obtainCard(chenqian, { sA, sB }, false, fk.ReasonJustMove)
+    local turn = GameEvent.Turn:create(TurnData:new(chenqian, "game_rule", {}))
+    function turn:main()
+      skill_test.withSkillRequests(room, "qiao__skill_jin018_1", {
+        askToSkillInvoke = function() selfAskCount = selfAskCount + 1; return true end,
+        askToCards = function() return { sA.id, sB.id } end,
+      }, function()
+        room:damage { from = chenqian, to = chenqian, damage = 1, skillName = "test" }
+      end)
+    end
+    turn:exec()
+  end)
+  lu.assertEquals(selfAskCount, 1, "自伤时忽辱仅应询问一次")
+  lu.assertEquals(chenqian.hp, selfHpBefore, "自伤展示两张同类别基本牌应将 1 点伤害减为 0")
+end
+
 -- 审阅回归（第 9 项）：凌统勇进排除已明置【聚宝】保护的宝物牌，避免无合法装备仍可发动消耗限定技。
 function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   local room = FkTest.room
@@ -239,6 +328,40 @@ function Testqiao_bian_wu_qun_jin:testWu021YongjinSkipsRevealedJubaoTreasure()
   end)
   lu.assertFalse(canServer, "场上仅有明置聚宝保护的宝物时勇进不可发动（服务端）")
   lu.assertFalse(canClient, "场上仅有明置聚宝保护的宝物时勇进不可发动（客户端）")
+end
+
+-- 审阅回归（第 12 项）：陈骞忽辱双方各亮一张手牌时合并为单次 fk.CardShown({2}) 且各自牌主准确。
+function Testqiao_bian_wu_qun_jin:testJin018HuruSimultaneousSingleCardShown()
+  local room = FkTest.room
+  local chenqian, foe = p(1), p(2)
+  local showCounts = {}
+  local cOwn, cFoe
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "jin", "wu", "shu", "han" })
+    skill_test.installDualGenerals(room, chenqian, {
+      main = "qiao_heg__jin018", deputy = "qiao_test__jin_2", kingdom = "jin", hp = 3,
+    })
+    cOwn = room:printCard("qiao__jink", Card.Heart, 8)
+    cFoe = room:printCard("qiao__jink", Card.Heart, 9)
+    room:obtainCard(chenqian, cOwn, false, fk.ReasonJustMove)
+    room:obtainCard(foe, cFoe, false, fk.ReasonJustMove)
+    local oldTrigger = room.logic.trigger
+    room.logic.trigger = function(this, ev, target, data, ...)
+      if ev == fk.CardShown then
+        table.insert(showCounts, #(data.cardIds or {}))
+      end
+      return oldTrigger(this, ev, target, data, ...)
+    end
+    skill_test.withSkillRequests(room, "qiao__skill_jin018_1", {
+      askToSkillInvoke = function() return true end,
+      askToCards = function() return { cOwn.id } end,
+      askToChooseCard = function() return cFoe.id end,
+    }, function()
+      room:damage { from = chenqian, to = foe, damage = 1, skillName = "test" }
+    end)
+    room.logic.trigger = oldTrigger
+  end)
+  lu.assertEquals(showCounts, { 2 }, "忽辱同时展示双方各一张手牌应合并为单次 CardShown 事件")
 end
 
 -- 复审回归（第 6 项）：吕范调度排除仅有受【聚宝】保护宝物的君孙权，且混有其他装备时仅保留合法装备。
