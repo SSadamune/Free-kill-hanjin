@@ -130,7 +130,7 @@ end
 -- 变包普通武将与君主使用独立角标“变”，不并入阵／势前缀。
 for _, id in ipairs({
   "qiao_heg__han023", "qiao_heg__han024", "qiao_heg__wei020",
-  "qiao_heg__shu020", "qiao_heg__shu022",
+  "qiao_heg__shu020", "qiao_heg__shu022", "qiao_heg__wu021",
   "qiao_heg__em_wu001",
 }) do
   prefixByGeneral[id] = "qiao_prefix_bian"

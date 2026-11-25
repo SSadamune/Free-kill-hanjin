@@ -1,16 +1,16 @@
--- 六势力变包正式数据：5 名普通武将。
+-- 六势力变包正式数据：6 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 5
+M.generalCount = 6
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 9
+M.skillCount = 11
 M.retinueSkillCount = 0
-M.kingdoms = { "han", "wei", "shu" }
+M.kingdoms = { "han", "wei", "shu", "wu" }
 
 M.generals = {
   {
@@ -168,6 +168,39 @@ M.generals = {
         text = [==[当你对其他角色造成伤害时，你可以防止此伤害，然后获得其区域里的一张牌，若其与你势力相同，其可以变更副将（限一次）。]==],
         related = false,
         tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[WU021]==],
+    id = [==[qiao_heg__wu021]==],
+    name = [==[凌统]==],
+    kingdom = [==[wu]==],
+    title = [==[豪情烈胆]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[君孙权、孙权、甘宁]==],
+    companionNames = { [==[君孙权]==], [==[孙权]==], [==[甘宁]==] },
+    companions = { [==[qiao_heg__em_wu001]==], [==[qiao_heg__wu001]==], [==[qiao_heg__wu002]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wu021_1]==],
+        name = [==[旋略]==],
+        text = [==[当你失去装备区里的牌后，你可以弃置一名其他角色的一张牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wu021_2]==],
+        name = [==[勇进]==],
+        text = [==[限定技，出牌阶段，你可以依次移动场上至多三张各不同的装备牌。]==],
+        related = false,
+        tags = { [==[Limited]==] },
       },
     },
   },
