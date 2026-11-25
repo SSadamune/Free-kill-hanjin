@@ -1,6 +1,7 @@
 -- 铁骑：按目标所选主/副将位置动态失效该位置的非锁定技能。
 -- 不写 MarkEnum.InvalidSkills；只读目标身上的位置记录，因此不误伤另一位置、
 -- 不误伤不属于将牌的后天技能，失去马超技能也不撤销已建立失效。
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local skill = fk.CreateSkill { name = "qiao__shu_tieqi_invalidity" }
 
 local POS = "qiao__skill_shu006_2_positions-turn"
@@ -24,7 +25,7 @@ skill:addEffect("invalidity", {
       local general_data = general and Fk.generals[general] or nil
       if general_data ~= nil
         and table.contains(general_data:getSkillNameList(), skill_obj.name)
-        and skill_obj:isPlayerSkill(from) then
+        and SkillSources.isGeneralSkill(skill_obj, from) then
         return true
       end
     end

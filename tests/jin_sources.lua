@@ -130,6 +130,81 @@ function Testqiao_jin_sources:testEjueLosesNamedGeneralSkillAndRaisesDamage()
   lu.assertTrue(owner:hasSkill(EJUE))
 end
 
+function Testqiao_jin_sources:testEjueOffersOnlyTheFourGeneralSkillsInTheReportedPair()
+  local room = prepare("qiao_heg__jin010")
+  local owner, victim = p1(), p2()
+  local ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+  local retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+  local commander = "qiao_commander_ability"
+  local vanguard = "vanguard_skill&"
+  local wenhu = "qiao__retinue_skill_wenhu"
+  local equip = "qiao__kylin_bow_skill"
+  local taikang = "qiao__skill_em_jin001_1"
+  inRoom(function()
+    skill_test.installDualGenerals(room, owner, {
+      main = "qiao_heg__em_jin001", deputy = "qiao_heg__jin010", kingdom = "jin",
+    })
+    room:handleAddLoseSkills(owner, ci.SKILL, taikang, false, true)
+    room:handleAddLoseSkills(owner, commander .. "|" .. vanguard, "qiao__general_card_skills_rule", false, true)
+    ci.save(room, owner, { "qiao_heg__jin004" })
+    retinues.grant(owner, { general = "qiao_heg__retinue_wenhu", skill = wenhu, origin = "granted" })
+    local bow = room:printCard("qiao__kylin_bow", Card.Heart, 5)
+    room:moveCardTo(bow, Card.PlayerEquip, owner, fk.ReasonJustMove)
+  end)
+  for _, name in ipairs({ ci.SKILL, ci.CONSUME, commander, vanguard, wenhu, equip }) do
+    lu.assertTrue(owner:hasSkill(name, true, true), name)
+  end
+
+  local options
+  skill_test.withSkillRequests(room, EJUE, {
+    askToChoice = function(_, _, params)
+      options = params.choices
+      return "Cancel"
+    end,
+  }, function()
+    inRoom(function() room:damage { from = owner, to = victim, damage = 1 } end)
+  end)
+
+  lu.assertNotNil(options)
+  lu.assertEquals(table.map(options, function(label) return label:match("^%[%d+%] (.-)（") end), {
+    Fk:translate(taikang), Fk:translate("qiao__skill_em_jin001_2"),
+    Fk:translate("qiao__skill_em_jin001_3"), Fk:translate(SHANGSHI),
+  })
+end
+
+function Testqiao_jin_sources:testEjueCanLoseAGrantedGeneralSkill()
+  local room = prepare("qiao_heg__jin010")
+  local owner, victim = p1(), p2()
+  local direct = "qiao__skill_han001_1"
+  local derived = "qiao__skill_jin001_2"
+  local startedHp = victim.hp
+  inRoom(function()
+    room:handleAddLoseSkills(owner, direct, nil, false, true)
+    room:handleAddLoseSkills(owner, derived, SHANGSHI, false, true)
+  end)
+  lu.assertTrue(owner:hasSkill(direct))
+  lu.assertTrue(owner:hasSkill(derived))
+
+  local options
+  skill_test.withSkillRequests(room, EJUE, {
+    askToChoice = function(_, _, params)
+      options = params.choices
+      return table.find(options, function(label)
+        return label:find(Fk:translate(derived), 1, true) ~= nil
+      end) or "Cancel"
+    end,
+  }, function()
+    inRoom(function() room:damage { from = owner, to = victim, damage = 1 } end)
+  end)
+
+  lu.assertNotNil(options)
+  lu.assertTrue(table.find(options, function(label) return label:find(Fk:translate(direct), 1, true) ~= nil end) ~= nil)
+  lu.assertFalse(owner:hasSkill(derived))
+  lu.assertTrue(owner:hasSkill(direct))
+  lu.assertTrue(owner:hasSkill(SHANGSHI))
+  lu.assertEquals(victim.hp, startedHp - 2)
+end
+
 function Testqiao_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
   local room = prepare("qiao_heg__jin010")
   local owner, target = p1(), p2()

@@ -6,6 +6,22 @@ local hiding = setmetatable({}, { __mode = "k" })
 local revealing = setmetatable({}, { __mode = "k" })
 local addPrinted
 
+--- 为引擎技能骨架登记汉晋规则中的非武将技能。
+function M.registerNonGeneral(name)
+  local skeleton = Fk.skill_skels[name]
+  if skeleton then skeleton.extra.qiaoNonGeneralSkill = true end
+end
+
+--- 判断易读描述中的武将技能。归属于角色或武将牌由调用者另行判断。
+function M.isGeneralSkill(skill, player)
+  local skeleton = skill and skill:getSkeleton()
+  return skeleton ~= nil
+    and not skill.name:startsWith("#") and not skeleton.name:startsWith("#")
+    and not skeleton.extra.qiaoNonGeneralSkill
+    and (not skill.package or skill.package.name ~= "qiao_mode")
+    and skill:isPlayerSkill(player)
+end
+
 local function skillObject(skill)
   if type(skill) == "string" then return Fk.skills[skill] end
   return skill
@@ -47,6 +63,7 @@ function M.install(room)
   end
 
   local function trackable(skill)
+    -- 这里只维护引擎授技来源，模式技及大旗等入口也需要记账。
     return skill and skill:isPlayerSkill(nil, true)
   end
 

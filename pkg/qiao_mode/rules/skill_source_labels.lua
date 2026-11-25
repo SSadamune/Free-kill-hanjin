@@ -10,6 +10,8 @@ local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Dying = require "packages.qiao.pkg.qiao_generals.util.qun_dying"
 local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 
@@ -70,6 +72,7 @@ end
 function M.decorate(name, label, extra, extraMarker)
   local skel = Fk.skill_skels[name]
   if skel == nil or skel[MARKER] ~= nil then return end
+  SkillSources.registerNonGeneral(name)
 
   local baseDynamic = skel.dynamicDesc
   local baseGet = rawget(skel, "getDynamicDescription")
@@ -144,8 +147,9 @@ function M.register(retinues)
   -- 六师率义旗、诸王敕封册没有独立 util 常量；保持与技能文件同名。
   M.decorate(Flags.shuFlag, LABELS.FLAG)
   -- 诸王敕封册本体是旗，另管理“赐”的独立消费；太康等武将技不在此标。
-  M.decorate("qiao__skill_em_jin001_banner", LABELS.FLAG,
+  M.decorate(Ci.SKILL, LABELS.FLAG,
     "<br/><b>〔赐〕</b> 本技能另有“赐”的消耗入口。", "〔赐〕")
+  SkillSources.registerNonGeneral(Ci.CONSUME)
 
   M.decorate(Commander.ABILITY_SKILL, LABELS.COMMANDER)
 

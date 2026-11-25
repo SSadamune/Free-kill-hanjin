@@ -5,6 +5,9 @@
 -- 将牌已失去，但保留实际技能。实际移除复用 qun_duanchang 的单技能入口。
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Duanchang = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+local CardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
 
 local M = {}
 
@@ -15,39 +18,30 @@ local function isLord(player)
   return player.role == "lord" and player.role_shown and room:isGameMode("role_mode")
 end
 
-local function excluded(skill, name)
-  if name == nil or name == "" or name == M.SKILL then return true end
-  if name:sub(1, 1) == "#" then return true end
-  if skill == nil then return true end
-  if skill.cardSkill or skill.attached_equip then return true end
-  local skel = skill:getSkeleton()
-  if skel ~= nil and (skel.attached_equip or tostring(skel.name):sub(1, 1) == "#") then
-    return true
-  end
-  return false
+local function canLose(player, name)
+  return SameName.canonicalHistoryKey(name) ~= M.SKILL
+    and SkillSources.isGeneralSkill(Fk.skills[name], player)
 end
 
-local function addChoice(result, seen, skillName, general, deputy, source, extra)
-  local skill = Fk.skills[skillName]
-  if excluded(skill, skillName) then return end
-  local key = table.concat({ skillName, general or "", tostring(deputy or ""),
-    source and source.name or "", extra and "extra" or "" }, "|")
-  if seen[key] then return end
-  seen[key] = true
-  table.insert(result, {
-    skill = skillName,
-    general = general,
-    deputy = deputy,
-    source = source,
-    extra = extra == true,
-  })
-end
-
---- 扼绝可选的当前实际技能。将牌技能按主/副将分别列出；非将牌技能保留来源。
+--- 扼绝可选的武将技能，按武将牌位置或角色授予来源分别列出。
 ---@param player ServerPlayer
 ---@return table[]
 function M.choices(player)
   local result, seen = {}, {}
+  local function addChoice(skillName, general, deputy, source, extra)
+    if not canLose(player, skillName) then return end
+    local key = table.concat({ skillName, general or "", tostring(deputy or ""),
+      source and source.name or "", extra and "extra" or "" }, "|")
+    if seen[key] then return end
+    seen[key] = true
+    table.insert(result, {
+      skill = skillName,
+      general = general,
+      deputy = deputy,
+      source = source,
+      extra = extra == true,
+    })
+  end
   local lord = isLord(player)
   for _, isDeputy in ipairs({ false, true }) do
     local name = Exchange.actualGeneral(player, isDeputy)
@@ -56,7 +50,7 @@ function M.choices(player)
         local skill = Fk.skills[skillName]
         if skill ~= nil and not Duanchang.isLost(player.room, name, skillName)
           and (player:hasSkill(skillName, true, true) or player:isFakeSkill(skill)) then
-          addChoice(result, seen, skillName, name, isDeputy, nil)
+          addChoice(skillName, name, isDeputy)
         end
       end
     end
@@ -64,14 +58,13 @@ function M.choices(player)
 
   for _, skillName in ipairs(player:getTableMark("ExtraAttachedSkills")) do
     if player:hasSkill(skillName, true, true) then
-      addChoice(result, seen, skillName, nil, nil, nil, true)
+      addChoice(skillName, nil, nil, nil, true)
     end
   end
   for sourceSkill, skills in pairs(player.derivative_skills or {}) do
-    local CardSkills=require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
-    for _, skill in ipairs(sourceSkill.name~=CardSkills.SOURCE and skills or {}) do
+    for _, skill in ipairs(sourceSkill.name ~= CardSkills.SOURCE and skills or {}) do
       if player:hasSkill(skill.name, true, true) then
-        addChoice(result, seen, skill.name, nil, nil, sourceSkill)
+        addChoice(skill.name, nil, nil, sourceSkill)
       end
     end
   end
@@ -84,7 +77,7 @@ end
 ---@param choice table
 ---@return boolean
 function M.lose(room, player, choice)
-  if room == nil or player == nil or choice == nil then return false end
+  if not room or not player or not choice or not canLose(player, choice.skill) then return false end
   if choice.general ~= nil then
     return Duanchang.loseCardSkill(room, player, choice.deputy == true, choice.skill)
   end
