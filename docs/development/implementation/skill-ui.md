@@ -24,6 +24,16 @@
 
 当前 `skill_source_labels` 在正式扩展注册后给诏书、君主旗、统领、翼从的描述加来源标签。诸王敕封册另标注赐的消费入口，描述不列举持有的赐。武将牌技能与装备沿用原描述。按钮悬浮说明共用这条描述路径，也会带标签。`standard_generals` 13/13 通过，覆盖正式注册后的 `Fk:getDescription`、统领动态描述及技能名称，未进行真人点击验收。
 
+## 详情中的引用
+
+汉晋房间的头像技能页和武将详情弹窗，以及图鉴中汉晋武将的技能页，使用 [SkillReferencePane.qml](../../../pkg/qiao_mode/qml/SkillReferencePane.qml)。头像技能由原生 `Ltk.getPlayerSkills` 筛选，选将和图鉴详情由 `Ltk.getGeneralDetail` 提供。房间通过原生信息弹窗的内容变更接入，图鉴通过技能页的加载器接入。
+
+[skill_references.lua](../../../pkg/qiao_mode/skill_references.lua) 根据公开的武将、翼从、大旗、技能和卡牌登记建立索引。军令、国战标记等采用现有翻译和已确认规则。带应变或合纵限定的明确牌名从正式牌位取得牌面，泛指牌名使用基础牌面。正文显示原有措辞，并根据牌名括号、技能和标记等上下文区分同名引用。
+
+武将、翼从和君主大旗的引用打开 page，其他引用打开 tooltip。tooltip 中可以继续打开 tooltip 或跳转 page。点击没有子 tooltip 的 tooltip 范围外会关闭它。关闭父级或离开所属 page 时，子 tooltip 一并关闭。从 tooltip 跳转后，返回栈记录出发的 page 和阅读位置。
+
+锁定版新月杀翻译专项 5/5，覆盖大旗、武将、翼从、国战标记及牌面版本。发布 ZIP 文件内容校验 1,177/1,177。离屏 Qt 使用 ZIP 中的汉晋部件和锁定版原生头像／武将详情 QML，以替身提供游戏数据、房间和图鉴宿主，验证点击、逐级关闭、从第二层 tooltip 跳转、后退及入口隔离。真实客户端对局待验收。[Issue #69](https://github.com/SSadamune/Free-kill-hanjin/issues/69)
+
 ## 决策前的详细提示
 
 诏书选势力锦囊、霸者求贤状、六师率义旗和缘江烽火图授技沿用锁定引擎 `askToChoice`／`askToChoices` 的 `detailed` 参数。`ChoicesBox.qml` 在选项旁读取 `:<选项 ID>` 的正式说明，技能的选项数量与确认方式沿原请求。赐的消费请求按所选牌给出实际摸牌或手牌上限效果。巧变和神速的首次有效请求显示当前阶段及对应效果或代价。
