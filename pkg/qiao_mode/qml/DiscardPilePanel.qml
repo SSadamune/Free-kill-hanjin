@@ -152,13 +152,6 @@ Controls.Popup {
           height: 1
           color: "#a08057"
         }
-        Rectangle {
-          anchors.fill: parent
-          anchors.margins: 3
-          radius: 5
-          color: hitArea.containsMouse ? "#514230" : slot.lord ? "#493626" : "transparent"
-          border.color: slot.lord ? "#b58a52" : "transparent"
-        }
         CardItem {
           objectName: "discardCardFace"
           anchors.horizontalCenter: slot.horizontalCenter
@@ -166,6 +159,11 @@ Controls.Popup {
           cardScale: Math.min(1, (slot.width - 12) / 93)
           enabled: false
           showDetail: false
+          glow.color: "#efbd63"
+          glow.cornerRadius: 5
+          glow.glowRadius: 7
+          glow.spread: 0.22
+          glow.opacity: slot.lord ? 0.85 : 0
           dataModel: {
             if (!slot.faceUp) return coveredCard;
             // Use the same on-card mark renderer as the hand area.
@@ -177,10 +175,8 @@ Controls.Popup {
           CardModel { id: coveredCard; known: false; selectable: true }
         }
         MouseArea {
-          id: hitArea
           anchors.fill: parent
           enabled: slot.faceUp
-          hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
           onClicked: panel.inspect(slot.modelData.id)
         }

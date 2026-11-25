@@ -235,6 +235,9 @@ def run():
     assert not ({"君主装备", *(card["name"] for card in initial)} & labels())
     faces = card_faces()
     assert set(faces) == {lord, other_id}
+    QTest.qWait(220)
+    assert js("glow.opacity", faces[lord]) > 0 and js("glow.opacity", faces[other_id]) == 0
+    assert js("glow.color.toString()", faces[lord]) == "#efbd63"
     for card in initial:
         face = faces[card["id"]]
         assert face.property("known") and face.property("suit") == card["face"]["suit"]
