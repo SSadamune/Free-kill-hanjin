@@ -58,7 +58,7 @@ Room {
   }
 
   Component { id: ciMark; CiMarkButton {} }
-  Component { id: ciPile; CiPile {} }
+  Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
   Component { id: referencePane; SkillReferencePane {} }
   Component { id: stateButton; SkillStatusButton {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
@@ -244,7 +244,6 @@ Room {
           cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
         });
         button.clicked.connect(() => room.showInfoPopup(ciPile, {
-          name: "@[qiao_ci]",
           cardNames: Qt.binding(() => button.cards ?? []),
         }));
       }

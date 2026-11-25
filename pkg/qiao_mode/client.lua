@@ -331,6 +331,15 @@ function QiaoPlayCard:canUsePileAction(holderId, skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
+  if elemType == "Interaction" and self.skill_name == Ci.CONSUME then
+    if action == "cancel" then
+      self:doCancelButton()
+    elseif action == "finish" and Ci.validAction(self.player, data) then
+      self:updateInteraction(data, true)
+      if self:feasible() then return ReqPlayCard.update(self, "Button", "OK", action, data) end
+    end
+    return false
+  end
   local skill = pileActions[elemType]
   if not skill then
     return ReqPlayCard.update(self, elemType, id, action, data)
@@ -349,6 +358,11 @@ function QiaoClient:initialize(client)
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
+end
+
+function QiaoClient:playCard(data)
+  self.qiaoCiActions = type(data) == "table" and data.qiaoCiActions or nil
+  return BaseClient.playCard(self, data)
 end
 
 function QiaoClient:canUsePileAction(holderId, action)

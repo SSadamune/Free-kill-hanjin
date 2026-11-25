@@ -18,15 +18,8 @@ local CONSUME = "qiao__skill_em_jin001_consume"
 local CI_MARK = "@[qiao_ci]"
 local CAIXING = "qiao__skill_em_jin001_2"
 local DINGFEI = "qiao__skill_em_jin001_3"
-local RESOURCE_MAXCARD = "qiao__jin001_banner-resource-maxcard"
-local RESOURCE_DRAW = "qiao__jin001_banner-resource-draw"
-local CHANGE = "qiao__jin001_banner-change"
-
---- 资源分支按所选赐的牌面单独阴阳鱼数二选一，不再使用笼统的 resource 项。
-local function resourceChoice(params)
-  if table.contains(params.choices, RESOURCE_MAXCARD) then return RESOURCE_MAXCARD end
-  if table.contains(params.choices, RESOURCE_DRAW) then return RESOURCE_DRAW end
-  return nil
+local function spend(name, action)
+  return { general = name, action = action }
 end
 
 local function inRoom(fn, label)
@@ -133,10 +126,13 @@ function Testqiao_em_jin001_simayan:testTransferCannotChooseBannedKingdomAfterFr
     setCi(room, lord, { jinShu, guanYu })
   end)
   local function give(reply)
-    skill_test.withSkillRequests(room, BANNER, { askToOptions = function(_, _, params)
-      lu.assertItemsEquals(params.options, { "jin", "wei" })
-      return { reply }
-    end }, function()
+    skill_test.withSkillRequests(room, BANNER, {
+      askToSkillInvoke = function() return true end,
+      askToCustomDialog = function(_, _, params)
+        lu.assertItemsEquals(params.component.prop.groupOrder, { "jin", "wei" })
+        return { kingdom = reply }
+      end,
+    }, function()
       inRoom(function() room:damage { from = source, to = p(5), damage = 1 } end)
     end)
   end
@@ -162,17 +158,17 @@ function Testqiao_em_jin001_simayan:testDamageTransfersAllCiOfChosenKingdom()
     })
   end)
   local asks = 0
-  FkTest.setRoomBreakpoint(lord, "AskForOptions", function(data)
-    if data[5] == BANNER then
-      asks = asks + 1
-      lu.assertItemsEquals(data[1], { "wei", "wu", "han" })
-      lu.assertTrue(data[4], "允许取消交赐")
-      lu.assertStrContains(data[6], tostring(source.id))
-      lu.assertTrue(data[7], "单击选项直接提交")
-    end
+  FkTest.setRoomBreakpoint(lord, "CustomDialog", function(data)
+    local prop = data.component.prop
+    lu.assertEquals(prop.mode, "give")
+    lu.assertEquals(prop.cardNames, { single, kept, guest })
+    lu.assertItemsEquals(prop.groupOrder, { "wei", "wu", "han" })
+    lu.assertEquals(prop.groups.wei, { single, guest })
+    lu.assertStrContains(prop.prompt, tostring(source.id))
+    asks = asks + 1
     return false
   end)
-  FkTest.setNextReplies(lord, { { "wei" } })
+  FkTest.setNextReplies(lord, { "1", { kingdom = "wei" } })
   inRoom(function() room:damage{ from = source, to = victim, damage = 1 } end)
   lu.assertEquals(asks, 1)
   lu.assertEquals(lord:getTableMark(CI_MARK), { kept })
@@ -201,13 +197,12 @@ function Testqiao_em_jin001_simayan:testTransferCanDeclineAndOnlyOtherJinDamageQ
     Guest.store(room, { [name] = { name = name, source = "original", kingdoms = { "jin" } } })
   end)
   skill_test.withSkillRequests(room, BANNER, {
-    askToOptions = function(_, who, params)
+    askToSkillInvoke = function(_, who)
       lu.assertIs(who, lord)
-      lu.assertEquals(params.options, { "jin" })
-      lu.assertTrue(params.cancelable)
       asks = asks + 1
-      return {}
+      return false
     end,
+    askToCustomDialog = function() error("declined gift opened a panel") end,
   }, function()
     inRoom(function()
       room:damage{ from = wei, to = jin, damage = 1 }
@@ -286,19 +281,10 @@ function Testqiao_em_jin001_simayan:testFirstDoubleRevealMakesCiAndChangeBranch(
     lord.phase = Player.Play
   end)
   lu.assertEquals(#lord:getCardIds("h"), 0)
-  skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, _, params)
-      lu.assertTrue(params.single)
-      lu.assertFalse(params.detailed == true)
-      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE, "Cancel" })
-      return { resourceChoice(params) }
-    end,
-  }, function()
-    inRoom(function()
-      room:useSkill(lord, Fk.skills[CONSUME], function()
-        Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = ciName })
-      end)
-    end)
+  inRoom(function()
+    local reply = FkTest.ReplyUseSkill(CONSUME, {}, {})
+    reply.interaction_data = spend(ciName, "draw")
+    room:handleUseCardReply(lord, reply)
   end)
   lu.assertEquals(#(lord:getTableMark(CI_MARK) or {}), 0, "执行分支应消耗赐")
   lu.assertEquals(lord:getMark(CI_MARK), 1, "消耗最后一张后仍可打开列表")
@@ -336,22 +322,12 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     oldDeputy = lord.deputyGeneral
     lord.phase = Player.Play
   end)
-  local handler = function(self, who, params, original)
-    if params.skill_name ~= BANNER then return original(self, who, params) end
-    if table.contains(params.choices, "main") and table.contains(params.choices, "deputy") then
-      return "deputy"
-    end
-    local resource = resourceChoice(params)
-    if resource ~= nil then return resource end
-    return params.choices[1]
-  end
   -- 通过真实首次双亮生成赐，确保该将牌已从剩余池占用。
   skill_test.withSkillRequests(room, BANNER, {
     askToSkillInvoke = function(self, who, params, original)
       if params.skill_name == BANNER then return true end
       return original(self, who, params)
     end,
-    askToChoice = handler,
   }, function()
     inRoom(function()
       target:revealGeneral(false)
@@ -373,14 +349,10 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
       chosen = params.component.prop.candidates[1]
       return { general = chosen }
     end,
-    askToChoices = function(_, _, params)
-      lu.assertTrue(table.contains(params.choices, CHANGE))
-      return { CHANGE }
-    end,
   }, function()
     inRoom(function()
       room:useSkill(lord, Fk.skills[CONSUME], function()
-        Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = ci[1] })
+        Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = spend(ci[1], "deputy") })
       end)
     end)
   end)
@@ -399,23 +371,15 @@ function Testqiao_em_jin001_simayan:testCiChangeAndResourceAfterUsed()
     room:setPlayerMark(lord, "qiao_jin001_ci_spent-phase", 0)
     setCi(room, lord, { "qiao_heg__jin007" })
   end)
-  skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, _, params)
-      branches = table.simpleClone(params.choices)
-      lu.assertFalse(params.detailed == true)
-      lu.assertEquals(params.all_choices, { resourceChoice(params), CHANGE, "Cancel" })
-      return { resourceChoice(params) }
-    end,
-  }, function()
-    inRoom(function()
-      Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = "qiao_heg__jin007" })
-    end)
+  inRoom(function()
+    local name = "qiao_heg__jin007"
+    branches = Ci.actionsFor(lord, name, room)
+    Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = spend(name, "maxcards") })
   end)
   lu.assertNotNil(branches)
-  lu.assertTrue(table.contains(branches, RESOURCE_MAXCARD))
+  lu.assertEquals(branches, { "maxcards" }, "整局限一次后不能再变更")
   lu.assertEquals(lord:getMark(MarkEnum.AddMaxCardsInTurn), 3)
   assertDiscarded(room, "qiao_heg__jin007")
-  lu.assertFalse(table.contains(branches, CHANGE), "整局限一次后变更按钮不可用")
   lu.assertEquals(#(lord:getTableMark(CI_MARK) or {}), 0, "资源分支应消耗赐")
 end
 
@@ -427,10 +391,8 @@ function Testqiao_em_jin001_simayan:testCiAtFourCardsStillPaysForDraw()
   end)
   local hand = table.simpleClone(lord:getCardIds("h"))
   lu.assertEquals(#hand, 4, "以四张起始手牌验证可以摸零张")
-  skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function() return { RESOURCE_DRAW } end,
-  }, function()
-    inRoom(function() Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = name }) end)
+  inRoom(function()
+    Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = spend(name, "draw") })
   end)
   lu.assertEquals(lord:getCardIds("h"), hand)
   lu.assertEquals(lord:getTableMark(CI_MARK), {})
@@ -445,16 +407,9 @@ function Testqiao_em_jin001_simayan:testCiKeptOnCancelOrNoChangeCandidate()
     setCi(room, lord, { name })
   end)
   local request = FkTest.ReplyUseSkill(CONSUME, {}, {})
-  request.interaction_data = name
-  for _, reply in ipairs({ {}, { CHANGE } }) do
-    skill_test.withSkillRequests(room, BANNER, {
-      askToChoices = function(_, _, params)
-        lu.assertFalse(table.contains(params.choices, CHANGE), "没有候选的变更应置灰")
-        return reply
-      end,
-    }, function()
-      inRoom(function() room:handleUseCardReply(lord, request) end)
-    end)
+  for _, action in ipairs({ "deputy", "maxcards" }) do
+    request.interaction_data = spend(name, action)
+    inRoom(function() room:handleUseCardReply(lord, request) end)
     lu.assertEquals(lord:getTableMark(CI_MARK), { name })
     lu.assertFalse(Discard.contains(room, name))
     lu.assertTrue(Fk.skills[CONSUME]:canUse(lord), "取消和未成功变更均保留本阶段的机会")
@@ -468,18 +423,15 @@ function Testqiao_em_jin001_simayan:testCiPreventsOwnSkippedDrawPhase()
   inRoom(function() setCi(room, lord, { kept, spent }) end)
   local phase = PhaseData:new { who = lord, phase = Player.Draw, reason = "game_rule", skipped = true }
   local hand, asks = #lord:getCardIds("h"), 0
-  FkTest.setRoomBreakpoint(lord, "AskForChoices", function(data)
-    if data[5] == BANNER then
-      lu.assertEquals(data[1], { kept, spent, "Cancel" })
-      lu.assertEquals(data[3], { 1, 1 })
-      lu.assertTrue(data[4])
-      lu.assertStrContains(data[6], "phase_draw")
-      lu.assertTrue(data[8], "点选赐时直接提交")
-      asks = asks + 1
-    end
+  FkTest.setRoomBreakpoint(lord, "CustomDialog", function(data)
+    local prop = data.component.prop
+    lu.assertEquals(prop.mode, "remove")
+    lu.assertEquals(prop.cardNames, { kept, spent })
+    lu.assertStrContains(prop.prompt, "phase_draw")
+    asks = asks + 1
     return false
   end)
-  FkTest.setNextReplies(lord, { { spent } })
+  FkTest.setNextReplies(lord, { "1", { general = spent } })
   inRoom(function() GameEvent.Phase:create(phase):exec() end)
   lu.assertEquals(asks, 1)
   lu.assertFalse(phase.skipped)
@@ -493,16 +445,22 @@ function Testqiao_em_jin001_simayan:testPreventSkippingPlayLeavesActiveCiUseAvai
   local room, lord = FkTest.room, p(1)
   local prevent, resource = "qiao_heg__jin005", "qiao_heg__jin004"
   local phase = PhaseData:new { who = lord, phase = Player.Play, reason = "game_rule" }
-  local active = FkTest.ReplyUseSkill(BANNER, {}, {})
-  active.interaction_data = resource
+  local active = FkTest.ReplyUseSkill(CONSUME, {}, {})
+  active.interaction_data = spend(resource, "maxcards")
   inRoom(function() setCi(room, lord, { prevent, resource }) end)
+  local actions
+  FkTest.setRoomBreakpoint(lord, "PlayCard", function(data)
+    if actions == nil then actions = data and data.qiaoCiActions end
+    return false
+  end)
   skill_test.withSkillRequests(room, CAIXING, {
     askToSkillInvoke = function() return true end,
   }, function()
-    FkTest.setNextReplies(lord, { { prevent }, active, { RESOURCE_MAXCARD } })
+    FkTest.setNextReplies(lord, { "1", { general = prevent }, active })
     inRoom(function() GameEvent.Phase:create(phase):exec() end)
   end)
   lu.assertFalse(phase.skipped, "可以防止採幸产生的出牌阶段跳过")
+  lu.assertEquals(actions, { [resource] = { "maxcards" } })
   lu.assertEquals(lord:getTableMark(CI_MARK), {}, "恢复的出牌阶段仍能另行消耗一枚赐")
   assertDiscarded(room, prevent)
   assertDiscarded(room, resource)
@@ -519,11 +477,12 @@ function Testqiao_em_jin001_simayan:testCiSkipDeclinedOrUnavailable()
     lu.assertEquals(#who:getCardIds("h"), hand)
   end
   skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, who)
+    askToSkillInvoke = function(_, who)
       lu.assertIs(who, lord)
       asks = asks + 1
-      return {}
+      return true
     end,
+    askToCustomDialog = function() return "__cancel" end,
   }, function()
     skippedDraw(lord)
     lu.assertEquals(asks, 0, "没有赐时不询问")
@@ -623,15 +582,10 @@ function Testqiao_em_jin001_simayan:testResourceCiAndCaixingAndDingfei()
   end)
   local fish = Fk.generals["qiao_heg__jin004"].maxHp
   local beforeHand
-  skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, _, params)
-      return { resourceChoice(params) }
-    end,
-  }, function()
-    inRoom(function()
-      beforeHand = #lord:getCardIds("h")
-      Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = "qiao_heg__jin004" })
-    end)
+  inRoom(function()
+    beforeHand = #lord:getCardIds("h")
+    local action = fish <= 3 and "maxcards" or "draw"
+    Fk.skills[CONSUME]:onUse(room, { from = lord, interaction_data = spend("qiao_heg__jin004", action) })
   end)
   lu.assertEquals(lord:getMark(BANNER), 0)
   lu.assertEquals(Ci.cards(lord), {})
@@ -713,7 +667,7 @@ local function useTransferredCiAfter(changeLord)
       [stored] = { name = stored, source = "original", kingdoms = { "jin" } },
     })
   end)
-  FkTest.setNextReplies(lord, { { "jin" } })
+  FkTest.setNextReplies(lord, { "1", { kingdom = "jin" } })
   inRoom(function()
     room:damage{ from = recipient, to = p(4), damage = 1 }
     changeLord(room, lord)
@@ -751,11 +705,13 @@ local function useTransferredCiAfter(changeLord)
       play:update("SkillButton", CONSUME, "click", { selected = true })
       lu.assertEquals(play.skill_name, CONSUME)
       lu.assertFalse(play:feasible())
-      play:update("Interaction", "1", "update", "qiao_heg__wei001")
-      lu.assertFalse(play:feasible())
-      play:update("Interaction", "1", "update", stored)
-      lu.assertTrue(play:feasible())
-      play:update("Button", "OK", "click")
+      play:update("Interaction", "1", "finish", spend("qiao_heg__wei001", "maxcards"))
+      lu.assertNil(reply)
+      play:update("Interaction", "1", "cancel", "")
+      lu.assertNil(play.skill_name)
+      lu.assertNil(reply)
+      play:update("SkillButton", CONSUME, "click", { selected = true })
+      play:update("Interaction", "1", "finish", spend(stored, "maxcards"))
     end)
     ClientInstance.notifyUI = originalNotify
     if not ok then error(err, 0) end
@@ -763,32 +719,21 @@ local function useTransferredCiAfter(changeLord)
     lu.assertEquals(reply.card.skill, CONSUME)
     lu.assertEquals(reply.card.subcards, {})
     lu.assertEquals(reply.targets, {})
-    lu.assertEquals(reply.interaction_data, stored)
+    lu.assertEquals(reply.interaction_data, spend(stored, "maxcards"))
     play:_finish()
   end)
   inRoom(function()
     local stale = table.simpleClone(reply)
-    stale.interaction_data = "qiao_heg__wei001"
+    stale.interaction_data = spend("qiao_heg__wei001", "maxcards")
     room:handleUseCardReply(recipient, stale)
     lu.assertEquals(recipient:usedSkillTimes(CONSUME, Player.HistoryPhase), 0)
   end)
-  local asks = 0
-  skill_test.withSkillRequests(room, BANNER, {
-    askToChoices = function(_, _, params)
-      asks = asks + 1
-      lu.assertTrue(params.single)
-      lu.assertFalse(params.detailed == true)
-      return { resourceChoice(params) }
-    end,
-  }, function()
-    inRoom(function()
-      room:handleUseCardReply(recipient, reply)
-      local second = table.simpleClone(reply)
-      second.interaction_data = otherCi
-      room:handleUseCardReply(recipient, second)
-    end)
+  inRoom(function()
+    room:handleUseCardReply(recipient, reply)
+    local second = table.simpleClone(reply)
+    second.interaction_data = spend(otherCi, "draw")
+    room:handleUseCardReply(recipient, second)
   end)
-  lu.assertEquals(asks, 1)
   lu.assertEquals(recipient:getMark(MarkEnum.AddMaxCardsInTurn), beforeMax + 3)
   lu.assertEquals(recipient:getTableMark(CI_MARK), { otherCi })
   lu.assertEquals(recipient:usedSkillTimes(CONSUME, Player.HistoryPhase), 1)
@@ -832,7 +777,7 @@ function Testqiao_em_jin001_simayan:testTransferredCiChangesDeputyAfterLordDeath
     room:setPlayerMark(recipient, "__heg_init_kingdom", "wei")
     setCi(room, lord, {gift})
     room.general_pile = {jin, wei}
-    FkTest.setNextReplies(lord, {{"jin"}})
+    FkTest.setNextReplies(lord, { "1", { kingdom = "jin" } })
     room:damage {from = recipient, to = p(4), damage = 1}
     lu.assertEquals(recipient:getTableMark(CI_MARK), {gift})
     room:killPlayer {who = lord}
@@ -842,18 +787,13 @@ function Testqiao_em_jin001_simayan:testTransferredCiChangesDeputyAfterLordDeath
     lu.assertEquals(Fk.generals[oldDeputy].maxHp, Fk.generals[gift].maxHp)
     room.current, recipient.phase = recipient, Player.Play
     skill_test.withSkillRequests(room, BANNER, {
-      askToChoices = function(_, _, params)
-        if params.prompt == "#qiao__jin001_banner-position" then return { "deputy" } end
-        lu.assertTrue(table.contains(params.choices, CHANGE), "转野后仍可用赐换将")
-        return {CHANGE}
-      end,
       askToCustomDialog = function(_, _, params)
         lu.assertEquals(params.component.prop.candidates, { jin })
         return { general = jin }
       end,
     }, function()
       local reply = FkTest.ReplyUseSkill(CONSUME, {}, {})
-      reply.interaction_data = gift
+      reply.interaction_data = spend(gift, "deputy")
       room:handleUseCardReply(recipient, reply)
     end)
     lu.assertEquals(recipient.deputyGeneral, jin)

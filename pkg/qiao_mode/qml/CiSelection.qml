@@ -7,7 +7,7 @@ import LunarLtk
 Item {
   id: root
   property list<string> cardNames
-  property string selection: ""
+  property var actionsByCard
   property Item picker: null
   readonly property var scene: Ltk.roomScene
 
@@ -15,30 +15,47 @@ Item {
   height: button.height
 
   function clicked() {
-    if (!scene || !cardNames.length) return;
+    if (!scene || !cardNames.length || picker) return;
     scene.showInfoPopup(pile, {
-      name: "qiao__ci_consume",
+      mode: "consume",
+      prompt: "#qiao__jin001_banner-active",
       cardNames: Array.from(cardNames),
-      selectedCi: selection,
-      chooseCard: name => {
-        selection = name;
-        Lua.updateRequestUI("Interaction", "1", "update", name);
-        scene.closeInfoPopup();
-      },
+      actionsByCard,
     });
     picker = scene.infoPopup.item;
   }
 
   function clear() {
-    if (picker && scene?.infoPopup.item === picker) scene.closeInfoPopup();
+    const opened = picker;
     picker = null;
+    if (opened && scene?.infoPopup.item === opened) scene.closeInfoPopup();
   }
 
-  Component { id: pile; CiPile {} }
+  function submit(action, choice) {
+    clear();
+    Lua.updateRequestUI("Interaction", "1", action, choice);
+  }
+
+  Connections {
+    target: root.scene?.infoPopup ?? null
+    function onClosed() {
+      if (!root.picker) return;
+      root.picker = null;
+      Lua.updateRequestUI("Interaction", "1", "cancel", "");
+    }
+  }
+
+  Component {
+    id: pile
+    CiPile {
+      onSubmitted: choice => root.submit("finish", choice)
+      onCanceled: root.submit("cancel", "")
+    }
+  }
 
   MetroButton {
     id: button
-    text: root.selection ? Lua.tr(root.selection) : Lua.tr("qiao__ci_select")
+    text: Lua.tr("qiao__ci_consume")
     onClicked: root.clicked()
   }
 }

@@ -9,13 +9,11 @@ local First = require "packages.qiao.pkg.qiao_generals.util.jin_first_reveal"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
-local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill { name = Ci.SKILL }
 skill.qiaoImplemented = true
 
 local CI_MARK = Ci.MARK
-local CHANGE = "qiao__jin001_banner-change"
 
 local function lord(room)
   if room == nil then return nil end
@@ -157,12 +155,10 @@ skill:addEffect(fk.Damage, {
     local groups = transferGroups(player.room, player)
     local choices = table.filter(Ban.kingdoms, function(k) return groups[k] ~= nil end)
     if #choices == 0 then return false end
-    local kingdom = Selection.askOption(player.room, player, {
-      choices = choices, all_choices = Ban.kingdoms,
-      buttons = true,
-      skill_name = skill.name, prompt = "#qiao__jin001_banner-transfer::" .. target.id,
-    })
-    if kingdom == nil or not groups[kingdom] then return false end
+    local prompt = "#qiao__jin001_banner-transfer::" .. target.id
+    if not player.room:askToSkillInvoke(player, { skill_name = skill.name, prompt = prompt }) then return false end
+    local kingdom = Ci.ask(player.room, player, "give", prompt, groups, choices).kingdom
+    if type(kingdom) ~= "string" or not groups[kingdom] then return false end
     event:setCostData(self, kingdom)
     return true
   end,
@@ -187,10 +183,9 @@ skill:addEffect(fk.EventPhaseSkipping, {
       and #Ci.cards(player) > 0
   end,
   on_cost = function(self, event, target, player, data)
-    local chosen = Selection.askOption(player.room, player, {
-      choices = Ci.cards(player),
-      skill_name = skill.name, prompt = "#qiao__jin001_banner-prevent-skip:::" .. Util.PhaseStrMapper(data.phase),
-    })
+    local prompt = "#qiao__jin001_banner-prevent-skip:::" .. Util.PhaseStrMapper(data.phase)
+    if not player.room:askToSkillInvoke(player, { skill_name = skill.name, prompt = prompt }) then return false end
+    local chosen = Ci.ask(player.room, player, "remove", prompt).general
     if not table.contains(Ci.cards(player), chosen) then return false end
     event:setCostData(self, chosen)
     return true
@@ -215,16 +210,13 @@ Fk:loadTranslationTable {
     .. "\n当你即将跳过一个阶段时，你可以移去你的一枚〖赐〗并防止之。",
   [CI_MARK] = "赐",
   ["qiao__ci_consume"] = "消耗一枚赐",
-  ["qiao__ci_select"] = "选择一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
   ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
   ["#qiao__jin001_banner-transfer"] = "诸王敕封册：请选择一个势力，将该势力的所有“赐”交给%dest",
   ["#qiao__jin001_banner-prevent-skip"] = "诸王敕封册：你可以移去一枚“赐”，防止跳过%arg",
-  ["#qiao__jin001_banner-branch"] = "诸王敕封册：选择资源效果或变更",
-  [CHANGE] = "变更武将",
-  ["qiao__jin001_banner-resource-maxcard"] = "本回合手牌上限+3",
-  ["qiao__jin001_banner-resource-draw"] = "将手牌摸至四张",
-  ["#qiao__jin001_banner-position"] = "诸王敕封册：选择变更位置（main 主将 / deputy 副将）",
+  ["qiao_ci_give_faction"] = "选择%arg赐",
+  ["qiao_ci_give"] = "交出",
+  ["qiao_ci_remove"] = "移去",
 }
 
 return skill
