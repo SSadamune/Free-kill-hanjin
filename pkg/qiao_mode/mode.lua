@@ -122,6 +122,11 @@ function M.create(base, name)
   local function getLogic()
     local parent = base.logic()
     local logic = parent:subclass("QiaoHegLogic")
+    function logic:trigger(event, target, data, refreshOnly)
+      -- 死亡翻牌仍须更新牌面和势力。引擎派发延迟时机时，已死亡的角色不生成「明置后」。
+      if event == fk.GeneralRevealed and target and target.dead then return false end
+      return parent.trigger(self, event, target, data, refreshOnly)
+    end
     if locked then
       function logic:run()
         local room = self.room

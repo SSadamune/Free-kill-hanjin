@@ -117,6 +117,35 @@ function Testqiao_em_jin001_simayan:testKilledGuestDeputyUsesActiveKingdomForCi(
   lu.assertEquals(p(1):getTableMark(CI_MARK), { weiGeneral }, "死者的副将关羽本局按魏取赐")
 end
 
+function Testqiao_em_jin001_simayan:testDeathFlipDoesNotCountAsFirstDoubleReveal()
+  local room, lord, first, second = FkTest.room, p(1), p(4), p(5)
+  local weiGeneral = "qiao_heg__wei003"
+  inRoom(function()
+    content.setupHidden(room, first, "qiao_heg__wei001", "qiao_heg__wei002", "wei")
+    content.setupHidden(room, second, "qiao_heg__wei004", "qiao_heg__wei005", "wei")
+    second:revealGeneral(true)
+    room.general_pile = { weiGeneral }
+  end)
+  local invokes = 0
+  skill_test.withSkillRequests(room, BANNER, {
+    askToSkillInvoke = function()
+      invokes = invokes + 1
+      return true
+    end,
+  }, function()
+    inRoom(function() room:killPlayer { who = first, killer = p(6) } end)
+    lu.assertEquals(first.general, "qiao_heg__wei001")
+    lu.assertEquals(first.deputyGeneral, "qiao_heg__wei002")
+    lu.assertEquals(invokes, 0, "非晋角色击杀时，死亡翻牌不能触发取赐")
+    lu.assertEquals(room.general_pile, { weiGeneral })
+
+    inRoom(function() room:killPlayer { who = second, killer = lord } end)
+    lu.assertEquals(second.general, "qiao_heg__wei004")
+    lu.assertEquals(invokes, 1, "晋击杀只按死亡分支询问一次")
+    lu.assertEquals(lord:getTableMark(CI_MARK), { weiGeneral })
+  end)
+end
+
 function Testqiao_em_jin001_simayan:testTransferCannotChooseBannedKingdomAfterFreeAssignment()
   local room, lord, source = FkTest.room, p(1), p(2)
   local jinShu, guanYu = content.generals.jin_shu_deputy.name, "qiao_heg__shu002"
