@@ -56,7 +56,7 @@ local function pay(room, user, jiaChong)
     prompt = "#qiao__skill_jin004_1-give-invoke",
   })[1]
   if id == nil or not table.contains(user:getCardIds("he"), id) then return false end
-  room:obtainCard(jiaChong, id, true, fk.ReasonGive, user, skill.name)
+  room:obtainCard(jiaChong, id, false, fk.ReasonGive, user, skill.name)
   -- 牌在移动事件中仍可能被其他效果移走；只要已离开支付者，交给即已完成。
   return not table.contains(user:getCardIds("he"), id)
 end

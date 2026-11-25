@@ -136,3 +136,7 @@
 技能要求「观看手牌」并弃置、获得或操作其中的牌时，观看和决定操作使用同一个私密面板。操作方能正面查看整手牌，只有满足技能条件的牌可以选。用 `askToChooseCardsAndChoice` 向操作方单独发送请求，`all_cards` 是完整手牌，`cards` 是合法候选。确认后由服务端复核牌的归属、区域和操作条件，再执行移动。观看期间其他角色的可见性保持原有规则。[观看](../../../rulebook/terms/card-op-terms/watch.md)
 
 可选操作应提供「结束观看」。只有一张合法牌且操作必做时，观看后自动处理这张牌。有其他结算分支的技能保留该分支的顺序，例如伪溃看到【闪】时先观看，随后按技能结算【杀】。攻心、伪溃和尚义共用此交互。尚义让对方观看自己的手牌和查看对方暗将仍按原时序执行。[攻心的原生面板](https://github.com/SSadamune/Free-kill-hanjin/pull/17) · [Issue #27 补充反馈](https://github.com/SSadamune/Free-kill-hanjin/issues/27#issuecomment-7038741069)
+
+## 交牌和获得牌的可见性
+
+普通交牌或取得他人牌时，交牌人与收牌人能看到具体牌面，其他角色按本次移动中每张牌的来源区域和查看权限显示。调用 `room:obtainCard` 或 `room:moveCardTo` 将手牌移入另一名角色手牌区时，使用 `visible = false`。即使在同一批移动中，原装备区或判定区的牌仍然公开。如【反间】要求先展示再交给，交牌时继续公开。移动动画与战报都使用引擎的 `Player:cardVisible(id, move)`。[手牌区](../../../rulebook/terms/zone-terms/handArea.md) · [移动事件](../../../rulebook/events/move-card.md#附同时移动多张牌的流程)

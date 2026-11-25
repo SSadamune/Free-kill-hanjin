@@ -65,7 +65,7 @@ skill:addEffect("active", {
       local give = chosen and chosen[1]
       if give ~= nil and table.contains(target:getCardIds(Player.Hand), give) then
         room:moveCardTo({ give }, Card.PlayerHand, player, fk.ReasonGive,
-          skill.name, nil, true, target)
+          skill.name, nil, false, target)
         if player.dead then return end
       end
     end

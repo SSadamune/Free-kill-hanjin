@@ -269,6 +269,8 @@ function Testqiao_wu_support:testFanjianCanRefuseAndLoseHp()
   assert(ok, err)
   lu.assertEquals(p2.hp, p2.maxHp - 1)
   lu.assertEquals(#p2:getCardIds("h"), 3) -- 展示牌已交给其，未弃置
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(shown, Card.PlayerHand, Card.PlayerHand, room().players)
 end
 
 function Testqiao_wu_support:testFanjianMainPlaceData()

@@ -64,6 +64,8 @@ function Testqiao_shu_retinues:testBaimaGainsResponderCardOnJink()
   end)
   lu.assertEquals(p1.hp, p1.maxHp)
   lu.assertTrue(table.contains(p1:getCardIds("he"), steal))
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(steal, Card.PlayerHand, Card.PlayerHand, { p1, p2 })
 end
 
 function Testqiao_shu_retinues:testXiangbingSlashSpawnsOneNanmanOnDamagedTargets()
@@ -214,6 +216,8 @@ function Testqiao_shu_retinues:testBaimaTakesArcheryUserCardWhenPlayingJink()
   lu.assertEquals(p1.hp, p1.maxHp) -- 打出【闪】抵消万箭伤害
   lu.assertTrue(table.contains(p1:getCardIds("h"), peach))
   lu.assertFalse(table.contains(p3:getCardIds("he"), peach))
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(peach, Card.PlayerHand, Card.PlayerHand, { p1, p3 })
   lu.assertEquals(room():getCardArea(jink), Card.DiscardPile)
 end
 

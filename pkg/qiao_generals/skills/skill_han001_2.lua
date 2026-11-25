@@ -109,7 +109,7 @@ skill:addEffect("active", {
     -- 交牌是发动消耗；不足 max(1, X) 时不移动、不进入后续。
     if #cards < required then return end
 
-    room:moveCardTo(cards, Card.PlayerHand, to, fk.ReasonGive, skill.name, nil, true, player)
+    room:moveCardTo(cards, Card.PlayerHand, to, fk.ReasonGive, skill.name, nil, false, player)
 
     -- 交牌结算完成后再选择 C；发动者或收牌者在中途死亡则不继续。
     if player.dead or to.dead or to:isRemoved() then return end

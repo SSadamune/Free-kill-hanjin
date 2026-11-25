@@ -336,6 +336,8 @@ function Testqiao_wei_damage:testXingshangTakesCardsOrRecovers()
   end)
   lu.assertTrue(table.contains(p(1):getCardIds(Player.Hand), c1))
   lu.assertTrue(table.contains(p(1):getCardIds(Player.Hand), c2))
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(c1, Card.PlayerHand, Card.PlayerHand, { p(2), p(1) })
 
   inRoom(function() room:loseHp(p(1), 1, "test") end)
   local damagedHp = p(1).hp

@@ -50,7 +50,7 @@ skill:addEffect(fk.DamageFinished, {
     })
     local id = chosen and chosen[1]
     if id ~= nil then
-      room:obtainCard(player, id, true, fk.ReasonJustMove, player)
+      room:obtainCard(player, id, false, fk.ReasonJustMove, player)
     end
   end,
 })

@@ -449,6 +449,8 @@ function Testqiao_faction_tricks:testDangguHanTargetGivesCardAndIsOnlyNullifiedF
     room:useCard { from = user, card = Fk:getCardById(card, true), tos = { hanTarget, other } }
   end)
   lu.assertTrue(table.contains(user:getCardIds("he"), gift.id), "汉目标应交出一张自己的牌")
+  local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
+  assertMoveViews(gift.id, Card.PlayerHand, Card.PlayerHand, { hanTarget, user })
   lu.assertNotEquals(hanTarget.general, "anjiang", "已交牌的汉目标不再被暗置")
   lu.assertFalse(hanTarget:prohibitReveal(), "已交牌的汉目标不受禁明置")
   lu.assertEquals(other.general, "anjiang", "其他目标照常暗置")
