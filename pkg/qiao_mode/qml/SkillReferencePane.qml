@@ -12,6 +12,7 @@ Column {
   required property Flickable viewport
   required property var rootText
   property bool active: visible
+  property bool inlineTips: false
   property string referenceKey
   property color textColor: "#E4D5A0"
   property bool darkBackground: true
@@ -27,7 +28,9 @@ Column {
 
   spacing: 6
   onActiveChanged: if (!active) closeTips()
-  onReferenceKeyChanged: {
+  onReferenceKeyChanged: reset()
+
+  function reset() {
     closeTips();
     pages = [];
     currentPage = null;
@@ -140,6 +143,16 @@ Column {
       id: tip
       parent: root.viewport
       viewport: root.viewport
+      modal: !root.inlineTips
+      transformOrigin: root.inlineTips ? Popup.TopLeft : Popup.Center
+      scale: {
+        if (!root.inlineTips) return 1;
+        // Popup is reparented to the window overlay. Match the viewport's scale.
+        const step = Config.winScale;
+        const left = root.viewport.mapToItem(null, 0, 0);
+        const right = root.viewport.mapToItem(null, step, 0);
+        return (right.x - left.x) / step;
+      }
       dismissOnOutsideClick: root.tips[root.tips.length - 1] === tip
       html: Links.entriesText(root.catalog, { page: "#9ED9FC", tip: "#A9E7C7" }, entries)
       onReferenceClicked: (link, position) => root.activate(link, position)

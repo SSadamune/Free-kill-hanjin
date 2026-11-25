@@ -22,19 +22,22 @@ ColumnLayout {
   property var actionsByCard: ({})
   property string selectedCi: ""
   property string selectedKingdom: ""
+  property string inspectedCi: ""
   readonly property var selectedNames: mode === "give" ? (groups[selectedKingdom] ?? []) : [selectedCi]
   readonly property var actions: actionsByCard[selectedCi] ?? []
   signal submitted(var choice)
   signal canceled()
 
-  function inspect(card, name) {
+  onCardNamesChanged: {
+    if (!cardNames.includes(inspectedCi)) inspectedCi = "";
+    if (!cardNames.includes(selectedCi)) selectedCi = "";
+  }
+
+  function inspect(name) {
     if (mode === "consume" || mode === "remove") selectedCi = name;
-    const detail = Ltk.getGeneralDetail(name);
-    skillTip.html = "<b>" + SkillLinks.escapeText(Lua.tr(name)) + "</b><br/>" +
-      Array.from(detail.skill, skill => "<b>" + SkillLinks.escapeText(Lua.tr(skill.name)) +
-        "</b> " + skill.description).join("<br/>");
-    skillTip.linkPosition = card.mapToItem(root, card.width * 0.75, card.height / 2);
-    skillTip.open();
+    if (inspectedCi === name) details.reset();
+    inspectedCi = name;
+    detailViewport.contentY = 0;
   }
 
   GlowText {
@@ -55,42 +58,104 @@ ColumnLayout {
     glow.radius: 5
   }
 
-  GridView {
-    Layout.preferredWidth: Math.max(cellWidth, root.width - root.width % cellWidth)
-    Layout.fillHeight: true
-    Layout.alignment: Qt.AlignHCenter
-    cellWidth: 97
-    cellHeight: 134
+  Flickable {
+    id: cardRow
+    objectName: "qiaoCiCardRow"
+    readonly property int cardWidth: 93
+    readonly property int cardHeight: 130
+    readonly property real cardStep: cards.count > 1
+      ? Math.max(cardWidth / 2, Math.min(cardWidth + 4, (width - cardWidth) / (cards.count - 1)))
+      : cardWidth
+
+    Layout.fillWidth: true
+    Layout.preferredHeight: cardHeight + (contentWidth > width ? 9 : 0)
+    visible: cards.count > 0
     clip: true
-    model: root.cardNames
+    contentWidth: cards.count ? cardWidth + (cards.count - 1) * cardStep : 0
+    contentHeight: height
+    flickableDirection: Flickable.HorizontalFlick
+    boundsBehavior: Flickable.StopAtBounds
+    Controls.ScrollBar.horizontal: Controls.ScrollBar {
+      policy: cardRow.contentWidth > cardRow.width ? Controls.ScrollBar.AlwaysOn : Controls.ScrollBar.AlwaysOff
+    }
+
+    Repeater {
+      id: cards
+      model: root.cardNames
+      delegate: QiaoGeneralCard {
+        id: card
+        required property int index
+        required property string modelData
+        readonly property real exposedWidth: index === cards.count - 1 ? width : Math.min(width, cardRow.cardStep)
+        objectName: "qiaoCiCard"
+        width: cardRow.cardWidth
+        height: cardRow.cardHeight
+        x: index * cardRow.cardStep
+        z: index
+        autoBack: false
+        generalName: modelData
+        onClicked: root.inspect(modelData)
+        onRightClicked: root.inspect(modelData)
+        // Match the hit region to the part left visible by the card on its right.
+        containmentMask: Item {
+          width: card.exposedWidth
+          height: card.height
+        }
+
+        Rectangle {
+          width: card.exposedWidth
+          height: card.height
+          color: "transparent"
+          border.color: "#e4d5a0"
+          border.width: 2
+          z: 3
+          visible: root.inspectedCi === card.modelData
+        }
+        Rectangle {
+          x: card.exposedWidth - width - 5
+          y: card.height - height - 5
+          width: 26
+          height: 26
+          radius: 13
+          z: 3
+          color: "#165737"
+          border.color: "#b0edb8"
+          visible: root.selectedNames.includes(card.modelData)
+          Text {
+            anchors.centerIn: parent
+            text: "✓"
+            font.pixelSize: 19
+            font.bold: true
+            color: "#e1ffe5"
+          }
+        }
+      }
+    }
+  }
+
+  Flickable {
+    id: detailViewport
+    objectName: "qiaoCiDetailViewport"
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+    clip: true
+    contentWidth: width
+    contentHeight: details.height
+    flickableDirection: Flickable.VerticalFlick
     Controls.ScrollBar.vertical: Controls.ScrollBar {}
 
-    delegate: QiaoGeneralCard {
-      id: card
-      required property string modelData
-      autoBack: false
-      generalName: modelData
-      onClicked: root.inspect(card, modelData)
-      onRightClicked: root.inspect(card, modelData)
-
-      Rectangle {
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        anchors.margins: 5
-        width: 26
-        height: 26
-        radius: 13
-        z: 3
-        color: "#165737"
-        border.color: "#b0edb8"
-        visible: root.selectedNames.includes(card.modelData)
-        Text {
-          anchors.centerIn: parent
-          text: "✓"
-          font.pixelSize: 19
-          font.bold: true
-          color: "#e1ffe5"
-        }
+    SkillReferencePane {
+      id: details
+      viewport: detailViewport
+      width: Math.max(0, detailViewport.width - 16)
+      x: 4
+      referenceKey: root.inspectedCi
+      inlineTips: true
+      rootText: (catalog, theme) => {
+        const name = root.inspectedCi;
+        if (!name) return "";
+        const groups = [{ name, detail: Ltk.getGeneralDetail(name) }];
+        return SkillLinks.generalText(catalog, theme, groups, key => Lua.tr(key), true);
       }
     }
   }
@@ -138,15 +203,5 @@ ColumnLayout {
       text: root.mode === "view" ? "关闭" : Lua.tr("Cancel")
       onClicked: root.canceled()
     }
-  }
-
-  SkillReferenceTooltip {
-    id: skillTip
-    parent: root
-    viewport: root
-    entries: []
-    linkPosition: Qt.point(0, 0)
-    html: ""
-    dismissOnOutsideClick: true
   }
 }
