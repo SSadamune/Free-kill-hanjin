@@ -78,6 +78,10 @@ local function findDraft(pool, factions, num, count, distinctVersions, guestRepl
   return best
 end
 
+function M.canDeal(plan, num, distinctVersions, guestReplacement)
+  return findDraft(plan.kept, plan.allowed, num, 2, distinctVersions, guestReplacement) ~= nil
+end
+
 function M.deal(room, plan, count)
   local num = #room.players
   if not M.matchesPlayerCount(num, room:getSettings(M.ruleKey)) then return end

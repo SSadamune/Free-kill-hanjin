@@ -64,7 +64,7 @@ W.ActionRow {
       }
       break;
     }
-    Qt.callLater(updatePlayerCount);
+    Qt.callLater(updateRoomSettings);
   }
 
   Binding {
@@ -74,12 +74,21 @@ W.ActionRow {
     value: false
   }
 
-  function updatePlayerCount() {
+  Connections {
+    target: Config
+    function onCurSchemeChanged() { Qt.callLater(root.updateRoomSettings); }
+  }
+
+  function updateRoomSettings() {
     if (locksPlayerCount && playerCountRow) {
+      // CreateRoom expands these same per-package lists when it sends the request.
+      lobby.config.qiaoLockedBanScheme = Config.curScheme;
+      lobby.config.qiaoLockedHiddenPacks = Config.serverHiddenPacks;
       playerCountRow.value = roomSizes[value] ?? roomSizes[model[0]];
+      lobby.updateFeasible();
     }
   }
 
   // The stock settings page saves the rule before the spin row checks capacity.
-  onValueChanged: Qt.callLater(updatePlayerCount)
+  onValueChanged: Qt.callLater(updateRoomSettings)
 }

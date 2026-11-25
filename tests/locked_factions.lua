@@ -138,6 +138,34 @@ function Testlocked_factions:testRoomRuleSelectsCapacity()
   lu.assertTrue(mode:feasible(settings(4)))
 end
 
+function Testlocked_factions:testCreationChecksTheActiveBanSchemeAndHidesWildCount()
+  __dofile("../../../tests/support/qiao_content.lua")
+  local mode = Fk.game_modes[Modes.locked]
+  local W = require "ui_emu.preferences"
+  local scheme = { banPkg = {} }
+  for name in pairs(Fk.packages) do scheme.banPkg[name] = {} end
+  local options = { playerNum = 4, qiaoLockedBanScheme = scheme,
+    _mode = { [Locked.ruleKey] = Locked.rules[2], [Guest.settingKey] = false } }
+
+  local shortlist = {}
+  scheme.banPkg.qiao_test_content = shortlist
+  for _, kingdom in ipairs({ "wei", "shu" }) do
+    for i = 1, 3 do table.insert(shortlist, ("qiao_test__%s_%d"):format(kingdom, i)) end
+  end
+  lu.assertFalse(mode:feasible(options))
+  table.insert(shortlist, "qiao_test__wei_4")
+  table.insert(shortlist, "qiao_test__shu_4")
+  lu.assertTrue(mode:feasible(options))
+  scheme.normalPkg = { qiao_test_content = { "qiao_test__shu_4" } }
+  lu.assertFalse(mode:feasible(options))
+
+  for _, group in ipairs(W.toQmlData(mode.ui_settings, options)) do
+    for _, row in ipairs(group._children) do
+      lu.assertNotEquals(row._settingsKey, "qiao_wild_count")
+    end
+  end
+end
+
 function Testlocked_factions:testDraftKeepsEqualFarmerOffersAndTwoExtraLandlordOffers()
   __dofile("../../../tests/support/qiao_content.lua")
   local players = { {}, {}, {} }

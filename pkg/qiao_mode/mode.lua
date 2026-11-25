@@ -48,6 +48,39 @@ local function offerCount(value, minimum, maximum)
   return math.max(minimum, math.min(value or 7, maximum))
 end
 
+-- Before the server draws faction bans, reject pools that cannot support any
+-- legal pair of factions. The server still checks its actual post-ban pool.
+local function canDealLocked(settings, getSetting, config)
+  local scheme = settings.qiaoLockedBanScheme or {}
+  local disabledPacks = getSetting("disabledPack") or {}
+  local disabledGenerals = getSetting("disabledGenerals") or {}
+  local modeDisabled = Fk.game_mode_disabled[Modes.locked] or {}
+  local hiddenPacks = settings.qiaoLockedHiddenPacks or {}
+  local function allowed(name)
+    local pack = Fk.generals[name].package.name
+    local whitelist = (scheme.banPkg or {})[pack]
+    return not table.contains(modeDisabled, pack)
+      and not table.contains(disabledPacks, pack)
+      and not table.contains(hiddenPacks, pack)
+      and not table.contains(scheme.banCardPkg or {}, pack)
+      and (whitelist == nil or table.contains(whitelist, name))
+      and not table.contains((scheme.normalPkg or {})[pack] or {}, name)
+      and not table.contains(disabledGenerals, name)
+  end
+
+  local names = {}
+  for name, general in pairs(Fk.generals) do
+    if not general.hidden and not general.total_hidden and not Commander.isRetinue(name) and allowed(name) then
+      table.insert(names, name)
+    end
+  end
+  local guestReplacement = getSetting(Guest.settingKey) ~= false
+  local plan = Versions.planPool(settings.playerNum, names, nil, 0, function() return {} end, getGeneral,
+    { candidates = config.candidates, limit = #config.candidates, guestReplacement = guestReplacement })
+  plan.kept = table.filter(plan.kept, allowed)
+  return Locked.canDeal(plan, settings.playerNum, getSetting("disableSameConvert"), guestReplacement)
+end
+
 -- Reserve a legal pair for every seat, then fill the remaining offers without duplicates.
 local function deal(room, players, count)
   local pool = table.simpleClone(room.general_pile)
@@ -127,6 +160,10 @@ function M.create(base, name)
       local count = offerCount(room:getSettings("qiao_offer_count"), minOffers, maxOffers)
       local offers, assigned
       if locked then
+        plan.kept = table.filter(plan.kept, function(name)
+          return not table.contains(room.disabled_generals, name)
+            and not table.contains(room.disabled_packs, getGeneral(name).package.name)
+        end)
         local actualCount
         offers, assigned, actualCount = Locked.deal(room, plan, count)
         if not offers then
@@ -409,15 +446,17 @@ function M.create(base, name)
         return modeOf(settings).generalTimeout or Selection.defaultTimeout
       end,
     },
-    W.SpinRow {
+  }
+  if not locked then
+    table.insert(ruleSettings, W.SpinRow {
       _settingsKey = "qiao_wild_count", title = "qiao_wild_count", from = 0,
       to = 12,
       value = function(settings)
         local value = (settings._mode or {}).qiao_wild_count
         return value == nil and 4 or value
       end,
-    },
-  }
+    })
+  end
   if locked then
     local ruleRow = W.ComboRow {
       _settingsKey = Locked.ruleKey, title = Locked.ruleKey,
@@ -473,7 +512,8 @@ function M.create(base, name)
       if locked and not Locked.matchesPlayerCount(settings.playerNum, getSetting(Locked.ruleKey)) then
         return false
       end
-      if not pcall(resolveSettings, getSetting) then return false end
+      local valid, config = pcall(resolveSettings, getSetting)
+      if not valid or (locked and not canDealLocked(settings, getSetting, config)) then return false end
       local generals, cards = 0, 0
       for _, name in ipairs(self.whitelist) do
         local pack = Fk.packages[name]
