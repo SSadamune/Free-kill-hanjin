@@ -2,6 +2,24 @@
 -- 只覆盖会在技能面板、旗状态栏或牌名中显示的键；内部规则/代理技能不强行配文案。
 Testqiao_translation_completeness = {}
 
+function Testqiao_translation_completeness:testSkillReferenceCatalog()
+  local references = require "packages.qiao.pkg.qiao_mode.skill_references"
+  local catalog = references.catalog()
+  local skills = {}
+  for _, skill in ipairs(catalog.skills) do
+    skills[skill.title] = skill
+  end
+
+  local lu = require "luaunit"
+  lu.assertEquals(skills["缘江烽火图"].description, Fk:getDescription(skills["缘江烽火图"].id))
+  lu.assertStrContains(skills["烽火"].description, "缘江烽火图")
+  lu.assertEquals(skills["统领能力"].description, Fk:translate(":qiao_commander_ability"))
+  lu.assertEquals(skills["野心家"].description, Fk:translate(":@!!wild"))
+  lu.assertEquals(catalog.cards["杀"].id, "qiao__slash")
+  lu.assertEquals(catalog.cards["赤霄剑"].description, Fk:translate(":qiao__chixiao_sword"))
+  lu.assertNotNil(catalog.cards["洛水之誓"])
+end
+
 local PUBLIC_SKILLS = {
   "qiao__skill_em_han001_banner",
   "qiao__skill_em_han001_consume",
