@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 3)
+  lu.assertEquals(Data.generalCount, 4)
   lu.assertEquals(Data.retinueCount, 0)
   lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 6)
+  lu.assertEquals(Data.skillCount, 7)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -60,6 +60,7 @@ function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests(
   lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__wei013"]))
   lu.assertTrue(Fk.generals["qiao_heg__wei020"]:isCompanionWith(Fk.generals["qiao_heg__han023"]))
   lu.assertEquals(Guest.guestKingdoms("qiao_heg__wei020"), { "han" })
+  lu.assertEquals(Guest.guestKingdoms("qiao_heg__shu020"), {})
 end
 
 -- HAN023 伍琼&种辑：除奸（无距离/无次数且不计次 + 阶段末延时伤害不因暗置撤销）
@@ -331,6 +332,70 @@ function Testqiao_bian_han_wei_shu:testWei020ZhiyuSameAndMixedColor()
   end)
   lu.assertNotEquals(xunyou.deputyGeneral, "qiao_test__wei_2", "正式荀攸奇策应支持变更副将")
   lu.assertTrue(room:getTag("qiao_qice_change_used_qiao_heg__wei020") == true, "奇策变更应随荀攸武将牌独立记账")
+end
+
+-- SHU020 沙摩柯：蒺藜（动态攻击范围连续触发 + 回合外打出触发）
+function Testqiao_bian_han_wei_shu:testShu020JiliDynamicAttackRangeAndRespond()
+  local room = FkTest.room
+  local smk, foe = p(1), p(2)
+  local sword, slash, jink
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "shu", "wei", "wu", "han" })
+    skill_test.installDualGenerals(room, smk, {
+      main = "qiao_heg__shu020", deputy = "qiao_test__shu_2", kingdom = "shu", hp = 4,
+    })
+    smk:throwAllCards("he")
+    sword = room:printCard("qiao__qinggang_sword", Card.Spade, 6) -- 攻击范围 2
+    slash = room:printCard("qiao__slash", Card.Heart, 7)
+    jink = room:printCard("qiao__jink", Card.Diamond, 8)
+    room:obtainCard(smk, { sword, slash, jink }, false, fk.ReasonJustMove)
+    room:setCurrent(smk)
+  end)
+
+  local drawnCounts = {}
+  local beforeHand
+  skill_test.withSkillRequests(room, "qiao__skill_shu020_1", {
+    askToSkillInvoke = function(self, who)
+      table.insert(drawnCounts, who:getAttackRange())
+      return true
+    end,
+  }, function()
+    inRoom(function()
+      -- 第 1 张：使用青釭剑（使用时攻击范围仍为 1 -> 摸 1）；随后青釭剑入装备（攻击范围变 2）。
+      -- 第 2 张：对 foe 使用杀（使用时攻击范围为 2 -> 摸 2）。
+      local turn = GameEvent.Turn:create(TurnData:new(smk, "game_rule", {}))
+      function turn:main()
+        beforeHand = #smk:getCardIds("h")
+        room:useCard { from = smk, tos = { smk }, card = sword }
+        room:useCard { from = smk, tos = { foe }, card = slash }
+      end
+      turn:exec()
+    end)
+  end)
+  lu.assertEquals(drawnCounts, { 1, 2 }, "第1张武器按装前范围1摸1，第2张杀按装后范围2摸2")
+  lu.assertEquals(#smk:getCardIds("h"), beforeHand - 2 + 1 + 2, "两次蒺藜共摸 3 张牌")
+
+  -- 回合外打出第 1 张牌（卸武器恢复攻击范围 1）也触发摸 1 张。
+  drawnCounts = {}
+  inRoom(function()
+    smk:throwAllCards("he")
+    room:obtainCard(smk, jink, false, fk.ReasonJustMove)
+  end)
+  skill_test.withSkillRequests(room, "qiao__skill_shu020_1", {
+    askToSkillInvoke = function(self, who)
+      table.insert(drawnCounts, who:getAttackRange())
+      return true
+    end,
+  }, function()
+    inRoom(function()
+      local turn = GameEvent.Turn:create(TurnData:new(foe, "game_rule", {}))
+      function turn:main()
+        room:responseCard { from = smk, card = jink }
+      end
+      turn:exec()
+    end)
+  end)
+  lu.assertEquals(drawnCounts, { 1 }, "回合外打出第 1 张牌且攻击范围 1 应触发蒺藜")
 end
 
 -- 审阅回归（第 6 项）：心疾暂时无效时桃恢复可用，恢复有效后个人鏖战立即恢复，全局鏖战仍覆盖。

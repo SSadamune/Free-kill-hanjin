@@ -1,16 +1,16 @@
--- 六势力变包正式数据：3 名普通武将。
+-- 六势力变包正式数据：4 名普通武将。
 -- 依据 docs/rules/bian-generals.md、各逐将规则页与石激桑武将列表（变包）定稿整理。
 -- 由 pkg/qiao_generals/init.lua 合并至君临天下（qiao_zhenshi）正式包，角标为「变」。
 local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 3
+M.generalCount = 4
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 6
+M.skillCount = 7
 M.retinueSkillCount = 0
-M.kingdoms = { "han", "wei" }
+M.kingdoms = { "han", "wei", "shu" }
 
 M.generals = {
   {
@@ -107,6 +107,32 @@ M.generals = {
         id = [==[qiao__skill_wei020_2]==],
         name = [==[智愚]==],
         text = [==[当你受到伤害后，你可以摸一张牌，展示所有手牌，若颜色均相同，来源弃置一张手牌。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[SHU020]==],
+    id = [==[qiao_heg__shu020]==],
+    name = [==[沙摩柯]==],
+    kingdom = [==[shu]==],
+    title = [==[五溪蛮王]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_shu020_1]==],
+        name = [==[蒺藜]==],
+        text = [==[当你于一回合内使用或打出第X张牌时，你可以摸X张牌（X为你的攻击范围）。]==],
         related = false,
         tags = {  },
       },
