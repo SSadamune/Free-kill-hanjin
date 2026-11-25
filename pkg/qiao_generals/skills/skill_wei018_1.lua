@@ -12,12 +12,8 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
----@param player ServerPlayer
----@return integer[]
-local function discardableArea(player)
-  return table.filter(player:getCardIds("hej"), function(id)
-    return not player:prohibitDiscard(id)
-  end)
+local function canDiscard(player, owner, id)
+  return player ~= owner or not player:prohibitDiscard(id)
 end
 
 ---@param data table
@@ -31,13 +27,32 @@ local function equippedBy(data)
 end
 
 ---@param room Room
+---@param player ServerPlayer
 ---@param equipped ServerPlayer
 ---@return ServerPlayer[]
-local function discardTargets(room, equipped)
+local function discardTargets(room, player, equipped)
   return table.filter(room:getPresentPlayers(), function(p)
     return p ~= equipped and not p.dead and not p:isRemoved()
-      and equipped:distanceTo(p) == 1 and #discardableArea(p) > 0
+      and equipped:distanceTo(p) == 1
+      and table.find(p:getCardIds("hej"), function(id) return canDiscard(player, p, id) end) ~= nil
   end)
+end
+
+local function ownDiscardGroups(player)
+  local groups, visible, candidates = {}, {}, {}
+  for _, zone in ipairs({ { "$Hand", Player.Hand }, { "$Equip", Player.Equip }, { "$Judge", Player.Judge } }) do
+    local ids = table.filter(player:getCardIds(zone[2]), function(id)
+      return canDiscard(player, player, id)
+    end)
+    if #ids > 0 then
+      table.insert(groups, { zone[1], ids })
+      table.insertTable(candidates, ids)
+      for _, id in ipairs(ids) do
+        if not player:cardVisible(id, nil, true) then visible[tostring(id)] = false end
+      end
+    end
+  end
+  return { card_data = groups, visible_data = visible }, candidates
 end
 
 local function canPlace(to, id)
@@ -107,13 +122,13 @@ skill:addEffect(fk.AfterCardsMove, {
     end
     if player.room.current ~= player then return false end
     local equipped = equippedBy(data)
-    return equipped ~= nil and #discardTargets(player.room, equipped) > 0
+    return equipped ~= nil and #discardTargets(player.room, player, equipped) > 0
   end,
   on_cost = function(self, event, target, player, data)
     local room = player.room
     local equipped = equippedBy(data)
     if equipped == nil then return false end
-    local targets = discardTargets(room, equipped)
+    local targets = discardTargets(room, player, equipped)
     if #targets == 0 then return false end
     local chosen = Invoke.ask(room, player, {
       targets = targets,
@@ -133,21 +148,21 @@ skill:addEffect(fk.AfterCardsMove, {
     local cost = event:getCostData(self) or {}
     local to = cost.to
     if to == nil or to.dead or to:isRemoved() then return end
-    local ids = discardableArea(to)
+    local ids = to:getCardIds("hej")
     if #ids == 0 then return end
-    local visible = {}
-    for _, cardId in ipairs(ids) do
-      if not player:cardVisible(cardId, nil, true) then
-        visible[tostring(cardId)] = false
-      end
+    local flag = "hej"
+    if to == player then
+      flag, ids = ownDiscardGroups(player)
+      if #ids == 0 then return end
     end
     local id = room:askToChooseCard(player, {
       target = to,
-      flag = { card_data = { { "可弃置", ids } }, visible_data = visible },
+      flag = flag,
       skill_name = skill.name,
       prompt = "#qiao__skill_wei018_1-card",
     })
-    if not table.contains(ids, id) or not table.contains(discardableArea(to), id) then return end
+    if not table.contains(ids, id) or not table.contains(to:getCardIds("hej"), id)
+      or not canDiscard(player, to, id) then return end
     room:throwCard(id, skill.name, to, player)
   end,
 })
