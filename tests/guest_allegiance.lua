@@ -492,6 +492,30 @@ function Testqiao_guest_allegiance:testClientDialogContract()
   lu.assertFalse(blocked)
 end
 
+function Testqiao_guest_allegiance:testOpeningAscensionHintsFollowTheRoomAndOfferedPair()
+  local normal, wild = "qiao_heg__jin001", "qiao_test__wild_2"
+  local deputy, unrelated = "qiao_test__jin_1", "qiao_test__han_1"
+  local lord = assert(Versions.lord_version(normal))
+  for _, settings in ipairs({
+    { qiao_guest_replacement = false, qiao_wild_count = 8 },
+    { qiao_guest_replacement = true, qiao_wild_count = 8 },
+    { qiao_guest_replacement = false, qiao_wild_count = 8, disabledGenerals = { lord } },
+  }) do
+    local room = create { settings = settings }
+    FkTest.runInRoom(function()
+      local component = Selection.askData(room, { normal, wild, deputy, unrelated }).component
+      local hints = component.model.prop.extraData.ascensions
+      lu.assertEquals(hints[normal], settings.disabledGenerals == nil and true or nil)
+      lu.assertTrue(hints[wild])
+      lu.assertNil(hints[deputy])
+      lu.assertEquals(component.url, settings.qiao_guest_replacement and Selection.redraw_url or Selection.ascension_url)
+      local noPartner = Selection.askData(room, { wild, unrelated }).component.model.prop.extraData.ascensions
+      lu.assertNil(noPartner[wild])
+    end)
+    support.clearRoom()
+  end
+end
+
 function Testqiao_guest_allegiance:testLiuBeiDraftShowsBannedGuestFactionWithoutAllowingPairing()
   local name = "qiao_heg__shu001"
   local room = create { backend = forcedBackend({ "shu", "qun" }) }

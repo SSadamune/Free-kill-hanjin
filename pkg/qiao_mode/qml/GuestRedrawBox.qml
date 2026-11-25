@@ -23,6 +23,11 @@ GraphicsBox {
 
   property alias generalCardList: generalCardList
 
+  SelectionAscensionBadges {
+    cards: generalCardList
+    eligible: root.dataModel.extraData.ascensions ?? ({})
+  }
+
   property var draggingCard: null
 
   property bool waitingForRedraw: false
