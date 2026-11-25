@@ -255,6 +255,24 @@ end
 
 local QiaoClient = BaseClient:subclass("QiaoClient")
 
+local hiddenGeneralMarks = { __heg_general = true, __heg_deputy = true }
+
+function QiaoClient:ownHiddenGenerals(playerId)
+  if self.observing or self.replaying or not Self or Self.id ~= playerId
+    or Self.general ~= "anjiang" or Self.deputyGeneral ~= "anjiang" then return false end
+  local main = Self:getMark("__heg_general")
+  local deputy = Self:getMark("__heg_deputy")
+  if not Fk.generals[main] or not Fk.generals[deputy] then return false end
+  return { main, deputy }
+end
+
+function QiaoClient:handleSetPlayerMark(data)
+  BaseClient.handleSetPlayerMark(self, data)
+  if hiddenGeneralMarks[data[2]] and Self and data[1] == Self.id then
+    self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
+  end
+end
+
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
 --- 辅助／额外发动与无次数声明的转化由 M.appliesTo 排除，其他模式由 M.exhausted 排除。
 local function exhaustedActiveSkill(request, name)
@@ -461,6 +479,7 @@ function QiaoClient:notifyUI(command, data)
   BaseClient.notifyUI(self, command, data)
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
+    BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})

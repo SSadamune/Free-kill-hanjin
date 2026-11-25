@@ -15,6 +15,7 @@ Room {
   property bool guestIllustrations: false
   property int pileActionRevision: 0
   property int ciRevision: 0
+  property int ownHiddenGeneralsRevision: 0
 
   function ciCardsForDisplay(playerId) {
     room.ciRevision;
@@ -25,6 +26,36 @@ Room {
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile {} }
   Component { id: referencePane; SkillReferencePane {} }
+  Component { id: privateGeneralModel; Binding { property: "dataModel" } }
+
+  function bindOwnHiddenGenerals(item) {
+    if (item.dataModel.playerid !== room.dataModel.dashboardId) return;
+    const cardColumn = SkillLinks.findChild(item, child =>
+      child.children.filter(card => card instanceof LtkComponents.GeneralCardItem).length === 2);
+    if (!cardColumn) return;
+    const context = privateGeneralContext.createObject(item, { player: item.dataModel });
+    const cards = cardColumn.children.filter(card => card instanceof LtkComponents.GeneralCardItem);
+    cards.forEach((card, index) => privateGeneralModel.createObject(item, {
+      target: card,
+      when: Qt.binding(() => !!context.generals[index]),
+      value: Qt.binding(() => context.generals[index] ? Ltk.createGeneralCardModel(context.generals[index]) : null),
+    }));
+  }
+
+  Component {
+    id: privateGeneralContext
+
+    QtObject {
+      required property var player
+      readonly property var generals: {
+        room.ownHiddenGeneralsRevision;
+        const id = player.playerid;
+        if (Config.observing || Config.replaying || id !== Cpp.self.id
+            || player.general !== "anjiang" || player.deputyGeneral !== "anjiang") return [];
+        return JSON.parse(Lua.ev(`json.encode(ClientInstance:ownHiddenGenerals(${id}))`)) || [];
+      }
+    }
+  }
 
   Connections {
     target: room.infoPopup
@@ -32,6 +63,7 @@ Room {
     function onItemChanged() {
       const item = room.infoPopup.item;
       if (item instanceof Info.PlayerDetail) {
+        room.bindOwnHiddenGenerals(item);
         const tabs = SkillLinks.findChild(item, child => child instanceof Controls.SwipeView);
         const viewport = tabs?.itemAt(0);
         const text = SkillLinks.findChild(viewport, child => child instanceof LtkComponents.DescriptionText);
@@ -239,6 +271,7 @@ Room {
 
   Component.onCompleted: {
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
+    addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {

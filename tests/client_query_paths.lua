@@ -13,6 +13,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 local ClientPlayer = require "ltk.client.clientplayer"
+local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
@@ -57,6 +58,42 @@ Testqiao_client_query_paths = {
     support.clearRoom()
   end,
 }
+
+function Testqiao_client_query_paths:testOnlyOwnDoubleHiddenGeneralFrontsAreAvailable()
+  client_room.run(room(), function(players)
+    local client = QiaoClient:new(ClientInstance.client)
+    client.players = players
+    local me, other = players[1], players[2]
+    me.general, me.deputyGeneral = "anjiang", "anjiang"
+    other.general, other.deputyGeneral = "anjiang", "anjiang"
+    other:setMark("__heg_general", "qiao_heg__jin001")
+    other:setMark("__heg_deputy", "qiao_heg__jin002")
+    local notifications = {}
+    function client:notifyUI(command) table.insert(notifications, command) end
+    local saved = Self
+    Self = me
+    local ok, err = pcall(function()
+      me:setMark("__heg_general", 0)
+      me:setMark("__heg_deputy", 0)
+      lu.assertFalse(client:ownHiddenGenerals(me.id))
+      client:handleSetPlayerMark { me.id, "__heg_general", "qiao_heg__jin001" }
+      client:handleSetPlayerMark { me.id, "__heg_deputy", "qiao_heg__jin002" }
+      client:handleSetPlayerMark { other.id, "__heg_deputy", "qiao_heg__jin003" }
+      lu.assertEquals(notifications, { "QiaoOwnHiddenGeneralsChanged", "QiaoOwnHiddenGeneralsChanged" })
+      lu.assertEquals(client:ownHiddenGenerals(me.id), { "qiao_heg__jin001", "qiao_heg__jin002" })
+      lu.assertFalse(client:ownHiddenGenerals(other.id))
+      client.observing = true
+      lu.assertFalse(client:ownHiddenGenerals(me.id))
+      client.observing, client.replaying = false, true
+      lu.assertFalse(client:ownHiddenGenerals(me.id))
+      client.replaying = false
+      me.general = "qiao_heg__jin001"
+      lu.assertFalse(client:ownHiddenGenerals(me.id))
+    end)
+    Self = saved
+    if not ok then error(err, 0) end
+  end)
+end
 
 local function pushPolicy(policy)
   local rec
