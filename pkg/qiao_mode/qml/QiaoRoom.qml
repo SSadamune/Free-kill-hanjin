@@ -22,6 +22,7 @@ Room {
   property int pileActionRevision: 0
   property int ciRevision: 0
   property int ownHiddenGeneralsRevision: 0
+  property int skillStatusRevision: 0
 
   function ciCardsForDisplay(playerId) {
     room.ciRevision;
@@ -32,6 +33,7 @@ Room {
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile {} }
   Component { id: referencePane; SkillReferencePane {} }
+  Component { id: stateButton; SkillStatusButton {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
 
   GeneralCardPresentation {
@@ -199,6 +201,17 @@ Room {
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
       const marks = photo?.picMarkArea;
+      if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
+        stateButton.createObject(marks, {
+          states: Qt.binding(() => {
+            room.skillStatusRevision;
+            photo.general;
+            photo.deputyGeneral;
+            if (photo.dead || !photo.playerid) return [];
+            return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
+          }),
+        });
+      }
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {
           cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
@@ -232,7 +245,10 @@ Room {
 
   Connections {
     target: room.dataModel
-    function onCardsMoved() { Qt.callLater(room.bindPhotoExtras); }
+    function onCardsMoved() {
+      ++room.skillStatusRevision;
+      Qt.callLater(room.bindPhotoExtras);
+    }
     function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
   }
 
@@ -256,6 +272,7 @@ Room {
   Component.onCompleted: {
     roomGeneralAppearance.watch(room);
     addCallback("QiaoGuestFactionsChanged", () => { ++room.guestFactionsRevision; });
+    addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);

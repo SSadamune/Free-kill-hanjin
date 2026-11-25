@@ -3,6 +3,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local Qianxi = require "packages.qiao.pkg.qiao_generals.util.shu019_qianxi"
 local JinDeck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
 
@@ -181,6 +182,14 @@ function Testqiao_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
   lu.assertNotNil(shown)
   lu.assertTrue(table.contains(zhangHua:getCardIds("h"), shown))
   lu.assertEquals(drawer:getMark("qiao_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
+  withClientRoom(room, function(clients)
+    local player = clients[2]
+    local state = table.find(SkillStatus.forPlayer(player), function(entry) return entry.id == "fuli" end)
+    lu.assertNotNil(state)
+    lu.assertEquals(state.value, JinDeck.suitSymbols({ Fk:getCardById(shown).suit }))
+    player:setMark(SkillStatus.fuliSuitMark(Fk:getCardById(shown).suit), 0)
+    lu.assertNil(table.find(SkillStatus.forPlayer(player), function(entry) return entry.id == "fuli" end))
+  end)
 end
 
 function Testqiao_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()

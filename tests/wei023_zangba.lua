@@ -60,6 +60,10 @@ function Testqiao_zangba:testHengjiangSubtractsBeforeAndAfterYinyangfish()
  inRoom(function()
   room:damage{from=current,to=me,damage=2}
   beforeFish=current:getMaxCards()
+  local status = require "packages.qiao.pkg.qiao_mode.skill_status"
+  local state = table.find(status.forPlayer(current), function(entry) return entry.id == status.hengjiang end)
+  lu.assertNotNil(state)
+  lu.assertEquals(state.value, "−2")
  end)
  FkTest.setNextReplies(current,{"1"})
  inRoom(function()

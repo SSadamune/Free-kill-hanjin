@@ -10,6 +10,7 @@ local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skil
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -268,9 +269,22 @@ end
 
 function QiaoClient:handleSetPlayerMark(data)
   BaseClient.handleSetPlayerMark(self, data)
+  if SkillStatus.watches(data[2]) then
+    self:notifyUI("QiaoSkillStatusChanged", {})
+  end
   if hiddenGeneralMarks[data[2]] and Self and data[1] == Self.id then
     self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
   end
+end
+
+function QiaoClient:sendDataToUI(data)
+  BaseClient.sendDataToUI(self, data)
+  self:notifyUI("QiaoSkillStatusChanged", {})
+  self:notifyUI("QiaoGuestFactionsChanged", {})
+end
+
+function QiaoClient:skillStates(playerId)
+  return SkillStatus.forPlayer(self:getPlayerById(playerId))
 end
 
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
@@ -480,6 +494,9 @@ local function choiceDialog(command, data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if command == "SetPlayerMark" and SkillStatus.watches(data[2]) and isQiaoMode() then
+    return
+  end
   if (command == "AskForChoices" or command == "AskForOptions") and isQiaoMode() then
     local dialog = choiceDialog(command, data)
     if dialog then return BaseClient.notifyUI(self, "CustomDialog", dialog) end
@@ -517,6 +534,9 @@ function QiaoClient:notifyUI(command, data)
     data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
   end
   BaseClient.notifyUI(self, command, data)
+  if (command == "AddSkill" or command == "LoseSkill") and data[2] == "ld__jilis" and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
+  end
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
     BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})

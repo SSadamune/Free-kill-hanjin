@@ -2,6 +2,7 @@
 local skill = fk.CreateSkill {name="qiao__skill_wei023_1"}
 skill.qiaoImplemented = true
 local RULE="qiao__wei023_hengjiang_rule"
+local status = require "packages.qiao.pkg.qiao_mode.skill_status"
 skill:addEffect(fk.Damaged,{
   can_trigger=function(self,event,target,player,data)
     return target==player and player:hasSkill(skill.name) and not player.dead
@@ -26,7 +27,9 @@ skill:addEffect(fk.Damaged,{
     local room=player.room
     if not room:hasSkill(RULE) then room:addSkill(Fk.skills[RULE]) end
     local current=room.current
-    room:addPlayerMark(current,MarkEnum.MinusMaxCardsInTurn,math.max(1,#current:getCardIds("e")))
+    local amount = math.max(1, #current:getCardIds("e"))
+    room:addPlayerMark(current, MarkEnum.MinusMaxCardsInTurn, amount)
+    room:addPlayerMark(current, status.hengjiang, amount)
     room:broadcastProperty(current,"MaxCards")
     local follow=current:getTableMark("qiao_hengjiang_follow-turn")
     table.insert(follow,player.id)
