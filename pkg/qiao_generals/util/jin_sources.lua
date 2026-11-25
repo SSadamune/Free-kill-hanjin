@@ -14,11 +14,6 @@ local M = {}
 
 M.SKILL = "qiao__skill_jin010_2"
 
-local function isLord(player)
-  local room = player.room
-  return player.role == "lord" and player.role_shown and room:isGameMode("role_mode")
-end
-
 local function canLose(player, name)
   return SameName.canonicalHistoryKey(name) ~= M.SKILL
     and SkillSources.isGeneralSkill(Fk.skills[name], player)
@@ -43,15 +38,17 @@ function M.choices(player)
       extra = extra == true,
     })
   end
-  local lord = isLord(player)
   for _, isDeputy in ipairs({ false, true }) do
     local name = Exchange.actualGeneral(player, isDeputy)
     if name ~= "" and name ~= "anjiang" and Fk.generals[name] and not Exchange.isSoldier(name) then
-      for _, skillName in ipairs(Exchange.positionSkills(name, isDeputy, lord, false)) do
+      local skills = Exchange.positionSkillKeys(player.room, player, isDeputy, false)
+      local ids = {}
+      for id in pairs(skills) do table.insert(ids, id) end
+      table.sort(ids)
+      for _, skillName in ipairs(ids) do
         local skill = Fk.skills[skillName]
-        if skill ~= nil and not Duanchang.isLost(player.room, name, skillName)
-          and (player:hasSkill(skillName, true, true) or player:isFakeSkill(skill)) then
-          addChoice(skillName, name, isDeputy)
+        if skill ~= nil and (player:hasSkill(skillName, true, true) or player:isFakeSkill(skill)) then
+          addChoice(skills[skillName], name, isDeputy)
         end
       end
     end
@@ -97,6 +94,7 @@ function M.lose(room, player, choice)
       and player:hasSkill(instance.skill, true, true) and Retinues.loseSkill(player, instance.id)
   end
   if choice.general ~= nil then
+    if Exchange.actualGeneral(player, choice.deputy == true) ~= choice.general then return false end
     return Duanchang.loseCardSkill(room, player, choice.deputy == true, choice.skill)
   end
   if choice.extra then

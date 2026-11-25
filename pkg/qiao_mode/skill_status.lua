@@ -1,6 +1,7 @@
 -- Read only public, synchronized state for the character panel. Keep the
 -- underlying marks and their existing cleanup rules as the source of truth.
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
 local M = {}
 Fk:loadTranslationTable {
   ["qiao_skill_status"] = "状态",
@@ -27,7 +28,7 @@ local entries = {
   end },
   { "qiao__skill_shu004_1_finish-turn", "qiao__skill_shu004_1", "本回合结束阶段额外卜算一次。" },
   { "qiao__skill_shu013_2_turn-turn", "qiao__skill_shu013_2", "本回合结束时可弃一张手牌，令一名其他角色获得额外回合。" },
-  { "qiao__skill_shu006_2_positions-turn", "qiao__skill_shu006_2", "所示武将牌的技能于本回合内按【铁骑】的限制无效。", function(value)
+  { Tieqi.POSITIONS, "qiao__skill_shu006_2", "所示武将牌的技能于本回合内按【铁骑】的限制无效。", function(value)
     local positions = {}
     if table.contains(value, "main") then table.insert(positions, "主将") end
     if table.contains(value, "deputy") then table.insert(positions, "副将") end

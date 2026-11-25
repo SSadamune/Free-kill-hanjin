@@ -1,12 +1,11 @@
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
-local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_shu006_2",
 }
 skill.qiaoImplemented = true
 
-local POS = "qiao__skill_shu006_2_positions-turn"
 local MAIN = "#qiao__skill_shu006_2-main"
 local DEPUTY = "#qiao__skill_shu006_2-deputy"
 
@@ -19,11 +18,6 @@ Fk:loadTranslationTable {
   ["#qiao__skill_shu006_2-discard"] = "铁骑：展示并弃置判定花色的所有手牌，否则不能响应此【杀】",
 }
 
-local function hasGeneralCard(to, pos)
-  local name = Exchange.actualGeneral(to, pos == "deputy")
-  return name ~= "" and name ~= "anjiang" and Fk.generals[name] ~= nil and not Exchange.isSoldier(name)
-end
-
 skill:addEffect(fk.TargetSpecified, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
@@ -33,8 +27,8 @@ skill:addEffect(fk.TargetSpecified, {
   on_cost = function(self, event, target, player, data)
     local to = data.to
     local choices = {}
-    if hasGeneralCard(to, "main") then table.insert(choices, MAIN) end
-    if hasGeneralCard(to, "deputy") then table.insert(choices, DEPUTY) end
+    if Tieqi.hasGeneral(to, false) then table.insert(choices, MAIN) end
+    if Tieqi.hasGeneral(to, true) then table.insert(choices, DEPUTY) end
     if #choices == 0 then return false end
     local choice = Selection.askOption(player.room, player, {
       choices = choices,
@@ -44,19 +38,14 @@ skill:addEffect(fk.TargetSpecified, {
       prompt = "#qiao__skill_shu006_2-ask::" .. to.id,
     })
     if choice == nil then return false end
-    event:setCostData(self, choice == MAIN and "main" or "deputy")
+    event:setCostData(self, choice)
     return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
     local to = data.to
-    local selected = event:getCostData(self)
-    if hasGeneralCard(to, selected) then
-      local old = to:getTableMark(POS)
-      if type(old) ~= "table" then old = {} end
-      if not table.contains(old, selected) then table.insert(old, selected) end
-      room:setPlayerMark(to, POS, old)
-    end
+    local deputy = event:getCostData(self) == DEPUTY
+    if Tieqi.hasGeneral(to, deputy) then Tieqi.mark(room, to, deputy) end
 
     local judge = { who = player, reason = skill.name }
     room:judge(judge)
