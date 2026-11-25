@@ -30,23 +30,38 @@ QtObject {
       required property Item card
 
       anchors.right: parent.right
-      anchors.rightMargin: 4
-      y: 45
+      anchors.rightMargin: 1
+      y: 59
       z: 2
       visible: !!hint.card.dataModel && root.eligible[hint.card.dataModel.name] === true
-      width: label.implicitWidth + 10
-      height: label.implicitHeight + 4
-      radius: height / 2
-      color: "#263b58"
-      border.color: "#d6dbeb"
+      width: label.implicitWidth + 24
+      height: 17
+      color: "transparent"
+
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0; color: "#001e1a15" }
+        GradientStop { position: 0.42; color: "#a61e1a15" }
+        GradientStop { position: 1; color: "#cf1e1a15" }
+      }
 
       Text {
         id: label
-        anchors.centerIn: parent
+        anchors.right: parent.right
+        anchors.rightMargin: 7
+        anchors.verticalCenter: parent.verticalCenter
         text: Lua.tr("qiao_selection_can_ascend")
-        color: "#fff5dc"
-        font.pixelSize: 12
+        color: "#ffe6b1"
+        font.pixelSize: 11
         font.bold: true
+      }
+
+      Rectangle {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: 2
+        height: parent.height - 4
+        color: "#d9b477"
       }
     }
   }
