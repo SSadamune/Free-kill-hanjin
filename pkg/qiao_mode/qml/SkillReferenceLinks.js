@@ -25,7 +25,8 @@ function createCatalog(raw) {
   const words = Array.from(new Set([...names.keys(), ...Object.keys(raw.cards), ...Object.keys(variants)]));
   words.sort((a, b) => b.length - a.length);
   const pattern = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  return { names, skills, cards: raw.cards, variants, pattern: pattern ? new RegExp(pattern, "g") : null };
+  return { names, skills, cards: raw.cards, variants, omissions: raw.omissions ?? {},
+    pattern: pattern ? new RegExp(pattern, "g") : null };
 }
 
 function target(catalog, name, source, before, after) {
@@ -60,7 +61,7 @@ function target(catalog, name, source, before, after) {
   return null;
 }
 
-function render(catalog, description, source, theme) {
+function renderLinks(catalog, description, source, theme) {
   if (!catalog.pattern) return description;
   // Process visible text only. Existing Qt rich text and anchors retain their
   // formatting, including descriptions that already support native links.
@@ -87,6 +88,18 @@ function render(catalog, description, source, theme) {
       return '<a href="' + href + '" style="color:' + color + ';">' + escapeText(name) + "</a>";
     }).replace(/\r?\n/g, "<br/>");
   }).join("");
+}
+
+function render(catalog, description, source, theme) {
+  const omission = catalog.omissions[source];
+  const target = omission && catalog.skills.get(omission.target);
+  if (target && lookup(catalog, target.title, source, false).some(entry => entry.id === target.id)) {
+    const shortened = omission.fragments.reduce((text, fragment) => text.replace(fragment, ""), description);
+    const rendered = renderLinks(catalog, shortened, source, theme);
+    const href = "qiao-tip:" + encodeURIComponent(target.title) + ":" + encodeURIComponent(source);
+    if (rendered.includes('href="' + href + '"')) return rendered;
+  }
+  return renderLinks(catalog, description, source, theme);
 }
 
 function lookup(catalog, name, source, page) {

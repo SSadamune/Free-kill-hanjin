@@ -3,6 +3,11 @@
 local M = {}
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
+
+local CI_MARK_DESCRIPTION = "〖赐〗是一种国战标记："
 
 -- The titles without a skill skeleton describe rules that already have a
 -- client-facing meaning. Descriptions keyed here reuse the installed text.
@@ -67,6 +72,36 @@ local function addAliases(entry)
   return entry
 end
 
+local function detailOmissions()
+  local omissions = {}
+  local function register(parent, target, fragments)
+    local rule = { target = target, fragments = fragments }
+    omissions[parent] = rule
+    omissions[SameName.instanceName(parent)] = rule
+  end
+
+  -- Derive the fragments from the standalone descriptions. If either text
+  -- changes, the renderer leaves any fragment that no longer matches intact.
+  local ci = translated(":" .. Ci.CONSUME)
+  if ci then
+    register(Ci.SKILL, Ci.CONSUME, {
+      "\n（" .. CI_MARK_DESCRIPTION .. ci .. "）",
+      "<br/><b>〔赐〕</b> 本技能另有“赐”的消耗入口。",
+    })
+  end
+  local tianbing = translated(":" .. Qun.ENTRY)
+  if tianbing then
+    register(Qun.BANNER_SKILL, Qun.ENTRY, {
+      "<br/>" .. tianbing:gsub("^群势力角色可以", "群势力角色均可以"),
+    })
+  end
+  local cunsi = translated(":qiao__skill_shu021_3")
+  if cunsi then
+    register("qiao__skill_shu021_2", "qiao__skill_shu021_3", { "（" .. cunsi .. "）" })
+  end
+  return omissions
+end
+
 local function cardVariants()
   local variants = {}
   local deck = Fk.packages.qiao_cards.qiao_cards
@@ -114,8 +149,10 @@ function M.catalog()
     if id:startsWith("qiao_") then
       local title, description = translated(id), translated(":" .. id)
       if title and description then
+        local display = Fk:getDescription(id)
+        if id == Ci.CONSUME and title == "赐" then display = CI_MARK_DESCRIPTION .. display end
         skills[#skills + 1] = addAliases {
-          id = id, title = title, description = Fk:getDescription(id),
+          id = id, title = title, description = display,
           related = skeleton.related_skills,
           page = Flags.flags[id] and "banner" or nil,
           bare = title:find("旗", 1, true) ~= nil or title == "诏书"
@@ -154,7 +191,8 @@ function M.catalog()
   if threatenEmperor then cards["挟天子"] = cards[threatenEmperor] end
   table.sort(skills, function(a, b) return a.id < b.id end)
   table.sort(generals, function(a, b) return a.id < b.id end)
-  return { skills = skills, cards = cards, generals = generals, variants = cardVariants() }
+  return { skills = skills, cards = cards, generals = generals, variants = cardVariants(),
+    omissions = detailOmissions() }
 end
 
 return M

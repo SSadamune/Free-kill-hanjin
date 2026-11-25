@@ -35,6 +35,32 @@ function Testqiao_translation_completeness:testSkillReferenceCatalog()
   lu.assertEquals(pages["司马师"], "general")
 end
 
+function Testqiao_translation_completeness:testEmbeddedDescriptionsAreRegisteredForDisplayOnly()
+  local references = require "packages.qiao.pkg.qiao_mode.skill_references"
+  local ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+  local qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
+  local related = {
+    [ci.SKILL] = ci.CONSUME,
+    [qun.BANNER_SKILL] = qun.ENTRY,
+    qiao__skill_shu021_2 = "qiao__skill_shu021_3",
+  }
+  local originals = {}
+  for parent in pairs(related) do originals[parent] = Fk:translate(":" .. parent) end
+
+  local catalog = references.catalog()
+  local byId = {}
+  for _, skill in ipairs(catalog.skills) do byId[skill.id] = skill end
+  for parent, target in pairs(related) do
+    local omission = catalog.omissions[parent]
+    lu.assertEquals(omission.target, target)
+    lu.assertStrContains(originals[parent], omission.fragments[1])
+    lu.assertEquals(Fk:translate(":" .. parent), originals[parent])
+    lu.assertEquals(byId[parent].description, Fk:getDescription(parent))
+    lu.assertStrContains(byId[target].description, Fk:translate(":" .. target))
+  end
+  lu.assertStrContains(byId[ci.CONSUME].description, "〖赐〗是一种国战标记：")
+end
+
 local PUBLIC_SKILLS = {
   "qiao__skill_em_han001_banner",
   "qiao__skill_em_han001_consume",
