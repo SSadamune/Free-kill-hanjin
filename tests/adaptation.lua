@@ -27,6 +27,7 @@ function Testqiao_adaptation:testChoicePresentationPreservesOriginalReplyValues(
     local long = { "这是一段超过按钮适合显示长度的完整选项说明文字", "Cancel" }
     client:notifyUI("AskForChoices", { long, long, { 1, 1 }, true, "test", "", true, true })
     lu.assertEquals(command, "CustomDialog")
+    lu.assertEquals(payload.component.model.url, "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesModel.qml")
     lu.assertEquals(payload.component.model.prop.choices, long)
     lu.assertTrue(payload.component.model.prop.detailed)
 

@@ -517,7 +517,7 @@ local function choiceDialog(command, data)
     component = {
       url = "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesBox.qml",
       model = {
-        uri = "LunarLtk.Models.Popups", name = "ChoicesModel",
+        url = "packages/qiao/pkg/qiao_mode/qml/QiaoChoicesModel.qml",
         prop = {
           choices = choices, allChoices = all, minNum = limits[1], maxNum = limits[2],
           cancelable = cancelable, skillName = name, prompt = prompt,
@@ -567,6 +567,11 @@ function QiaoClient:notifyUI(command, data)
     data = table.simpleClone(data)
     data.component = table.simpleClone(data.component)
     data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
+    if data.component.model
+      and data.component.model.url == "packages/utility/qml/models/ChooseGeneralsAndChoiceModel.qml" then
+      data.component.model = table.simpleClone(data.component.model)
+      data.component.model.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoicesModel.qml"
+    end
   end
   BaseClient.notifyUI(self, command, data)
   if (command == "AddSkill" or command == "LoseSkill") and data[2] == "ld__jilis" and isQiaoMode() then

@@ -107,5 +107,4 @@ GraphicsBox {
     }
   }
 
-  Component.onCompleted: dataModel.syncOkEnabled()
 }
