@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import Fk
+import Fk.Components.Common
 import LunarLtk
 import LunarLtk.Components as LtkComponents
 import LunarLtk.Pages
@@ -62,6 +63,42 @@ Room {
   Component { id: referencePane; SkillReferencePane {} }
   Component { id: stateButton; SkillStatusButton {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
+  Component {
+    id: focusedSeat
+    Rectangle {
+      id: badge
+      objectName: "qiaoFocusedSeat"
+      required property Item photo
+      readonly property Item normalSeat: photo.children.find(child => child instanceof GlowText
+        && child.anchors.bottomMargin === -24) ?? null
+      anchors.right: photo.photoMask.right
+      anchors.bottom: photo.photoMask.bottom
+      anchors.margins: 5
+      width: Math.max(22, number.implicitWidth + 8)
+      height: 22
+      radius: 4
+      color: "#db222123"
+      border.color: "#ad9068"
+      z: 5
+      visible: photo.playerid !== 0 && photo.playerid !== -1
+        && (photo.progressBar.visible || photo.progressTip !== "")
+
+      Binding {
+        target: badge.normalSeat
+        property: "visible"
+        when: badge.normalSeat !== null && (badge.photo.progressBar.visible || badge.photo.progressTip !== "")
+        value: false
+      }
+      Text {
+        id: number
+        anchors.centerIn: parent
+        text: badge.photo.seatNumber
+        color: "#fff2ce"
+        font.pixelSize: 16
+        font.bold: true
+      }
+    }
+  }
 
   GeneralCardPresentation {
     id: roomGeneralAppearance
@@ -227,6 +264,10 @@ Room {
     guestIllustrations = !!GuestIllustration.enabledInRoom();
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
+      if (!photo) continue;
+      roomGeneralAppearance.watch(photo);
+      if (!photo.children.some(child => child.objectName === "qiaoFocusedSeat"))
+        focusedSeat.createObject(photo, { photo });
       const marks = photo?.picMarkArea;
       if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
         stateButton.createObject(marks, {
@@ -298,7 +339,10 @@ Room {
 
   Component.onCompleted: {
     roomGeneralAppearance.watch(room);
-    addCallback("QiaoGuestFactionsChanged", () => { ++room.guestFactionsRevision; });
+    addCallback("QiaoGuestFactionsChanged", () => {
+      guestIllustrations = !!GuestIllustration.enabledInRoom();
+      ++room.guestFactionsRevision;
+    });
     addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
     addCallback("QiaoPindianStart", () => {
       pindianDisplay.clear();

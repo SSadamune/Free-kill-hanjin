@@ -22,8 +22,8 @@ QtObject {
       if (art) compactCard.createObject(item, { card: item, art });
     } else if (item instanceof Ltk.PhotoBase) {
       const layer = item.children.find(child => child.maskSource === item.photoMask)?.source;
-      if (layer?.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
-      const portraits = layer?.children.filter(child => child instanceof Image) ?? [];
+      if (!layer || layer.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
+      const portraits = layer.children.filter(child => child instanceof Image);
       if (portraits.length === 2)
         portraits.forEach((art, index) => portrait.createObject(layer, { photo: item, art, deputy: index === 1 }));
     } else if (item instanceof Ltk.CardItem) {
@@ -90,18 +90,22 @@ QtObject {
   }
 
   readonly property Component portrait: Component {
-    Image {
+    Item {
+      id: portraitArtwork
       objectName: "qiaoGuestPortrait"
       required property Item photo
       required property Image art
       required property bool deputy
       readonly property string name: deputy ? photo.deputyGeneral : photo.general
-      readonly property var skin: deputy ? photo.deputySkinSource : photo.skinSource
-      anchors.fill: art
-      fillMode: Image.PreserveAspectCrop
-      source: !Config.banChangeSkin && skin?.name
-        ? "" : (GuestIllustration.picture(name, root.enabledInContext) ?? "")
-      visible: status === Image.Ready
+      readonly property var picture: GuestIllustration.picture(name, root.enabledInContext)
+      // The original image is already part of the masked texture and sits
+      // behind its skin layer. Change only that image's source.
+      Binding {
+        target: portraitArtwork.art
+        property: "source"
+        when: !!portraitArtwork.picture
+        value: portraitArtwork.picture
+      }
     }
   }
 
