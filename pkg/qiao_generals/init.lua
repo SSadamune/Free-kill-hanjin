@@ -129,7 +129,7 @@ for _, id in ipairs({
 end
 -- 变包普通武将与君主使用独立角标“变”，不并入阵／势前缀。
 for _, id in ipairs({
-  "qiao_heg__han023",
+  "qiao_heg__han023", "qiao_heg__han024",
   "qiao_heg__em_wu001",
 }) do
   prefixByGeneral[id] = "qiao_prefix_bian"

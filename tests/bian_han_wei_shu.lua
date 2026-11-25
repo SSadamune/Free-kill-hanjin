@@ -38,10 +38,10 @@ Testqiao_bian_han_wei_shu = {
 }
 
 function Testqiao_bian_han_wei_shu:testBianRegistrationPrefixesCompanionsGuests()
-  lu.assertEquals(Data.generalCount, 1)
+  lu.assertEquals(Data.generalCount, 2)
   lu.assertEquals(Data.retinueCount, 0)
   lu.assertEquals(Data.commanderCount, 0)
-  lu.assertEquals(Data.skillCount, 2)
+  lu.assertEquals(Data.skillCount, 4)
   for _, entry in ipairs(Data.generals) do
     local g = assert(Fk.generals[entry.id], "缺少变包武将：" .. entry.id)
     lu.assertEquals(g.package.name, "qiao_zhenshi")
@@ -165,6 +165,94 @@ function Testqiao_bian_han_wei_shu:testHan023XinjiPersonalBattleRoyalAndDyingSel
   lu.assertTrue(han.dead, "体力上限为 1 时减上限至 0 应直接死亡")
 end
 
+-- HAN024 灵雎：竭缘（装备区红牌 +1/-1 防伤）与焚心（额外异势力 3 候选 + 势力不变 + 伪限定）
+function Testqiao_bian_han_wei_shu:testHan024JieyuanAndFenxinExtraPool()
+  local room = FkTest.room
+  local lingju, victim, victim2 = p(1), p(2), p(3)
+  local redEquip, redHand
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "han", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, lingju, {
+      main = "qiao_heg__han024", deputy = "qiao_test__han_2", kingdom = "han", hp = 2,
+    })
+    skill_test.installDualGenerals(room, victim, {
+      main = "qiao_heg__wei001", deputy = "qiao_heg__wei003", kingdom = "wei", hp = 3,
+    })
+    skill_test.installDualGenerals(room, victim2, {
+      main = "qiao_heg__wu001", deputy = "qiao_heg__wu002", kingdom = "wu", hp = 1,
+    })
+    lingju:throwAllCards("he")
+    redEquip = room:printCard("qiao__chitu", Card.Heart, 5)
+    redHand = room:printCard("qiao__jink", Card.Diamond, 2)
+    room:moveCardTo(redEquip, Player.Equip, lingju, fk.ReasonJustMove, "test", nil, true, lingju)
+    room:obtainCard(lingju, redHand, false, fk.ReasonJustMove)
+    -- 确保将池中有足够的汉/魏武将用于焚心合并候选
+    resetGeneralPool(room, { "qiao_heg__han002", "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei006" },
+      { "han", "wei", "wu", "shu" })
+  end)
+
+  -- 竭缘：弃装备区红牌令造成伤害 +1
+  skill_test.withSkillRequests(room, "qiao__skill_han024_1", {
+    askToCards = function() return { redEquip.id } end,
+    askToChoice = function() return "#qiao__skill_han024_1-plus" end,
+  }, function()
+    inRoom(function()
+      room:damage { from = lingju, to = victim, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(victim.hp, 1, "竭缘弃装备区红牌应令伤害 +1（3 -> 1）")
+  lu.assertEquals(#lingju:getCardIds("e"), 0)
+
+  -- 竭缘：受到体力 >= 自己的角色伤害时弃手牌红牌令伤害 -1 至 0（防止伤害）
+  local ljBefore = lingju.hp
+  inRoom(function() victim.hp = 2 end)
+  skill_test.withSkillRequests(room, "qiao__skill_han024_1", {
+    askToCards = function() return { redHand.id } end,
+    askToChoice = function() return "#qiao__skill_han024_1-minus" end,
+  }, function()
+    inRoom(function()
+      room:damage { from = victim, to = lingju, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(lingju.hp, ljBefore, "竭缘减 1 点伤害至 0 应防止本次伤害")
+
+  -- 焚心：击杀副将为魏势力的 victim，候选应合并汉 + 魏并允许变更为魏将且保持灵雎汉势力。
+  local offeredCandidates
+  skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
+    askToSkillInvoke = function() return true end,
+    askToCustomDialog = function(self, who, params)
+      offeredCandidates = table.simpleClone(params.component.prop.candidates)
+      -- 故意选额外翻出的魏势力武将，验证无视势力限制。
+      return { general = "qiao_heg__wei004" }
+    end,
+  }, function()
+    inRoom(function()
+      victim:throwAllCards("he")
+      victim.hp = 1
+      room:damage { from = lingju, to = victim, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertNotNil(offeredCandidates)
+  lu.assertTrue(table.contains(offeredCandidates, "qiao_heg__han002"), "常规候选应含同势力武将")
+  lu.assertTrue(table.contains(offeredCandidates, "qiao_heg__wei004"), "额外候选应含死者副将牌面势力武将")
+  lu.assertEquals(lingju.deputyGeneral, "qiao_heg__wei004", "灵雎应成功变更副将为异势力备选")
+  lu.assertEquals(lingju.kingdom, "han", "变更异势力备选不得改变灵雎本局势力")
+  lu.assertTrue(table.contains(Discard.list(room), "qiao_test__han_2"), "换下的旧副将应进入武将弃牌堆")
+  lu.assertFalse(Change.canUseSkillChange(room, lingju, "qiao__skill_han024_2"), "焚心变更每局限一次")
+
+  -- 再次击杀时不得再次触发焚心
+  local secondAsk = 0
+  skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
+    askToSkillInvoke = function() secondAsk = secondAsk + 1; return true end,
+  }, function()
+    inRoom(function()
+      victim2:throwAllCards("he")
+      room:damage { from = lingju, to = victim2, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(secondAsk, 0, "焚心伪限定次数耗尽后再次击杀不应再询问")
+end
+
 -- 审阅回归（第 6 项）：心疾暂时无效时桃恢复可用，恢复有效后个人鏖战立即恢复，全局鏖战仍覆盖。
 function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidationRestoreAndGlobalBattleRoyal()
   local room = FkTest.room
@@ -197,6 +285,48 @@ function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidationRestoreAndGlobalBa
     room:invalidateSkill(han, "qiao__skill_han023_2", "", "test")
   end)
   lu.assertTrue(O.isForbidden(han, peach), "全局已进入鏖战时即使心疾失效仍受全局鏖战约束")
+end
+
+-- 审阅回归（第 7、8 项）：专属野心家焚心额外候选严格按死者副将势力筛选；副将换走自己时来源记在旧副将牌上且取消不耗次。
+function Testqiao_bian_han_wei_shu:testHan024FenxinWildExtraPoolAndSelfDeputySourceKey()
+  local room = FkTest.room
+  local holder = p(1)
+  local regularWild, extraWei, originalKey, cancelledOk, changedOk
+  inRoom(function()
+    skill_test.installBlankGenerals(room, { "han", "wei", "wu", "shu" })
+    skill_test.installDualGenerals(room, holder, {
+      main = "qiao_test__han_2", deputy = "qiao_heg__han024", kingdom = "han", hp = 3,
+    })
+    room:setPlayerMark(holder, "__heg_wild", 1)
+    resetGeneralPool(room, { "qiao_heg__wei004", "qiao_heg__wu003", "qiao_heg__han002" })
+    regularWild = Change.candidates(room, holder, true)
+    extraWei = Change.candidates(room, holder, true, { kingdoms = { "wei" } })
+    originalKey = Change.skillChangeSourceKey(room, holder, "qiao__skill_han024_2")
+  end)
+  lu.assertTrue(table.contains(regularWild, "qiao_heg__wu003"), "专属野心家常规变更仍从全可用将池随机取")
+  lu.assertEquals(extraWei, { "qiao_heg__wei004" }, "显式限定魏势力的焚心额外池不得混入吴将")
+
+  -- 取消变更不消耗来源次数
+  skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
+    askToCustomDialog = function() return nil end,
+  }, function()
+    inRoom(function()
+      cancelledOk = Change.performSkillChangeDeputy(room, holder, holder, "qiao__skill_han024_2")
+    end)
+  end)
+  lu.assertFalse(cancelledOk)
+  lu.assertNil(room:getTag(originalKey), "取消变更副将不得消耗每局限一次")
+
+  -- 副将灵雎成功换走自己后，已用记录应落在原副将灵雎对应的来源键
+  skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
+    askToCustomDialog = function() return { general = "qiao_heg__han002" } end,
+  }, function()
+    inRoom(function()
+      changedOk = Change.performSkillChangeDeputy(room, holder, holder, "qiao__skill_han024_2")
+    end)
+  end)
+  lu.assertTrue(changedOk)
+  lu.assertTrue(room:getTag(originalKey) == true, "副将换走自己时应记账到发动前的旧副将来源键")
 end
 
 return { name = "qiao_bian_han_wei_shu" }
