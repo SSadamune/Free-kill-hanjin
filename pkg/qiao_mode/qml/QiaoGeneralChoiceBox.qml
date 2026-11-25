@@ -41,18 +41,8 @@ GraphicsBox {
       scene: root.parent
       selectable: root.dataModel.max > 0 && !root.dataModel.disable_cards.includes(modelData)
       autoBack: false
-
-      onSelectedChanged: {
-        chosenInBox = selected;
-        root.dataModel.toggleGeneral(modelData, selected);
-      }
-
-      Connections {
-        target: root.dataModel
-        function onRequestGeneralUnselect(name) {
-          if (name === generalCard.modelData) generalCard.selected = false;
-        }
-      }
+      chosenInBox: Array.isArray(root.dataModel.result) && root.dataModel.result.includes(modelData)
+      onClicked: if (selectable) root.dataModel.toggleGeneral(modelData, !chosenInBox)
 
       onRightClicked: root.parent.showInfoPopup(
         Qt.createComponent("LunarLtk.Pages.InfoPopups", "GeneralDetail"), { generals: [modelData] })

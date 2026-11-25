@@ -7,6 +7,7 @@ import Fk.Components.Common
 import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Pages.Popups
+import "GuestIllustration.js" as GuestIllustration
 
 GraphicsBox {
   id: root
@@ -33,12 +34,7 @@ GraphicsBox {
   height: grid.height + 104
 
   function factionsFor(name) {
-    const factions = Array.from(guestFactions[name] ?? []);
-    if (factions.length > 2) {
-      const order = ["han", "wei", "shu", "wu", "qun", "jin"];
-      factions.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    }
-    return factions;
+    return GuestIllustration.roomFactions(guestFactions[name]);
   }
 
   function matchesPartner(name) {

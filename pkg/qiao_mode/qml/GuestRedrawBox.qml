@@ -37,12 +37,7 @@ GraphicsBox {
   property bool waitingForRedraw: false
 
   function displayFactions(name) {
-    const kingdoms = Array.from(dataModel.extraData.guestFactions?.[name] ?? []);
-    if (kingdoms.length >= 3) {
-      const rank = { han: 0, wei: 1, shu: 2, wu: 3, qun: 4, jin: 5 };
-      kingdoms.sort((a, b) => (rank[a] ?? 6) - (rank[b] ?? 6));
-    }
-    return kingdoms;
+    return GuestIllustration.roomFactions(dataModel.extraData.guestFactions?.[name]);
   }
 
   onShown: arrangeCards()

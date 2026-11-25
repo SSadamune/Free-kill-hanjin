@@ -17,8 +17,10 @@ Room {
   property int guestFactionsRevision: 0
   readonly property var guestCardFactions: {
     guestFactionsRevision;
-    return guestIllustrations
-      ? JSON.parse(Lua.ev("json.encode(ClientInstance:guestCardFactions())") ?? "{}") : ({});
+    if (!guestIllustrations) return {};
+    const factions = JSON.parse(Lua.ev("json.encode(ClientInstance:guestCardFactions())") ?? "{}");
+    return Object.fromEntries(Object.entries(factions).map(([name, values]) =>
+      [name, GuestIllustration.roomFactions(values)]));
   }
   property int pileActionRevision: 0
   property int ciRevision: 0
