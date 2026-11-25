@@ -48,7 +48,7 @@ skill:addEffect("active", {
 
 Fk:loadTranslationTable {
   [Ci.CONSUME] = "赐",
-  [":" .. Ci.CONSUME] = "出牌阶段限一次，你可以消耗一枚〖赐〗，然后变更一张与此牌单独阴阳鱼数相同的武将牌（限一次），或根据此牌单独阴阳鱼数执行效果：≤3：本回合手牌上限+3。≥4：摸牌至四张。",
+  [":" .. Ci.CONSUME] = Ci.SPEND_DESCRIPTION,
   ["qiao_ci_main"] = "变更主将",
   ["qiao_ci_deputy"] = "变更副将",
   ["qiao_ci_maxcards"] = "手牌上限+3",

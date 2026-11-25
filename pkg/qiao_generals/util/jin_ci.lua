@@ -9,6 +9,7 @@ local M = {
   MARK = "@[qiao_ci]",
   SPENT = "qiao_jin001_ci_spent-phase",
   CHANGED = "qiao_jin001_change_used",
+  SPEND_DESCRIPTION = "出牌阶段限一次，你可以消耗一枚〖赐〗，然后变更一张与此牌单独阴阳鱼数相同的武将牌（限一次），或根据此牌单独阴阳鱼数执行效果：≤3：本回合手牌上限+3。≥4：摸牌至四张。",
 }
 
 function M.cards(holder)

@@ -202,18 +202,21 @@ Fk:addPostLoadFunc(function()
   Fk.skills[skill.name].visible = false
 end)
 
+local gain = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以随机将一张符合其副将牌面势力的剩余武将牌置为“赐”。"
+local effects = "\n其他晋势力角色造成伤害后，你可以将你一个势力的所有〖赐〗交给其。"
+  .. "\n当你即将跳过一个阶段时，你可以移去你的一枚〖赐〗并防止之。"
+local markDescription = "〖赐〗是一种国战标记：" .. Ci.SPEND_DESCRIPTION
 Fk:loadTranslationTable {
   [skill.name] = "诸王敕封册",
-  [":" .. skill.name] = "当一名角色的武将牌首次均明置后，或被晋势力角色杀死后，你可以随机将一张符合其副将牌面势力的剩余武将牌置为“赐”。"
-    .. "\n（〖赐〗是一种国战标记：出牌阶段限一次，你可以消耗一枚〖赐〗，然后变更一张与此牌单独阴阳鱼数相同的武将牌（限一次），或根据此牌单独阴阳鱼数执行效果：≤3：本回合手牌上限+3。≥4：摸牌至四张。）"
-    .. "\n其他晋势力角色造成伤害后，你可以将你一个势力的所有〖赐〗交给其。"
-    .. "\n当你即将跳过一个阶段时，你可以移去你的一枚〖赐〗并防止之。",
+  [":" .. skill.name] = gain .. "\n（" .. markDescription .. "）" .. effects,
+  [":@!!" .. skill.name] = gain .. effects,
   [CI_MARK] = "赐",
+  [":" .. CI_MARK] = markDescription,
   ["qiao__ci_consume"] = "消耗一枚赐",
   ["#qiao__jin001_banner-invoke"] = "诸王敕封册：是否随机将一张符合条件的剩余武将牌置为“赐”",
-  ["#qiao__jin001_banner-active"] = "诸王敕封册：消耗一枚赐",
-  ["#qiao__jin001_banner-transfer"] = "诸王敕封册：请选择一个势力，将该势力的所有“赐”交给%dest",
-  ["#qiao__jin001_banner-prevent-skip"] = "诸王敕封册：你可以移去一枚“赐”，防止跳过%arg",
+  ["#qiao__jin001_banner-active"] = "选择一枚「赐」消耗",
+  ["#qiao__jin001_banner-transfer"] = "选一个势力，把该势力的「赐」全交给%dest",
+  ["#qiao__jin001_banner-prevent-skip"] = "移去一枚「赐」，防止跳过%arg",
   ["qiao_ci_give_faction"] = "选择%arg赐",
   ["qiao_ci_give"] = "交出",
   ["qiao_ci_remove"] = "移去",

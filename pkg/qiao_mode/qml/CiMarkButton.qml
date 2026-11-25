@@ -8,11 +8,20 @@ Controls.AbstractButton {
   objectName: "qiaoCiButton"
   required property var cards
   visible: cards != null
+  hoverEnabled: true
   implicitWidth: 21
   implicitHeight: 21
   padding: 0
   text: Lua.tr("@[qiao_ci]")
   Accessible.name: text + " " + (cards?.length ?? 0)
+
+  Controls.ToolTip {
+    visible: button.visible && button.hovered
+    delay: 300
+    width: 340
+    x: (button.width - width) / 2
+    text: Lua.tr(":@[qiao_ci]")
+  }
 
   background: Rectangle {
     radius: 4

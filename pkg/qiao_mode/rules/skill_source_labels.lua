@@ -105,7 +105,10 @@ function M.register(retinues)
   for name in pairs(Flags.flags) do
     local mark = "@!!" .. name
     translations[mark] = Fk:translate(name, "zh_CN")
-    translations[":" .. mark] = Fk:translate(":" .. name, "zh_CN")
+    local description = ":" .. mark
+    if Fk:translate(description, "zh_CN") == description then
+      translations[description] = Fk:translate(":" .. name, "zh_CN")
+    end
   end
   for name, skel in pairs(Fk.skill_skels) do
     if name:startsWith("qiao__") and table.contains(skel.tags, Skill.Limited) then

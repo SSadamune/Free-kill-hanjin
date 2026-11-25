@@ -37,10 +37,22 @@ ColumnLayout {
     skillTip.open();
   }
 
-  BigGlowText {
+  GlowText {
+    objectName: "qiaoCiPrompt"
     Layout.fillWidth: true
-    Layout.preferredHeight: childrenRect.height + 4
+    Layout.minimumWidth: 0
+    Layout.preferredHeight: textItem.contentHeight + 4
     text: Ltk.processPrompt(root.prompt)
+    horizontalAlignment: Text.AlignHCenter
+    verticalAlignment: Text.AlignVCenter
+    wrapMode: Text.Wrap
+    font.family: Config.libianName
+    font.pixelSize: 22
+    font.weight: Font.Medium
+    color: "#e4d5a0"
+    glow.color: "black"
+    glow.spread: 0.3
+    glow.radius: 5
   }
 
   GridView {
