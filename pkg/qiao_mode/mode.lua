@@ -295,6 +295,7 @@ function M.create(base, name)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      require("packages.qiao.pkg.qiao_mode.ai").install(self.room)
       if collection then
         local settings = self.room.settings
         settings._mode = settings._mode or {}
