@@ -24,6 +24,7 @@ local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_card
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 local W = require "ui_emu.preferences"
 local M = {}
 
@@ -34,6 +35,7 @@ function M.installRules()
   Ascension.installFoundingCountries()
   FaqRules.install()
   SlashUseTiming.installCardChecks()
+  Junling.install()
 end
 
 local function getGeneral(name) return assert(Fk.generals[name], "Unknown general: " .. name) end
@@ -351,6 +353,7 @@ function M.create(base, name)
       self.room:addSkill("qiao__luoshui_rule")
       self.room:addSkill("qiao__removed_player_rule")
       self.room:addSkill("qiao__zhoujun_turn_bonus")
+      self.room:addSkill("qiao__quan_rules")
       for _, player in ipairs(self.room.players) do
         player:addFakeSkill("qiao__alliance")
       end

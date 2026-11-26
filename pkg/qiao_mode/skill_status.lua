@@ -2,6 +2,7 @@
 -- underlying marks and their existing cleanup rules as the source of truth.
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
+local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
 local M = {}
 Fk:loadTranslationTable {
   ["qiao_skill_status"] = "状态",
@@ -44,6 +45,9 @@ local entries = {
   { "qiao__skill_wei006_1_granted", "qiao__skill_wei006_1", "因【轻辎】获得【神速】，直到你的回合结束。" },
   { "qiao_wu_dimeng_granted", "qiao__skill_wu014_2", "因【缔盟】获得【好施】，直到你的下个回合结束。" },
   { "qiao_wei024_extra_draw", "qiao__skill_wei024_1", "本回合摸牌阶段多摸所示数量的牌。", function(value) return "+" .. value end },
+  { Quan.YUJUE_DRAW_MARK, "qiao__skill_han003_1", "本回合下次造成伤害后摸两张牌。", function(value)
+    return value > 1 and ("×" .. value) or ""
+  end },
   { "@qiao_zhaoran-phase", "qiao__skill_jin003_1", "本出牌阶段手牌公开，所示花色已结算过失去最后一张手牌的效果。", function(value)
     return value == " " and "" or value
   end },

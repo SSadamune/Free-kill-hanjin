@@ -45,12 +45,14 @@ local LordShu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_shu"
 local LordQun = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_qun"
 local LordWu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wu"
 local LordWei = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wei"
+local Quan = require "packages.qiao.pkg.qiao_generals.data.quan"
 
 local sources = {
   { package = zhenshi, data = LordShu },
   { package = zhenshi, data = LordQun },
   { package = zhenshi, data = LordWu },
   { package = zhenshi, data = LordWei },
+  { package = zhenshi, data = Quan },
   { package = zhenshi, data = Qun2 },
   { package = extension, data = Standard },
   { package = zhenshi, data = ZhenShi },
@@ -127,8 +129,13 @@ for _, id in ipairs({
 end
 -- 变包君主使用独立角标“变”，不并入阵／势前缀。
 prefixByGeneral["qiao_heg__em_wu001"] = "qiao_prefix_bian"
--- 权包君主使用独立角标“权”。
-prefixByGeneral["qiao_heg__em_wei001"] = "qiao_prefix_quan"
+-- 权包君主及普通武将使用独立角标“权”。
+for _, id in ipairs({
+  "qiao_heg__em_wei001",
+  "qiao_heg__han003",
+}) do
+  prefixByGeneral[id] = "qiao_prefix_quan"
+end
 local prefixByRetinue = {
   ["qiao_heg__retinue_bazhenbing"] = "qiao_prefix_zhen",
   ["qiao_heg__retinue_qingzhou_jingrui"] = "qiao_prefix_shi",
