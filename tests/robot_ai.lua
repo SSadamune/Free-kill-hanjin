@@ -205,4 +205,19 @@ function Testqiao_robot_ai:testRecastWhenNoneOfTheNormalTargetsAreUseful()
   end)
 end
 
+function Testqiao_robot_ai:testEightDiagramForUseAndResponse()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    for _, method in ipairs({ "askToUseCard", "askToResponse" }) do
+      room:moveCardTo(room:printCard("qiao__slash", Card.Heart, 3), Card.DrawPile)
+      local result = room[method](room, player, { skill_name = "jink", pattern = "jink", cancelable = true })
+      lu.assertNotNil(result, method)
+      lu.assertEquals(result.card.name, "qiao__jink")
+      lu.assertEquals(result.card.skillName, "qiao__eight_diagram_skill")
+    end
+  end)
+end
+
 return { name = "qiao_robot_ai" }

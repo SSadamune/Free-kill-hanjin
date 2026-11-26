@@ -62,8 +62,11 @@ function M.invoke(ai, data)
   if key == "#qiao__skill_wei017_2-invoke" or key == "#qiao__retinue_skill_fuxin_sishi-give-invoke" then
     return ai:isFriend(M.promptTarget(ai, fields, key == "#qiao__skill_wei017_2-invoke" and 3 or 2))
   end
-  if name == "qiao__eight_diagram_skill" then return true end
-  if name == "qiao__kylin_bow_skill" then
+  local skill = type(name) == "string" and Fk.skills[name]
+  local skeleton = skill and skill:getSkeleton()
+  local original = skeleton and skeleton.name or name
+  if original == "qiao__eight_diagram_skill" then return true end
+  if original == "qiao__kylin_bow_skill" then
     local damage = parentData(ai, GameEvent.Damage)
     return damage ~= nil and ai:isEnemy(damage.to)
   end
