@@ -14,7 +14,7 @@
 | 选将请求、重抽、服务端复核 | `pkg/qiao_mode/rules/selection.lua` |
 | 武将弃牌堆与引擎入口拦截 | `pkg/qiao_mode/rules/general_discard.lua` |
 | 重抽客户端 | `pkg/qiao_mode/qml/GuestRedrawBox.qml`、`qiao_heg_pair` 客户端选将规则 |
-| 正式/测试内容 | `tests/support/guest_allegiance_content.lua`（仅测试）；正式登记见 `pkg/qiao_generals/data/standard.lua` |
+| 正式/测试内容 | 正式登记见 `pkg/qiao_generals/data/standard.lua` 及阵势包的 `zhen_shi*.lua`。独立测试内容见 `tests/support/guest_allegiance_content.lua` |
 
 ### 房间状态与配将
 
@@ -38,7 +38,7 @@
 
 ### 边界
 
-- 正式标准包已有 51 张武将登记客将势力并接入正式将池；其专属技能仍仅展示。`tests/support/guest_allegiance_content.lua` 的独立测试武将不进入正式将池。
+- 正式标准包有 51 张武将登记客将势力，君临天下新增 9 张。阵、势包按[图鉴牌面](../../rules/zhen-shi-generals.md#客将势力)填写 `guests`，随正式武将一起注册。孙策按牌面顺序登记群、汉。`tests/support/guest_allegiance_content.lua` 的独立测试武将不进入正式将池。
 - 选将界面的客将重抽入口与本局势力提示已按请求数据实现，仍需在游戏客户端人工验收；自动化测试覆盖请求数据、客户端选将规则、服务端复核和状态落盘。
 - 战报、动画和断线重连显示不在本轮自动化范围内。
 
@@ -52,7 +52,8 @@
 - 自由选将、同名替换和重抽复用原候选卡片。底图随当前武将牌模型更新。本局开启客将替换且当前武将有对应客将插画时才采用该插画，其余情况使用默认插画。`python scripts/check_free_assign_ui.py` 离屏检查蔡文姬与司马炎互换，以及关闭客将替换时蔡文姬显示默认插画。
 - `QiaoRoom.qml` 使用 `GeneralCardPresentation.qml` 处理房间及详情弹窗中创建的原生武将牌、缩略牌、武将图牌面和 `PhotoBase` 头像。房间开关和公开的本局允许势力决定显示。暗将占位与缺图回退沿用原组件，主、副将分别按当前可见身份取图。
 - `GuestIllustration.js` 与 `GuestCardAppearance.qml` 提供选将、对局与图鉴共用的附加图和卡面势力徽记。选将、变更与局内详情统一按房间显示顺序排列三种以上客籍，图鉴按登记顺序预览。对局头像沿用原遮罩、分栏及皮肤层。
+- 对局内按房间开关和可见武将的程序 ID 查找插画，朱儁的 `guests` 留空也能在选将与局内换图。其牌面势力和配将按汉处理，图鉴开关仍按客籍登记预览。
 - 【尚义】的私看和【祸水】的选将共用 utility 请求模型与对局武将牌显示，详情可查看本次提供的武将。选中状态由模型保存，候选滚出网格后仍可由下一次选择替换。候选限制和回包格式沿用 utility。
 - 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。「客将势力」开关对原生图鉴网格和详情预览应用同一份客将登记。登记由武将数据提供，一到两种势力用原卡面样式，三种以上由 `GuestFactionBadges.qml` 错行排列。各包的显示、搜索与原详情入口可继续使用。
 
-`tests/guest_allegiance.lua` 已覆盖势力解析与配将、连续重抽、两人重抽、补发失败保留原候选、选将回复复核和客户端请求协议；`tests/standard_generals.lua` 覆盖正式客将登记与解析。界面显示、动画及断线重连的人工验收仍待完成。
+`tests/guest_allegiance.lua` 覆盖势力解析与配将、连续重抽、两人重抽、补发失败保留原候选、选将回复复核和客户端请求协议，也核对阵势包九将登记、禁吴和群时孙策的入池与配将、朱儁在房间开关两种状态下的选将请求。`tests/standard_generals.lua` 覆盖标准包客将登记与解析。真人联机及断线重连显示待人工验收。
