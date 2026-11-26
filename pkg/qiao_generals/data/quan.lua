@@ -6,12 +6,12 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 10
+M.generalCount = 11
 M.retinueCount = 2
 M.commanderCount = 2
-M.skillCount = 17
+M.skillCount = 19
 M.retinueSkillCount = 2
-M.kingdoms = { "han", "wei", "shu", "wu", "qun" }
+M.kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }
 
 M.generals = {
   -- 汉势力
@@ -337,6 +337,40 @@ M.generals = {
         id = [==[qiao__skill_qun023_2]==],
         name = [==[附敌]==],
         text = [==[当你受到伤害后，你可以交给来源一张手牌，然后对其势力中体力值最大且大于等于你的一名角色造成1点伤害。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  -- 晋势力
+  {
+    number = [==[JIN021]==],
+    id = [==[qiao_heg__jin021]==],
+    name = [==[卫瓘]==],
+    kingdom = [==[jin]==],
+    title = [==[刀笔扼乱]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_jin021_1]==],
+        name = [==[乘隙]==],
+        text = [==[准备阶段，你可以令一名角色视为使用【以逸待劳】，然后使用者对以此法弃置了非基本牌的目标角色各造成1点伤害。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_jin021_2]==],
+        name = [==[追诛]==],
+        text = [==[轮次技，当一名角色受到致命伤害时，你可以对其发起“军令”。若其执行，你可以防止此伤害；若其不执行，此伤害翻倍。]==],
         related = false,
         tags = {  },
       },

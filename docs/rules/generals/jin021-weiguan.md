@@ -37,4 +37,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__jin021` / `qiao__skill_jin021_1`、`qiao__skill_jin021_2`）。实现与专项测试见[卫瓘实现页](../../development/implementation/generals/quan/jin021.md)。

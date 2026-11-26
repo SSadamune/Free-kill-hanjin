@@ -450,6 +450,97 @@ function Testqiao_quan_wu_qun_jin:testQun023ZhangxiuCongjianFudiAndHucheer()
   lu.assertFalse(hucheerTriggered, "目标仅有明置聚宝保护的宝物牌时胡车儿不可触发")
 end
 
+function Testqiao_quan_wu_qun_jin:testJin021WeiguanChengxiAndZhuizhu()
+  local weiguan, jinAlly, enemy = p(5), p(6), p(1)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), weiguan, { main = "qiao_heg__jin021", deputy = "qiao_test__jin_2", kingdom = "jin" })
+    skill_test.installDualGenerals(room(), jinAlly, { main = "qiao_heg__jin001", deputy = "qiao_test__jin_2", kingdom = "jin" })
+    room().current = weiguan
+    weiguan.phase = Player.Start
+    -- 确保牌堆顶4张全是基本牌，方便精确控制谁弃非基本牌
+    for i = 1, 6 do
+      local c = room():printCard("qiao__slash", Card.Spade, (i % 13) + 1)
+      table.insert(room().draw_pile, 1, c.id)
+    end
+  end)
+  -- 给 weiguan 一张非基本牌（锦囊），jinAlly 全是基本牌
+  local trickCard = give(weiguan, "qiao__dismantlement", Card.Spade, 3)
+  local basicCard = give(weiguan, "qiao__jink", Card.Club, 2)
+  local wgHpBefore = weiguan.hp
+  local allyHpBefore = jinAlly.hp
+  local damageSources = {}
+
+  skill_test.withSkillRequests(room(), "qiao__skill_jin021_1", {
+    askToChoosePlayers = function() return { weiguan } end,
+  }, function()
+    skill_test.withSkillRequests(room(), "await_exhausted_skill", {
+      askToDiscard = function(self, who, params)
+        if who == weiguan then
+          -- 卫瓘弃置1张锦囊+1张基本牌 -> 受到自己造成的1点伤害
+          self:throwCard({ trickCard.id, basicCard.id }, params.skill_name, who, who)
+          return { trickCard.id, basicCard.id }
+        end
+        -- jinAlly 全弃基本牌 -> 不受伤害
+        local hs = who:getCardIds("h")
+        self:throwCard({ hs[1], hs[2] }, params.skill_name, who, who)
+        return { hs[1], hs[2] }
+      end,
+    }, function()
+      inRoom(function()
+        local origDamage = room().damage
+        room().damage = function(self, dmg)
+          table.insert(damageSources, { from = dmg.from and dmg.from.id, to = dmg.to and dmg.to.id, skill = dmg.skillName })
+          return origDamage(self, dmg)
+        end
+        local ok, err = pcall(function()
+          room().logic:trigger(fk.EventPhaseStart, weiguan, {})
+        end)
+        room().damage = origDamage
+        if not ok then error(err, 0) end
+      end)
+    end)
+  end)
+  lu.assertEquals(weiguan.hp, wgHpBefore - 1, "弃置非基本牌的使用者自身应受1点伤害")
+  lu.assertEquals(jinAlly.hp, allyHpBefore, "仅弃置基本牌的目标不应受伤")
+  lu.assertEquals(#damageSources, 1)
+  lu.assertEquals(damageSources[1].from, weiguan.id, "伤害来源应为【以逸待劳】使用者")
+
+  -- 追诛：轮次技，致命伤害时可对自己发动；执行后可自选防止；不执行翻倍
+  local origAsk = Junling.ask
+  Junling.ask = function() return true end
+  inRoom(function()
+    room():loseHp(weiguan, weiguan.hp - 1, "test") -- 剩 1 血
+  end)
+  local wgHp1 = weiguan.hp
+  skill_test.withSkillRequests(room(), "qiao__skill_jin021_2", {
+    askToSkillInvoke = function() return true end, -- 发动且防止
+  }, function()
+    inRoom(function()
+      room():damage { from = enemy, to = weiguan, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(weiguan.hp, wgHp1, "追诛执行后选择防止应防止致命伤害")
+
+  -- 同一轮已用过，不可再触发；重置轮次后测试不执行翻倍
+  inRoom(function()
+    weiguan:setSkillUseHistory("qiao__skill_jin021_2", 0, Player.HistoryRound)
+    room():loseHp(jinAlly, jinAlly.hp - 2, "test") -- 剩 2 血
+  end)
+  Junling.ask = function() return false end
+  local inflictedAmount
+  skill_test.withSkillRequests(room(), "qiao__skill_jin021_2", {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function()
+      local dmgData = { from = enemy, to = jinAlly, damage = 2, skillName = "test" }
+      room().logic:trigger(fk.DamageInflicted, jinAlly, dmgData)
+      inflictedAmount = dmgData.damage
+    end)
+  end)
+  Junling.ask = origAsk
+  lu.assertEquals(inflictedAmount, 4, "追诛不执行军令应令致命伤害翻倍")
+end
+
 function Testqiao_quan_wu_qun_jin:testShouxiProtectsEquipmentUsedByAnotherFaction()
   local lukang, caojie, enemy = p(1), p(2), p(7)
   local jueyan, shouxi = "qiao__skill_wu019_1", "qiao__skill_han021_1"
