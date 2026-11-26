@@ -95,11 +95,6 @@ ColumnLayout {
         z: index
         autoBack: false
         generalName: modelData
-        GuestCardAppearance {
-          card: card
-          enabledInContext: root.roomScene?.guestIllustrations ?? false
-          factions: root.roomScene?.guestCardFactions?.[card.modelData] ?? []
-        }
         onClicked: root.inspect(modelData)
         onRightClicked: root.inspect(modelData)
         // Match the hit region to the part left visible by the card on its right.
@@ -151,10 +146,12 @@ ColumnLayout {
       x: 4
       referenceKey: root.inspectedCi
       inlineTips: true
+      generalCardPresentation: root.roomScene?.generalCardPresentation
       rootText: (catalog, theme) => {
         const name = root.inspectedCi;
         if (!name) return "";
-        const groups = [{ name, detail: Ltk.getGeneralDetail(name), factions: root.roomScene?.guestCardFactions?.[name] }];
+        const factions = root.roomScene?.generalCardPresentation?.appearanceFor(name).factions;
+        const groups = [{ name, detail: Ltk.getGeneralDetail(name), factions }];
         return SkillLinks.generalText(catalog, theme, groups, key => Lua.tr(key), true);
       }
     }

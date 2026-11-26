@@ -8,7 +8,6 @@ import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Models.Popups
 import LunarLtk.Pages.Popups
-import "GuestIllustration.js" as GuestIllustration
 
 pragma ComponentBehavior: Bound
 
@@ -22,8 +21,6 @@ GraphicsBox {
   readonly property var scene: Ltk.roomScene
   readonly property bool freeAssignmentEnabled: dataModel.extraData.freeAssign
     ?? Lua.client.getSettings("enableFreeAssign")
-  readonly property bool guestIllustrations: dataModel.extraData.guestIllustrations
-    ?? GuestIllustration.enabledInRoom()
 
   property alias generalCardList: generalCardList
 
@@ -35,10 +32,6 @@ GraphicsBox {
   property var draggingCard: null
 
   property bool waitingForRedraw: false
-
-  function displayFactions(name) {
-    return GuestIllustration.roomFactions(dataModel.extraData.guestFactions?.[name]);
-  }
 
   onShown: arrangeCards()
 
@@ -207,7 +200,6 @@ GraphicsBox {
       required property int index
       dataModel: root.dataModel.generalDict[index]
       generalName: dataModel.name
-      preferredSkin: root.freeAssignmentEnabled ? "" : (Config.enabledSkins?.[generalName] ?? "")
       selectable: {
         const result = root.dataModel.resultInt?.map(e => Number(e));
         if (result) {
@@ -216,20 +208,6 @@ GraphicsBox {
         return false;
       }
       draggable: !root.draggingCard || root.draggingCard === this
-
-      readonly property var factions: root.displayFactions(dataModel.name)
-      readonly property var factionColors: ({ wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
-                                               qun: "#92959a", han: "#aa832e", jin: "#845ba8" })
-      GuestCardAppearance {
-        card: card
-        enabledInContext: root.guestIllustrations
-        factions: card.factions
-      }
-
-      GuestFactionBorder {
-        anchors.fill: parent
-        colors: card.factions.map(faction => card.factionColors[faction] || "#888888")
-      }
 
       MetroButton {
         // The card may be dimmed or moving between the offer and result areas.
@@ -259,8 +237,7 @@ GraphicsBox {
       onRightClicked: {
         if (root.freeAssignmentEnabled) {
           root.scene.showInfoPopup(freeAssignment, {
-            dataModel: root.dataModel, index, guestIllustrations: root.guestIllustrations,
-            displayFactions: name => root.displayFactions(name),
+            dataModel: root.dataModel, index,
           });
         }
       }

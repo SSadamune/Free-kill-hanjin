@@ -61,6 +61,24 @@ function M.registeredInPackage(packageName)
   return factions
 end
 
+local function allowedOriginalKingdoms(general, allowed)
+  return table.filter(Ban.affiliations(general), function(kingdom)
+    return table.contains(allowed, kingdom)
+  end)
+end
+
+---Printed guest affiliations for cards whose original affiliations are all banned.
+function M.replacementFactionsForDisplay(allowed)
+  local factions = {}
+  for name, registered in pairs(M.guests) do
+    local general = Fk.generals[name]
+    if general and general.kingdom ~= "wild" and #allowedOriginalKingdoms(general, allowed) == 0 then
+      factions[name] = registered
+    end
+  end
+  return factions
+end
+
 ---Resolve one general against this game's allowed kingdoms.
 ---
 ---Order: keep the printed affiliations that are allowed; only when every
@@ -76,9 +94,7 @@ function M.resolve(name, allowed, replacementEnabled)
   if general.kingdom == "wild" then
     return { name = name, source = "wild", kingdoms = {}, wild = true }
   end
-  local original = table.filter(Ban.affiliations(general), function(kingdom)
-    return table.contains(allowed, kingdom)
-  end)
+  local original = allowedOriginalKingdoms(general, allowed)
   if #original > 0 then
     return { name = name, source = "original", kingdoms = original }
   end

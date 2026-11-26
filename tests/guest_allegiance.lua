@@ -84,10 +84,18 @@ function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   lu.assertFalse(client:guestIllustrationsEnabled())
   client.settings = { gameMode = "qiao_heg_mode" }
   lu.assertTrue(client:guestIllustrationsEnabled())
-  client.banners.all_kingdoms = { "wu", "qun", "han", "jin" }
+  lu.assertEquals(client:guestCardFactions(), {})
+  client.banners.all_kingdoms = { "shu", "wu", "qun", "han" }
+  lu.assertNil(client:guestCardFactions().qiao_heg__shu001)
+  lu.assertNil(client:guestCardFactions().qiao_heg__wu010)
+  lu.assertNil(client:guestCardFactions().qiao_test__guest_partial)
+  client.banners.all_kingdoms = { "qun", "han", "jin" }
   local factions = client:guestCardFactions()
   lu.assertEquals(factions.qiao_heg__shu001, { "han", "qun", "wei", "wu" })
+  lu.assertEquals(factions.qiao_heg__wu010, { "qun", "han" })
   lu.assertNil(factions.qiao_heg__han001)
+  lu.assertNil(factions.qiao_heg__han014)
+  lu.assertEquals(factions.qiao_test__guest_partial, { "qun" })
   client.settings.qiao_guest_replacement = false
   lu.assertFalse(client:guestIllustrationsEnabled())
   lu.assertEquals(client:guestCardFactions(), {})
