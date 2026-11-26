@@ -360,6 +360,96 @@ function Testqiao_quan_wu_qun_jin:testQun021YuanshuYongsiAndWeidi()
   lu.assertEquals(#shownCards, yuanshu:getHandcardNum(), "成为知己知彼目标后应展示所有手牌")
 end
 
+function Testqiao_quan_wu_qun_jin:testQun023ZhangxiuCongjianFudiAndHucheer()
+  local zhangxiu, unknownEnemy, other, wuLord = p(3), p(4), p(5), p(1)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), zhangxiu, { main = "qiao_heg__qun023", deputy = "qiao_test__qun_2", kingdom = "qun" })
+    unknownEnemy.kingdom = "unknown"
+    room():setPlayerProperty(unknownEnemy, "kingdom", "unknown")
+    room().current = zhangxiu
+  end)
+
+  -- 从谏：张绣回合内，其他角色造成伤害 +1，张绣自己造成伤害不 +1
+  local hp1 = other.hp
+  inRoom(function()
+    room():damage { from = unknownEnemy, to = other, damage = 1, skillName = "test" }
+  end)
+  lu.assertEquals(other.hp, hp1 - 2, "张绣回合内其他角色造成伤害应+1")
+
+  local hp2 = other.hp
+  inRoom(function()
+    room():damage { from = zhangxiu, to = other, damage = 1, skillName = "test" }
+  end)
+  lu.assertEquals(other.hp, hp2 - 1, "张绣回合内自己造成伤害不+1")
+
+  -- 张绣回合外：受到未确定势力角色伤害 -> 附敌交1张手牌并对其势力（含自己）最大体力且>=张绣的角色造成1点伤害 -> 叠加从谏变2点
+  local handCard = give(zhangxiu, "qiao__jink", Card.Club, 3)
+  local enemyHpBefore = unknownEnemy.hp
+  skill_test.withSkillRequests(room(), "qiao__skill_qun023_2", {
+    askToCards = function() return { handCard.id } end,
+  }, function()
+    inRoom(function()
+      room().current = unknownEnemy
+      room():damage { from = unknownEnemy, to = zhangxiu, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertTrue(table.contains(unknownEnemy:getCardIds("h"), handCard.id), "附敌应交1张手牌给伤害来源")
+  lu.assertEquals(unknownEnemy.hp, enemyHpBefore - 2, "回合外附敌伤害应与从谏叠加为2点")
+
+  -- 偏将·胡车儿（限一）：相互在攻击范围内，排除明置聚宝宝物；获得装备并立即装备+1马离开其攻击范围 -> 摸1牌
+  inRoom(function()
+    skill_test.installDualGenerals(room(), wuLord, { main = "qiao_heg__em_wu001", deputy = "qiao_test__wu_2", kingdom = "wu" })
+    -- 相邻座位 p(3) 和 p(4)：给张绣一把射程2武器，使张绣即使对方装有+1马也能打到对方（双方互在攻击范围内）
+    R.grant(zhangxiu, { general = "qiao_heg__retinue_hucheer", skill = "qiao__retinue_skill_hucheer", position = "deputy" })
+    clearAllZones(zhangxiu)
+    clearAllZones(unknownEnemy)
+  end)
+  equip(zhangxiu, "qiao__qinggang_sword", Card.Spade, 6)
+  local defHorse = equip(unknownEnemy, "qiao__jueying", Card.Spade, 5)
+  local zxHandBefore = zhangxiu:getHandcardNum()
+  skill_test.withSkillRequests(room(), "qiao__retinue_skill_hucheer", {
+    askToSkillInvoke = function() return true end,
+    askToUseRealCard = function(self, who, params)
+      lu.assertEquals(params.pattern, { defHorse.id })
+      local use = { from = who, tos = { who }, card = defHorse }
+      self:useCard(use)
+      return use
+    end,
+  }, function()
+    inRoom(function()
+      room().current = unknownEnemy
+      unknownEnemy.phase = Player.Play
+      room().logic:trigger(fk.EventPhaseStart, unknownEnemy, {})
+    end)
+  end)
+  lu.assertTrue(table.contains(zhangxiu:getCardIds("e"), defHorse.id), "胡车儿应可使用刚获得的装备")
+  lu.assertFalse(unknownEnemy:inMyAttackRange(zhangxiu), "装上+1马后应离开对方攻击范围")
+  lu.assertEquals(zhangxiu:getHandcardNum(), zxHandBefore + 1, "离开对方攻击范围应摸1张牌")
+
+  -- 校验聚宝保护过滤：只有明置聚宝的宝物牌时胡车儿不可触发
+  inRoom(function()
+    -- 将 p(2) 设为君孙权（与 p(3) 张绣相邻互在攻击范围），仅装定澜夜明珠
+    skill_test.installDualGenerals(room(), p(2), { main = "qiao_heg__em_wu001", deputy = "qiao_test__wu_2", kingdom = "wu" })
+    clearAllZones(p(2))
+    clearAllZones(zhangxiu)
+    local pearl = room():printCard(Wu.PEARL, Card.Club, 6)
+    room():moveCardTo(pearl, Card.PlayerEquip, p(2), fk.ReasonJustMove, "test", nil, true)
+    room():setBanner("RoundCount", 2) -- 新一轮重置轮次技
+    zhangxiu:setSkillUseHistory("qiao__retinue_skill_hucheer", 0, Player.HistoryRound)
+  end)
+  local hucheerTriggered = false
+  skill_test.withSkillRequests(room(), "qiao__retinue_skill_hucheer", {
+    askToSkillInvoke = function() hucheerTriggered = true; return true end,
+  }, function()
+    inRoom(function()
+      room().current = p(2)
+      p(2).phase = Player.Play
+      room().logic:trigger(fk.EventPhaseStart, p(2), {})
+    end)
+  end)
+  lu.assertFalse(hucheerTriggered, "目标仅有明置聚宝保护的宝物牌时胡车儿不可触发")
+end
+
 function Testqiao_quan_wu_qun_jin:testShouxiProtectsEquipmentUsedByAnotherFaction()
   local lukang, caojie, enemy = p(1), p(2), p(7)
   local jueyan, shouxi = "qiao__skill_wu019_1", "qiao__skill_han021_1"

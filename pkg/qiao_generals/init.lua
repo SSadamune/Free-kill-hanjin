@@ -136,7 +136,7 @@ for _, id in ipairs({
   "qiao_heg__wei021b", "qiao_heg__wei024",
   "qiao_heg__shu023", "qiao_heg__shu024",
   "qiao_heg__wu019", "qiao_heg__wu024",
-  "qiao_heg__qun021",
+  "qiao_heg__qun021", "qiao_heg__qun023",
 }) do
   prefixByGeneral[id] = "qiao_prefix_quan"
 end
@@ -145,6 +145,7 @@ local prefixByRetinue = {
   ["qiao_heg__retinue_qingzhou_jingrui"] = "qiao_prefix_shi",
   ["qiao_heg__retinue_lujiang_shangjia"] = "qiao_prefix_shi",
   ["qiao_heg__retinue_wudang_feijun"] = "qiao_prefix_quan",
+  ["qiao_heg__retinue_hucheer"] = "qiao_prefix_quan",
 }
 for _, general in ipairs(Data.generals) do
   translations[general.id] = general.displayName or general.name

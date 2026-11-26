@@ -7,6 +7,7 @@
 - 称号：枪出风偃、北地枪王。
 - 单将体力贡献：2（原码 `6969`，对应 4 单独阴阳鱼）。
 - 珠联璧合：`QUN007`（贾诩）。
+- 客将势力：**魏**（紫乔专栏 `1178873011318554633` 卡面 `G.QUN(&WEI) 023` 确认）。
 - 统领：`{统领 (限一)：胡车儿 |【顺手牵羊】}`（**偏将 / 限一翼从**，按[统领与翼从：偏将](../commander-retinue.md#偏将限一翼从)分别记录偏将唯一取得与统领牌每局一次）。
 - 公共依据：[通用约定](../general-principles.md)、[统领与翼从](../commander-retinue.md)及[权包索引](../quan-generals.md)。
 
@@ -50,4 +51,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包与偏将系统。
+已正式接入权包（`qiao_heg__qun023` / `qiao__skill_qun023_1`、`qiao__skill_qun023_2`，客将势力：魏）及限一偏将【胡车儿】（`qiao_heg__retinue_hucheer` / `qiao__retinue_skill_hucheer`）。实现与专项测试见[张绣实现页](../../development/implementation/generals/quan/qun023.md)与[胡车儿实现页](../../development/implementation/generals/quan/retinue-hucheer.md)。

@@ -18,3 +18,4 @@
 | WU019 | [陆抗](quan/wu019.md) | — | [决堰](quan/wu019.md#wu019-1)、[恪守](quan/wu019.md#wu019-2) |
 | WU024 | [吴国太](quan/wu024.md) | 蜀 | [补益](quan/wu024.md#wu024-1)、[甘露](quan/wu024.md#wu024-2) |
 | QUN021 | [袁术](quan/qun021.md) | 汉 | [庸肆](quan/qun021.md#qun021-1)、[伪帝](quan/qun021.md#qun021-2) |
+| QUN023 | [张绣](quan/qun023.md) | 魏 | [从谏](quan/qun023.md#qun023-1)、[附敌](quan/qun023.md#qun023-2)（统领限一偏将：[胡车儿](quan/retinue-hucheer.md#hucheer)） |

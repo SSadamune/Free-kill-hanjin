@@ -6,11 +6,11 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 9
-M.retinueCount = 1
-M.commanderCount = 1
-M.skillCount = 15
-M.retinueSkillCount = 1
+M.generalCount = 10
+M.retinueCount = 2
+M.commanderCount = 2
+M.skillCount = 17
+M.retinueSkillCount = 2
 M.kingdoms = { "han", "wei", "shu", "wu", "qun" }
 
 M.generals = {
@@ -302,6 +302,46 @@ M.generals = {
       },
     },
   },
+  {
+    number = [==[QUN023]==],
+    id = [==[qiao_heg__qun023]==],
+    name = [==[张绣]==],
+    kingdom = [==[qun]==],
+    title = [==[枪出风偃、北地枪王]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[wei]==] },
+    companionText = [==[贾诩]==],
+    companionNames = { [==[贾诩]==] },
+    companions = { [==[qiao_heg__qun007]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    commander = {
+      card = [==[qiao__snatch]==],
+      cardText = [==[顺手牵羊]==],
+      sourceText = [==[胡车儿(限一) | 顺手牵羊]==],
+      retinue = [==[qiao_heg__retinue_hucheer]==],
+      limited = true,
+    },
+    skills = {
+      {
+        id = [==[qiao__skill_qun023_1]==],
+        name = [==[从谏]==],
+        text = [==[锁定技，当其他角色于你回合内造成伤害时，或你于回合外造成伤害时，此伤害+1。]==],
+        related = false,
+        tags = { [==[Compulsory]==] },
+      },
+      {
+        id = [==[qiao__skill_qun023_2]==],
+        name = [==[附敌]==],
+        text = [==[当你受到伤害后，你可以交给来源一张手牌，然后对其势力中体力值最大且大于等于你的一名角色造成1点伤害。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
 }
 
 M.retinues = {
@@ -317,6 +357,18 @@ M.retinues = {
       tags = {  },
     },
   },
+  {
+    id = [==[qiao_heg__retinue_hucheer]==],
+    name = [==[胡车儿]==],
+    limited = true,
+    title = [==[张绣｜顺手牵羊]==],
+    skill = {
+      id = [==[qiao__retinue_skill_hucheer]==],
+      name = [==[胡车儿]==],
+      text = [==[轮次技，与你相互处于彼此攻击范围的角色出牌阶段开始时，你可以获得其装备区的一张牌且可以使用之，若你因此离开其攻击范围，你摸一张牌。]==],
+      tags = {  },
+    },
+  },
 }
 
 M.commanders = {
@@ -329,6 +381,16 @@ M.commanders = {
     card = [==[qiao__slash]==],
     cardText = [==[杀]==],
     sourceText = [==[无当飞军 | 杀]==],
+  },
+  {
+    general = [==[qiao_heg__qun023]==],
+    number = [==[QUN023]==],
+    name = [==[张绣]==],
+    retinue = [==[qiao_heg__retinue_hucheer]==],
+    retinueName = [==[胡车儿]==],
+    card = [==[qiao__snatch]==],
+    cardText = [==[顺手牵羊]==],
+    sourceText = [==[胡车儿(限一) | 顺手牵羊]==],
   },
 }
 
