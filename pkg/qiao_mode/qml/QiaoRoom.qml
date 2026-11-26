@@ -382,7 +382,7 @@ Room {
 
   Component.onCompleted: {
     roomGeneralAppearance.watch(room);
-    addCallback(Command.MoveCards, (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
+    addCallback("QiaoMoveCards", (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
     addCallback("QiaoGuestFactionsChanged", () => {
       guestIllustrations = !!GuestIllustration.enabledInRoom();
       ++room.guestFactionsRevision;

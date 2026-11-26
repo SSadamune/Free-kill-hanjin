@@ -1,5 +1,6 @@
 """Verify that the native move animation uses the latest card-face visibility."""
 from pathlib import Path
+import shutil
 import tempfile
 
 from check_room_records_ui import ROOT, RUNTIME, install_card_fixture
@@ -14,6 +15,7 @@ import QtQuick
 import QtQuick.Controls
 import LunarLtk
 import LunarLtk.Components
+import VisibilityFixture
 import "CardMoveVisibility.js" as MoveVisibility
 
 ApplicationWindow {
@@ -43,34 +45,50 @@ ApplicationWindow {
     dataModel: tableCopy
   }
 
-  QtObject {
-    id: nativeRoom
-    property var processing: []
-    property var discard: []
-    property var dashboard: ({ handcards: [] })
-    signal cardsMoved(var move, var models)
-    onCardsMoved: (move, models) => {
-      fixture.movedModels = models;
-      fixture.animatedModel = models[0];
+  PageBase {
+    id: room
+    property alias dataModel: nativeRoom
+    property var tablePile: null
+    Component.onCompleted: {
+      /* QIAO_MOVE_CALLBACK */
     }
-    // The test inserts the locked engine's implementation here.
-    /* NATIVE_MOVE_CARDS */
+
+    QtObject {
+      id: nativeRoom
+      property var processing: []
+      property var discard: []
+      property var dashboard: ({ handcards: [] })
+      signal cardsMoved(var move, var models)
+      onCardsMoved: (move, models) => {
+        fixture.movedModels = models;
+        fixture.animatedModel = models[0];
+      }
+      Component.onCompleted: {
+        /* NATIVE_MOVE_CALLBACK */
+      }
+      /* NATIVE_MOVE_CARDS */
+    }
+  }
+
+  function dispatch(data, pile = null) {
+    room.tablePile = pile;
+    room.handleCommand(null, "QiaoMoveCards", data);
   }
 
   function moveExisting(fromKnown, nextKnown, recipient) {
     reused.known = fromKnown;
     nativeRoom.processing = [reused];
-    MoveVisibility.moveCards(nativeRoom, { "20": nextKnown, merged: [
+    dispatch({ "20": nextKnown, merged: [
       { fromArea: areas.Processing, toArea: areas.PlayerHand, to: recipient, ids: [20] },
-    ] }, areas, perspective);
+    ] });
     return animatedModel === reused;
   }
 
   function moveHiddenFromAnotherHand() {
     Ltk.cards[21] = { name: "qiao__slash", suit: "spade", number: 9 };
-    MoveVisibility.moveCards(nativeRoom, { "21": false, merged: [
+    dispatch({ "21": false, merged: [
       { fromArea: areas.PlayerHand, from: 2, toArea: areas.Processing, ids: [21] },
-    ] }, areas, perspective);
+    ] });
     return animatedModel.cardId;
   }
 
@@ -78,9 +96,9 @@ ApplicationWindow {
     reused.known = true;
     nativeRoom.processing = [reused, other];
     // Both are "未知牌" in the third seat's log for this move.
-    MoveVisibility.moveCards(nativeRoom, { "20": false, "22": false, merged: [
+    dispatch({ "20": false, "22": false, merged: [
       { fromArea: areas.Processing, toArea: areas.PlayerHand, to: 2, ids: [20, 22] },
-    ] }, areas, perspective);
+    ] });
     return movedModels.length;
   }
 
@@ -91,11 +109,20 @@ ApplicationWindow {
   function scryFromDeck() {
     Ltk.cards[20] = { name: "qiao__slash", suit: "spade", number: 5 };
     Ltk.cards[22] = { name: "qiao__slash", suit: "spade", number: 7 };
-    MoveVisibility.moveCards(nativeRoom, { "20": false, "22": false, merged: [
+    dispatch({ "20": false, "22": false, merged: [
       { fromArea: areas.DrawPile, toArea: areas.Processing, ids: [20, 22] },
-    ] }, areas, perspective, {
+    ] }, {
       cards: [lingering], cardMap: new Map([[tableCopy, [lingering, tableOriginal]]]),
     });
+  }
+
+  function transferFromAnotherHand() {
+    lingering.dataModel = tableCopy;
+    tableCopy.known = true;
+    tableOriginal.known = true;
+    dispatch({ "20": false, "22": true, merged: [
+      { fromArea: areas.PlayerHand, from: 1, toArea: areas.PlayerHand, to: 2, ids: [20, 22] },
+    ] }, { cards: [lingering], cardMap: new Map([[tableCopy, [lingering, tableOriginal]]]) });
   }
 
   function restoreOldTableModel() {
@@ -103,19 +130,36 @@ ApplicationWindow {
   }
 
   function scryReturnToDeck() {
-    MoveVisibility.moveCards(nativeRoom, { "20": false, "22": false, merged: [
+    dispatch({ "20": false, "22": false, merged: [
       { fromArea: areas.Processing, toArea: areas.DrawPile, ids: [20, 22] },
-    ] }, areas, perspective, { cards: [lingering] });
+    ] }, { cards: [lingering] });
   }
 }
 """
 
 
-def native_move_cards():
-    room = (RUNTIME / "packages/freekill-core/LunarLtk/Models/RoomModel.qml").read_text(encoding="utf-8")
-    start = room.index("  function moveCards(move, data) {")
-    end = room.index("  function vanishDiscard(", start)
-    return room[start:end].replace("Ltk.Card.", "fixture.areas.").replace("Cpp.self.id", "fixture.perspective")
+def room_fixture(directory):
+    core = RUNTIME / "packages/freekill-core"
+    module = directory / "VisibilityFixture"
+    module.mkdir()
+    shutil.copyfile(core / "Fk/Widgets/PageBase.qml", module / "PageBase.qml")
+    (module / "qmldir").write_text("module VisibilityFixture\nPageBase 1.0 PageBase.qml\n", encoding="utf-8")
+
+    native = (core / "LunarLtk/Models/RoomModel.qml").read_text(encoding="utf-8")
+    qiao = (ROOT / "pkg/qiao_mode/qml/QiaoRoom.qml").read_text(encoding="utf-8")
+    callback_start = native.index("    roomPage.addCallback(Command.MoveCards,")
+    callback_end = native.index("    roomPage.addCallback(Command.SetCardFootnote,", callback_start)
+    native_callback = native[callback_start:callback_end].replace("roomPage.", "room.")
+    qiao_callback = next(line for line in qiao.splitlines() if "=> CardMoveVisibility.moveCards(" in line)
+    start = native.index("  function moveCards(move, data) {")
+    end = native.index("  function vanishDiscard(", start)
+    return (WINDOW.replace("/* NATIVE_MOVE_CALLBACK */", native_callback)
+            .replace("/* QIAO_MOVE_CALLBACK */", qiao_callback)
+            .replace("/* NATIVE_MOVE_CARDS */", native[start:end])
+            .replace("Command.MoveCards", '"MoveCards"')
+            .replace("CardMoveVisibility.moveCards", "MoveVisibility.moveCards")
+            .replace("Ltk.Card", "fixture.areas")
+            .replace("Cpp.self.id", "fixture.perspective"))
 
 
 def run():
@@ -125,7 +169,7 @@ def run():
     engine.warnings.connect(lambda entries: warnings.extend(entry.toString() for entry in entries))
     with tempfile.TemporaryDirectory(dir=ROOT / ".dev") as directory:
         install_card_fixture(engine, Path(directory))
-        source = WINDOW.replace("/* NATIVE_MOVE_CARDS */", native_move_cards())
+        source = room_fixture(Path(directory))
         url = QUrl.fromLocalFile(str(ROOT / "pkg/qiao_mode/qml/MoveVisibilityCheck.qml"))
         engine.loadData(source.encode(), url)
         assert engine.rootObjects(), warnings
@@ -155,10 +199,15 @@ def run():
         for index in range(2):
             fixture.showMovedCard(index)
             assert_face(False, "card-back.png")
+        fixture.transferFromAnotherHand()
+        assert_face(False, "card-back.png")
+        assert fixture.property("lingeringImageName") == "card-back.png"
+        fixture.showMovedCard(1)
+        assert_face(True, "qiao__slash.png")
         assert not warnings, warnings
         fixture.close()
         app.processEvents()
-    print("PASS card movement: hidden swaps and both scry stages show backs, including lingering table copies")
+    print("PASS Han-Jin move callback: hidden swaps, private scry and mixed hand transfers show the correct faces")
 
 
 if __name__ == "__main__":
