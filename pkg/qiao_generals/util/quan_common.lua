@@ -8,6 +8,7 @@ local M = {}
 
 M.YUJUE_DRAW_MARK = "qiao_han003_yujue_draw-turn"
 M.XUANHU_RED_MARK = "qiao_han021_red_discarded-turn"
+M.ZHENGPI_TWICE_MARK = "qiao_wei021b_zhengpi_twice-turn"
 
 --- 汉晋定向叠置：仅平置改为叠置，已叠置不反向平置。
 function M.directedStack(target)

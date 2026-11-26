@@ -6,12 +6,12 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 2
+M.generalCount = 3
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 3
+M.skillCount = 5
 M.retinueSkillCount = 0
-M.kingdoms = { "han" }
+M.kingdoms = { "han", "wei" }
 
 M.generals = {
   -- 汉势力
@@ -71,6 +71,40 @@ M.generals = {
         text = [==[每回合结束时，若本回合你的红色牌置入过弃牌堆，你可以令一名角色摸或弃置一张牌，然后若其手牌数等于体力值，其回复1点体力。]==],
         related = false,
         tags = {  },
+      },
+    },
+  },
+  -- 魏势力
+  {
+    number = [==[WEI021B]==],
+    id = [==[qiao_heg__wei021b]==],
+    name = [==[毛玠]==],
+    kingdom = [==[wei]==],
+    title = [==[清公素履]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[崔琰]==],
+    companionNames = { [==[崔琰]==] },
+    companions = {  },
+    companionsUnresolved = { [==[崔琰]==] },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wei021b_1]==],
+        name = [==[征辟]==],
+        text = [==[出牌阶段限一次，你可以将一张牌交给一名角色，其展示并交给你一张非基本牌或两张基本牌，若其有暗置武将牌，本回合此技能限两次。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wei021b_2]==],
+        name = [==[奉迎]==],
+        text = [==[限定技，你可以将所有手牌当【挟天子以令诸侯】使用（无视大势力限制），使用时所有与你势力相同的角色摸牌至其体力上限。]==],
+        related = false,
+        tags = { [==[Limited]==] },
       },
     },
   },

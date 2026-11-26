@@ -39,4 +39,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__wei021b` / `qiao__skill_wei021b_1`、`qiao__skill_wei021b_2`）。实现与专项测试见[毛玠实现页](../../development/implementation/generals/quan/wei021b.md)。

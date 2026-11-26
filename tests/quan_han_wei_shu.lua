@@ -228,6 +228,86 @@ function Testqiao_quan_han_wei_shu:testHan021CaojieShouxiAndXuanhu()
   lu.assertEquals(ally.hp, allyHpBefore + 1, "手牌数等于体力值应回复1点体力")
 end
 
+function Testqiao_quan_han_wei_shu:testWei021bMaojieZhengpiAndFengying()
+  local maojie, ally, hiddenTarget = p(2), p(8), p(3)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), maojie, { main = "qiao_heg__wei021b", deputy = "qiao_test__wei_2", kingdom = "wei" })
+    skill_test.installDualGenerals(room(), ally, { main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei" })
+    hiddenTarget.general = "anjiang"
+    room().current = maojie
+    maojie.phase = Player.Play
+  end)
+
+  local give1 = give(maojie, "qiao__slash", Card.Spade, 5)
+  local give2 = give(maojie, "qiao__slash", Card.Spade, 6)
+  local targetEquip = equip(hiddenTarget, "qiao__chitu", Card.Heart, 5)
+  local zhengpi = assert(Fk.skills["qiao__skill_wei021b_1"])
+
+  -- 征辟第1次：交给有暗置武将的目标 -> 目标展示并交还装备区里的非基本牌，解锁本回合第2次
+  skill_test.withSkillRequests(room(), "#qiao__skill_wei021b_1_return", {
+    askToUseActiveSkill = function(self, who, params)
+      return true, { cards = { targetEquip.id }, targets = {} }
+    end,
+  }, function()
+    inRoom(function()
+      lu.assertTrue(zhengpi:canUse(maojie))
+      room():useSkill(maojie, zhengpi, function()
+        zhengpi:onUse(room(), { from = maojie, cards = { give1.id }, tos = { hiddenTarget } })
+      end, { from = maojie, cards = { give1.id }, tos = { hiddenTarget } })
+    end)
+  end)
+  lu.assertTrue(table.contains(maojie:getCardIds("h"), targetEquip.id), "目标装备区的非基本牌应交还毛玠")
+  lu.assertEquals(maojie:getMark(Quan.ZHENGPI_TWICE_MARK), 1)
+
+  -- 客户端校验：解锁后仍可发动第2次
+  client_room.run(room(), function(clients)
+    local me = clients[2]
+    me.mark[Quan.ZHENGPI_TWICE_MARK] = 1
+    lu.assertTrue(zhengpi:canUse(me), "客户端应识别征辟本回合限两次")
+  end)
+
+  -- 征辟第2次：目标仅有1张基本牌、无非基本牌 -> 无合法交还组合，直接跳过不报错
+  inRoom(function()
+    clearAllZones(hiddenTarget)
+    local onlyBasic = room():printCard("qiao__jink", Card.Club, 2)
+    room():obtainCard(hiddenTarget, onlyBasic, false, fk.ReasonJustMove)
+    room():useSkill(maojie, zhengpi, function()
+      zhengpi:onUse(room(), { from = maojie, cards = { give2.id }, tos = { hiddenTarget } })
+    end, { from = maojie, cards = { give2.id }, tos = { hiddenTarget } })
+    -- 目标获得 give2 后有 2 张基本牌，测试无回牌时不崩溃；再测真正仅 1 张基本牌时无询问
+    lu.assertFalse(zhengpi:canUse(maojie), "两次用尽后本出牌阶段不可再用")
+  end)
+
+  -- 奉迎：魏为小势力（2人，与汉并列或设汉为大势力）仍可发动，且使用时所有同势力摸至体力上限（先于无懈可击）
+  inRoom(function()
+    -- 让汉势力占 3 人成为唯一大势力，确保魏不是大势力
+    skill_test.installDualGenerals(room(), p(4), { main = "qiao_heg__han004", deputy = "qiao_test__han_2", kingdom = "han" })
+    clearAllZones(maojie)
+    clearAllZones(ally)
+    local h1 = room():printCard("qiao__slash", Card.Club, 7)
+    room():obtainCard(maojie, h1, false, fk.ReasonJustMove)
+  end)
+  local fengying = assert(Fk.skills["qiao__skill_wei021b_2"])
+  client_room.run(room(), function(clients, clientRoom)
+    local me = clients[2]
+    clientRoom.current = me
+    lu.assertTrue(fengying:enabledAtPlay(me), "奉迎客户端应无视大势力限制")
+  end)
+
+  inRoom(function()
+    local card = fengying:viewAs(maojie, {})
+    lu.assertNotNil(card)
+    lu.assertEquals(card.name, "qiao__threaten_emperor")
+    lu.assertTrue(card:getMark("qiao_ignore_big_kingdom") > 0)
+    -- 模拟被无懈可击抵消，验证“使用时”摸牌仍已完成
+    local use = { from = maojie, tos = { maojie }, card = card, nullifiedTargets = { maojie } }
+    room():useCard(use)
+  end)
+  lu.assertEquals(maojie:getHandcardNum(), maojie.maxHp, "奉迎使用时毛玠应摸至体力上限")
+  lu.assertEquals(ally:getHandcardNum(), ally.maxHp, "奉迎使用时同势力盟友应摸至体力上限")
+  lu.assertFalse(fengying:enabledAtPlay(maojie), "限定技用过一次后不可再用")
+end
+
 function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
   support.clearRoom()
   local upstream = support.initRoom()
@@ -239,6 +319,38 @@ function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
     H.CommandCB("command3", target, source, data)
   end)
   lu.assertEquals(target.hp, initialHp - 1)
+end
+
+function Testqiao_quan_han_wei_shu:testZhengpiLocksLimitBeforeTargetReveals()
+  local maojie, target = p(2), p(8)
+  local name = "qiao__skill_wei021b_1"
+  local gift = give(maojie, "qiao__dismantlement")
+  local revealed = false
+  local reveal = fk.CreateSkill { name = "#qiao_test_reveal_during_zhengpi" }
+  reveal:addEffect(fk.AfterCardsMove, {
+    global = true,
+    can_refresh = function(_, _, _, player, moves)
+      return player == target and not revealed and table.find(moves, function(move)
+        return move.to == target and move.skillName == name
+      end) ~= nil
+    end,
+    on_refresh = function()
+      revealed = true
+      target:revealGeneral(true)
+    end,
+  })
+  inRoom(function()
+    room():handleAddLoseSkills(maojie, name, nil, false, true)
+    target:hideGeneral(true)
+    lu.assertTrue(Quan.hasHiddenGeneral(target))
+    room():addSkill(reveal:createSkill())
+    room():setCurrent(maojie)
+    maojie.phase = Player.Play
+    Fk.skills[name]:onUse(room(), { from = maojie, tos = { target }, cards = { gift.id } })
+  end)
+  lu.assertTrue(revealed)
+  lu.assertFalse(Quan.hasHiddenGeneral(target))
+  lu.assertEquals(maojie:getMark(Quan.ZHENGPI_TWICE_MARK), 1)
 end
 
 return { name = "qiao_quan_han_wei_shu" }
