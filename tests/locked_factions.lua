@@ -122,6 +122,33 @@ local function startRoom(count, alternate, modeSettings, previous, blankDraft)
   return room
 end
 
+function Testlocked_factions:testFinishedLockedGamesWriteNativeWinAndLoss()
+  for _, count in ipairs({ 3, 4 }) do
+    local room = startRoom(count, nil, { [Locked.ruleKey] = Locked.rules[count - 2] })
+    local records = {}
+    function room.room:updatePlayerWinRate(id, mode, _, result)
+      lu.assertEquals(mode, Modes.locked)
+      lu.assertNil(records[id], "The same player was counted twice")
+      records[id] = result
+    end
+
+    FkTest.runInRoom(function()
+      room.start_time = os.time()
+      lu.assertFalse(room:shouldUpdateWinRate())
+      room.start_time = os.time() - 60
+      room:setTag("qiao_locked_start_rejected", true)
+      lu.assertFalse(room:shouldUpdateWinRate())
+      room:setTag("qiao_locked_start_rejected", nil)
+      room:gameOver({ room.players[1] })
+    end)
+
+    for seat, player in ipairs(room.players) do
+      lu.assertEquals(records[player.id], seat == 1 and 1 or 2)
+    end
+    support.clearRoom()
+  end
+end
+
 function Testlocked_factions:testRoomRuleSelectsCapacity()
   local mode = Fk.game_modes[Modes.locked]
   local W = require "ui_emu.preferences"

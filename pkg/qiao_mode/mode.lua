@@ -114,6 +114,13 @@ function M.create(base, name)
   local maxOffers = locked and 5 or MAX_OFFERS
   local collection = name == Modes.collection or locked
   local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
+  local countIn = base.countInFunc
+  if locked then
+    countIn = function(_, room)
+      return not room:getTag("qiao_locked_start_rejected")
+        and Locked.matchesPlayerCount(#room.players, room:getSettings(Locked.ruleKey))
+    end
+  end
   local function rejectLockedStart(room, message)
     room:setTag("qiao_locked_start_rejected", true)
     room:sendLog { type = message, toast = true }
@@ -502,7 +509,7 @@ function M.create(base, name)
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,
     get_adjusted = locked and Locked.adjusted or nil,
-    is_counted = base.countInFunc,
+    is_counted = countIn,
     reward_punish = function(self, victim, killer)
       local Counts=require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
       return Counts.withPhysicalCount(victim.room,function()
