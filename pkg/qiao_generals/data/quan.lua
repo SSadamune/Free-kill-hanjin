@@ -6,12 +6,12 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 4
-M.retinueCount = 0
-M.commanderCount = 0
-M.skillCount = 6
-M.retinueSkillCount = 0
-M.kingdoms = { "han", "wei" }
+M.generalCount = 5
+M.retinueCount = 1
+M.commanderCount = 1
+M.skillCount = 7
+M.retinueSkillCount = 1
+M.kingdoms = { "han", "wei", "shu" }
 
 M.generals = {
   -- 汉势力
@@ -134,12 +134,68 @@ M.generals = {
       },
     },
   },
+  -- 蜀势力
+  {
+    number = [==[SHU023]==],
+    id = [==[qiao_heg__shu023]==],
+    name = [==[王平]==],
+    kingdom = [==[shu]==],
+    title = [==[朴将封疆]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[费祎]==],
+    companionNames = { [==[费祎]==] },
+    companions = { [==[qiao_heg__shu018b]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    commander = {
+      card = [==[qiao__slash]==],
+      cardText = [==[杀]==],
+      sourceText = [==[无当飞军 | 杀]==],
+      retinue = [==[qiao_heg__retinue_wudang_feijun]==],
+      limited = false,
+    },
+    skills = {
+      {
+        id = [==[qiao__skill_shu023_1]==],
+        name = [==[将略]==],
+        text = [==[限定技，出牌阶段，你可以令所有与你势力相同的角色各加1点体力上限并回复1点体力（未确定势力角色可以明置任意张与你势力相同的武将牌并执行之），你摸等同与你势力相同的角色数的牌，然后你可以交给其中任意名角色各一张牌并令其选择是否使用一张牌。]==],
+        related = false,
+        tags = { [==[Limited]==] },
+      },
+    },
+  },
 }
 
 M.retinues = {
+  {
+    id = [==[qiao_heg__retinue_wudang_feijun]==],
+    name = [==[无当飞军]==],
+    limited = false,
+    title = [==[王平｜杀]==],
+    skill = {
+      id = [==[qiao__retinue_skill_wudang_feijun]==],
+      name = [==[无当飞军]==],
+      text = [==[当你使用【杀】造成伤害时，你可以防止受伤角色本回合下一次回复体力，当前回合结束时，若其未触发此效果，其弃置每区域各一张牌。]==],
+      tags = {  },
+    },
+  },
 }
 
 M.commanders = {
+  {
+    general = [==[qiao_heg__shu023]==],
+    number = [==[SHU023]==],
+    name = [==[王平]==],
+    retinue = [==[qiao_heg__retinue_wudang_feijun]==],
+    retinueName = [==[无当飞军]==],
+    card = [==[qiao__slash]==],
+    cardText = [==[杀]==],
+    sourceText = [==[无当飞军 | 杀]==],
+  },
 }
 
 return M

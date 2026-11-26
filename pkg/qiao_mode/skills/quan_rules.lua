@@ -2,6 +2,7 @@
 -- 包含：
 --   1. 刘宏【鬻爵】：本回合下次造成伤害后摸两张牌；
 --   2. 曹节【悬壶】：追踪本回合角色手牌/装备区实体红牌置入弃牌堆（含经处理区，不含判定区）；
+--   3. 无当飞军：防止本回合下一次回复体力，回合结束时未触发则每区弃一；
 --   6. 军令四：补充包含手牌的混合转化牌禁使用／打出防护。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
@@ -103,6 +104,51 @@ skill:addEffect(fk.TurnEnd, {
   end,
 })
 
+-- 3. 无当飞军：防止受伤角色本回合下一次回复体力；回合结束时仍有未触发实例则每份令其每区弃一。
+skill:addEffect(fk.PreHpRecover, {
+  global = true,
+  is_delay_effect = true,
+  mute = true,
+  can_trigger = function(self, event, target, player, data)
+    return target == player and inQiao(player.room)
+      and player:getMark(Quan.WUDANG_PENDING_MARK) > 0
+      and not data.prevented
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    if player:getMark(Quan.WUDANG_PENDING_MARK) <= 0 then return end
+    room:addPlayerMark(player, Quan.WUDANG_PENDING_MARK, -1)
+    data:preventRecover()
+    room:sendLog {
+      type = "#QiaoWudangPreventRecover",
+      from = player.id,
+    }
+  end,
+})
+
+skill:addEffect(fk.TurnEnd, {
+  global = true,
+  is_delay_effect = true,
+  mute = true,
+  can_trigger = function(self, event, target, player, data)
+    return inQiao(player.room) and RemovedTargets.isPresent(player)
+      and player:getMark(Quan.WUDANG_PENDING_MARK) > 0
+  end,
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local remain = player:getMark(Quan.WUDANG_PENDING_MARK)
+    if remain <= 0 then return end
+    room:setPlayerMark(player, Quan.WUDANG_PENDING_MARK, 0)
+    for _ = 1, remain do
+      if RemovedTargets.isPresent(player) then
+        Quan.discardOnePerArea(room, player, "qiao__retinue_skill_wudang_feijun")
+      end
+    end
+  end,
+})
+
 -- 6. 军令四补充防护：任何包含手牌材料的转化牌同样不得使用或打出。
 skill:addEffect("prohibit", {
   prohibit_use = function(self, player, card)
@@ -125,6 +171,7 @@ skill:addEffect("prohibit", {
 
 Fk:loadTranslationTable {
   ["qiao__quan_rules"] = "权包规则",
+  ["#QiaoWudangPreventRecover"] = "受【无当飞军】效果影响，防止了 %from 的此次体力回复",
 }
 
 return skill

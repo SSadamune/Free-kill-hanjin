@@ -13,3 +13,4 @@
 | HAN021 | [曹节](quan/han021.md) | 魏 | [守玺](quan/han021.md#han021-1)、[悬壶](quan/han021.md#han021-2) |
 | WEI021B | [毛玠](quan/wei021b.md) | — | [征辟](quan/wei021b.md#wei021b-1)、[奉迎](quan/wei021b.md#wei021b-2) |
 | WEI024 | [于禁](quan/wei024.md) | 汉、蜀、吴 | [常令](quan/wei024.md#wei024-1) |
+| SHU023 | [王平](quan/shu023.md) | — | [将略](quan/shu023.md#shu023-1)（统领：[无当飞军](quan/retinue-wudang-feijun.md#wudang-feijun)） |

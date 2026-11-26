@@ -329,6 +329,111 @@ function Testqiao_quan_han_wei_shu:testWei024YujinChangling()
   lu.assertEquals(yujin:getMark("qiao_wei024_extra_draw"), 3, "常令不执行应在本回合摸牌阶段多摸3张")
 end
 
+function Testqiao_quan_han_wei_shu:testShu023WangpingJianglueAndWudangFeijun()
+  local wangping, shuAlly, hiddenShu, enemy = p(3), p(4), p(5), p(2)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), wangping, { main = "qiao_heg__shu023", deputy = "qiao_test__shu_2", kingdom = "shu" })
+    skill_test.installDualGenerals(room(), shuAlly, { main = "qiao_heg__shu001", deputy = "qiao_test__shu_2", kingdom = "shu" })
+    -- hiddenShu 为未确定势力但暗置蜀将，响应亮将后加入蜀势力
+    skill_test.installDualGenerals(room(), hiddenShu, { main = "qiao_heg__shu002", deputy = "qiao_test__shu_2", kingdom = "unknown" })
+    hiddenShu.general = "anjiang"
+    hiddenShu.deputyGeneral = "anjiang"
+    room():setPlayerProperty(hiddenShu, "kingdom", "unknown")
+    room():setPlayerMark(hiddenShu, "__heg_general", "qiao_heg__shu002")
+    room():setPlayerMark(hiddenShu, "__heg_deputy", "qiao_test__shu_2")
+    room():setPlayerMark(hiddenShu, "__heg_kingdom", "shu")
+    room():loseHp(wangping, 1, "test")
+    room():loseHp(shuAlly, 1, "test")
+    room().current = wangping
+    wangping.phase = Player.Play
+  end)
+
+  local wpMaxBefore = wangping.maxHp
+  local wpHpBefore = wangping.hp
+  local allyMaxBefore = shuAlly.maxHp
+  local jianglue = assert(Fk.skills["qiao__skill_shu023_1"])
+  local giveStep = 0
+  skill_test.withSkillRequests(room(), "qiao__skill_shu023_1", {
+    askToChoice = function(self, who, params)
+      if who == hiddenShu then return params.choices[1] end
+      return "Cancel"
+    end,
+    askToUseCard = function() return nil end,
+  }, function()
+    skill_test.withSkillRequests(room(), "#qiao__skill_shu023_1_give", {
+      askToUseActiveSkill = function(self, who, params)
+        giveStep = giveStep + 1
+        if giveStep == 1 then
+          return true, { cards = { who:getCardIds("h")[1] }, targets = { shuAlly } }
+        end
+        return false, nil
+      end,
+    }, function()
+      inRoom(function()
+        lu.assertTrue(jianglue:canUse(wangping))
+        room():useSkill(wangping, jianglue, function()
+          jianglue:onUse(room(), { from = wangping, cards = {}, tos = {} })
+        end, { from = wangping, cards = {}, tos = {} })
+      end)
+    end)
+  end)
+
+  lu.assertEquals(hiddenShu.kingdom, "shu", "未确定势力蜀将响应将略亮将")
+  lu.assertEquals(wangping.maxHp, wpMaxBefore + 1)
+  lu.assertEquals(wangping.hp, wpHpBefore + 1)
+  lu.assertEquals(shuAlly.maxHp, allyMaxBefore + 1)
+  -- 3名蜀势力角色 -> 王平摸3张，交1张给 shuAlly，王平剩2张
+  lu.assertEquals(wangping:getHandcardNum(), 2)
+  lu.assertEquals(shuAlly:getHandcardNum(), 1)
+  lu.assertFalse(jianglue:canUse(wangping), "将略限定技不可再用")
+
+  -- 翼从无当飞军：分支A 防止下一次回血且回合末不弃牌；分支B 未回血则回合末三区各弃一
+  local wudangSkill = "qiao__retinue_skill_wudang_feijun"
+  inRoom(function()
+    R.grant(wangping, { general = "qiao_heg__retinue_wudang_feijun", skill = wudangSkill, position = "deputy" })
+  end)
+  skill_test.withSkillRequests(room(), wudangSkill, {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function()
+      local slash = Fk:cloneCard("qiao__slash")
+      room():damage { from = wangping, to = enemy, card = slash, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(enemy:getMark(Quan.WUDANG_PENDING_MARK), 1)
+
+  -- 分支A：尝试回血被防止并消耗标记
+  local hpAfterDamage = enemy.hp
+  inRoom(function()
+    room():recover { who = enemy, num = 1, skillName = "test" }
+  end)
+  lu.assertEquals(enemy.hp, hpAfterDamage, "无当飞军应防止本回合下一次回复体力")
+  lu.assertEquals(enemy:getMark(Quan.WUDANG_PENDING_MARK), 0)
+
+  -- 分支B：再次挂上后不回血，回合结束时三区各弃一
+  give(enemy, "qiao__jink", Card.Club, 3)
+  equip(enemy, "qiao__chitu", Card.Heart, 5)
+  inRoom(function()
+    local ind = room():printCard("qiao__indulgence", Card.Spade, 6)
+    room():moveCardTo(ind, Card.PlayerJudge, enemy, fk.ReasonJustMove, "test", nil, true)
+    Quan.addWudangEffect(room(), enemy)
+  end)
+  skill_test.withSkillRequests(room(), wudangSkill, {
+    askToDiscard = function(self, who, params)
+      local id = who:getCardIds("h")[1]
+      self:throwCard({ id }, params.skill_name, who, who)
+      return { id }
+    end,
+  }, function()
+    inRoom(function()
+      room().logic:trigger(fk.TurnEnd, room().current, {})
+    end)
+  end)
+  lu.assertEquals(#enemy:getCardIds("h"), 0)
+  lu.assertEquals(#enemy:getCardIds("e"), 0)
+  lu.assertEquals(#enemy:getCardIds("j"), 0)
+end
+
 function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
   support.clearRoom()
   local upstream = support.initRoom()
@@ -372,6 +477,51 @@ function Testqiao_quan_han_wei_shu:testZhengpiLocksLimitBeforeTargetReveals()
   lu.assertTrue(revealed)
   lu.assertFalse(Quan.hasHiddenGeneral(target))
   lu.assertEquals(maojie:getMark(Quan.ZHENGPI_TWICE_MARK), 1)
+end
+
+function Testqiao_quan_han_wei_shu:testJianglueCountsDeliveredCardsEvenIfTheyMoveAgain()
+  local wangping, sealed, missed, received = p(1), p(2), p(3), p(4)
+  local name = "qiao__skill_shu023_1"
+  local sword = equip(wangping, "qiao__qinggang_sword")
+  local gift = give(wangping, "qiao__slash")
+  local notified = {}
+  local rediscard = fk.CreateSkill { name = "#qiao_test_discard_jianglue_gift" }
+  rediscard:addEffect(fk.AfterCardsMove, {
+    global = true,
+    can_refresh = function(_, _, _, player, moves)
+      return player == received and table.find(moves, function(move)
+        return move.to == received and move.toArea == Card.PlayerHand and move.skillName == name
+      end) ~= nil
+    end,
+    on_refresh = function() room():throwCard(gift.id, "test", received, received) end,
+  })
+  inRoom(function()
+    for _, ally in ipairs({ sealed, missed, received }) do room():setPlayerProperty(ally, "kingdom", wangping.kingdom) end
+    room():setCurrent(wangping)
+    wangping.phase = Player.Play
+    room():handleAddLoseSkills(wangping, name, nil, false, true)
+    room():abortPlayerArea(sealed, Player.HandSlot)
+    room():setCardMark(sword, MarkEnum.DestructOutMyEquip, 1)
+    room():addSkill(rediscard:createSkill())
+  end)
+  skill_test.withSkillRequests(room(), "#qiao__skill_shu023_1_give", {
+    askToUseActiveSkill = function(_, _, params)
+      local targets = params.extra_data.qiao_valid_targets
+      lu.assertFalse(table.contains(targets, sealed.id))
+      if table.contains(targets, missed.id) then return true, { cards = { sword.id }, targets = { missed } } end
+      if table.contains(targets, received.id) then return true, { cards = { gift.id }, targets = { received } } end
+      return false
+    end,
+  }, function()
+    skill_test.withSkillRequests(room(), name, {
+      askToUseCard = function(_, player) table.insert(notified, player.id) end,
+    }, function()
+      inRoom(function() Fk.skills[name]:onUse(room(), { from = wangping, tos = {}, cards = {} }) end)
+    end)
+  end)
+  lu.assertEquals(room():getCardArea(sword.id), Card.Void)
+  lu.assertEquals(room():getCardArea(gift.id), Card.DiscardPile)
+  lu.assertEquals(notified, { received.id })
 end
 
 return { name = "qiao_quan_han_wei_shu" }

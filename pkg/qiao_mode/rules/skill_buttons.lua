@@ -9,6 +9,7 @@ local aliases = {
   qiao__retinue_skill_bingzhou_langqi = "并州骑",
   qiao__retinue_skill_qingzhou_jingrui = "青州兵",
   qiao__retinue_skill_lujiang_shangjia = "庐江兵",
+  qiao__retinue_skill_wudang_feijun = "无当军",
   qiao__luminous_pearl_skill = "夜明珠",
   qiao__sihai_liuqian_skill = "流钱",
   qiao__five_elements_fan_skill = "五行扇",
