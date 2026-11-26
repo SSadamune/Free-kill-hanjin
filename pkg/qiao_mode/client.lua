@@ -407,18 +407,13 @@ function QiaoClient:handleSetBanner(data)
 end
 
 function QiaoClient:guestIllustrationsEnabled()
-  return self.settings ~= nil and Guest.replacementEnabled(self)
+  return self.settings ~= nil and Modes.inRoom(self) and Guest.replacementEnabled(self)
 end
 
 function QiaoClient:guestCardFactions()
   local allowed = self:getBanner("all_kingdoms")
   if not self:guestIllustrationsEnabled() or not allowed then return {} end
-  local factions = {}
-  for name, registered in pairs(Guest.guests) do
-    local entry = Guest.resolve(name, allowed)
-    if entry and entry.guest then factions[name] = registered end
-  end
-  return factions
+  return Guest.replacementFactionsForDisplay(allowed)
 end
 
 -- 读取客户端同步的实体弃牌堆。桌面动画消失时，这些牌可能仍在堆中。
@@ -609,7 +604,13 @@ function QiaoClient:notifyUI(command, data)
       data.component.model.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoicesModel.qml"
     end
   end
-  BaseClient.notifyUI(self, command, data)
+  -- RoomModel registers MoveCards in its own Component.onCompleted. Route
+  -- live moves and reconnect snapshots to the Han-Jin room's separate callback.
+  local uiCommand = command
+  if command == "MoveCards" and self.settings and Modes.inRoom(self) then
+    uiCommand = "QiaoMoveCards"
+  end
+  BaseClient.notifyUI(self, uiCommand, data)
   if (command == "AddSkill" or command == "LoseSkill") and data[2] == "ld__jilis" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end

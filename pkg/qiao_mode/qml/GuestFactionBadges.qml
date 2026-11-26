@@ -8,10 +8,11 @@ Item {
 
   required property var factions
   property Item card: null
+  property bool standalone: false
+  property real badgeSize: 22
   readonly property bool clustered: factions.length >= 3
-  readonly property int badgeSize: 22
-  readonly property int columnStep: 18
-  readonly property int rowStep: 15
+  readonly property real columnStep: badgeSize * 18 / 22
+  readonly property real rowStep: badgeSize * 15 / 22
   readonly property int topCount: Math.floor(factions.length / 2)
   readonly property int topOffset: factions.length % 2 ? columnStep / 2 : 0
   readonly property int bottomOffset: factions.length % 2 ? 0 : 6
@@ -54,18 +55,22 @@ Item {
   }
 
   Repeater {
-    model: badges.clustered ? badges.factions : []
+    model: badges.clustered || badges.standalone ? badges.factions : []
 
     Image {
       required property int index
       required property string modelData
-      x: index < badges.topCount ? badges.topOffset + index * badges.columnStep
+      x: !badges.clustered ? index * badges.columnStep
+        : index < badges.topCount ? badges.topOffset + index * badges.columnStep
         : badges.bottomOffset + (index - badges.topCount) * badges.columnStep
-      y: index < badges.topCount ? 0 : badges.rowStep
+      y: !badges.clustered || index < badges.topCount ? 0 : badges.rowStep
       width: badges.badgeSize
       height: badges.badgeSize
       fillMode: Image.PreserveAspectFit
-      source: SkinBank.getGeneralCardDir(modelData) + modelData
+      source: {
+        const dir = SkinBank.getGeneralCardDir(modelData);
+        return dir ? dir + modelData : "";
+      }
     }
   }
 }

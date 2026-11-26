@@ -4,6 +4,7 @@
 local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local EquipmentExchange = require "packages.qiao.pkg.qiao_mode.rules.equipment_exchange"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_jin023_1",
@@ -11,6 +12,8 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local SLASH = "qiao__slash"
+local SINGLE = "qiao__skill_jin023_1-single"
+local QUEUE = "qiao__skill_jin023_1-queue"
 
 local function canExchangeWithSomeone(room, chooser, target)
   return table.find(room:getPresentPlayers(), function(other)
@@ -60,15 +63,16 @@ skill:addEffect("active", {
     local condition = {}
     local targetsForSlash = { other }
     local queue = queueTargets(room, other, player, condition)
-    if #queue > 1 then
-      local choice = room:askToChoice(player, {
-        choices = { "single", "queue" },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_jin023_1-target-group",
-        cancelable = false,
-      })
-      if choice == "queue" then targetsForSlash = queue end
-    end
+    local options = { SINGLE, QUEUE }
+    local choice = Selection.askOption(room, player, {
+      choices = #queue > 1 and options or { SINGLE },
+      all_choices = options,
+      skill_name = skill.name,
+      prompt = "#qiao__skill_jin023_1-target-group",
+      cancelable = false,
+    })
+    if not choice then return end
+    if choice == QUEUE then targetsForSlash = queue end
 
     local policy = C.explicit(condition, {
       names = { SLASH },
@@ -84,8 +88,8 @@ Fk:loadTranslationTable {
   ["#qiao__skill_jin023_1-prompt"] = "锋械：交换两名角色各一张装备牌，然后可对另一名或其队列使用【杀】",
   ["#qiao__skill_jin023_1-equip"] = "锋械：选择 %dest 一张装备牌",
   ["#qiao__skill_jin023_1-target-group"] = "锋械：选择【杀】的目标组",
-  ["single"] = "另一名角色",
-  ["queue"] = "其队列",
+  [SINGLE] = "视为对其使用【杀】",
+  [QUEUE] = "视为对其队列使用【杀】",
 }
 
 return skill

@@ -24,6 +24,14 @@ local function discardOne(room, player, target)
     return not target:prohibitDiscard(id)
   end)
   if #ids == 0 then return end
+  if target == player then
+    room:askToDiscard(player, {
+      min_num = 1, max_num = 1, include_equip = true, cancelable = false,
+      skill_name = skill.name,
+      prompt = "#qiao__skill_jin005_2-discard-self",
+    })
+    return
+  end
   local id = room:askToChooseCard(player, {
     target = target,
     flag = "he",
@@ -65,6 +73,7 @@ Fk:loadTranslationTable {
   [":qiao__skill_jin005_2"] = "副将技（☯️-1），当你造成属性伤害后，你可以依次弃置受伤角色和所有横置的角色各一张牌。",
   ["#qiao__skill_jin005_2-invoke"] = "顺流：你可以依次弃置受伤角色和所有横置角色各一张牌",
   ["#qiao__skill_jin005_2-discard"] = "顺流：选择 %dest 的一张牌弃置",
+  ["#qiao__skill_jin005_2-discard-self"] = "顺流：弃置自己的一张手牌或装备牌",
 }
 
 return skill

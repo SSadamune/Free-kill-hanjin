@@ -2,6 +2,7 @@
 -- is required, so the same references can be used before entering a room.
 local M = {}
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
 local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
@@ -134,9 +135,12 @@ function M.catalog()
     if general.package.extensionName == "qiao" then
       local title = translated(id)
       if title and (not general.total_hidden or Commander.isRetinue(id)) then
+        local commander = Commander.commanders[id]
         generals[#generals + 1] = addAliases {
           id = id, title = title, variant = translated(general.prefix or ""),
           page = Commander.isRetinue(id) and "retinue" or "general", bare = true,
+          lord = Versions.lord_version(id),
+          commander = commander and Commander.describeSource(id, commander.retinues),
         }
       end
     end

@@ -14,7 +14,7 @@ local H = require "packages.hegemony.util"
 local M = {}
 
 M.FEIYING_SKILL = "qiao__feiying"
-M.FEIYING_MARK = "@@qiao_feiying_sources"
+M.FEIYING_MARK = "qiao_feiying_sources"
 M.FEIYING_LAYERS_MARK = "@@qiao_feiying_layers"
 M.HEYI_SKILL = "qiao__skill_wei018_2"
 M.SOURCE_COUNT = 10 -- 汉晋模式沿用国战的房间人数上限。

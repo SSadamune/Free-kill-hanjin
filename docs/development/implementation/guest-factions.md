@@ -14,7 +14,7 @@
 | 选将请求、重抽、服务端复核 | `pkg/qiao_mode/rules/selection.lua` |
 | 武将弃牌堆与引擎入口拦截 | `pkg/qiao_mode/rules/general_discard.lua` |
 | 重抽客户端 | `pkg/qiao_mode/qml/GuestRedrawBox.qml`、`qiao_heg_pair` 客户端选将规则 |
-| 正式/测试内容 | `tests/support/guest_allegiance_content.lua`（仅测试）；正式登记见 `pkg/qiao_generals/data/standard.lua` |
+| 正式/测试内容 | 正式登记见 `pkg/qiao_generals/data/standard.lua` 及阵势包的 `zhen_shi*.lua`。独立测试内容见 `tests/support/guest_allegiance_content.lua` |
 
 ### 房间状态与配将
 
@@ -38,21 +38,17 @@
 
 ### 边界
 
-- 正式标准包已有 51 张武将登记客将势力并接入正式将池；其专属技能仍仅展示。`tests/support/guest_allegiance_content.lua` 的独立测试武将不进入正式将池。
-- 选将界面的客将重抽入口与本局势力提示已按请求数据实现，仍需在游戏客户端人工验收；自动化测试覆盖请求数据、客户端选将规则、服务端复核和状态落盘。
-- 战报、动画和断线重连显示不在本轮自动化范围内。
+- 正式标准包有 51 张武将登记客将势力，君临天下新增 9 张。阵、势包按[图鉴牌面](../../rules/zhen-shi-generals.md#客将势力)填写 `guests`，随正式武将一起注册。孙策按牌面顺序登记群、汉。`tests/support/guest_allegiance_content.lua` 的独立测试武将不进入正式将池。
+- 服务端请求提供各候选的客将重抽资格，局内武将牌在统一入口读取房间状态展示势力。自动化覆盖重抽请求、选将规则、服务端复核和状态落盘。各显示场景的验收范围见[客将显示验证](#客将插画)。
 
 ### 客将插画
 
-房间照片和弹窗里的简化照片通过公共武将牌接线更新原生遮罩中的主副将图片源。图片沿用该层的双将裁切，换将后重新读取当前可见程序 ID。具备独立皮肤的角色仍按引擎层级显示皮肤。
+图鉴、局内完整牌和主桌面头像的显示规则见[客将插画显示表](../guest-illustrations.md#显示行为)。原本完整牌和部分弹窗分别从候选数据或角色势力取徽记，头像和缩略牌又走各自的换图路径。同一武将因此可能在不同组件显示不同的牌面。房间客籍映射现也避开了 Qt 6.10 未支持的 `Object.fromEntries`。
 
-- `GuestRedrawBox.qml` 读取请求中的 `extraData.guestIllustrations`，候选、确认区与重抽沿用同一张卡片。只要房间开关开启，即使本次没有可重抽的客将也使用这个选将框。`extraData.guestFactions` 提供启用客籍武将的完整登记客籍，供牌面和边框渲染。`GuestFactionBorder.qml` 从上边中点逆时针按周长等分。禁用蜀、群时，刘备显示汉、魏、吴、群。常规配将的 `pairing` 和初始势力选择使用本局允许的客籍。
-- 开启自由选将及客将替换规则时，请求也包含候选外可换入的客将在资料上登记的全部客籍。重抽资格继续来自原始候选。
-- 自由选将按武将列表的扩展登记顺序把汉晋武将包放在顶部，与上游包以分割线隔开。列表预览与选将框共用普通及客将牌面，自由选将时使用相同的默认插画，避免本地皮肤盖住换入前预览的插画。
-- 自由选将、同名替换和重抽复用原候选卡片。底图随当前武将牌模型更新。本局开启客将替换且当前武将有对应客将插画时才采用该插画，其余情况使用默认插画。`python scripts/check_free_assign_ui.py` 离屏检查蔡文姬与司马炎互换，以及关闭客将替换时蔡文姬显示默认插画。
-- `QiaoRoom.qml` 使用 `GeneralCardPresentation.qml` 处理房间及详情弹窗中创建的原生武将牌、缩略牌、武将图牌面和 `PhotoBase` 头像。房间开关和公开的本局允许势力决定显示。暗将占位与缺图回退沿用原组件，主、副将分别按当前可见身份取图。
-- `GuestIllustration.js` 与 `GuestCardAppearance.qml` 提供选将、对局与图鉴共用的附加图和卡面势力徽记。选将、变更与局内详情统一按房间显示顺序排列三种以上客籍，图鉴按登记顺序预览。对局头像沿用原遮罩、分栏及皮肤层。
-- 【尚义】的私看和【祸水】的选将共用 utility 请求模型与对局武将牌显示，详情可查看本次提供的武将。选中状态由模型保存，候选滚出网格后仍可由下一次选择替换。候选限制和回包格式沿用 utility。
-- 根 `init.lua` 通过已登记的武将一览页面入口加载 `QiaoGeneralsOverview.qml`。「客将势力」开关对原生图鉴网格和详情预览应用同一份客将登记。登记由武将数据提供，一到两种势力用原卡面样式，三种以上由 `GuestFactionBadges.qml` 错行排列。各包的显示、搜索与原详情入口可继续使用。
+- [`GeneralCardPresentation.appearanceFor`](../../../pkg/qiao_mode/qml/GeneralCardPresentation.qml) 按武将程序 ID 返回可用客将图、用于展示的客籍和最终牌面势力。房间从 `guestIllustrationsEnabled()` 和 `guestCardFactions()` 取公开状态，后者以 `all_kingdoms` 判定主势力是否全禁。初始化、禁选同步及重连均刷新这份状态。武将一览用独立的预览开关和登记数据提供同一接口。
+- 选将、确认区、自由选将、重抽、换将、赐、知己知彼、尚义和祸水候选共用牌面。原生角色详情、缩略牌、战报、武将牌堆、技能弹窗、动画和 `general:` 武将牌面也由房间接入。完整牌经 `GuestCardAppearance.qml` 接线，客将边框与徽记布局分别使用共享组件。图片通过 `SkinBank.getGeneralExtraPic` 从 `guest/` 读取，完整牌默认图由原生 `GeneralCardModel.frontSkin` 提供。
+- 主桌面原生 `Photo` 按主副将各自公开的程序 ID 持续绑定图片源，沿用原生遮罩及裁切。Qt 6.10 退出旧的客将图条件绑定时可能残留上一张正面，因此暗将占位显式加载牌背。桌面 `Photo` 隐藏额外的武将牌徽记，原生角色势力标与弹窗中的牌面徽记各按原有显示入口处理。本人的私密武将牌从右键详情查看。
+- 配将、重抽资格和赐的转交分组读取服务端的本局允许势力。局内牌面使用的完整客籍只用于展示。
+- `python scripts/check_free_assign_ui.py` 验证右键及长按换将、原势力仍允许时只换图、主势力全禁时同时换图和势力标识，以及关闭开关时还原。并核对主副将头像、角色详情牌、私看牌、赐、缩略牌和武将图牌面的公共接线。
 
-`tests/guest_allegiance.lua` 已覆盖势力解析与配将、连续重抽、两人重抽、补发失败保留原候选、选将回复复核和客户端请求协议；`tests/standard_generals.lua` 覆盖正式客将登记与解析。界面显示、动画及断线重连的人工验收仍待完成。
+`tests/guest_allegiance.lua` 覆盖势力解析与配将、连续重抽、两人重抽、补发失败保留原候选、选将回复复核和客户端请求协议，也核对阵势包九将登记、禁吴和群时孙策的入池与配将、朱儁在房间开关两种状态下的选将请求。`tests/standard_generals.lua` 覆盖标准包客将登记与解析。实机、联机与重连的当前验收范围见[开发状态](../status.md#最近验证记录)。

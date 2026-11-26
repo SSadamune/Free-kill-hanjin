@@ -93,7 +93,11 @@ function Testqiao_jin006_duyu:testSanChenDrawDiscardRestoreMainFlow()
         FkTest.room:throwCard(ids, SANCHEN, player, player)
         return ids
       end,
-      askToChoice = function() return "restore" end,
+      askToChoice = function(_, _, params)
+        lu.assertEquals(table.map(params.choices, function(choice) return Fk:translate(choice) end),
+          { "摸一张牌", "复原〖三陈〗" })
+        return "qiao__skill_jin006_1-restore"
+      end,
     }, function()
       Fk.skills[SANCHEN]:onUse(FkTest.room, { from = me, tos = { target } })
     end)
