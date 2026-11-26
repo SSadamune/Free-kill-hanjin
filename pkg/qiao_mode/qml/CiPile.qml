@@ -111,23 +111,17 @@ ColumnLayout {
           z: 3
           visible: root.inspectedCi === card.modelData
         }
-        Rectangle {
-          x: card.exposedWidth - width - 5
-          y: card.height - height - 5
-          width: 26
-          height: 26
-          radius: 13
+        Image {
+          objectName: "qiaoCiChosen"
+          source: SkinBank.cardDir + "chosen"
+          width: Math.min(implicitWidth * 1.25, card.exposedWidth - 4)
+          height: implicitHeight * width / Math.max(implicitWidth, 1)
+          x: (card.exposedWidth - width) / 2
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 8
+          fillMode: Image.PreserveAspectFit
           z: 3
-          color: "#165737"
-          border.color: "#b0edb8"
           visible: root.selectedNames.includes(card.modelData)
-          Text {
-            anchors.centerIn: parent
-            text: "✓"
-            font.pixelSize: 19
-            font.bold: true
-            color: "#e1ffe5"
-          }
         }
       }
     }
