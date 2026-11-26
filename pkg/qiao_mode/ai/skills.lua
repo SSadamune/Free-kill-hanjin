@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -69,17 +70,12 @@ function M.invoke(ai, data)
   local skill = type(name) == "string" and Fk.skills[name]
   local skeleton = skill and skill:getSkeleton()
   local original = skeleton and skeleton.name or name
+  local decision = Triggers.invoke(ai, original, fields)
+  if decision ~= nil then return decision end
   if original == "qiao__eight_diagram_skill" then return true end
   if original == "qiao__kylin_bow_skill" then
     local damage = parentData(ai, GameEvent.Damage)
     return damage ~= nil and ai:isEnemy(damage.to)
-  end
-  if key == "#qiao__skill_shu010_2-invoke" then
-    local rescue = table.filter(player:getCardIds("h"), function(id)
-      local card = Fk:getCardById(id)
-      return (card.trueName == "peach" or card.trueName == "analeptic") and not player:prohibitUse(card)
-    end)
-    return #rescue < 1 - player.hp
   end
   if key == "#qiao__skill_shu016_2-invoke" then
     local hand = player:getCardIds("h")
@@ -129,6 +125,11 @@ function M.active(ai, data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  if skill == "choose_players_skill" then
+    local use = key == "#qiao__skill_jin012_1-targets" and parentData(ai, GameEvent.UseCard)
+    local score, extend = Triggers.targetScore(ai, key, use)
+    if score then return chooseTargets(ai, score, extend and extra.num or 1) end
+  end
   if key == "#qiao_adaptation_support" then
     return Adaptation.support(ai, extra) and M.activeReply(ai) or ""
   end
@@ -157,6 +158,17 @@ function M.active(ai, data)
       budget = 2
     elseif key == "#qiao__retinue_skill_jinfanjun-discard" then
       budget = 3
+    elseif key == "#qiao__skill_jin012_1-discard" then
+      budget = Triggers.ciweiBudget(ai)
+      if not budget then return "" end
+    elseif key == "#qiao__skill_shu006_2-discard" then
+      local sacrifice = ai:getEnabledCards()
+      local canJink = table.find(ai.player:getCardIds("h"), function(id)
+        local card = Fk:getCardById(id)
+        return card.trueName == "jink" and not table.contains(sacrifice, id) and not ai.player:prohibitUse(card)
+      end)
+      if not canJink then return "" end
+      budget = ai.player.hp <= 1 and 6 or 3
     elseif key == "#qiao__retinue_skill_huangjin_leishi-discard" then
       local frame = Selection.currentCost(ai.player)
       local damage = frame and frame.data
@@ -236,7 +248,7 @@ end
 function M.arrange(ai, data)
   if #data.names ~= 2 or data.names[1] ~= "Top" or data.names[2] ~= "Bottom"
     or data.pattern ~= "." or data.poxi_type ~= "" or ai.room.current ~= ai.player
-    or #ai.player:getCardIds("j") > 0 then return end
+    or ai.player.phase == Player.Finish or #ai.player:getCardIds("j") > 0 then return end
   local cards = table.connect(table.unpack(data.cards))
   table.sort(cards, function(a, b)
     local va, vb = Cost.value(ai, a), Cost.value(ai, b)
@@ -260,6 +272,7 @@ function M.chosen(ai, data)
   local fields = (prompt or ""):split(":")
   local key = fields[1]
   local removal = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__chasing_near-choose-discard"
+    or key == "#qiao__skill_qun016_1-card"
     or key == "#qiao_ice_damage_skill-discard" or key == "#qiao_adaptation_discard_equip"
     or (key == "#AskForChooseCard" and (fields[4] == "dismantlement_skill" or fields[4] == "snatch_skill"))
   if removal and areas:find("e", 1, true) then
@@ -280,7 +293,7 @@ end
 
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
-  local pick
+  local pick = Triggers.choice(ai, choices, (prompt or ""):split(":"))
   if skillName == "trigger" then
     pick = choices[1]
   elseif skillName == "qiao__restore_heartland_skill" then

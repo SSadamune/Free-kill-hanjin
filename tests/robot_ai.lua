@@ -275,4 +275,71 @@ function Testqiao_robot_ai:testVenomSavesGeneralWhenEnemyIsNotDying()
   end)
 end
 
+function Testqiao_robot_ai:testYimieKeepsLimitedUseUntilDamageIsLethal()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_jin002_2"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    room:setPlayerProperty(player, "hp", 1)
+    room:setPlayerProperty(enemy, "hp", 3)
+    room:damage { from = player, to = enemy, damage = 1 }
+    lu.assertEquals(enemy.hp, 2)
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryGame), 0)
+    room:damage { from = player, to = enemy, damage = 1 }
+    lu.assertEquals(enemy.hp, 0)
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryGame), 1)
+  end)
+end
+
+function Testqiao_robot_ai:testLizhanDrawsForWoundedAllyOnly()
+  scenario(function(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei011_2", nil, false, true)
+    room:setPlayerProperty(player, "phase", Player.Finish)
+    for _, target in ipairs({ enemy, ally, unknown }) do room:setPlayerProperty(target, "hp", 1) end
+    local allyHand, enemyHand, unknownHand = ally:getHandcardNum(), enemy:getHandcardNum(), unknown:getHandcardNum()
+    room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Finish })
+    lu.assertEquals(ally:getHandcardNum(), allyHand + 1)
+    lu.assertEquals(enemy:getHandcardNum(), enemyHand)
+    lu.assertEquals(unknown:getHandcardNum(), unknownHand)
+  end)
+end
+
+function Testqiao_robot_ai:testJizhiInvokesThroughDefaultPrompt()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_shu007_1", nil, false, true)
+    local card = give(room, player, "qiao__foresight")
+    room:useCard { from = player, tos = { player }, card = card }
+    lu.assertEquals(player:getHandcardNum(), 3)
+  end)
+end
+
+function Testqiao_robot_ai:testCiweiPaysForAnAllyButLeavesOtherTargetsInPlace()
+  scenario(function(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_jin012_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local cheap = give(room, player, "qiao__lightning")
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    local attack = give(room, enemy, "qiao__archery_attack")
+    local allyHp, unknownHp = ally.hp, unknown.hp
+    local probe = fk.CreateSkill { name = "#qiao_robot_ciwei_turn_probe" }
+    probe:addEffect(fk.TurnStart, {
+      global = true,
+      can_refresh = function(_, _, target, owner) return target == enemy and owner == enemy end,
+      on_refresh = function()
+        room:setCurrent(enemy)
+        room:useCard { from = enemy, tos = { enemy }, card = armor }
+        room:useCard { from = enemy, tos = { ally, unknown }, card = attack }
+      end,
+    })
+    room:addSkill(probe:createSkill())
+    GameEvent.Turn:create(TurnData:new(enemy, "game_rule", { Player.Play })):exec()
+    lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
+    lu.assertEquals(ally.hp, allyHp)
+    lu.assertEquals(unknown.hp, unknownHp - 1)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

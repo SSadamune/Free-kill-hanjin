@@ -46,6 +46,10 @@ function Robot:handleAskForChoices(data)
   return Skills.choice(self, data)
 end
 
+function Robot:handleAskForOptions(data)
+  return Skills.choice(self, data)
+end
+
 function Robot:handleAskForUseCard(data)
   if data[1] == "qiao__retinue_skill_niujin" then return Cards.play(self) end
   if data[2] == "slash" then return Cards.playEnemySlash(self) end
