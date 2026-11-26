@@ -145,7 +145,7 @@ end
 for _, retinue in ipairs(Data.retinues) do
   translations[retinue.id] = retinue.name
   translations["#" .. retinue.id] = retinue.title
-  translations[retinue.skill.id] = retinue.skill.name
+  translations[retinue.skill.id] = retinue.name
   translations[":" .. retinue.skill.id] = retinue.skill.text
 end
 Fk:loadTranslationTable(translations)
@@ -244,7 +244,7 @@ Fk:addPostLoadFunc(function()
     })
     Sources.registerRetinue(retinue.id, retinue.skill.id)
   end
-  -- 非武将来源标签：只包裹既有 skeleton.dynamic_desc，不改技能名或可见性。
+  -- 从各能力的来源登记技能详情标签及默认显示名。
   SkillSourceLabels.register(Data.retinues)
   for _, source in ipairs(sources) do
     for _, version in ipairs(source.data.versions or {}) do Versions.register(version) end

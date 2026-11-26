@@ -1,12 +1,15 @@
 -- HanJin selection interaction and server-side validation.
 --
--- The final pair uses the engine's generic ChooseGeneralBox with a HanJin
+-- The final pair uses the engine's ChooseGeneralModel with a HanJin
 -- choose-general rule (registered by the mode package). The rule receives the
 -- per-room pairing map as extra data, so a guest candidate is filtered by its
 -- actual this-game factions instead of the engine's global general definition.
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
+local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 
@@ -23,6 +26,7 @@ end
 M.defaultTimeout = 90
 M.rule = "qiao_heg_pair"
 M.redraw_url = "packages/qiao/pkg/qiao_mode/qml/GuestRedrawBox.qml"
+M.ascension_url = "packages/qiao/pkg/qiao_mode/qml/QiaoChooseGeneralBox.qml"
 
 local function strings(list)
   local result = {}
@@ -189,6 +193,42 @@ function M.prompt(room)
   return "#QiaoChooseGeneralsBans:::" .. (#banned > 0 and kingdomList(banned) or "无")
 end
 
+local function ascensionHints(room, names, freeAssign)
+  local allowed = room:getBanner("all_kingdoms") or {}
+  local allowsLord = FaqRules.allows_lord_ascension(room)
+  local hints = {}
+  local function add(name, general)
+    if general.kingdom == "wild" then
+      for _, loyalty in ipairs(Versions.loyalty_versions(name)) do
+        if RoomBans.allows(room, loyalty) then
+          local possible
+          if freeAssign then
+            possible = Guest.factionsOf(room, loyalty)
+          else
+            possible = table.find(names, function(deputy)
+              return M.canPair(room, name, deputy) and #Guest.pairKingdoms(room, loyalty, deputy, allowed) > 0
+            end)
+          end
+          if possible then hints[name] = true; return end
+        end
+      end
+    elseif allowsLord then
+      local lord = Versions.lord_version(name)
+      if RoomBans.allows(room, lord) and table.find(Versions.lord_kingdoms(lord), function(kingdom)
+        return table.contains(allowed, kingdom)
+      end) then hints[name] = true end
+    end
+  end
+  if freeAssign then
+    for name, general in pairs(Fk.generals) do
+      if validFreeGeneral(name) then add(name, general) end
+    end
+  else
+    for _, name in ipairs(names) do add(name, Fk.generals[name]) end
+  end
+  return hints
+end
+
 ---Dialog data for the final pair selection.
 ---@param room Room
 ---@param offers string[]
@@ -198,6 +238,7 @@ function M.askData(room, offers, guests, kingdom, seat)
   local names, pairing = M.pairing(room, offers, kingdom)
   local freeAssign = M.freeAssign(room)
   local guestIllustrations = Guest.replacementEnabled(room)
+  local ascensions = ascensionHints(room, names, freeAssign)
   local prompt = M.prompt(room)
   if kingdom then
     local key = "#QiaoChooseLockedKingdom"
@@ -232,8 +273,9 @@ function M.askData(room, offers, guests, kingdom, seat)
           hegemony = true,
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
-          extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions, locked = kingdom ~= nil,
-            freeAssign = freeAssign, guestIllustrations = guestIllustrations, offers = table.simpleClone(offers) },
+          extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
+            ascensions = ascensions, locked = kingdom ~= nil, freeAssign = freeAssign, guestIllustrations = guestIllustrations,
+            offers = table.simpleClone(offers) },
         },
       },
     },
@@ -242,6 +284,9 @@ function M.askData(room, offers, guests, kingdom, seat)
   if guestIllustrations or freeAssign then
     data.component.name, data.component.uri = nil, nil
     data.component.url = M.redraw_url
+  elseif next(ascensions) then
+    data.component.name, data.component.uri = nil, nil
+    data.component.url = M.ascension_url
   end
   return data
 end
@@ -262,7 +307,7 @@ function M.ask(room, players, offers, assigned)
     req:setData(player, data)
     local default = assert(M.firstLegalPair(room, offers[player], kingdom))
     req:setDefaultReply(player, { default.main, default.deputy })
-    if data.component.url and canRedraw(room) then
+    if data.component.url == M.redraw_url and canRedraw(room) then
       player.mini_game_data = { type = "qiao_guest_selection",
         offers = offers, req = req, failed = {} }
     end

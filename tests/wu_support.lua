@@ -12,6 +12,7 @@ local FANJIAN = "qiao__skill_wu005_2"
 local JIEYIN = "qiao__skill_wu008_1"
 local XIAOJI = "qiao__skill_wu008_2"
 local YINGHUN = "qiao__skill_wu009_1"
+local YINGHUN_CHOOSE = "#qiao__skill_wu009_1_choose"
 local ZHIJIAN = "qiao__skill_wu015a_1"
 local GUZHENG = "qiao__skill_wu015a_2"
 
@@ -177,17 +178,11 @@ function Testqiao_wu_support:testYinghunDrawThenDiscard()
     lu.assertStrContains(text, "摸X张牌")
     lu.assertStrContains(text, "弃置X张牌")
   end)
-  local oldChoose, oldChoice, oldDiscard = room().askToChoosePlayers, room().askToChoice, room().askToDiscard
+  local oldDiscard = room().askToDiscard
+  local reply = FkTest.ReplyUseSkill(YINGHUN_CHOOSE, { p2 })
+  reply.interaction_data = "#qiao__skill_wu009_1-draw:::2"
+  FkTest.setNextReplies(p1, { reply })
   skill_test.withSkillRequests(room(), YINGHUN, {
-    askToChoosePlayers = function(self, player, params)
-      lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-choose:::2")
-      return { p2 }
-    end,
-    askToChoice = function(self, player, params)
-      lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-choice::" .. p2.id)
-      lu.assertEquals(params.choices, { "#qiao__skill_wu009_1-draw:::2", "#qiao__skill_wu009_1-discard:::2" })
-      return params.choices[1]
-    end,
     askToDiscard = function(self, player, params)
       lu.assertEquals(params.prompt, "#qiao__skill_wu009_1-throw:::1")
       local id = player:getCardIds("h")[1]
@@ -201,8 +196,6 @@ function Testqiao_wu_support:testYinghunDrawThenDiscard()
       })
     end)
   end)
-  lu.assertIs(room().askToChoosePlayers, oldChoose)
-  lu.assertIs(room().askToChoice, oldChoice)
   lu.assertIs(room().askToDiscard, oldDiscard)
   -- X=2：摸 2 后弃 1，净得 1 张。
   lu.assertEquals(#p2:getCardIds("h"), 1)

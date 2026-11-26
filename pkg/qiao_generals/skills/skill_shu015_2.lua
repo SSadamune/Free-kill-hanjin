@@ -7,6 +7,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_shu015_2"] = "烈刃",
   [":qiao__skill_shu015_2"] = "当你使用【杀】对一个目标造成伤害后，你可以与其拼点：若你赢，你获得其一张牌。",
   ["#qiao__skill_shu015_2-invoke"] = "烈刃：是否与%src拼点？",
+  ["#qiao__skill_shu015_2-card"] = "烈刃：选择 %src 的一张牌获得",
 }
 
 skill:addEffect(fk.DamageFinished, {

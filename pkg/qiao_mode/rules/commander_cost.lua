@@ -11,15 +11,8 @@ local function rootName(skill)
 end
 
 local function positionSkills(room, player, deputy)
-  local names = {}
-  if not Exchange.isRevealed(player, deputy) then return names end
-  local general = Exchange.actualGeneral(player, deputy)
-  for _, name in ipairs(Exchange.positionSkills(general, deputy, false, true, room)) do
-    if Exchange.cardProvidesSkill(room, general, name) then
-      names[SameName.historyKey(player, general, name)] = true
-    end
-  end
-  return names
+  if not Exchange.isRevealed(player, deputy) then return {} end
+  return Exchange.positionSkillKeys(room, player, deputy, true)
 end
 
 function M.excludedSkills(room, player, deputy)

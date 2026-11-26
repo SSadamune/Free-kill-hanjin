@@ -17,8 +17,6 @@ skill:addEffect(fk.GameStart, {
   end,
 })
 
--- 普通君主升变沿用“首个回合开始”的原有时机；一回合只询问一次。
-
 -- 四人及以下局首亮不获得先驱标记：高优先级早于上游 heg_rule 置位
 -- `_vanguard_gained`，保留 `TheFirstToShowRewarded` 记录且不影响技能主动授先驱。
 skill:addEffect(fk.GeneralRevealed, {
@@ -58,16 +56,6 @@ skill:addEffect(fk.GeneralRevealed, {
     end
   end,
 })
-skill:addEffect(fk.TurnStart, {
-  priority = 200,
-  can_trigger = function(self, event, target, player)
-    return target == player
-  end,
-  on_trigger = function(self, event, target, player)
-    A.on_turn_start(player.room, player)
-  end,
-})
-
 skill:addEffect(fk.TurnEnd, {
   priority = -100,
   can_trigger = function(self, event, target, player)
@@ -146,10 +134,14 @@ skill:addEffect(fk.GameOverJudge, {
 
 Fk:loadTranslationTable {
   [A.RULE_SKILL] = "汉晋升变规则",
-  [A.ASCEND_ACCEPT] = "升变为君主",
+  [A.ASCEND_ACCEPT] = "君主升变",
   [A.ASCEND_KINGDOM] = "升变为%arg的君主",
+  ["qiao_turn_reveal"] = "明置%arg",
+  ["qiao_turn_reveal_deputy"] = "明置%arg",
+  ["#QiaoTurnRevealAlso"] = "是否要同时明置另一个武将牌？",
+  ["qiao_turn_reveal_also_main"] = "同时明置主将",
+  ["qiao_turn_reveal_also_deputy"] = "同时明置副将",
   [A.WILD_ASCEND] = "效忠并加入%arg",
-  ["#QiaoSecondLordConvert"] = "国战规则：你的主将可升变为君主，是否升变？",
   ["#QiaoSecondLordSuccession"] = "君主死亡：你的主将可继位为君主，是否升变？",
   ["#QiaoWildAllegiance"] = "野心家效忠：你的主将可升变为效忠版，是否升变？",
   ["#QiaoAscension"] = "%from 将主将 %arg 升变为 %arg2，势力改为 %arg3",

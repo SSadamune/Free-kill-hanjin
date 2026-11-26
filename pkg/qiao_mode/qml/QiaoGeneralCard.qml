@@ -3,7 +3,6 @@ import Fk
 import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Components.Photo
-import "GuestIllustration.js" as GuestIllustration
 
 GeneralCardItem {
   id: card
@@ -17,7 +16,6 @@ GeneralCardItem {
     const properties = appearance.kingdom ? { kingdom: appearance.kingdom, subkingdom: "" } : {};
     return Ltk.createGeneralCardModel(generalName, properties);
   }
-  cardFrontSource: GuestIllustration.picture(generalName, scene?.guestIllustrations) ?? dataModel.frontSkin
 
   SkinArea {
     parent: card.cardBg

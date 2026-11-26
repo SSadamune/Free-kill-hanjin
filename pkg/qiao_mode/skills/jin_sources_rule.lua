@@ -5,15 +5,12 @@
 -- 张华来源不会共用 target 的一个 bool。无手牌时整份清理，不把承诺留到以后。
 local PROMISES = "qiao_jin016_1_promises"
 local FULI = "qiao__skill_jin016_1"
+local suitMark = require("packages.qiao.pkg.qiao_mode.skill_status").fuliSuitMark
 
 local skill = fk.CreateSkill {
   name = "qiao__jin_sources_rule",
   tags = { Skill.Compulsory },
 }
-
-local function suitMark(suit)
-  return "qiao_jin016_1_suit" .. tostring(suit) .. "-turn"
-end
 
 local function prohibited(player, card)
   return player ~= nil and card ~= nil and player:getMark(suitMark(card.suit)) > 0

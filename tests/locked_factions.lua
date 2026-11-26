@@ -17,29 +17,25 @@ local function startRoom(count, alternate, modeSettings, previous, blankDraft)
   -- The engine test client starts in an eight-seat lobby.
   for id = count + 1, 8 do ClientInstance:removePlayer({ id }) end
   local propsById, defaults = {}, {}
-  local ask = Request.ask
-  Request.ask = function(self, ...)
-    if self.room:getSettings("gameMode") == Modes.locked and self.focus_text == "AskForGeneral" then
-      for _, player in ipairs(self.players) do
-        propsById[player.id] = self.data[player.id].component.model.prop
-        defaults[player.id] = self.default_reply[player.id]
-      end
-      local first = self.players[1]
-      local faction = function(player)
-        return propsById[player.id].prompt:match(":::([^:]+):seat#%d+$")
-      end
-      local otherFaction = table.find(self.players, function(player)
-        return faction(player) ~= faction(first)
-      end)
-      -- A reply with two real cards from another faction must still be rejected.
-      for _, player in ipairs(self.players) do
-        local choice = player == first and defaults[otherFaction.id] or defaults[player.id]
-        FkTest.setNextReplies(player, { choice })
-      end
+  local function replyToDraft(request)
+    for _, player in ipairs(request.players) do
+      propsById[player.id] = request.data[player.id].component.model.prop
+      defaults[player.id] = request.default_reply[player.id]
     end
-    return ask(self, ...)
+    local first = request.players[1]
+    local function faction(player)
+      return propsById[player.id].prompt:match(":::([^:]+):seat#%d+$")
+    end
+    local otherFaction = table.find(request.players, function(player)
+      return faction(player) ~= faction(first)
+    end)
+    -- A reply with two real cards from another faction must still be rejected.
+    for _, player in ipairs(request.players) do
+      local choice = player == first and defaults[otherFaction.id] or defaults[player.id]
+      FkTest.setNextReplies(player, { choice })
+    end
   end
-  local ok, room = pcall(support.createRoom, {
+  local room = support.createRoom {
     mode = Modes.locked,
     backend = FkTest.createFakeRoom(ids),
     realSelection = true,
@@ -49,6 +45,16 @@ local function startRoom(count, alternate, modeSettings, previous, blankDraft)
       _mode = modeSettings or { generalTimeout = 1 },
     },
     configure = function(current)
+      -- Queue replies before the opening draft sends packets, within this room only.
+      local notify = current.notifyMoveFocus
+      function current:notifyMoveFocus(players, command, timeout)
+        local request = self.current_request
+        if command == "AskForGeneral" and request and request.command == "CustomDialog" then
+          self.notifyMoveFocus = notify
+          replyToDraft(request)
+        end
+        return notify(self, players, command, timeout)
+      end
       if previous then current:setSessionData { qiao_faction_ban_v1 = previous } end
       if blankDraft then
         local makePile = current.makeGeneralPile
@@ -69,9 +75,7 @@ local function startRoom(count, alternate, modeSettings, previous, blankDraft)
         end
       end
     end,
-  })
-  Request.ask = ask
-  assert(ok, room)
+  }
   lu.assertFalse(room:getSettings("enableFreeAssign"))
   lu.assertEquals(#room:getBanner("all_kingdoms"), 2)
   local kingdoms = room:getBanner("qiao_candidate_kingdoms")
@@ -116,6 +120,33 @@ local function startRoom(count, alternate, modeSettings, previous, blankDraft)
   end
   lu.assertEquals(room:getTag("qiao_selection_fallbacks"), { room.players[1].id })
   return room
+end
+
+function Testlocked_factions:testFinishedLockedGamesWriteNativeWinAndLoss()
+  for _, count in ipairs({ 3, 4 }) do
+    local room = startRoom(count, nil, { [Locked.ruleKey] = Locked.rules[count - 2] })
+    local records = {}
+    function room.room:updatePlayerWinRate(id, mode, _, result)
+      lu.assertEquals(mode, Modes.locked)
+      lu.assertNil(records[id], "The same player was counted twice")
+      records[id] = result
+    end
+
+    FkTest.runInRoom(function()
+      room.start_time = os.time()
+      lu.assertFalse(room:shouldUpdateWinRate())
+      room.start_time = os.time() - 60
+      room:setTag("qiao_locked_start_rejected", true)
+      lu.assertFalse(room:shouldUpdateWinRate())
+      room:setTag("qiao_locked_start_rejected", nil)
+      room:gameOver({ room.players[1] })
+    end)
+
+    for seat, player in ipairs(room.players) do
+      lu.assertEquals(records[player.id], seat == 1 and 1 or 2)
+    end
+    support.clearRoom()
+  end
 end
 
 function Testlocked_factions:testRoomRuleSelectsCapacity()

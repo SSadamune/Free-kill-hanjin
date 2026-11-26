@@ -84,8 +84,13 @@ function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   lu.assertFalse(client:guestIllustrationsEnabled())
   client.settings = { gameMode = "qiao_heg_mode" }
   lu.assertTrue(client:guestIllustrationsEnabled())
+  client.banners.all_kingdoms = { "wu", "qun", "han", "jin" }
+  local factions = client:guestCardFactions()
+  lu.assertEquals(factions.qiao_heg__shu001, { "han", "qun", "wei", "wu" })
+  lu.assertNil(factions.qiao_heg__han001)
   client.settings.qiao_guest_replacement = false
   lu.assertFalse(client:guestIllustrationsEnabled())
+  lu.assertEquals(client:guestCardFactions(), {})
 end
 
 function Testqiao_guest_allegiance:testSkillGeneralPopupKeepsUtilityReplyModel()
@@ -102,13 +107,21 @@ function Testqiao_guest_allegiance:testSkillGeneralPopupKeepsUtilityReplyModel()
   client.client = {
     notifyUI = function(_, name, payload) command, data = name, payload end,
   }
-  FkTest.runInRoom(function()
-    client:notifyUI("CustomDialog", { component = component })
-  end)
-  lu.assertEquals(command, "CustomDialog")
-  lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml")
-  lu.assertIs(data.component.model, component.model)
-  lu.assertEquals(component.url, "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml")
+  for _, path in ipairs({
+    "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml",
+    "packages/hegemony/qml/KnownBothBox.qml",
+  }) do
+    component.url = path
+    FkTest.runInRoom(function()
+      client:notifyUI("CustomDialog", { component = component })
+    end)
+    lu.assertEquals(command, "CustomDialog")
+    lu.assertEquals(data.component.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml")
+    lu.assertEquals(data.component.model.url, "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoicesModel.qml")
+    lu.assertIs(data.component.model.prop, component.model.prop)
+    lu.assertEquals(component.model.url, "packages/utility/qml/models/ChooseGeneralsAndChoiceModel.qml")
+    lu.assertEquals(component.url, path)
+  end
   support.clearRoom()
 end
 
@@ -490,6 +503,46 @@ function Testqiao_guest_allegiance:testClientDialogContract()
   lu.assertEquals(prop.extraData.guestFactions["qiao_test__guest_dual_1"], { "han" })
   lu.assertTrue(allowed)
   lu.assertFalse(blocked)
+end
+
+function Testqiao_guest_allegiance:testOpeningAscensionHintsFollowTheRoomAndOfferedPair()
+  local normal, wild = "qiao_heg__jin001", "qiao_test__wild_2"
+  local deputy, unrelated = "qiao_test__jin_1", "qiao_test__han_1"
+  local lord = assert(Versions.lord_version(normal))
+  -- Keep the offered wild general eligible independently of the random pool cap.
+  local otherWild = {}
+  for name, general in pairs(Fk.generals) do
+    if name ~= wild and general.kingdom == "wild" then table.insert(otherWild, name) end
+  end
+  for _, scenario in ipairs({
+    { guestReplacement = false, lordBanned = false },
+    { guestReplacement = true, lordBanned = false },
+    { guestReplacement = false, lordBanned = true },
+  }) do
+    local disabled = table.simpleClone(otherWild)
+    if scenario.lordBanned then table.insert(disabled, lord) end
+    local room = create { settings = {
+      qiao_guest_replacement = scenario.guestReplacement,
+      qiao_wild_count = 1,
+      disabledGenerals = disabled,
+    } }
+    FkTest.runInRoom(function()
+      lu.assertTrue(Fk:canUseGeneral(wild))
+      local component = Selection.askData(room, { normal, wild, deputy, unrelated }).component
+      local hints = component.model.prop.extraData.ascensions
+      if scenario.lordBanned then
+        lu.assertNil(hints[normal])
+      else
+        lu.assertTrue(hints[normal])
+      end
+      lu.assertTrue(hints[wild])
+      lu.assertNil(hints[deputy])
+      lu.assertEquals(component.url, scenario.guestReplacement and Selection.redraw_url or Selection.ascension_url)
+      local noPartner = Selection.askData(room, { wild, unrelated }).component.model.prop.extraData.ascensions
+      lu.assertNil(noPartner[wild])
+    end)
+    support.clearRoom()
+  end
 end
 
 function Testqiao_guest_allegiance:testLiuBeiDraftShowsBannedGuestFactionWithoutAllowingPairing()

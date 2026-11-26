@@ -10,7 +10,10 @@ local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local Qun = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local Flags = require "packages.qiao.pkg.qiao_mode.rules.lord_flag_display"
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Dying = require "packages.qiao.pkg.qiao_generals.util.qun_dying"
+local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 
 local M = {}
 
@@ -21,6 +24,20 @@ local LABELS = {
   RETINUE = "翼从",
 }
 M.LABELS = LABELS
+
+-- The engine writes the callback's actual skill ID into logs and broadcasts
+-- it to the room. Delayed effects keep their IDs and display their source name.
+local DISPLAY_NAME_SOURCES = {
+  ["#qiao_jin017_cruise"] = "qiao__skill_jin017_2",
+  qiao__han019_1_rule = "qiao__skill_han019_1",
+  [Wu.RULE] = Wu.FLAG,
+  qiao__wei023_hengjiang_rule = "qiao__skill_wei023_1",
+  qiao__wu020_pojun_rule = "qiao__skill_wu020_2",
+  qiao__wu_turn_effects = "qiao__skill_wu014_1",
+  ["@@qiao_bazhen_viewas"] = "qiao__retinue_skill_bazhenbing_viewas",
+  ["@[qiao_bingzhou_pairs]"] = "qiao__retinue_skill_bingzhou_distance",
+  [Formation.FEIYING_LAYERS_MARK] = Formation.FEIYING_SKILL,
+}
 
 -- 用于幂等：并行维护处若已经给同一骨架加过标签，不重复包裹。
 local MARKER = "qiaoSourceLabel"
@@ -55,6 +72,7 @@ end
 function M.decorate(name, label, extra, extraMarker)
   local skel = Fk.skill_skels[name]
   if skel == nil or skel[MARKER] ~= nil then return end
+  if label ~= LABELS.RETINUE then SkillSources.registerNonGeneral(name) end
 
   local baseDynamic = skel.dynamicDesc
   local baseGet = rawget(skel, "getDynamicDescription")
@@ -75,10 +93,30 @@ end
 --- @param retinues? table Data.retinues（实际声明的翼从技能来源）
 function M.register(retinues)
   local translations = {}
+  local function addDisplayName(key, label)
+    translations[key] = label
+    local skeleton = Fk.skill_skels[key]
+    -- The engine snapshots these names before postLoad. They can also show
+    -- up in the trigger-order chooser when two effects can resolve together.
+    for _, effect in ipairs(skeleton and skeleton.effect_names or {}) do
+      local previous = Fk:translate(effect, "zh_CN")
+      if previous == key or previous == effect then translations[effect] = label end
+    end
+  end
+  for key, name in pairs(DISPLAY_NAME_SOURCES) do
+    addDisplayName(key, Fk:translate(name, "zh_CN"))
+  end
+  for _, retinue in ipairs(retinues or {}) do
+    addDisplayName(retinue.skill.id, retinue.name)
+  end
+  translations[Formation.FEIYING_MARK] = "飞影来源"
   for name in pairs(Flags.flags) do
     local mark = "@!!" .. name
     translations[mark] = Fk:translate(name, "zh_CN")
-    translations[":" .. mark] = Fk:translate(":" .. name, "zh_CN")
+    local description = ":" .. mark
+    if Fk:translate(description, "zh_CN") == description then
+      translations[description] = Fk:translate(":" .. name, "zh_CN")
+    end
   end
   for name, skel in pairs(Fk.skill_skels) do
     if name:startsWith("qiao__") and table.contains(skel.tags, Skill.Limited) then
@@ -114,8 +152,9 @@ function M.register(retinues)
   -- 六师率义旗、诸王敕封册没有独立 util 常量；保持与技能文件同名。
   M.decorate(Flags.shuFlag, LABELS.FLAG)
   -- 诸王敕封册本体是旗，另管理“赐”的独立消费；太康等武将技不在此标。
-  M.decorate("qiao__skill_em_jin001_banner", LABELS.FLAG,
+  M.decorate(Ci.SKILL, LABELS.FLAG,
     "<br/><b>〔赐〕</b> 本技能另有“赐”的消耗入口。", "〔赐〕")
+  SkillSources.registerNonGeneral(Ci.CONSUME)
 
   M.decorate(Commander.ABILITY_SKILL, LABELS.COMMANDER)
 
@@ -123,7 +162,9 @@ function M.register(retinues)
     local skill = data.skill
     if skill ~= nil then M.decorate(skill.id, LABELS.RETINUE) end
   end
-  -- 两个可见的内部派生效果也由翼从产生；不是独立的武将牌技能。
+  -- 已建立的距离与转化效果沿用来源标签，不作为另一项可失去的技能。
+  SkillSources.registerNonGeneral("qiao__retinue_skill_bingzhou_distance")
+  SkillSources.registerNonGeneral("qiao__retinue_skill_bazhenbing_viewas")
   M.decorate("qiao__retinue_skill_bingzhou_distance", LABELS.RETINUE)
   M.decorate("qiao__retinue_skill_bazhenbing_viewas", LABELS.RETINUE)
 end

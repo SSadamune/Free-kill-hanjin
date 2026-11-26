@@ -31,6 +31,15 @@ function Testqiao_scenarios:testCollectionIgnoresRemovedSettingsAndKeepsAllEnabl
   lu.assertTrue(room:getSettings("old_battle_royal"))
 end
 
+function Testqiao_scenarios:testCollectionKeepsNativeFreeAssignmentStatisticsPolicy()
+  for _, freeAssign in ipairs({ false, true }) do
+    local room = create { mode = "qiao_heg_mode", settings = { enableFreeAssign = freeAssign } }
+    room.start_time = os.time() - 60
+    lu.assertEquals(room:shouldUpdateWinRate(), not freeAssign)
+    support.clearRoom()
+  end
+end
+
 function Testqiao_scenarios:testConsecutiveGamesRespectWinnerAndPreviousBan()
   local first = create { settings = { qiao_wild_count = 0 } }
   local backend = first.room

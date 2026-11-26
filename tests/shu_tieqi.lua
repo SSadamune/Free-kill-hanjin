@@ -1,6 +1,7 @@
 -- 蜀势力第六批：铁骑。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 
 local TIEQI = "qiao__skill_shu006_2"
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
@@ -53,16 +54,19 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
     room().current = p1
     p1.phase = Player.Play
     p2.hp = p2.maxHp
+    Cards.grant(room(), p2.general, "qiao__skill_shu002_1")
+    lu.assertTrue(p2:hasSkill("qiao__skill_shu002_1"))
     room():moveCardTo(room():printCard("qiao__jink", Card.Heart, 6), Card.DrawPile)
   end)
-  FkTest.setNextReplies(p1, { TIEQI })
+  local options
+  FkTest.setRoomBreakpoint(p1, "AskForOptions", function(data)
+    if data[5] == TIEQI then options = table.simpleClone(data[1]) end
+    return false
+  end)
+  FkTest.setNextReplies(p1, { { "#qiao__skill_shu006_2-main" } })
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
-      return original(self, player, params)
-    end,
     askToDiscard = function(self, player, params, original)
       if params.skill_name == TIEQI then
         lu.assertTrue(params.skip)
@@ -77,10 +81,16 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
       })
     end)
   end)
+  lu.assertEquals(options, { "#qiao__skill_shu006_2-main", "#qiao__skill_shu006_2-deputy" })
   lu.assertEquals(p2.hp, p2.maxHp) -- 弃干净后仍可用黑桃闪响应
   lu.assertFalse(p2:hasSkill("qiao__skill_shu014_2")) -- 主将再起失效
+  lu.assertFalse(p2:hasSkill("qiao__skill_shu002_1")) -- 后天附于主将牌的仁德也失效
+  lu.assertTrue(table.contains(p2:getTableMark("qiao_shu_tieqi_public-turn"), "qiao__skill_shu002_1"))
   lu.assertTrue(p2:hasSkill("qiao__skill_shu014_1")) -- 锁定祸首不受影响
   lu.assertTrue(p2:hasSkill("qiao__skill_shu001_1")) -- 未选副将不受影响
+  inRoom(function() room():handleAddLoseSkills(p2, "qiao__skill_shu002_1") end)
+  lu.assertTrue(p2:hasSkill("qiao__skill_shu002_1")) -- 角色单独获得的同名技能仍生效
+  lu.assertFalse(table.contains(p2:getTableMark("qiao_shu_tieqi_public-turn"), "qiao__skill_shu002_1"))
 end
 
 function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterReveal()
@@ -98,8 +108,8 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   FkTest.setNextReplies(p1, { TIEQI })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-deputy" end
+    askToOptions = function(self, player, params, original)
+      if params.skill_name == TIEQI then return { "#qiao__skill_shu006_2-deputy" } end
       return original(self, player, params)
     end,
     askToDiscard = function(self, player, params, original)
@@ -113,6 +123,27 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   end)
   lu.assertFalse(p2:hasSkill("qiao__skill_shu001_1")) -- 暗副将被选后失效
   lu.assertTrue(p2:hasSkill("qiao__skill_shu014_1")) -- 主将锁定不受影响
+  local owner = cbor.decode(room():serialize(p2).players[p2.id].mark)
+  local other = cbor.decode(room():serialize(p1).players[p2.id].mark)
+  lu.assertTrue(table.contains(owner["qiao_shu_tieqi_private-turn"], "qiao__skill_shu001_1"))
+  lu.assertNil(other["qiao_shu_tieqi_private-turn"])
+  lu.assertNil(other["qiao_shu_tieqi_public-turn"])
+  inRoom(function()
+    local r, observed = room()
+    local observer = {
+      getId = function() return 999 end,
+      getScreenName = function() return "铁骑旁观" end,
+      doNotify = function(_, command, data)
+        if command == "Observe" then observed = cbor.decode(data) end
+      end,
+    }
+    -- The core uses the first seat as the initial spectator view.
+    r.players[1], r.players[2] = p2, p1
+    local ok, err = pcall(r.tellRoomToObserver, r, observer)
+    r.players[1], r.players[2] = p1, p2
+    if ok then table.remove(r.observers) else error(err, 0) end
+    lu.assertNil(cbor.decode(observed.players[p2.id].mark)["qiao_shu_tieqi_private-turn"])
+  end)
   -- 后续明置仍依据同一位置记录失效。
   inRoom(function() p2.deputyGeneral = "qiao_heg__shu001" end)
   lu.assertFalse(p2:hasSkill("qiao__skill_shu001_1"))
@@ -134,8 +165,8 @@ function Testqiao_shu_tieqi:testTieqiNoMatchingCardCannotRespond()
   FkTest.setNextReplies(p2, { FkTest.ReplyCard(Fk:getCardById(spadeJink)) })
   skill_test.withSkillRequests(room(), TIEQI, {
     askToSkillInvoke = function() error("铁骑应直接询问武将牌位置") end,
-    askToChoice = function(self, player, params, original)
-      if params.skill_name == TIEQI then return "#qiao__skill_shu006_2-main" end
+    askToOptions = function(self, player, params, original)
+      if params.skill_name == TIEQI then return { "#qiao__skill_shu006_2-main" } end
       return original(self, player, params)
     end,
   }, function()

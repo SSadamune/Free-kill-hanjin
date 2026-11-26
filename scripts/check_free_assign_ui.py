@@ -1,14 +1,7 @@
-"""Headless regression for the HanJin free-assignment entry points.
+"""Drive the HanJin free-assignment popup with the runtime model and entry gestures.
 
-The real GuestRedrawBox.qml is loaded in a context that deliberately has no
-bare ``roomScene`` context property. The only room route is the same public
-singleton used by RoomBase.qml: ``Ltk.roomScene``.
-
-The real runtime FreeAssign.qml is copied into a temporary fixture and opened
-through Scene.showInfoPopup. The test clicks the package list and a general
-card, then checks the original ChooseGeneralModel and the popup's finish
-signal. Both right-click and long press on a candidate card must create a
-fresh popup instance.
+The host and card renderer are fixture components. The test opens the real
+extension popup, activates its card delegate and checks the loaded portrait.
 """
 import os
 import shutil
@@ -19,8 +12,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 QML_QA = ROOT / ".dev" / "qml-qa"
 RUNTIME_ROOT = ROOT / ".dev" / "runtime" / "FreeKill-release"
-RUNTIME_FREE_ASSIGN = RUNTIME_ROOT / "LunarLtk" / "Pages" / "InfoPopups" / "FreeAssign.qml"
-RUNTIME_TAP_HANDLER = RUNTIME_ROOT / "Fk" / "Widgets" / "TapHandler.qml"
+RUNTIME_FILES = (
+    "Fk/Widgets/TapHandler.qml",
+    "Fk/Widgets/PopupItem.qml",
+    "LunarLtk/Models/GeneralCardModel.qml",
+    "LunarLtk/Models/Popups/ChooseGeneralModel.qml",
+)
 sys.path.insert(0, str(QML_QA))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
@@ -28,23 +25,42 @@ os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 from PySide6.QtCore import QMetaObject, QPoint, QPointF, Qt, QUrl, qInstallMessageHandler
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtQuick import QQuickItem
+from PySide6.QtQuick import QQuickItem  # Registers the QML Item property converter.
 from PySide6.QtTest import QTest
 
 FIXTURE_PARTS = {
-    "Fk/qmldir": "singleton Lua 1.0 Lua.qml\nsingleton Config 1.0 Config.qml\n",
-    "Fk/Lua.qml": """pragma Singleton
+    "Fk/qmldir": "module Fk\nimport Fk.Base auto\n",
+    "Fk/Base/qmldir": "module Fk.Base\nsingleton Lua 1.0 Lua.qml\n"
+                      "singleton Config 1.0 Config.qml\nsingleton SkinBank 1.0 SkinBank.qml\n",
+    "Fk/Base/Lua.qml": """pragma Singleton
 import QtQuick
 QtObject {
   property var client: QtObject { function getSettings(key) { return false } }
+  property var fk: ({ extensions: { qiao: ["qiao_generals"] } })
   function tr(text) { return text }
 }
 """,
-    "Fk/Config.qml": """pragma Singleton
+    "Fk/Base/Config.qml": """pragma Singleton
 import QtQuick
-QtObject { property string libianName: "Arial" }
+QtObject {
+  property bool banChangeSkin: false
+  property var enabledSkins: ({})
+  property real winScale: 1
+}
 """,
-    "Fk/Widgets/qmldir": "TapHandler 1.0 TapHandler.qml\n",
+    "Fk/Base/SkinBank.qml": """pragma Singleton
+import QtQuick
+QtObject {
+  readonly property url generalsDir: "__GENERALS_DIR__"
+  readonly property url generalCardDir: "__CARD_DIR__"
+  function getGeneralPicture(name) { return generalsDir + name + ".jpg" }
+  function getGeneralExtraPic(name, dir) {
+    if (name === "qiao_heg__qun012") return generalsDir + dir + name + ".jpg"
+  }
+  function getGeneralCardDir(name) { return generalCardDir }
+}
+""",
+    "Fk/Widgets/qmldir": "TapHandler 1.0 TapHandler.qml\nPopupItem 1.0 PopupItem.qml\n",
     "Fk/Components/Common/qmldir": "MetroButton 1.0 MetroButton.qml\n",
     "Fk/Components/Common/MetroButton.qml": """import QtQuick
 Rectangle {
@@ -60,30 +76,27 @@ Rectangle {
     "LunarLtk/qmldir": "singleton Ltk 1.0 Ltk.qml\n",
     "LunarLtk/Ltk.qml": """pragma Singleton
 import QtQuick
+import LunarLtk.Models
 QtObject {
   property var roomScene
   property Component cardComp: Component {
-    QtObject {
-      property string name
-      property string kingdom: "han"
-      property string subkingdom: ""
-      property int inPosition: 0
-      property bool hasCompanion: false
-      property int mainMaxHp: 0
-      property int deputyMaxHp: 0
-    }
+    GeneralCardModel {}
   }
-  function getAllGeneralPack() { return ["qiao_test_content"] }
-  function getGenerals(pack) { return ["qiao_test__wei_1", "qiao_test__shu_1"] }
-  function searchAllGenerals(word) { return getGenerals("qiao_test_content") }
+  function getAllGeneralPack() { return ["qiao_generals"] }
+  function getGenerals(pack) { return ["qiao_heg__jin001", "qiao_heg__qun012"] }
+  function getSameGenerals(name) { return [] }
+  function processPrompt(prompt) { return prompt }
+  function chooseGeneralFilter(rule, name, selected) { return !selected.includes(name) }
+  function chooseGeneralFeasible() { return true }
   function createGeneralCardModel(name) {
-    let model = cardComp.createObject(null)
-    model.name = name
-    return model
+    return cardComp.createObject(null, {
+      name, kingdom: name === "qiao_heg__qun012" ? "qun" : "jin"
+    })
   }
   function isCompanionWith(first, second) { return false }
 }
 """,
+    "LunarLtk/Models/qmldir": "GeneralCardModel 1.0 GeneralCardModel.qml\n",
     "LunarLtk/Components/qmldir": "GeneralCardItem 1.0 GeneralCardItem.qml\n",
     "LunarLtk/Components/GeneralCardItem.qml": """import QtQuick
 import Fk.Widgets as W
@@ -92,6 +105,10 @@ Rectangle {
   width: 93
   height: 130
   required property var dataModel
+  property url cardFrontSource: dataModel.frontSkin
+  readonly property Item cardBg: portrait
+  readonly property url renderedPortrait: portrait.source
+  readonly property bool portraitReady: portrait.status === Image.Ready
   property bool selectable: true
   property bool draggable: false
   property bool dragging: false
@@ -103,7 +120,7 @@ Rectangle {
   signal rightClicked()
   signal released()
   function goBack(animated) { x = origX; y = origY; opacity = origOpacity }
-  function destroyOnStop() {}
+  Image { id: portrait; anchors.fill: parent; source: root.cardFrontSource }
   // Reuse the runtime gesture component, including its long-press behavior.
   W.TapHandler {
     onTapped: (point, button) => {
@@ -114,40 +131,15 @@ Rectangle {
   }
 }
 """,
-    "LunarLtk/Models/Popups/qmldir": "ChooseGeneralModel 1.0 ChooseGeneralModel.qml\n",
-    "LunarLtk/Models/Popups/ChooseGeneralModel.qml": """import QtQuick
-import LunarLtk
-QtObject {
-  property var generals: []
-  property int choiceNum: 2
-  property bool convertDisabled: false
-  property bool hegemony: true
-  property var extraData: ({})
-  property string prompt: ""
-  property var generalDict: []
-  property list<int> resultInt: []
-  readonly property var result: resultInt.map(e => generals[e])
-  readonly property string promptText: "prompt"
-  readonly property bool feasible: true
-  readonly property bool canConvert: false
-  signal generalChanged(int idx, string newname)
-  signal accepted()
-  signal rejected()
-  function generalFilter(choice) { return true }
-  function selectGeneralCard(index) {}
-  function moveGeneral(generalIndex, toSelect, toIndex) {}
-  function changeGeneral(idx, newModel) {
-    generalDict[idx] = newModel
-    generals[idx] = newModel.name
-    generalChanged(idx, newModel.name)
-  }
-  function initialize() {
-    let dict = []
-    for (let name of generals) dict.push(Ltk.createGeneralCardModel(name))
-    generalDict = dict
-  }
+    "LunarLtk/Components/Photo/qmldir": "SkinArea 1.0 SkinArea.qml\n",
+    "LunarLtk/Components/Photo/SkinArea.qml": """import QtQuick
+Item {
+  property string general
+  property string skinName
+  property bool enabledShown
 }
 """,
+    "LunarLtk/Models/Popups/qmldir": "ChooseGeneralModel 1.0 ChooseGeneralModel.qml\n",
     "LunarLtk/Pages/Popups/qmldir": "GraphicsBox 1.0 GraphicsBox.qml\n",
     "LunarLtk/Pages/Popups/GraphicsBox.qml": """import QtQuick
 Item {
@@ -158,12 +150,12 @@ Item {
   Text { id: titleText }
 }
 """,
-    "LunarLtk/Pages/InfoPopups/qmldir": "FreeAssign 1.0 FreeAssign.qml\n",
 }
 
 MAIN_QML = """
 import QtQuick
 import QtQuick.Window
+import Fk.Widgets
 import LunarLtk
 import LunarLtk.Models.Popups
 
@@ -174,53 +166,43 @@ Window {
   visible: true
   property var model: null
   property var box: null
-  property var popup: null
+  readonly property Item popup: info.item
   property var popupParams: null
   property int finishCount: 0
-  property var cardCenter0: null
-  property var cardCenter1: null
+  readonly property Item first: box?.generalCardList.itemAt(0) ?? null
+  readonly property string selectedGeneral: model.result[0] ?? ""
 
   function showInfoPopup(component, params) {
     popupParams = params
-    if (box) box.visible = false
-    popup = component.createObject(popupHost, params)
-    popup.z = 1000
+    info.setSourceComponent(component, params)
     popup.finish.connect(function() { finishCount += 1 })
+    info.open()
   }
 
-  function closePopup() {
-    if (popup) {
-      popup.destroy()
-      popup = null
-    }
-    if (box) box.visible = true
+  function disableGuestIllustrations() {
+    model.extraData = Object.assign({}, model.extraData, { guestIllustrations: false })
   }
 
-  function inspect() {
-    let first = box.generalCardList.itemAt(0)
-    let second = box.generalCardList.itemAt(1)
-    cardCenter0 = Qt.point(box.x + first.x + first.width / 2,
-                           box.y + first.y + first.height / 2)
-    cardCenter1 = Qt.point(box.x + second.x + second.width / 2,
-                           box.y + second.y + second.height / 2)
-  }
-
-  Item {
-    id: popupHost
-    width: 900
-    height: 700
+  PopupItem {
+    id: info
+    width: 630
+    height: 460
+    anchors.centerIn: parent
   }
 
   ChooseGeneralModel {
     id: model
-    generals: ["qiao_test__han_1", "qiao_test__jin_1"]
+    generals: ["qiao_heg__qun012", "qiao_heg__jin002"]
+    choiceNum: 2
+    hegemony: true
+    prompt: "选择主将与副将"
     extraData: ({
       freeAssign: true,
-      offers: ["qiao_test__han_1", "qiao_test__jin_1"],
+      guestIllustrations: true,
+      offers: ["qiao_heg__qun012", "qiao_heg__jin002"],
       guests: [],
-      guestFactions: {},
-      pairing: {},
-      wild: {}
+      guestFactions: { qiao_heg__qun012: ["han", "qun"] },
+      ascensions: { qiao_heg__jin001: true }
     })
   }
 
@@ -242,16 +224,11 @@ def write_fixture(root):
     for rel, text in FIXTURE_PARTS.items():
         path = imports / rel
         path.parent.mkdir(parents=True, exist_ok=True)
+        text = text.replace("__GENERALS_DIR__", (ROOT / "image/generals").as_uri() + "/")
+        text = text.replace("__CARD_DIR__", (RUNTIME_ROOT / "image/card/general").as_uri() + "/")
         path.write_text(text, encoding="utf-8")
-    target = imports / "LunarLtk" / "Pages" / "InfoPopups" / "FreeAssign.qml"
-    if not RUNTIME_FREE_ASSIGN.is_file():
-        raise FileNotFoundError("Missing runtime FreeAssign.qml: %s" % RUNTIME_FREE_ASSIGN)
-    shutil.copyfile(RUNTIME_FREE_ASSIGN, target)
-    tap_handler = imports / "Fk" / "Widgets" / "TapHandler.qml"
-    if not RUNTIME_TAP_HANDLER.is_file():
-        raise FileNotFoundError("Missing runtime TapHandler.qml: %s" % RUNTIME_TAP_HANDLER)
-    shutil.copyfile(RUNTIME_TAP_HANDLER, tap_handler)
-    return target
+    for rel in RUNTIME_FILES:
+        shutil.copyfile(RUNTIME_ROOT / rel, imports / rel)
 
 
 def walk(item):
@@ -266,17 +243,15 @@ def visible_of_type(root, name):
             if name in item.metaObject().className() and item.isVisible()]
 
 
-def click_item(scene, item):
+def center_point(item):
     center = item.mapToScene(QPointF(item.width() / 2, item.height() / 2))
-    QTest.mouseClick(scene, Qt.LeftButton, Qt.NoModifier,
-                     QPoint(int(center.x()), int(center.y())))
+    return QPoint(int(center.x()), int(center.y()))
 
 
 def long_press_point(scene, point):
-    pos = QPoint(int(point.x()), int(point.y()))
-    QTest.mousePress(scene, Qt.LeftButton, Qt.NoModifier, pos)
+    QTest.mousePress(scene, Qt.LeftButton, Qt.NoModifier, point)
     QTest.qWait(1200)
-    QTest.mouseRelease(scene, Qt.LeftButton, Qt.NoModifier, pos)
+    QTest.mouseRelease(scene, Qt.LeftButton, Qt.NoModifier, point)
 
 
 def main():
@@ -295,83 +270,83 @@ def main():
             raise RuntimeError("QML failed to load: " + repr(warnings))
         scene = engine.rootObjects()[0]
         QTest.qWait(200)
-        QMetaObject.invokeMethod(scene, "inspect")
-        card0 = scene.property("cardCenter0")
-        card1 = scene.property("cardCenter1")
+        offer = scene.property("first")
         model = scene.property("model")
-        if not (card0 and card1):
-            raise AssertionError("Missing card geometry")
 
         def fail(message):
-            diagnostics = [w for w in warnings if "font" not in w.lower()]
-            raise AssertionError(message + "\nQML diagnostics:\n" + "\n".join(diagnostics[-20:]))
+            raise AssertionError(message + "\nQML diagnostics:\n" + "\n".join(warnings[-20:]))
 
-        def choose_from_popup(label):
+        def choose_from_popup(label, name):
             popup = scene.property("popup")
             if popup is None:
                 fail("The %s entry did not create a popup" % label)
-            if "FreeAssign" not in popup.metaObject().className():
-                fail("The %s entry created %s, not the runtime FreeAssign" %
+            if "QiaoFreeAssign" not in popup.metaObject().className():
+                fail("The %s entry created %s, expected QiaoFreeAssign" %
                      (label, popup.metaObject().className()))
-            if popup.width() <= 0 or popup.height() <= 0:
-                fail("The %s popup has no real size: %sx%s" %
-                     (label, popup.width(), popup.height()))
+            params = scene.property("popupParams").toVariant()
+            if params["index"] != 0:
+                fail("The %s entry opened the wrong slot: %r" % (label, params["index"]))
             packages = visible_of_type(popup, "ItemDelegate")
             if not packages:
                 fail("The %s popup has no package delegate" % label)
-            click_item(scene, packages[0])
-            QTest.qWait(2000)
-            cards = visible_of_type(popup, "GeneralCardItem")
-            if not cards:
-                classes = sorted({i.metaObject().className() for i in walk(popup)})
-                stacks = [i for i in walk(popup) if "StackView" in i.metaObject().className()]
-                fail("The %s popup did not show general cards after choosing a package; "
-                     "stack=%r classes=%r" % (label,
-                     stacks[0].property("depth") if stacks else None, classes))
-            click_item(scene, cards[0])
-            QTest.qWait(120)
-            return popup
+            QTest.mouseClick(scene, Qt.LeftButton, Qt.NoModifier, center_point(packages[0]))
+            QTest.qWait(400)
+            card = next((item for item in visible_of_type(popup, "GeneralCardItem")
+                         if item.property("dataModel").property("name") == name), None)
+            if card is None:
+                fail("The %s popup did not show %s" % (label, name))
+            preview = card.property("cardFrontSource")
+            if not QMetaObject.invokeMethod(card, "clicked"):
+                fail(f"Could not activate the {label} popup's delegate for {name}")
+            return preview
 
-        # Right-click path: real runtime popup, then package -> general click.
-        QTest.mouseClick(scene, Qt.RightButton, Qt.NoModifier,
-                         QPoint(int(card0.x()), int(card0.y())))
-        QTest.qWait(100)
-        first_popup = choose_from_popup("right-click")
-        params = scene.property("popupParams")
-        if hasattr(params, "toVariant"):
-            params = params.toVariant()
-        if params["index"] != 0:
-            fail("Right-click popup index: %r" % (params["index"],))
-        if model.property("generals").toVariant()[0] != "qiao_test__wei_1":
-            fail("Right-click selection did not write back to the model")
-        if scene.property("finishCount") != 1:
-            fail("Right-click popup did not emit finish")
-        QMetaObject.invokeMethod(scene, "closePopup")
-        QTest.qWait(50)
+        def check_offer(name, kingdom, subkingdom, image_path, ascension):
+            card_model = offer.property("dataModel")
+            identity = tuple(card_model.property(key) for key in ("name", "kingdom", "subkingdom"))
+            if identity != (name, kingdom, subkingdom):
+                fail(f"Wrong name or factions on the offer for {name}: {identity}")
+            expected = ROOT / "image/generals" / image_path
+            actual = offer.property("renderedPortrait").toLocalFile()
+            if Path(actual) != expected or not offer.property("portraitReady"):
+                fail(f"Wrong portrait for {name}: {actual}, expected {expected}")
+            badge = next((item for item in walk(offer) if item.objectName() == "qiaoAscensionBadge"), None)
+            if badge is None or badge.isVisible() != ascension:
+                fail("Wrong ascension badge on the offer for " + name)
 
-        # Long press uses the runtime TapHandler's onLongPressed -> rightClicked.
-        long_press_point(scene, card1)
-        QTest.qWait(100)
-        second_popup = choose_from_popup("long press")
-        if second_popup is first_popup:
-            fail("Long press reused the previous popup instance")
-        params = scene.property("popupParams")
-        if hasattr(params, "toVariant"):
-            params = params.toVariant()
-        if params["index"] != 1:
-            fail("Long-press popup index: %r" % (params["index"],))
-        if model.property("generals").toVariant()[1] != "qiao_test__wei_1":
-            fail("Long-press selection did not write back to the model")
-        if scene.property("finishCount") != 2:
-            fail("Long-press popup did not emit finish")
+        if offer is None:
+            fail("Missing candidate card")
+        cai = "qiao_heg__qun012"
+        sima = "qiao_heg__jin001"
+        check_offer(cai, "han", "qun", f"guest/{cai}.jpg", False)
 
-        diagnostics = [w for w in warnings if "font" not in w.lower()]
-        if any("roomScene is not defined" in warning for warning in diagnostics):
-            fail("GuestRedrawBox still uses bare roomScene")
-        print("PASS: runtime FreeAssign opened through Ltk.roomScene from right-click and long press")
-        print("PASS: clicked package -> general card; fresh popup, dataModel/index, finish and model writeback verified")
-        if diagnostics:
-            print("NOTE: QML diagnostics:", diagnostics[-5:])
+        QTest.mouseClick(scene, Qt.RightButton, Qt.NoModifier, center_point(offer))
+        QTest.qWait(150)
+        preview = choose_from_popup("right-click", sima)
+        check_offer(sima, "jin", "", f"{sima}.jpg", True)
+        if model.property("generals").toVariant()[0] != sima or offer.property("cardFrontSource") != preview:
+            fail("Right-click selection did not apply the general and its preview to the offer")
+        QTest.qWait(150)
+        if scene.property("finishCount") != 1 or scene.property("popup") is not None:
+            fail("Right-click popup did not finish and close")
+
+        QTest.mouseClick(scene, Qt.LeftButton, Qt.NoModifier, center_point(offer))
+        long_press_point(scene, center_point(offer))
+        QTest.qWait(150)
+        preview = choose_from_popup("long press", cai)
+        check_offer(cai, "han", "qun", f"guest/{cai}.jpg", False)
+        if scene.property("selectedGeneral") != cai or offer.property("cardFrontSource") != preview:
+            fail("Long-press selection did not refresh the selected slot with its preview")
+        QTest.qWait(150)
+        if scene.property("finishCount") != 2 or scene.property("popup") is not None:
+            fail("Long-press popup did not finish and close")
+
+        QMetaObject.invokeMethod(scene, "disableGuestIllustrations")
+        check_offer(cai, "qun", "", f"{cai}.jpg", False)
+
+        if any("font" not in warning.lower() for warning in warnings):
+            fail("Unexpected QML diagnostics")
+        print("PASS: right-click and long press refresh the portrait, factions and ascension badge in place")
+        print("PASS: disabling guest replacements restores the ordinary portrait and faction")
     finally:
         engine.deleteLater()
         app.processEvents()

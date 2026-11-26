@@ -6,6 +6,22 @@ local hiding = setmetatable({}, { __mode = "k" })
 local revealing = setmetatable({}, { __mode = "k" })
 local addPrinted
 
+--- 为引擎技能骨架登记汉晋规则中的非武将技能。
+function M.registerNonGeneral(name)
+  local skeleton = Fk.skill_skels[name]
+  if skeleton then skeleton.extra.qiaoNonGeneralSkill = true end
+end
+
+--- 判断易读描述中的武将技能。归属于角色或武将牌由调用者另行判断。
+function M.isGeneralSkill(skill, player)
+  local skeleton = skill and skill:getSkeleton()
+  return skeleton ~= nil
+    and not skill.name:startsWith("#") and not skeleton.name:startsWith("#")
+    and not skeleton.extra.qiaoNonGeneralSkill
+    and (not skill.package or skill.package.name ~= "qiao_mode")
+    and skill:isPlayerSkill(player)
+end
+
 local function skillObject(skill)
   if type(skill) == "string" then return Fk.skills[skill] end
   return skill
@@ -29,6 +45,7 @@ function M.install(room)
   if room.qiaoSkillSourcesInstalled then return end
   room.qiaoSkillSourcesInstalled = true
   local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+  local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
   local H = require "packages.hegemony.util"
   local class = require "ltk.server.serverplayer"
 
@@ -47,6 +64,7 @@ function M.install(room)
   end
 
   local function trackable(skill)
+    -- 这里只维护引擎授技来源，模式技及大旗等入口也需要记账。
     return skill and skill:isPlayerSkill(nil, true)
   end
 
@@ -58,10 +76,12 @@ function M.install(room)
     function class:getSkillNameList()
       local names = getSkillNameList(self)
       if Modes.inRoom(self.room) then
-        -- 角色直接获授仍是其武将技能。保持原查询对限定技等规则的可见性。
-        for _, skill in ipairs(self.derivative_skills[Fk.skills[M.DIRECT]] or {}) do
-          if not skill.name:startsWith("#") then
-            table.insertIfNeed(names, skill:getSkeleton().name)
+        -- 保留角色直接获授和翼从实例所提供的技能供角色规则查询。
+        for _, source in ipairs({ M.DIRECT, Retinues.SOURCE_SKILL }) do
+          for _, skill in ipairs(self.derivative_skills[Fk.skills[source]] or {}) do
+            if not skill.name:startsWith("#") then
+              table.insertIfNeed(names, skill:getSkeleton().name)
+            end
           end
         end
       end

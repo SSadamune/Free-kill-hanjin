@@ -132,6 +132,15 @@ local function checkRoukeConversion(cardName, accepts, cancelFollow)
   local playProbe = playSkel:createSkill()
   Fk.skills[playSkel.name] = playProbe
   local asked, followRequests = nil, 0
+  local followLog
+  local sendLog = room.sendLog
+  function room:sendLog(log, ...)
+    if (log.type == "#InvokeSkill" or log.type == "#InvokeSkillTo")
+      and log.from == p(1).id and log.arg == "#qiao__skill_jin005_1_follow" then
+      followLog = Fk:translate(log.arg)
+    end
+    return sendLog(self, log, ...)
+  end
   skill_test.withSkillRequests(room, ROUKE, {
     askToSkillInvoke = function(self, who)
       lu.assertNil(asked)
@@ -173,6 +182,7 @@ local function checkRoukeConversion(cardName, accepts, cancelFollow)
   lu.assertEquals(actor and actor.id, accepts and p(2).id or nil)
   lu.assertFalse(require("packages.qiao.pkg.qiao_mode.rules.skill_prelight").canPrelight(ROUKE))
   local changesChain = accepts and not cancelFollow
+  lu.assertEquals(followLog, changesChain and "柔克" or nil)
   lu.assertEquals(p(2).chained, changesChain)
   lu.assertEquals(p(3).chained, not changesChain)
   -- 场上恰有一个横置角色；只有柔克持有者羊祜的手牌上限增加。

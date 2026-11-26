@@ -11,14 +11,23 @@ local otherSelectionSources = {
 -- cannot auto-return it and disabled alternatives are still explained.
 function M.askOption(room, player, params)
   if #params.choices == 0 then return end
-  local choice = room:askToChoice(player, {
-    choices = table.simpleClone(params.choices),
-    all_choices = table.simpleClone(params.all_choices or params.choices),
-    skill_name = params.skill_name,
-    prompt = params.prompt,
-    detailed = params.detailed,
-    cancelable = params.cancelable ~= false,
-  })
+  local choices = table.simpleClone(params.choices)
+  local all = table.simpleClone(params.all_choices or params.choices)
+  local cancelable = params.cancelable ~= false
+  local choice
+  if params.buttons then
+    -- The option bar has its own Cancel button and returns an empty reply on cancellation.
+    choice = room:askToOptions(player, {
+      options = choices, all_options = all, cancelable = cancelable,
+      skill_name = params.skill_name, prompt = params.prompt,
+      min_num = 1, max_num = 1, single = true,
+    })[1]
+  else
+    choice = room:askToChoice(player, {
+      choices = choices, all_choices = all, detailed = params.detailed, cancelable = cancelable,
+      skill_name = params.skill_name, prompt = params.prompt,
+    })
+  end
   if choice == "Cancel" or not table.contains(params.choices, choice) then return end
   local frame = room.qiaoTriggerSelection
   if frame and frame.player == player and room.current_cost_skill == frame.skill then

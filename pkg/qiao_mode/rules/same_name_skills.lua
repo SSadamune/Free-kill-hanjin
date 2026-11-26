@@ -95,7 +95,11 @@ local function registerInstance(original)
     end
   end
   if #alias.effect_spec_list == 0 then return end
-  Fk:loadTranslationTable({ [id] = Fk:translate(name), [":" .. id] = Fk:translate(":" .. name) }, Config.language)
+  local descKey = ":" .. name
+  local desc = Fk:translate(descKey)
+  local translations = { [id] = Fk:translate(name) }
+  if desc ~= descKey then translations[":" .. id] = desc end
+  Fk:loadTranslationTable(translations, Config.language)
   Fk.skill_skels[id] = alias
   local skill = alias:createSkill()
   skill.package = original.package

@@ -603,4 +603,11 @@ function M.isHeji(card)
   return type(data) == "table" and (data[M.HEJI_KEY] == true or data.qiao_hezong == true)
 end
 
+M.ALLIANCE_NAME = "@@alliance"
+M.ALLIANCE_PUBLIC = M.ALLIANCE_NAME .. "-public"
+
+function M.hasAllianceMark(card)
+  return card ~= nil and card:hasMark(M.ALLIANCE_NAME, MarkEnum.CardTempMarkSuffix) ~= nil
+end
+
 return M

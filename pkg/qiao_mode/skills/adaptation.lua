@@ -52,7 +52,8 @@ local translations = {
   ["#qiao_adaptation_discard_equip"] = "应变：弃置目标角色装备区里的一张牌",
   ["#qiao_adaptation_support"] = "助战：你可以弃置一张%arg手牌，助战 %src 的应变牌",
   ["#qiao_adaptation_ignore"] = "选择本次无视的一项应变条件",
-  ["qiao_ignore_option"] = "第%arg项（%arg2）",
+  ["qiao_ignore_option"] = "%arg→%arg2",
+  ["qiao_ignore_option_satisfied"] = "%arg→%arg2（已满足）",
   ["#qiao_adaptation_add_target"] = "应变：你可以增加一个合法目标",
   ["#qiao_adaptation_remove_target"] = "应变：你可以减少一个目标",
   -- The invoke-log prefix makes the client show the text in its centered

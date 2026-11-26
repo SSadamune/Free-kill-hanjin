@@ -114,6 +114,13 @@ function M.create(base, name)
   local maxOffers = locked and 5 or MAX_OFFERS
   local collection = name == Modes.collection or locked
   local resolveSettings = collection and Ban.resolveCollectionSettings or Ban.resolveSettings
+  local countIn = base.countInFunc
+  if locked then
+    countIn = function(_, room)
+      return not room:getTag("qiao_locked_start_rejected")
+        and Locked.matchesPlayerCount(#room.players, room:getSettings(Locked.ruleKey))
+    end
+  end
   local function rejectLockedStart(room, message)
     room:setTag("qiao_locked_start_rejected", true)
     room:sendLog { type = message, toast = true }
@@ -122,6 +129,11 @@ function M.create(base, name)
   local function getLogic()
     local parent = base.logic()
     local logic = parent:subclass("QiaoHegLogic")
+    function logic:trigger(event, target, data, refreshOnly)
+      -- 死亡翻牌仍须更新牌面和势力。引擎派发延迟时机时，已死亡的角色不生成「明置后」。
+      if event == fk.GeneralRevealed and target and target.dead then return false end
+      return parent.trigger(self, event, target, data, refreshOnly)
+    end
     if locked then
       function logic:run()
         local room = self.room
@@ -293,6 +305,7 @@ function M.create(base, name)
       TriggerSelection.install(self.room)
       MandatoryCards.install(self.room)
       FaqRules.installServer(self.room)
+      Ascension.installTurnReveal()
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
@@ -321,10 +334,12 @@ function M.create(base, name)
       self.room:addSkill("qiao__jin_deck_rule")
       self.room:addSkill("qiao__jin_information_rule")
       self.room:addSkill("#qiao_pindian_display")
+      self.room:addSkill("#qiao_discard_turn")
       self.room:addSkill("qiao__jin_adaptation_rule")
       self.room:addSkill("qiao__jin_sources_rule")
       self.room:addSkill("qiao__zhen_shi_history_rule")
       require("packages.qiao.pkg.qiao_mode.rules.skill_sources").install(self.room)
+      require("packages.qiao.pkg.qiao_mode.rules.tieqi").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.marker_cards").install()
       self.room:addSkill("qiao__skill_jin022b_range")
       self.room:addSkill("qiao__general_card_skills_rule")
@@ -494,7 +509,7 @@ function M.create(base, name)
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,
     get_adjusted = locked and Locked.adjusted or nil,
-    is_counted = base.countInFunc,
+    is_counted = countIn,
     reward_punish = function(self, victim, killer)
       local Counts=require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
       return Counts.withPhysicalCount(victim.room,function()
