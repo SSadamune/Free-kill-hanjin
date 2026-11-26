@@ -1,4 +1,4 @@
--- 六势力权包正式卡面数据。
+-- 六势力权包正式卡面数据（12 名普通武将、21 条技能、2 种翼从、2 条统领来源）。
 -- 牌面文本与称号以 assets/docs/石激桑武将列表.json 为准；客将势力依紫乔权包专栏
 -- （1178873011318554633）卡面与注释确认。君曹操已在 zhen_shi_lord_wei.lua 独立登记，
 -- 于禁【常令】复用既有的 qiao__skill_wei024_1 实现。
@@ -6,15 +6,15 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 11
+M.generalCount = 12
 M.retinueCount = 2
 M.commanderCount = 2
-M.skillCount = 19
+M.skillCount = 21
 M.retinueSkillCount = 2
 M.kingdoms = { "han", "wei", "shu", "wu", "qun", "jin" }
 
 M.generals = {
-  -- 汉势力
+  -- 汉势力（2 将）
   {
     number = [==[HAN003]==],
     id = [==[qiao_heg__han003]==],
@@ -74,7 +74,7 @@ M.generals = {
       },
     },
   },
-  -- 魏势力
+  -- 魏势力（2 将）
   {
     number = [==[WEI021B]==],
     id = [==[qiao_heg__wei021b]==],
@@ -134,7 +134,7 @@ M.generals = {
       },
     },
   },
-  -- 蜀势力
+  -- 蜀势力（2 将）
   {
     number = [==[SHU023]==],
     id = [==[qiao_heg__shu023]==],
@@ -201,7 +201,7 @@ M.generals = {
       },
     },
   },
-  -- 吴势力
+  -- 吴势力（2 将）
   {
     number = [==[WU019]==],
     id = [==[qiao_heg__wu019]==],
@@ -268,7 +268,7 @@ M.generals = {
       },
     },
   },
-  -- 群势力
+  -- 群势力（2 将）
   {
     number = [==[QUN021]==],
     id = [==[qiao_heg__qun021]==],
@@ -342,7 +342,7 @@ M.generals = {
       },
     },
   },
-  -- 晋势力
+  -- 晋势力（2 将）
   {
     number = [==[JIN021]==],
     id = [==[qiao_heg__jin021]==],
@@ -371,6 +371,39 @@ M.generals = {
         id = [==[qiao__skill_jin021_2]==],
         name = [==[追诛]==],
         text = [==[轮次技，当一名角色受到致命伤害时，你可以对其发起“军令”。若其执行，你可以防止此伤害；若其不执行，此伤害翻倍。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[JIN024]==],
+    id = [==[qiao_heg__jin024]==],
+    name = [==[贾南风]==],
+    kingdom = [==[jin]==],
+    title = [==[司晨的丹鴸]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "female",
+    skills = {
+      {
+        id = [==[qiao__skill_jin024_1]==],
+        name = [==[伤败]==],
+        text = [==[当你对其他角色造成伤害后，你可以令其弃置每个区域各一张牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_jin024_2]==],
+        name = [==[废戮]==],
+        text = [==[每名角色限一次，当一名角色进入濒死时，你可以令其选择一项：1.你移除其一个武将，其回复1点体力；2.你失去此技能，其死亡。]==],
         related = false,
         tags = {  },
       },

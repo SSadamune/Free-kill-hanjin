@@ -15,6 +15,8 @@ M.JUEYAN_RANGE_MARK = "qiao_wu019_jueyan_range-turn"
 M.DRAWN_TURN_MARK = "qiao_quan_drawn-turn"
 M.WUDANG_PENDING_MARK = "qiao_wudang_feijun_pending-turn"
 M.WEIDI_SKILL = "qiao__skill_qun021_2"
+M.FEILU_SKILL = "qiao__skill_jin024_2"
+M.FEILU_USED_TAG = "qiao_jin024_feilu_used_v1"
 
 --- 汉晋定向叠置：仅平置改为叠置，已叠置不反向平置。
 function M.directedStack(target)
@@ -40,6 +42,26 @@ function M.canHideGeneralPosition(player, isDeputy)
   if Exchange.isLordPosition(player, isDeputy) then return false end
   if Exchange.isWildGeneral(public) then return false end
   return true
+end
+
+--- 指定位置是否为可被移除的普通武将牌（排除空位、士兵/翼从/偏将、君主及明置专属野心家；暗置普通武将牌允许移除）。
+function M.canRemoveOrdinaryPosition(player, isDeputy)
+  if player == nil or player.dead then return false end
+  local actual = Exchange.actualGeneral(player, isDeputy)
+  if type(actual) ~= "string" or actual == "" or actual == "anjiang" then return false end
+  if Commander.isSoldier(actual) then return false end
+  if Exchange.isLordPosition(player, isDeputy) then return false end
+  if Exchange.isRevealed(player, isDeputy) and Exchange.isWildGeneral(actual) then return false end
+  return true
+end
+
+--- 角色是否至少有一张可被弃置的牌（手牌区、装备区或判定区）。
+function M.hasDiscardableInAnyArea(player)
+  if player == nil or not RemovedTargets.isPresent(player) then return false end
+  for _, id in ipairs(player:getCardIds("he")) do
+    if not player:prohibitDiscard(id) then return true end
+  end
+  return #player:getCardIds("j") > 0
 end
 
 --- 令目标依次从手牌区、装备区、判定区各弃置一张牌（无合法牌的区域跳过）。

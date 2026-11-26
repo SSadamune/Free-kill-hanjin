@@ -1,8 +1,8 @@
 # 权包
 
-已接入的权包武将及其技能见下表。规则依据见[六势力权包索引](../../../rules/quan-generals.md)。
+本包共正式接入 13 张武将牌（六势力各 2 张普通武将共 12 张 + 君曹操 1 张）、2 种翼从／偏将（无当飞军、胡车儿）及 2 条统领来源，统一归入 `qiao_zhenshi` 武将包并使用角标 `qiao_prefix_quan`（「权」）。规则依据见[六势力权包索引](../../../rules/quan-generals.md)。
 
-军令复用[汉晋军令适配](../../../../pkg/qiao_mode/rules/junling.lua)，持续效果由[权包模式规则](../../../../pkg/qiao_mode/skills/quan_rules.lua)处理。
+五名军令武将（刘宏【鬻爵】、于禁【常令】、吴国太【补益】、袁术【庸肆】、卫瓘【追诛】）集中复用汉晋军令公共适配 [junling.lua](../../../../pkg/qiao_mode/rules/junling.lua)，其他国战模式沿用上游的军令准备与执行函数。持续延时与全局历史记账集中承接于模式级规则 [quan_rules.lua](../../../../pkg/qiao_mode/skills/quan_rules.lua)。
 
 ## 逐将检索
 
@@ -20,3 +20,4 @@
 | QUN021 | [袁术](quan/qun021.md) | 汉 | [庸肆](quan/qun021.md#qun021-1)、[伪帝](quan/qun021.md#qun021-2) |
 | QUN023 | [张绣](quan/qun023.md) | 魏 | [从谏](quan/qun023.md#qun023-1)、[附敌](quan/qun023.md#qun023-2)（统领限一偏将：[胡车儿](quan/retinue-hucheer.md#hucheer)） |
 | JIN021 | [卫瓘](quan/jin021.md) | — | [乘隙](quan/jin021.md#jin021-1)、[追诛](quan/jin021.md#jin021-2) |
+| JIN024 | [贾南风](quan/jin024.md) | — | [伤败](quan/jin024.md#jin024-1)、[废戮](quan/jin024.md#jin024-2) |

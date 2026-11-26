@@ -69,6 +69,89 @@ Testqiao_quan_han_wei_shu = {
   end,
 }
 
+function Testqiao_quan_han_wei_shu:testRegistrationGuestsCompanionsCommandersAndUI()
+  local ClientUtil = require "ltk.client.util"
+  local ordinary = {
+    "qiao_heg__han003", "qiao_heg__han021",
+    "qiao_heg__wei021b", "qiao_heg__wei024",
+    "qiao_heg__shu023", "qiao_heg__shu024",
+    "qiao_heg__wu019", "qiao_heg__wu024",
+    "qiao_heg__qun021", "qiao_heg__qun023",
+    "qiao_heg__jin021", "qiao_heg__jin024",
+  }
+  for _, id in ipairs(ordinary) do
+    local g = assert(Fk.generals[id], "missing quan general: " .. id)
+    lu.assertEquals(g.package.name, "qiao_zhenshi")
+    lu.assertEquals(g.prefix, "qiao_prefix_quan")
+    lu.assertEquals(Fk:translate(g.prefix), "权")
+    lu.assertEquals(ClientUtil:getGeneralData(id).prefix, "qiao_prefix_quan")
+  end
+
+  -- 陆抗主将技 ☯️-1
+  local lukang = Fk.generals["qiao_heg__wu019"]
+  lu.assertEquals(lukang.maxHp, 4)
+  lu.assertEquals(lukang.mainMaxHpAdjustedValue, -1)
+  lu.assertEquals(lukang.deputyMaxHpAdjustedValue, 0)
+
+  -- 客将势力核对（依紫乔专栏 1178873011318554633 确认）
+  local expectedGuests = {
+    qiao_heg__han021 = { "wei" },
+    qiao_heg__wei024 = { "han", "shu", "wu" },
+    qiao_heg__shu024 = { "qun" },
+    qiao_heg__wu024 = { "shu" },
+    qiao_heg__qun021 = { "han" },
+    qiao_heg__qun023 = { "wei" },
+  }
+  for _, id in ipairs(ordinary) do
+    local want = expectedGuests[id] or {}
+    local got = Guest.guestKingdoms(id)
+    lu.assertEquals(got, want, "guest mismatch for " .. id)
+  end
+
+  -- 珠联璧合核对
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__han003"].companions, "qiao_heg__han007"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__han003"].companions, "qiao_heg__han004"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__han021"].companions, "qiao_heg__han001"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__wei021b"].companions, "崔琰"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__shu023"].companions, "qiao_heg__shu018b"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__shu024"].companions, "qiao_heg__em_shu001"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__shu024"].companions, "qiao_heg__shu001"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__wu024"].companions, "qiao_heg__wu009"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__qun021"].companions, "qiao_heg__qun015"))
+  lu.assertTrue(table.contains(Fk.generals["qiao_heg__qun023"].companions, "qiao_heg__qun007"))
+
+  -- 两名新翼从/偏将与两条统领来源
+  local wudang = assert(Fk.generals["qiao_heg__retinue_wudang_feijun"])
+  local hucheer = assert(Fk.generals["qiao_heg__retinue_hucheer"])
+  lu.assertEquals(wudang.package.name, "qiao_zhenshi")
+  lu.assertEquals(hucheer.package.name, "qiao_zhenshi")
+  lu.assertEquals(wudang.prefix, "qiao_prefix_quan")
+  lu.assertEquals(hucheer.prefix, "qiao_prefix_quan")
+  lu.assertTrue(wudang.hidden)
+  lu.assertTrue(hucheer.hidden)
+  lu.assertTrue(Commander.isRetinue("qiao_heg__retinue_wudang_feijun"))
+  lu.assertTrue(Commander.isRetinue("qiao_heg__retinue_hucheer"))
+  lu.assertTrue(Commander.isSoldier("qiao_heg__retinue_wudang_feijun"))
+  lu.assertTrue(Commander.isSoldier("qiao_heg__retinue_hucheer"))
+  lu.assertFalse(Commander.retinues["qiao_heg__retinue_wudang_feijun"].limited)
+  lu.assertTrue(Commander.retinues["qiao_heg__retinue_hucheer"].limited)
+
+  local wpCmd = assert(Commander.commanders["qiao_heg__shu023"])
+  lu.assertEquals(wpCmd.card, "qiao__slash")
+  lu.assertFalse(wpCmd.limited)
+  lu.assertTrue(table.contains(wpCmd.retinues, "qiao_heg__retinue_wudang_feijun"))
+
+  local zxCmd = assert(Commander.commanders["qiao_heg__qun023"])
+  lu.assertEquals(zxCmd.card, "qiao__snatch")
+  lu.assertTrue(zxCmd.limited)
+  lu.assertTrue(table.contains(zxCmd.retinues, "qiao_heg__retinue_hucheer"))
+
+  -- 界面接线：恪守尖括号转义与无当飞军简称
+  local keshouDesc = Fk:getDescription("qiao__skill_wu019_2")
+  lu.assertStrContains(keshouDesc, "&lt;孤军→获得或消耗一枚阴阳鱼标记&gt;")
+  lu.assertEquals(SkillButtons.label(Fk.skills["qiao__retinue_skill_wudang_feijun"], "无当飞军"), "无当军")
+end
+
 function Testqiao_quan_han_wei_shu:testHanjinJunlingRules()
   local from, to, bystander, removed = p(1), p(2), p(3), p(4)
   inRoom(function()

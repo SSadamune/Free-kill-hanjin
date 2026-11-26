@@ -541,6 +541,110 @@ function Testqiao_quan_wu_qun_jin:testJin021WeiguanChengxiAndZhuizhu()
   lu.assertEquals(inflictedAmount, 4, "追诛不执行军令应令致命伤害翻倍")
 end
 
+function Testqiao_quan_wu_qun_jin:testJin024JiananfengShangbaiAndFeilu()
+  local jnf, victim, lordOnly = p(5), p(1), p(2)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), jnf, { main = "qiao_heg__jin024", deputy = "qiao_test__jin_2", kingdom = "jin" })
+    skill_test.installDualGenerals(room(), victim, { main = "qiao_heg__wu005", deputy = "qiao_heg__wu009", kingdom = "wu" })
+    victim.deputyGeneral = "anjiang"
+    room():setPlayerMark(victim, "__heg_deputy", "qiao_heg__wu009")
+  end)
+
+  -- 伤败：造成伤害后令对方三区各弃一
+  give(victim, "qiao__jink", Card.Club, 2)
+  equip(victim, "qiao__chitu", Card.Heart, 5)
+  inRoom(function()
+    local ind = room():printCard("qiao__indulgence", Card.Spade, 6)
+    room():moveCardTo(ind, Card.PlayerJudge, victim, fk.ReasonJustMove, "test", nil, true)
+  end)
+  skill_test.withSkillRequests(room(), "qiao__skill_jin024_1", {
+    askToSkillInvoke = function() return true end,
+    askToDiscard = function(self, who, params)
+      local id = who:getCardIds("h")[1]
+      self:throwCard({ id }, params.skill_name, who, who)
+      return { id }
+    end,
+  }, function()
+    inRoom(function()
+      room():damage { from = jnf, to = victim, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(#victim:getCardIds("h"), 0)
+  lu.assertEquals(#victim:getCardIds("e"), 0)
+  lu.assertEquals(#victim:getCardIds("j"), 0)
+
+  -- 废戮分支1：暗置副将选项仅显示 deputyGeneral（不泄露暗将牌名），移除后回复 1 血；且对同一角色限一次
+  local seenRemoveChoices
+  inRoom(function()
+    victim.hp = 0
+  end)
+  skill_test.withSkillRequests(room(), "qiao__skill_jin024_2", {
+    askToSkillInvoke = function() return true end,
+    askToOptions = function() return { "#qiao__skill_jin024_2-opt1" } end,
+    askToChoice = function(self, who, params)
+      seenRemoveChoices = params.choices
+      return "deputyGeneral"
+    end,
+  }, function()
+    inRoom(function()
+      room().logic:trigger(fk.EnterDying, victim, { who = victim })
+    end)
+  end)
+  lu.assertNotNil(seenRemoveChoices)
+  lu.assertTrue(table.contains(seenRemoveChoices, "deputyGeneral"), "暗置副将不得泄露真实牌名")
+  lu.assertEquals(victim.hp, 1, "废戮选项1移除武将后目标应回复1点体力")
+
+  -- 同一目标第二次进入濒死不再触发废戮
+  local secondAsk = false
+  skill_test.withSkillRequests(room(), "qiao__skill_jin024_2", {
+    askToSkillInvoke = function() secondAsk = true; return true end,
+  }, function()
+    inRoom(function()
+      victim.hp = 0
+      room().logic:trigger(fk.EnterDying, victim, { who = victim })
+    end)
+  end)
+  lu.assertFalse(secondAsk, "废戮每名角色限一次")
+
+  -- 废戮分支2：目标无可移除普通武将（仅士兵）时仅选项2可选；贾南风按将牌失去废戮且目标无来源直接死亡
+  inRoom(function()
+    lordOnly.general = "blank_shibing"
+    lordOnly.deputyGeneral = "blank_shibing"
+    room():setPlayerMark(lordOnly, "__heg_general", "blank_shibing")
+    room():setPlayerMark(lordOnly, "__heg_deputy", "blank_shibing")
+    lordOnly.hp = 0
+  end)
+  local availOptionsSeen
+  local deathDataSeen
+  skill_test.withSkillRequests(room(), "qiao__skill_jin024_2", {
+    askToSkillInvoke = function() return true end,
+    askToOptions = function(self, who, params)
+      availOptionsSeen = params.options
+      return { "#qiao__skill_jin024_2-opt2" }
+    end,
+  }, function()
+    inRoom(function()
+      local origKill = room().killPlayer
+      room().killPlayer = function(self, spec)
+        deathDataSeen = spec
+        return origKill(self, spec)
+      end
+      local ok, err = pcall(function()
+        room().logic:trigger(fk.EnterDying, lordOnly, { who = lordOnly })
+      end)
+      room().killPlayer = origKill
+      if not ok then error(err, 0) end
+    end)
+  end)
+  lu.assertEquals(availOptionsSeen, { "#qiao__skill_jin024_2-opt2" }, "无可移除普通武将时选项1不可选")
+  lu.assertTrue(lordOnly.dead, "选项2应令目标直接死亡")
+  lu.assertNotNil(deathDataSeen)
+  lu.assertNil(deathDataSeen.killer, "废戮选项2应按无来源死亡结算")
+  lu.assertNil(deathDataSeen.damage, "废戮选项2不应附带伤害来源")
+  lu.assertFalse(jnf:hasSkill("qiao__skill_jin024_2", true, true), "贾南风应失去废戮")
+  lu.assertTrue(Duanchang.isLost(room(), "qiao_heg__jin024", "qiao__skill_jin024_2"), "失技记录应归属贾南风将牌")
+end
+
 function Testqiao_quan_wu_qun_jin:testShouxiProtectsEquipmentUsedByAnotherFaction()
   local lukang, caojie, enemy = p(1), p(2), p(7)
   local jueyan, shouxi = "qiao__skill_wu019_1", "qiao__skill_han021_1"
