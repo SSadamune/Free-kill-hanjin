@@ -6,14 +6,18 @@ function M.harmfulDelay(card)
   return card.trueName == "indulgence" or card.trueName == "supply_shortage"
 end
 
+function M.equipScore(card)
+  if card.sub_type == Card.SubtypeArmor then return 3 end
+  if card.sub_type == Card.SubtypeDefensiveRide then return 2 end
+  return 1
+end
+
 local function moveScore(ai, from, id)
   local card = from:getVirtualEquip(id) or Fk:getCardById(id)
   local area = ai.room:getCardArea(id)
   if area == Card.PlayerJudge and ai:isFriend(from) and M.harmfulDelay(card) then return 4 end
   if area == Card.PlayerEquip and ai:isEnemy(from) and not from:hasSkill("qiao__skill_wu008_2") then
-    if card.sub_type == Card.SubtypeArmor then return 3 end
-    if card.sub_type == Card.SubtypeDefensiveRide then return 2 end
-    return 1
+    return M.equipScore(card)
   end
 end
 

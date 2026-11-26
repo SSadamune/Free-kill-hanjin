@@ -122,6 +122,10 @@ function M.active(ai, data)
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
   end
+  if key == "#qiao__skill_jin001_2-use" then
+    if not Cost.select(ai, 1, 2, function(id) return Triggers.xingtuMaterial(ai, id) end) then return "" end
+    return chooseTargets(ai, function(target) return Triggers.xingtuTarget(ai, target) end)
+  end
   if key == "#qiao__skill_wei002_2-ask" or key == "#qiao__skill_qun010_2-ask" then
     return Judgment.choose(ai, key == "#qiao__skill_qun010_2-ask") and Requests.reply(ai) or ""
   end
@@ -161,7 +165,29 @@ function M.active(ai, data)
     end, extra.num)
   end
   if skill == "discard_skill" or skill == "choose_cards_skill" then
-    if key == "#axe-invoke" then
+    if key == "#qiao__skill_shu007_2-card" then
+      local frame = Selection.currentCost(ai.player)
+      local best, bestScore
+      for _, id in ipairs(ai:getEnabledCards()) do
+        local enemyDiscard = frame and table.find(frame.data, function(move)
+          return ai:isEnemy(move.proposer) and table.find(move.moveInfo, function(info) return info.cardId == id end)
+        end)
+        if enemyDiscard then
+          local card = ai.player:getVirtualEquip(id) or Fk:getCardById(id)
+          local score = Board.equipScore(card)
+          if not bestScore or score > bestScore then best, bestScore = id, score end
+        end
+      end
+      if not best then return "" end
+      ai:selectCard(best, true)
+      return Requests.reply(ai)
+    elseif key == "#qiao__skill_wei005_1-discard" then
+      if not Triggers.luoyiWorth(ai) then return "" end
+      return Cost.select(ai, 1, 2, function(id)
+        local name = Fk:getCardById(id).trueName
+        return name ~= "slash" and name ~= "duel"
+      end) and Requests.reply(ai) or ""
+    elseif key == "#axe-invoke" then
       local target = M.promptTarget(ai, fields, 3)
       local effect = parentData(ai, GameEvent.CardEffect)
       local damage = 1 + (effect and effect.additionalDamage or 0)
@@ -301,6 +327,16 @@ end
 function M.chosen(ai, data)
   local target, areas, prompt = table.unpack(data)
   if type(target) == "number" then target = ai.room:getPlayerById(target) end
+  if prompt == "#qiao__skill_jin001_1-choose" and ai:isEnemy(target) and type(areas) == "table" then
+    local best, bestScore
+    for _, group in ipairs(areas.card_data) do
+      for _, id in ipairs(group[2]) do
+        local score = Board.equipScore(target:getVirtualEquip(id) or Fk:getCardById(id))
+        if not bestScore or score > bestScore then best, bestScore = id, score end
+      end
+    end
+    return best
+  end
   if not target or type(areas) ~= "string" or not ai:isEnemy(target) then return end
   local fields = (prompt or ""):split(":")
   local key = fields[1]
@@ -312,8 +348,7 @@ function M.chosen(ai, data)
     local best, bestValue
     for _, id in ipairs(target:getCardIds("e")) do
       local card = target:getVirtualEquip(id) or Fk:getCardById(id)
-      local value = card.sub_type == Card.SubtypeArmor and 3
-        or card.sub_type == Card.SubtypeDefensiveRide and 2 or 1
+      local value = Board.equipScore(card)
       if not bestValue or value > bestValue then best, bestValue = id, value end
     end
     if best then return best end

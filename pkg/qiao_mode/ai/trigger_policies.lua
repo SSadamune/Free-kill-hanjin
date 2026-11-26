@@ -21,6 +21,32 @@ local function usableRescue(player)
   end)
 end
 
+function M.xingtuMaterial(ai, id)
+  return ai.room:getCardArea(id) == Card.PlayerHand and Fk:getCardById(id).type == Card.TypeEquip
+    and Cost.value(ai, id) <= 2
+end
+
+function M.xingtuTarget(ai, target)
+  if ai:isFriend(target) and target.hp <= 1 and target:isWounded() then
+    local peach = Fk:cloneCard("qiao__peach")
+    if not ai.player:prohibitUse(peach) and not ai.player:isProhibited(target, peach) then return 10 - target.hp end
+  end
+end
+
+function M.luoyiWorth(ai)
+  local player = ai.player
+  if not player:canSkip(Player.Play) then return false end
+  return table.find(player:getCardIds("h"), function(id)
+    local card = Fk:getCardById(id)
+    if card.trueName ~= "slash" and card.trueName ~= "duel" then return false end
+    return table.find(card:getAvailableTargets(player), function(target)
+      return target.hp + target.shield == 2 and target:isKongcheng()
+        and Cards.safeDamage(ai, card, target)
+        and (card.trueName == "duel" or #target:getEquipments(Card.SubtypeArmor) == 0)
+    end) ~= nil
+  end) ~= nil
+end
+
 function M.invoke(ai, original, fields)
   local key, player = fields[1], ai.player
   if original == "qiao__skill_shu007_1" then return true end -- 集智没有自定义提示
@@ -34,6 +60,10 @@ function M.invoke(ai, original, fields)
   if key == "#qiao__skill_shu018b_2-invoke" then return ai:isFriend(playerAt(ai, fields, 3)) end
   if key == "#qiao__skill_shu002_1-invoke" then
     return Cards.safeDamage(ai, Fk:cloneCard("qiao__drowning"), playerAt(ai, fields, 2))
+  end
+  if key == "#qiao__skill_jin001_1-invoke" then
+    local target = playerAt(ai, fields, 3)
+    return ai:isEnemy(target) and not target:hasSkill("qiao__skill_wu008_2")
   end
   if key == "#qiao__skill_jin002_2-invoke" then
     local damage = currentData(ai)
@@ -158,7 +188,15 @@ end
 
 function M.choice(ai, choices, fields)
   local key, player = fields[1], ai.player
-  if key == "#qiao__skill_han015_2-choice" then
+  if key == "#qiao__skill_jin001_2-choice" then
+    local heal = "qiao__skill_jin001_2-option_equip"
+    if table.contains(choices, heal)
+      and table.find(player:getCardIds("h"), function(id) return M.xingtuMaterial(ai, id) end)
+      and table.find(ai.room:getPresentPlayers(), function(target) return M.xingtuTarget(ai, target) ~= nil end) then
+      return heal
+    end
+    return "qiao__skill_jin001_2-option_draw"
+  elseif key == "#qiao__skill_han015_2-choice" then
     local target = playerAt(ai, fields, 3)
     if ai:isFriend(target) then return "qiao__skill_han015_2-draw" end
     if ai:isEnemy(target) then return "qiao__skill_han015_2-discard" end

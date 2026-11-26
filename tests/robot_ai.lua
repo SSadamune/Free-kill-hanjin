@@ -569,4 +569,82 @@ function Testqiao_robot_ai:testShelieTakesBestCardOfEachPublicSuit()
   end)
 end
 
+function Testqiao_robot_ai:testCangjiProtectsEquipmentOnlyFromEnemyDiscard()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_shu007_2"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    room:throwCard(armor.id, "test", player, player)
+    lu.assertEquals(room:getCardArea(armor.id), Card.DiscardPile)
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    room:throwCard(armor.id, "test", player, enemy)
+    lu.assertEquals(room:getCardArea(armor.id), Card.PlayerEquip)
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryGame), 1)
+  end)
+end
+
+function Testqiao_robot_ai:testLuoyiPaysOnlyForReachableEnemyAndPlayPhase()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    for index = 3, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    room:handleAddLoseSkills(player, "qiao__skill_wei005_1", nil, false, true)
+    local cost = give(room, player, "qiao__lightning")
+    give(room, player, "qiao__duel")
+    local hand = enemy:getCardIds("h")
+    if #hand > 0 then room:throwCard(hand, "test", enemy, enemy) end
+    room:setPlayerProperty(enemy, "hp", 2)
+    for _ = 1, 4 do room:moveCardTo(room:printCard("qiao__jink", Card.Heart, 3), Card.DrawPile) end
+    GameEvent.Turn:create(TurnData:new(player, "game_rule", { Player.Draw })):exec()
+    lu.assertEquals(room:getCardOwner(cost.id).id, player.id)
+    lu.assertEquals(enemy.hp, 2)
+    GameEvent.Turn:create(TurnData:new(player, "game_rule", { Player.Draw, Player.Play })):exec()
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+    lu.assertEquals(enemy.hp, 0)
+  end)
+end
+
+function Testqiao_robot_ai:testXingtuSparesArmorAndHealsAllyWithSpareEquipment()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_jin001_2", nil, false, true)
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    room:setPlayerProperty(ally, "hp", 1)
+    local first = give(room, enemy, "qiao__foresight")
+    Adaptation.setCardEntries(first, { { condition = "canqu", effect = "add_target" } })
+    room:useCard { from = enemy, tos = { enemy }, card = first }
+    room:moveCardTo(room:printCard("qiao__jink", Card.Heart, 3), Card.DrawPile)
+    room.logic:trigger(fk.TurnEnd, enemy, {})
+    lu.assertEquals(player:getHandcardNum(), 1)
+    lu.assertEquals(ally.hp, 1)
+    local spare = give(room, player, "qiao__breastplate")
+    room.logic:trigger(fk.TurnEnd, enemy, {})
+    lu.assertEquals(ally.hp, 2)
+    lu.assertEquals(room:getCardArea(armor.id), Card.PlayerEquip)
+    lu.assertEquals(room:getCardArea(spare.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testChuitongChoosesEnemyArmorAtDyingEvent()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_jin001_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local friendlyArmor = give(room, ally, "qiao__eight_diagram")
+    room:moveCardTo(friendlyArmor, Card.PlayerEquip, ally, fk.ReasonPut)
+    room:enterDying { who = ally }
+    lu.assertEquals(room:getCardOwner(friendlyArmor.id).id, ally.id)
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryGame), 0)
+    local weapon = give(room, enemy, "qiao__blade")
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(weapon, Card.PlayerEquip, enemy, fk.ReasonPut)
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    room:enterDying { who = enemy }
+    lu.assertEquals(room:getCardOwner(armor.id).id, player.id)
+    lu.assertEquals(room:getCardOwner(weapon.id).id, enemy.id)
+  end)
+end
+
 return { name = "qiao_robot_ai" }
