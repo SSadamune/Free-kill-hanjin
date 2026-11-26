@@ -6,10 +6,10 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 5
+M.generalCount = 6
 M.retinueCount = 1
 M.commanderCount = 1
-M.skillCount = 7
+M.skillCount = 9
 M.retinueSkillCount = 1
 M.kingdoms = { "han", "wei", "shu" }
 
@@ -165,6 +165,39 @@ M.generals = {
         text = [==[限定技，出牌阶段，你可以令所有与你势力相同的角色各加1点体力上限并回复1点体力（未确定势力角色可以明置任意张与你势力相同的武将牌并执行之），你摸等同与你势力相同的角色数的牌，然后你可以交给其中任意名角色各一张牌并令其选择是否使用一张牌。]==],
         related = false,
         tags = { [==[Limited]==] },
+      },
+    },
+  },
+  {
+    number = [==[SHU024]==],
+    id = [==[qiao_heg__shu024]==],
+    name = [==[法正]==],
+    kingdom = [==[shu]==],
+    title = [==[鼓舞飞扬、蜀汉的辅翼]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[qun]==] },
+    companionText = [==[君刘备、刘备]==],
+    companionNames = { [==[君刘备]==], [==[刘备]==] },
+    companions = { [==[qiao_heg__em_shu001]==], [==[qiao_heg__shu001]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_shu024_1]==],
+        name = [==[定军]==],
+        text = [==[摸牌阶段结束时，你可以交给一名其他角色两张手牌，其需视为对你选择的另一名角色使用任意一种【杀】，否则交给你至少两张手牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_shu024_2]==],
+        name = [==[恩怨]==],
+        text = [==[锁定技，其他角色交给你至少两张牌后，令其摸一张牌；当你受到其他角色的伤害后，令其需展示并交给你一张红桃牌，否则失去1点体力。]==],
+        related = false,
+        tags = { [==[Compulsory]==] },
       },
     },
   },

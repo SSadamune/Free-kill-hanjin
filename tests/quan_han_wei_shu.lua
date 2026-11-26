@@ -69,6 +69,64 @@ Testqiao_quan_han_wei_shu = {
   end,
 }
 
+function Testqiao_quan_han_wei_shu:testHanjinJunlingRules()
+  local from, to, bystander, removed = p(1), p(2), p(3), p(4)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), from, { main = "qiao_heg__shu024", deputy = "qiao_test__shu_2", kingdom = "shu" })
+    room():setPlayerMark(removed, MarkEnum.PlayerRemoved .. "-turn", 1)
+    room():setPlayerMark(removed, "@@lure_tiger-turn", 1)
+  end)
+
+  -- 军令一：排除执行者本人与移出游戏角色
+  local seenTargets
+  skill_test.withSkillRequests(room(), "test_cmd1", {
+    askToChoosePlayers = function(self, who, params)
+      seenTargets = table.map(params.targets, function(pl) return pl.id end)
+      return { bystander }
+    end,
+  }, function()
+    inRoom(function()
+      local data = { from = from, tos = { to }, skillName = "test_cmd1" }
+      H.CommandPrepare("command1", data)
+      H.CommandCB("command1", to, from, data)
+    end)
+  end)
+  lu.assertNotNil(seenTargets)
+  lu.assertFalse(table.contains(seenTargets, to.id), "军令一不得选择执行者本人")
+  lu.assertFalse(table.contains(seenTargets, removed.id), "军令一不得选择移出游戏角色")
+  lu.assertEquals(bystander.hp, bystander.maxHp - 1)
+
+  -- 军令二：摸1交2且以执行者为 proposer 触发法正【恩怨】；对自身跳过交牌
+  give(to, "qiao__slash", Card.Spade, 5)
+  local beforeToHand = to:getHandcardNum()
+  inRoom(function()
+    H.CommandCB("command2", to, from, { from = from, tos = { to } })
+  end)
+  -- to 原1张 + 摸1 = 2张 -> 全交2张给法正 -> 触发恩怨摸1张，故手牌=1，法正手牌=2
+  lu.assertEquals(to:getHandcardNum(), beforeToHand)
+  lu.assertEquals(from:getHandcardNum(), 2)
+
+  -- 军令二对自身：只摸1不交牌
+  local selfBefore = from:getHandcardNum()
+  inRoom(function()
+    H.CommandCB("command2", from, from, { from = from, tos = { from } })
+  end)
+  lu.assertEquals(from:getHandcardNum(), selfBefore + 1)
+
+  -- 军令五：汉晋定向叠置（已叠置不反向平置）且本回合不能回血
+  inRoom(function()
+    lu.assertTrue(to.faceup)
+    H.CommandCB("command5", to, from, { from = from, tos = { to } })
+    lu.assertFalse(to.faceup, "平置应改为叠置")
+    H.CommandCB("command5", to, from, { from = from, tos = { to } })
+    lu.assertFalse(to.faceup, "已叠置不得反向平置")
+    room():loseHp(to, 1, "test")
+    local hpBefore = to.hp
+    room():recover { who = to, num = 1, skillName = "test" }
+    lu.assertEquals(to.hp, hpBefore, "军令五本回合禁止回复体力")
+  end)
+end
+
 function Testqiao_quan_han_wei_shu:testHan003LiuhongYujue()
   local liuhong, target, victim = p(1), p(2), p(3)
   inRoom(function()
@@ -432,6 +490,74 @@ function Testqiao_quan_han_wei_shu:testShu023WangpingJianglueAndWudangFeijun()
   lu.assertEquals(#enemy:getCardIds("h"), 0)
   lu.assertEquals(#enemy:getCardIds("e"), 0)
   lu.assertEquals(#enemy:getCardIds("j"), 0)
+end
+
+function Testqiao_quan_han_wei_shu:testShu024FazhengDingjunAndEnyuan()
+  local fazheng, actor, enemy = p(3), p(2), p(4)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), fazheng, { main = "qiao_heg__shu024", deputy = "qiao_test__shu_2", kingdom = "shu" })
+    room().current = fazheng
+    fazheng.phase = Player.Draw
+  end)
+  local c1 = give(fazheng, "qiao__slash", Card.Spade, 2)
+  local c2 = give(fazheng, "qiao__jink", Card.Club, 2)
+
+  -- 定军分支A：令 actor 视为对法正自己使用【杀】否则回交>=2手牌；选回交2牌触发恩怨
+  skill_test.withSkillRequests(room(), "qiao__skill_shu024_1", {
+    askToChooseCardsAndPlayers = function() return { actor }, { c1.id, c2.id } end,
+    askToChoosePlayers = function() return { fazheng } end,
+    askToChoice = function() return "#qiao__skill_shu024_1-return" end,
+    askToCards = function(self, who, params)
+      return { c1.id, c2.id }
+    end,
+  }, function()
+    inRoom(function()
+      room().logic:trigger(fk.EventPhaseEnd, fazheng, {})
+    end)
+  end)
+  -- actor 交还 2 张手牌给法正 -> 触发法正锁定技【恩怨】，actor 摸 1 张牌
+  lu.assertEquals(fazheng:getHandcardNum(), 2)
+  lu.assertEquals(actor:getHandcardNum(), 1, "定军交还>=2牌应触发恩怨令其摸1张")
+
+  -- 定军分支B：actor 选择视为对法正使用虚拟火【杀】（无视距离与次数）
+  local fzHpBefore = fazheng.hp
+  skill_test.withSkillRequests(room(), "qiao__skill_shu024_1", {
+    askToChooseCardsAndPlayers = function() return { actor }, { c1.id, c2.id } end,
+    askToChoosePlayers = function() return { fazheng } end,
+    askToChoice = function() return "qiao__fire__slash" end,
+  }, function()
+    inRoom(function()
+      room().logic:trigger(fk.EventPhaseEnd, fazheng, {})
+    end)
+  end)
+  lu.assertEquals(fazheng.hp, fzHpBefore - 1, "定军允许令目标视为对法正自己使用虚拟火杀")
+
+  -- 恩怨·怨：一次 2 点伤害事件仅触发一次；无红桃则失去 1 点体力
+  inRoom(function()
+    fazheng.hp = fazheng.maxHp -- 恢复至 3 血，确保吃 2 点伤害后仍存活进入 Damaged
+  end)
+  local enemyHpBefore = enemy.hp
+  inRoom(function()
+    clearAllZones(enemy)
+    room():damage { from = enemy, to = fazheng, damage = 2, skillName = "test" }
+  end)
+  lu.assertEquals(enemy.hp, enemyHpBefore - 1, "单次2点伤害事件恩怨只结算一次，无红桃失去1点体力")
+
+  -- 恩怨·怨：有红桃牌时展示并交给法正，不掉血
+  inRoom(function()
+    fazheng.hp = fazheng.maxHp
+  end)
+  local heartCard = give(enemy, "qiao__peach", Card.Heart, 4)
+  local enemyHp2 = enemy.hp
+  skill_test.withSkillRequests(room(), "qiao__skill_shu024_2", {
+    askToCards = function() return { heartCard.id } end,
+  }, function()
+    inRoom(function()
+      room():damage { from = enemy, to = fazheng, damage = 1, skillName = "test" }
+    end)
+  end)
+  lu.assertEquals(enemy.hp, enemyHp2)
+  lu.assertTrue(table.contains(fazheng:getCardIds("h"), heartCard.id))
 end
 
 function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
