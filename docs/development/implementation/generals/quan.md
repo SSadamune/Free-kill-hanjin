@@ -10,3 +10,4 @@
 | --- | --- | --- | --- |
 | EM(WEI001) | [君曹操](quan/em-wei001.md) | — | [建安](quan/em-wei001.md#em-wei001-1)、[挥鞭](quan/em-wei001.md#em-wei001-2)、[总御](quan/em-wei001.md#em-wei001-3)、[霸者求贤状](quan/em-wei001.md#em-wei001-banner)（派生／标记）、[常令](quan/em-wei001.md#em-wei001-changling)（派生／标记）、[奇策](quan/em-wei001.md#em-wei001-qice)（派生／标记）、[胆戾](quan/em-wei001.md#em-wei001-danli)（派生／标记） |
 | HAN003 | [刘宏](quan/han003.md) | — | [鬻爵](quan/han003.md#han003-1) |
+| HAN021 | [曹节](quan/han021.md) | 魏 | [守玺](quan/han021.md#han021-1)、[悬壶](quan/han021.md#han021-2) |

@@ -145,6 +145,89 @@ function Testqiao_quan_han_wei_shu:testHan003LiuhongYujue()
   lu.assertFalse(target.faceup, "已有暗置将牌时改为叠置")
 end
 
+function Testqiao_quan_han_wei_shu:testHan021CaojieShouxiAndXuanhu()
+  local caojie, ally, enemy = p(1), p(7), p(2)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), caojie, { main = "qiao_heg__han021", deputy = "qiao_test__han_2", kingdom = "han" })
+    skill_test.installDualGenerals(room(), ally, { main = "qiao_heg__han001", deputy = "qiao_test__han_2", kingdom = "han" })
+    skill_test.installDualGenerals(room(), enemy, { main = "qiao_heg__wei005", deputy = "qiao_test__wei_2", kingdom = "wei" })
+  end)
+  local eqSpade = equip(ally, "qiao__crossbow", Card.Spade, 1)
+  local eqHeart = equip(ally, "qiao__chitu", Card.Heart, 5)
+  local cjSpade = give(caojie, "qiao__slash", Card.Spade, 9)
+  local cjHeart = give(caojie, "qiao__peach", Card.Heart, 6)
+
+  -- 守玺：异势力同时非弃置移动两张装备牌，逐张判定：弃黑桃防黑桃，放行红桃
+  local askCalls = 0
+  skill_test.withSkillRequests(room(), "qiao__skill_han021_1", {
+    askToDiscard = function(self, who, params)
+      askCalls = askCalls + 1
+      if params.pattern == ".|.|spade" then
+        self:throwCard({ cjSpade.id }, params.skill_name, who, who)
+        return { cjSpade.id }
+      end
+      return {}
+    end,
+  }, function()
+    inRoom(function()
+      room():moveCards({
+        from = ally,
+        ids = { eqSpade.id, eqHeart.id },
+        to = enemy,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonPrey,
+        proposer = enemy,
+        skillName = "test_prey",
+      })
+    end)
+  end)
+  lu.assertEquals(askCalls, 2, "多张装备应逐张触发询问")
+  lu.assertTrue(table.contains(ally:getCardIds("e"), eqSpade.id), "黑桃装备应被防止移动留在装备区")
+  lu.assertTrue(table.contains(enemy:getCardIds("h"), eqHeart.id), "红桃装备放弃防止则正常被获得")
+
+  -- 弃置原因不触发守玺
+  local discardTriggered = false
+  local cjSpade2 = give(caojie, "qiao__slash", Card.Spade, 8)
+  skill_test.withSkillRequests(room(), "qiao__skill_han021_1", {
+    askToDiscard = function() discardTriggered = true; return {} end,
+  }, function()
+    inRoom(function()
+      room():throwCard({ eqSpade.id }, "test_discard", ally, enemy)
+    end)
+  end)
+  lu.assertFalse(discardTriggered, "弃置原因不得触发守玺")
+  lu.assertNotNil(cjSpade2)
+
+  -- 悬壶：判定区红牌入弃牌堆不计入；手牌红牌入弃牌堆计入，回合结束曹节选摸/弃使手牌数==体力值后回复1血
+  inRoom(function()
+    room():setPlayerMark(caojie, Quan.XUANHU_RED_MARK, 0)
+    local judgeRed = room():printCard("qiao__indulgence", Card.Heart, 6)
+    room():moveCardTo(judgeRed, Card.PlayerJudge, caojie, fk.ReasonJustMove, "test", nil, true)
+    room():moveCardTo(judgeRed, Card.DiscardPile, nil, fk.ReasonDiscard, "test", nil, true)
+    lu.assertEquals(caojie:getMark(Quan.XUANHU_RED_MARK), 0, "判定区红牌置入弃牌堆不计入悬壶")
+
+    room():throwCard({ cjHeart.id }, "test", caojie, caojie)
+    lu.assertEquals(caojie:getMark(Quan.XUANHU_RED_MARK), 1, "手牌区红牌置入弃牌堆计入悬壶")
+
+    -- 准备受伤盟友：hp = 2，手牌 1 -> 选摸1变2 == hp -> 回1血变3
+    if ally.hp > 2 then room():loseHp(ally, ally.hp - 2, "test") end
+    clearAllZones(ally)
+    local c = room():printCard("qiao__jink", Card.Club, 2)
+    room():obtainCard(ally, c, false, fk.ReasonJustMove)
+  end)
+  local allyHpBefore = ally.hp
+  skill_test.withSkillRequests(room(), "qiao__skill_han021_2", {
+    askToChoosePlayers = function() return { ally } end,
+    askToOptions = function(self, who, params) return { "#qiao__skill_han021_2-draw" } end,
+  }, function()
+    inRoom(function()
+      room().logic:trigger(fk.TurnEnd, room().current, {})
+    end)
+  end)
+  lu.assertEquals(ally:getHandcardNum(), allyHpBefore)
+  lu.assertEquals(ally.hp, allyHpBefore + 1, "手牌数等于体力值应回复1点体力")
+end
+
 function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
   support.clearRoom()
   local upstream = support.initRoom()

@@ -132,7 +132,7 @@ prefixByGeneral["qiao_heg__em_wu001"] = "qiao_prefix_bian"
 -- 权包君主及普通武将使用独立角标“权”。
 for _, id in ipairs({
   "qiao_heg__em_wei001",
-  "qiao_heg__han003",
+  "qiao_heg__han003", "qiao_heg__han021",
 }) do
   prefixByGeneral[id] = "qiao_prefix_quan"
 end
