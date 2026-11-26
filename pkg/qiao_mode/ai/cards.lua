@@ -197,7 +197,7 @@ local function priority(ai, card)
   end
   local name = card.name
   if name == "qiao__restore_heartland" then return 90 end
-  if name == "qiao__analeptic" and hasSlashTarget(ai) then return 65 end
+  if name == "qiao__analeptic" and ai.command == "PlayCard" and hasSlashTarget(ai) then return 65 end
   if name == "qiao__fire_attack" and fireSuits(ai, card) < 3 then return end
   if name == "qiao__befriend_attacking" then return 80 end
   if name == "qiao__iron_chain" or name == "qiao__god_salvation" then return 75 end

@@ -220,4 +220,59 @@ function Testqiao_robot_ai:testEightDiagramForUseAndResponse()
   end)
 end
 
+function Testqiao_robot_ai:testJinfanPaysCheapMatchingCardAndDrawsTwo()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__retinue_skill_jinfanjun", nil, false, true)
+    local peach = give(room, player, "qiao__peach")
+    local cheap = give(room, player, "qiao__lightning")
+    local discarded = give(room, player, "qiao__slash")
+    room:throwCard(discarded, "test", player, player)
+    lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+    lu.assertEquals(player:getHandcardNum(), 3)
+  end)
+end
+
+function Testqiao_robot_ai:testQuaxiaoRequiresAllOverlappingTargetsToBeEnemies()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__retinue_skill_quaxiaojiang", nil, false, true)
+    local function use(targets)
+      room:useCard { from = player, tos = targets, card = Fk:cloneCard("qiao__iron_chain") }
+    end
+    local allyHp, enemyHp = ally.hp, enemy.hp
+    use({ ally })
+    use({ ally, enemy })
+    lu.assertEquals(ally.hp, allyHp)
+    use({ enemy })
+    lu.assertEquals(enemy.hp, enemyHp - 1)
+  end)
+end
+
+function Testqiao_robot_ai:testNiujinUsesSafeCardInActualFreeUseWindow()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__retinue_skill_niujin"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local card = give(room, player, "qiao__foresight")
+    room.logic:trigger(fk.TurnEnd, ally, {})
+    lu.assertEquals(room:getCardArea(card.id), Card.DiscardPile)
+    lu.assertTrue(player:usedSkillTimes(name, Player.HistoryGame) > 0)
+  end)
+end
+
+function Testqiao_robot_ai:testVenomSavesGeneralWhenEnemyIsNotDying()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_han019_2", nil, false, true)
+    room:setPlayerProperty(enemy, "hp", 1)
+    room:recover { who = enemy, num = 1 }
+    lu.assertEquals(enemy.hp, 2)
+    room:setPlayerProperty(enemy, "hp", 0)
+    room:recover { who = enemy, num = 1 }
+    lu.assertEquals(enemy.hp, 0)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

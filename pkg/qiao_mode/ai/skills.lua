@@ -1,5 +1,6 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -11,7 +12,7 @@ local free = {
   ["#qiao__skill_han022_2-invoke"] = true, -- 安境
   ["#qiao__skill_jin014_2-invoke"] = true, -- 夺气
   ["#qiao__skill_qun003_2-invoke"] = true, -- 闭月
-  ["#qiao__skill_qun005_1-retrieve"] = true, -- 豹变取牌
+  ["#qiao__skill_qun005_1-retrieve"] = true, -- 双雄取牌
   ["#qiao__skill_qun081_2-invoke"] = true, -- 杀绝
   ["#qiao__skill_shu004_2-invoke"] = true, -- 空城
   ["#qiao__skill_shu018b_1-invoke"] = true, -- 生息
@@ -31,7 +32,6 @@ local free = {
 
 -- Each slot is the index of the affected player in the prompt.
 local hostile = {
-  ["#qiao__skill_han019_2-invoke"] = 3, -- 蛊毒
   ["#qiao__skill_wei002_1-invoke"] = 2, -- 狼顾
   ["#qiao__skill_wei003_1-invoke"] = 2, -- 刚烈
   ["#qiao__wei023-invoke"] = 3, -- 横江
@@ -59,6 +59,10 @@ function M.invoke(ai, data)
   local key, player = fields[1], ai.player
   if free[key] then return true end
   if hostile[key] then return ai:isEnemy(M.promptTarget(ai, fields, hostile[key])) end
+  if key == "#qiao__skill_han019_2-invoke" then
+    local target = M.promptTarget(ai, fields, 3)
+    return ai:isEnemy(target) and target.hp <= 0
+  end
   if key == "#qiao__skill_wei017_2-invoke" or key == "#qiao__retinue_skill_fuxin_sishi-give-invoke" then
     return ai:isFriend(M.promptTarget(ai, fields, key == "#qiao__skill_wei017_2-invoke" and 3 or 2))
   end
@@ -151,6 +155,18 @@ function M.active(ai, data)
       budget = 4
     elseif key == "#qiao__skill_han012_1-recast" or key == "#qiao__taigong_tactics-recast" then
       budget = 2
+    elseif key == "#qiao__retinue_skill_jinfanjun-discard" then
+      budget = 3
+    elseif key == "#qiao__retinue_skill_huangjin_leishi-discard" then
+      local frame = Selection.currentCost(ai.player)
+      local damage = frame and frame.data
+      if not damage or damage.chain or not ai:isFriend(damage.from) or not ai:isEnemy(damage.to)
+        or damage.damage ~= damage.to.hp + damage.to.shield - 1 then return "" end
+      if damage.damageType ~= fk.NormalDamage and damage.to.chained
+        and table.find(ai.room:getPresentPlayers(), function(target)
+          return target.chained and not ai:isEnemy(target)
+        end) then return "" end
+      budget = 2
     elseif key == "#qiao__skill_wei001_1-discard" then
       local damage = parentData(ai, GameEvent.Damage)
       local card = damage and damage.card
@@ -206,6 +222,13 @@ function M.play(ai)
       local reply = M.activeReply(ai)
       if reply ~= "" then return reply end
       ai:unSelectAll()
+    elseif name == "qiao__retinue_skill_qingzhou_jingrui" then
+      ai:selectSkill(name, true)
+      local reply = chooseTargets(ai, function(target)
+        if ai:isEnemy(target) then return 20 - target.hp end
+      end)
+      if reply ~= "" then return reply end
+      ai:unSelectAll()
     end
   end
 end
@@ -256,12 +279,21 @@ function M.chosen(ai, data)
 end
 
 function M.choice(ai, data)
-  local choices, _, limits, _, skillName = table.unpack(data)
+  local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local pick
   if skillName == "trigger" then
     pick = choices[1]
   elseif skillName == "qiao__restore_heartland_skill" then
     pick = "restore_heartland_draw"
+  elseif skillName == "qiao__retinue_skill_qingzhou_jingrui"
+    and (prompt or ""):startsWith("#qiao__retinue_skill_qingzhou_jingrui-choose:") then
+    local discard = "#qiao__retinue_skill_qingzhou_jingrui-option-discard"
+    local damage = "#qiao__retinue_skill_qingzhou_jingrui-option-damage"
+    local cheap = table.find(ai.player:getCardIds("h"), function(id)
+      return not ai.player:prohibitDiscard(id) and Cost.value(ai, id) <= 4
+    end)
+    pick = (ai.player.hp <= 2 or cheap) and discard or damage
+    if not table.contains(choices, pick) then pick = choices[1] end
   elseif skillName == "qiao__drowning" and ai.player.hp > 2 and #ai.player:getCardIds("e") > 1
     and not ai.player.chained then
     pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
