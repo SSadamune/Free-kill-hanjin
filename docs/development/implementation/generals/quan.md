@@ -12,3 +12,4 @@
 | HAN003 | [刘宏](quan/han003.md) | — | [鬻爵](quan/han003.md#han003-1) |
 | HAN021 | [曹节](quan/han021.md) | 魏 | [守玺](quan/han021.md#han021-1)、[悬壶](quan/han021.md#han021-2) |
 | WEI021B | [毛玠](quan/wei021b.md) | — | [征辟](quan/wei021b.md#wei021b-1)、[奉迎](quan/wei021b.md#wei021b-2) |
+| WEI024 | [于禁](quan/wei024.md) | 汉、蜀、吴 | [常令](quan/wei024.md#wei024-1) |

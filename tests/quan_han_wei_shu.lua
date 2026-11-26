@@ -308,6 +308,27 @@ function Testqiao_quan_han_wei_shu:testWei021bMaojieZhengpiAndFengying()
   lu.assertFalse(fengying:enabledAtPlay(maojie), "限定技用过一次后不可再用")
 end
 
+function Testqiao_quan_han_wei_shu:testWei024YujinChangling()
+  local yujin, target = p(2), p(1)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), yujin, { main = "qiao_heg__wei024", deputy = "qiao_test__wei_2", kingdom = "wei" })
+  end)
+  local card = give(yujin, "qiao__slash", Card.Spade, 7)
+  local origAsk = H.askToCommand
+  H.askToCommand = function() return false end
+  skill_test.withSkillRequests(room(), "qiao__skill_wei024_1", {
+    askToChooseCardsAndPlayers = function() return { target }, { card.id } end,
+  }, function()
+    inRoom(function()
+      room().current = yujin
+      yujin.phase = Player.Start
+      room().logic:trigger(fk.EventPhaseStart, yujin, {})
+    end)
+  end)
+  H.askToCommand = origAsk
+  lu.assertEquals(yujin:getMark("qiao_wei024_extra_draw"), 3, "常令不执行应在本回合摸牌阶段多摸3张")
+end
+
 function Testqiao_quan_han_wei_shu:testArmyOrderFallsBackInUpstreamHegemony()
   support.clearRoom()
   local upstream = support.initRoom()

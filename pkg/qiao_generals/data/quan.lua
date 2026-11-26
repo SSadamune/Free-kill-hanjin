@@ -6,10 +6,10 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 3
+M.generalCount = 4
 M.retinueCount = 0
 M.commanderCount = 0
-M.skillCount = 5
+M.skillCount = 6
 M.retinueSkillCount = 0
 M.kingdoms = { "han", "wei" }
 
@@ -105,6 +105,32 @@ M.generals = {
         text = [==[限定技，你可以将所有手牌当【挟天子以令诸侯】使用（无视大势力限制），使用时所有与你势力相同的角色摸牌至其体力上限。]==],
         related = false,
         tags = { [==[Limited]==] },
+      },
+    },
+  },
+  {
+    number = [==[WEI024]==],
+    id = [==[qiao_heg__wei024]==],
+    name = [==[于禁]==],
+    kingdom = [==[wei]==],
+    title = [==[能整难全、讨暴坚垒]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[han]==], [==[shu]==], [==[wu]==] },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wei024_1]==],
+        name = [==[常令]==],
+        text = [==[准备阶段，你可以将一张手牌交给一名其他势力角色，对其发起一次“军令”。若其执行，你摸一张牌；若其不执行，你于本回合摸牌阶段多摸三张牌。]==],
+        related = false,
+        tags = {  },
       },
     },
   },
