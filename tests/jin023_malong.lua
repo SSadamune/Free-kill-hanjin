@@ -142,9 +142,10 @@ function Testqiao_jin023_malong:testFengxieFitsOccupiedSlotsAndExcludesUserFromQ
       chooseCalls = chooseCalls + 1
       return armor.id
     end,
-    askToChoice = function()
+    askToChoice = function(_, _, params)
       queued = true
-      return "queue"
+      lu.assertEquals(params.choices, params.all_choices)
+      return "qiao__skill_jin023_1-queue"
     end,
   }, function()
     inRoom(function()

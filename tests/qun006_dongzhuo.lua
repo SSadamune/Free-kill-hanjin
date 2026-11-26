@@ -151,7 +151,7 @@ function Testqiao_qun006_dongzhuo:testBaolingRemovesDeputyOnlyOnce()
   lu.assertEquals(player.maxHp, 7)
 end
 
-function Testqiao_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
+function Testqiao_qun006_dongzhuo:testBengChoosesOneWithoutExtraDrawPhase()
   local room, player, other = FkTest.room, p(1), p(2)
   inRoom(function()
     room:handleAddLoseSkills(player, BENG, nil, false, true)
@@ -159,26 +159,25 @@ function Testqiao_qun006_dongzhuo:testBengChooseTwoAndExtraDrawPhase()
     other.hp = 1
   end)
 
-  local picked = nil
-  skill_test.withSkillRequests(room, BENG, {
-    askToChoices = function(self, who, params, original)
-      if params.skill_name ~= BENG then return original(self, who, params) end
-      lu.assertTrue(params.single)
-      picked = { LOSE_HP, LOSE_MAX }
-      return { "qiao_option_pair:::" .. LOSE_HP .. ":" .. LOSE_MAX }
-    end,
-  }, function()
-    inRoom(function()
-      GameEvent.Turn:create(TurnData:new(player, "game_rule", {
-        Player.Finish,
-      })):exec()
+  local asked = {}
+  for _, choice in ipairs({ LOSE_MAX, LOSE_HP }) do
+    skill_test.withSkillRequests(room, BENG, {
+      askToChoice = function(_, _, params)
+        lu.assertEquals(params.choices, { LOSE_MAX, LOSE_HP })
+        lu.assertFalse(params.cancelable)
+        table.insert(asked, choice)
+        return choice
+      end,
+    }, function()
+      inRoom(function()
+        GameEvent.Turn:create(TurnData:new(player, "game_rule", { Player.Finish })):exec()
+      end)
     end)
-  end)
-
-  lu.assertEquals(picked, { LOSE_HP, LOSE_MAX })
+  end
+  lu.assertEquals(asked, { LOSE_MAX, LOSE_HP })
   lu.assertEquals(player.hp, 2)
   lu.assertEquals(player.maxHp, 3)
-  lu.assertEquals(#player:getCardIds(Player.Hand), 2) -- 额外摸牌阶段。
+  lu.assertEquals(#player:getCardIds(Player.Hand), 0)
 end
 
 function Testqiao_qun006_dongzhuo:testBaolingRejectsExistingRetinueDeputy()
