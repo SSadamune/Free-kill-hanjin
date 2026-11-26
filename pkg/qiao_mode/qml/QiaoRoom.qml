@@ -9,6 +9,7 @@ import LunarLtk.Pages
 import LunarLtk.Pages.InfoPopups as Info
 import "GuestIllustration.js" as GuestIllustration
 import "SkillReferenceLinks.js" as SkillLinks
+import "CardMoveVisibility.js" as CardMoveVisibility
 
 Room {
   id: room
@@ -381,6 +382,7 @@ Room {
 
   Component.onCompleted: {
     roomGeneralAppearance.watch(room);
+    addCallback(Command.MoveCards, (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
     addCallback("QiaoGuestFactionsChanged", () => {
       guestIllustrations = !!GuestIllustration.enabledInRoom();
       ++room.guestFactionsRevision;
