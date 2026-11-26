@@ -6,10 +6,10 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 7
+M.generalCount = 8
 M.retinueCount = 1
 M.commanderCount = 1
-M.skillCount = 11
+M.skillCount = 13
 M.retinueSkillCount = 1
 M.kingdoms = { "han", "wei", "shu", "wu" }
 
@@ -230,6 +230,39 @@ M.generals = {
         id = [==[qiao__skill_wu019_2]==],
         name = [==[恪守]==],
         text = [==[你可以将两张牌当【闪】或【无懈可击】使用且具有<孤军→获得或消耗一枚阴阳鱼标记>。]==],
+        related = false,
+        tags = {  },
+      },
+    },
+  },
+  {
+    number = [==[WU024]==],
+    id = [==[qiao_heg__wu024]==],
+    name = [==[吴国太]==],
+    kingdom = [==[wu]==],
+    title = [==[慈怀瑾瑜、懿哲之霖]==],
+    halfHp = 1.5,
+    hp = 3,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[shu]==] },
+    companionText = [==[孙坚]==],
+    companionNames = { [==[孙坚]==] },
+    companions = { [==[qiao_heg__wu009]==] },
+    companionsUnresolved = {  },
+    gender = "female",
+    skills = {
+      {
+        id = [==[qiao__skill_wu024_1]==],
+        name = [==[补益]==],
+        text = [==[每回合限一次，与你势力相同的角色脱离濒死时，你可以对来源发起一次“军令”。若其不执行，该濒死角色回复1点体力。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_wu024_2]==],
+        name = [==[甘露]==],
+        text = [==[出牌阶段限一次，你可以选择两名装备区牌数差小于等于X的角色（X为你已损失体力值），令这些角色交换装备区的所有牌。]==],
         related = false,
         tags = {  },
       },

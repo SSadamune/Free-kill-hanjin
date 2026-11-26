@@ -211,6 +211,80 @@ function Testqiao_quan_wu_qun_jin:testKeshouNullificationWithHandAndCargo()
   checkKeshouWithCargo("nullification", 1, "qiao__duel")
 end
 
+function Testqiao_quan_wu_qun_jin:testWu024WuguotaiBuyiAndGanlu()
+  local wuguotai, wuAlly, caojie = p(1), p(2), p(7)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), wuguotai, { main = "qiao_heg__wu024", deputy = "qiao_test__wu_2", kingdom = "wu" })
+    skill_test.installDualGenerals(room(), wuAlly, { main = "qiao_heg__wu009", deputy = "qiao_test__wu_2", kingdom = "wu" })
+    skill_test.installDualGenerals(room(), caojie, { main = "qiao_heg__han021", deputy = "qiao_test__han_2", kingdom = "han" })
+  end)
+
+  -- 补益：同势力角色脱离濒死（含自伤来源），发起军令不执行 -> 回复1血
+  local origAsk = Junling.ask
+  local junlingTargetId
+  Junling.ask = function(from, to)
+    junlingTargetId = to.id
+    return false
+  end
+  inRoom(function()
+    room():loseHp(wuAlly, wuAlly.hp - 1, "test") -- 剩 1 血
+  end)
+  skill_test.withSkillRequests(room(), "qiao__skill_wu024_1", {
+    askToSkillInvoke = function() return true end,
+  }, function()
+    inRoom(function()
+      -- 构造已脱离濒死的 AfterDying 事件（hp=1，damage.from = wuAlly 自伤）
+      room().logic:trigger(fk.AfterDying, wuAlly, {
+        who = wuAlly,
+        damage = { from = wuAlly, to = wuAlly, damage = 1 },
+      })
+    end)
+  end)
+  Junling.ask = origAsk
+  lu.assertEquals(junlingTargetId, wuAlly.id, "补益允许对自伤来源发起军令")
+  lu.assertEquals(wuAlly.hp, 2, "补益不执行军令应令濒死角色回复1点体力")
+
+  -- 甘露：装备数差<=已损体力值；与曹节【守玺】及废除栏位联动
+  inRoom(function()
+    room():loseHp(wuguotai, 1, "test") -- lostHp = 1
+    room().current = wuguotai
+    wuguotai.phase = Player.Play
+  end)
+  local eqA1 = equip(caojie, "qiao__crossbow", Card.Spade, 1)
+  local eqA2 = equip(caojie, "qiao__chitu", Card.Heart, 5)
+  local eqB1 = equip(wuAlly, "qiao__zhuahuangfeidian", Card.Diamond, 13)
+  local cjSpade = give(caojie, "qiao__slash", Card.Spade, 9)
+  local ganlu = assert(Fk.skills["qiao__skill_wu024_2"])
+
+  -- 客户端校验：|2 - 1| = 1 <= lostHp(1) 合法
+  client_room.run(room(), function(clients)
+    local me = clients[1]
+    lu.assertTrue(ganlu:canUse(me))
+    lu.assertTrue(ganlu:targetFilter(me, clients[7], {}))
+    lu.assertTrue(ganlu:targetFilter(me, clients[2], { clients[7] }))
+  end)
+
+  -- 甘露结算中，曹节弃黑桃发动【守玺】防住黑桃诸葛连弩离开，其余两件正常互换
+  skill_test.withSkillRequests(room(), "qiao__skill_han021_1", {
+    askToDiscard = function(self, who, params)
+      if params.pattern == ".|.|spade" then
+        self:throwCard({ cjSpade.id }, params.skill_name, who, who)
+        return { cjSpade.id }
+      end
+      return {}
+    end,
+  }, function()
+    inRoom(function()
+      room():useSkill(wuguotai, ganlu, function()
+        ganlu:onUse(room(), { from = wuguotai, cards = {}, tos = { caojie, wuAlly } })
+      end, { from = wuguotai, cards = {}, tos = { caojie, wuAlly } })
+    end)
+  end)
+  lu.assertTrue(table.contains(caojie:getCardIds("e"), eqA1.id), "被守玺防止的装备应留在曹节装备区")
+  lu.assertTrue(table.contains(caojie:getCardIds("e"), eqB1.id), "对方装备应换入曹节装备区")
+  lu.assertTrue(table.contains(wuAlly:getCardIds("e"), eqA2.id), "未防住的装备应换入盟友装备区")
+end
+
 function Testqiao_quan_wu_qun_jin:testShouxiProtectsEquipmentUsedByAnotherFaction()
   local lukang, caojie, enemy = p(1), p(2), p(7)
   local jueyan, shouxi = "qiao__skill_wu019_1", "qiao__skill_han021_1"

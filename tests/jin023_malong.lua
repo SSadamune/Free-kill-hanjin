@@ -207,18 +207,17 @@ function Testqiao_jin023_malong:testEquipSlotsAfterJubao()
   lu.assertEquals(count, slots, "受聚宝保护的宝物须独占原栏位")
 end
 
-local function checkFengxieSingleDirectionAfterRefill(event, shouldRefill)
+local function checkSwapAfterRefill(skillName, event, shouldRefill)
   local room, me, other = FkTest.room, p(1), p(2)
-  local feng = "qiao__skill_jin023_1"
   local mine, theirs, replacement
   local occupied = false
-  local refill = fk.CreateSkill { name = "#qiao_test_fengxie_refill_" .. tostring(event) }
+  local refill = fk.CreateSkill { name = "#qiao_test_refill_" .. skillName .. tostring(event) }
   refill:addEffect(event, {
     global = true,
     late_refresh = event == fk.BeforeCardsMove,
     can_refresh = function(_, _, _, player, moves)
       return player == me and not occupied and mine and room:getCardArea(mine) == Card.Processing
-        and shouldRefill(moves, other, feng)
+        and shouldRefill(moves, other, skillName)
     end,
     on_refresh = function()
       occupied = true
@@ -228,14 +227,14 @@ local function checkFengxieSingleDirectionAfterRefill(event, shouldRefill)
   inRoom(function()
     room:setCurrent(me)
     me.phase = Player.Play
-    room:handleAddLoseSkills(me, feng, nil, false, true)
+    room:handleAddLoseSkills(me, skillName, nil, false, true)
     mine = room:printCard("qiao__bronze_sparrow", Card.Spade, 3).id
     theirs = room:printCard("qiao__luminous_pearl", Card.Diamond, 4).id
     replacement = room:printCard("qiao__bronze_sparrow", Card.Club, 5).id
-    room:moveCardIntoEquip(me, mine, feng, false, me)
-    room:moveCardIntoEquip(other, theirs, feng, false, other)
+    room:moveCardIntoEquip(me, mine, skillName, false, me)
+    room:moveCardIntoEquip(other, theirs, skillName, false, other)
     room:addSkill(refill:createSkill())
-    Fk.skills[feng]:onUse(room, { from = me, tos = { me, other } })
+    Fk.skills[skillName]:onUse(room, { from = me, tos = { me, other } })
   end)
   lu.assertTrue(occupied)
   lu.assertEquals(other:getEquipments(Card.SubtypeTreasure), { replacement })
@@ -244,15 +243,21 @@ local function checkFengxieSingleDirectionAfterRefill(event, shouldRefill)
 end
 
 function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterEquipsLeave()
-  checkFengxieSingleDirectionAfterRefill(fk.AfterCardsMove, function() return true end)
+  checkSwapAfterRefill("qiao__skill_jin023_1", fk.AfterCardsMove, function() return true end)
+end
+
+local function isIncomingEquipment(moves, recipient, skillName)
+  return table.find(moves, function(move)
+    return move.to == recipient and move.toArea == Card.PlayerEquip and move.skillName == skillName
+  end) ~= nil
 end
 
 function Testqiao_jin023_malong:testFengxieRechecksSlotsAfterIncomingMoveRefresh()
-  checkFengxieSingleDirectionAfterRefill(fk.BeforeCardsMove, function(moves, recipient, skillName)
-    return table.find(moves, function(move)
-      return move.to == recipient and move.toArea == Card.PlayerEquip and move.skillName == skillName
-    end) ~= nil
-  end)
+  checkSwapAfterRefill("qiao__skill_jin023_1", fk.BeforeCardsMove, isIncomingEquipment)
+end
+
+function Testqiao_jin023_malong:testGanluRechecksSlotsAfterIncomingMoveRefresh()
+  checkSwapAfterRefill("qiao__skill_wu024_2", fk.BeforeCardsMove, isIncomingEquipment)
 end
 
 function Testqiao_jin023_malong:testFengxieAfterOrdinarySlashLeavesCountUnchanged()
