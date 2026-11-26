@@ -20,8 +20,8 @@ local function scenario(fn)
   assert(ok, err or "Robot scenario did not reach its assertions")
 end
 
-local function give(room, player, name)
-  local card = room:printCard(name, Card.Heart, 5)
+local function give(room, player, name, number, suit)
+  local card = room:printCard(name, suit or Card.Heart, number or 5)
   room:obtainCard(player, card, true)
   return card
 end
@@ -339,6 +339,80 @@ function Testqiao_robot_ai:testCiweiPaysForAnAllyButLeavesOtherTargetsInPlace()
     lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
     lu.assertEquals(ally.hp, allyHp)
     lu.assertEquals(unknown.hp, unknownHp - 1)
+  end)
+end
+
+function Testqiao_robot_ai:testKurouRequiresEffectiveZhaxiangAndSafeHp()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local kurou, zhaxiang = "qiao__skill_wu004_1", "qiao__skill_wu004_2"
+    room:handleAddLoseSkills(player, kurou, nil, false, true)
+    room:setPlayerProperty(player, "hp", 3)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    room:handleAddLoseSkills(player, zhaxiang, nil, false, true)
+    room:setPlayerProperty(player, "hp", 2)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    room:setPlayerProperty(player, "hp", 3)
+    local req = Request:new(player, "PlayCard")
+    local answer = req:getResult(player)
+    lu.assertEquals(answer.card.skill, kurou)
+    room:handleUseCardReply(player, answer)
+    lu.assertEquals(player.hp, 2)
+    lu.assertEquals(player:getHandcardNum(), 3)
+    lu.assertEquals(player:getMark("qiao_wu004_zhaxiang_times-turn"), 1)
+  end)
+end
+
+function Testqiao_robot_ai:testQiangxiChoosesSpareWeaponForLethalDamage()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_wei012_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local weapon = give(room, player, "qiao__axe")
+    room:moveCardTo(weapon, Card.PlayerEquip, player, fk.ReasonPut)
+    local spare = give(room, player, "qiao__crossbow")
+    room:setPlayerProperty(enemy, "hp", 1)
+    local hp = player.hp
+    local answer = reply(player, "PlayCard", {})
+    lu.assertEquals(answer.card.skill, name)
+    lu.assertEquals(answer.interaction_data, "#qiao__skill_wei012_1-discard")
+    lu.assertEquals(answer.targets, { enemy.id })
+    room:handleUseCardReply(player, answer)
+    lu.assertEquals(player.hp, hp)
+    lu.assertEquals(enemy.hp, 0)
+    lu.assertEquals(room:getCardArea(spare.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(weapon.id), Card.PlayerEquip)
+  end)
+end
+
+function Testqiao_robot_ai:testMinsiFindsCheapExactSumAndProtectsPeach()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_han007_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    room:setPlayerProperty(player, "hp", player.maxHp)
+    local peach = give(room, player, "qiao__peach", 13)
+    local a = give(room, player, "qiao__lightning", 6)
+    local b = give(room, player, "qiao__lure_tiger", 7)
+    local answer = reply(player, "PlayCard", {})
+    lu.assertEquals(answer.card.skill, name)
+    lu.assertItemsEquals(answer.card.subcards, { a.id, b.id })
+    room:handleUseCardReply(player, answer)
+    lu.assertEquals(player:getHandcardNum(), 5)
+    lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+  end)
+end
+
+function Testqiao_robot_ai:testYinghunTargetsAllyWithDrawOption()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu009_1", nil, false, true)
+    room:setPlayerProperty(player, "phase", Player.Start)
+    room:setPlayerProperty(player, "hp", player.maxHp - 2)
+    local allyHand, enemyHand = ally:getHandcardNum(), enemy:getHandcardNum()
+    room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Start })
+    lu.assertEquals(ally:getHandcardNum(), allyHand + 1)
+    lu.assertEquals(enemy:getHandcardNum(), enemyHand)
   end)
 end
 

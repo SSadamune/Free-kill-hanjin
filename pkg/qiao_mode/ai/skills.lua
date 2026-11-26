@@ -2,6 +2,8 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
+local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
+local Play = require "packages.qiao.pkg.qiao_mode.ai.play_policies"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -98,40 +100,22 @@ function M.invoke(ai, data)
   end
 end
 
-function M.activeReply(ai)
-  if ai:okButtonEnabled() then
-    return {
-      card = { skill = ai.handler.skill_name, subcards = ai:getSelectedCards() },
-      targets = table.map(ai:getSelectedTargets(), Util.IdMapper),
-    }
-  end
-  return ""
-end
-
-local function chooseTargets(ai, score, limit)
-  for _ = #ai:getSelectedTargets() + 1, limit or 1 do
-    local target = Cards.bestTarget(ai, score)
-    if not target then break end
-    ai:selectTarget(target, true)
-  end
-  if table.every(ai:getSelectedTargets(), function(target) return score(target) ~= nil end) then
-    return M.activeReply(ai)
-  end
-  return ""
-end
+local chooseTargets = Requests.targets
 
 function M.active(ai, data)
   local skill, prompt, cancelable, extra = table.unpack(data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
+  if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
   if skill == "choose_players_skill" then
     local use = key == "#qiao__skill_jin012_1-targets" and parentData(ai, GameEvent.UseCard)
     local score, extend = Triggers.targetScore(ai, key, use)
     if score then return chooseTargets(ai, score, extend and extra.num or 1) end
   end
   if key == "#qiao_adaptation_support" then
-    return Adaptation.support(ai, extra) and M.activeReply(ai) or ""
+    return Adaptation.support(ai, extra) and Requests.reply(ai) or ""
   end
   if key == "#qiao_adaptation_add_target" or key == "#qiao_adaptation_remove_target"
     or key == "#qiao_adaptation_sub_target" then
@@ -158,6 +142,15 @@ function M.active(ai, data)
       budget = 2
     elseif key == "#qiao__retinue_skill_jinfanjun-discard" then
       budget = 3
+    elseif key == "#qiao__skill_wei016_1-discard" then
+      if not ai:isEnemy(M.promptTarget(ai, fields, 3)) then return "" end
+      budget = 2
+    elseif key == "#qiao__skill_qun012_1-discard" then
+      local frame = Selection.currentCost(ai.player)
+      local damage = frame and frame.data
+      if not damage or not ai:isFriend(damage.to) or not ai:isEnemy(damage.from)
+        or not damage.from.faceup then return "" end
+      budget = 2
     elseif key == "#qiao__skill_jin012_1-discard" then
       budget = Triggers.ciweiBudget(ai)
       if not budget then return "" end
@@ -191,7 +184,7 @@ function M.active(ai, data)
     elseif cancelable and extra.skillName ~= "phase_discard" then
       return
     end
-    if Cost.select(ai, extra.min_num or 1, budget) then return M.activeReply(ai) end
+    if Cost.select(ai, extra.min_num or 1, budget) then return Requests.reply(ai) end
     return ""
   end
   if key == "#qiao__triblade-invoke" then
@@ -220,28 +213,8 @@ function M.play(ai)
   local buttons = ai:getEnabledSkills()
   table.sort(buttons)
   for _, name in ipairs(buttons) do
-    if name == "qiao__retinue_skill_lujiang_shangjia"
-      and ai.player:getHandcardNum() < #ai.player:getCardIds("e") then
-      ai:selectSkill(name, true)
-      local reply = M.activeReply(ai)
-      if reply ~= "" then return reply end
-      ai:unSelectAll()
-    elseif name == "qiao__skill_wu001_1" then
-      ai:selectSkill(name, true)
-      for _ = 1, ai.player.maxHp do
-        if not Cost.select(ai, 1, 2) then break end
-      end
-      local reply = M.activeReply(ai)
-      if reply ~= "" then return reply end
-      ai:unSelectAll()
-    elseif name == "qiao__retinue_skill_qingzhou_jingrui" then
-      ai:selectSkill(name, true)
-      local reply = chooseTargets(ai, function(target)
-        if ai:isEnemy(target) then return 20 - target.hp end
-      end)
-      if reply ~= "" then return reply end
-      ai:unSelectAll()
-    end
+    local reply = Play.play(ai, name)
+    if reply then return reply end
   end
 end
 
