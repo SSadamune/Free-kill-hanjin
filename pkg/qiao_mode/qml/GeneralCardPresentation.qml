@@ -155,7 +155,8 @@ QtObject {
         value: false
       }
       GuestFactionBadges {
-        visible: root.inRoom
+        // The battlefield Photo already shows the character's native faction.
+        visible: root.inRoom && !(portraitArtwork.photo instanceof Components.Photo)
         standalone: true
         badgeSize: portraitArtwork.photo.deputyGeneral ? 15 : 19
         factions: portraitArtwork.appearance.factions

@@ -124,7 +124,7 @@ QtObject {
     "LunarLtk/Models/qmldir": "GeneralCardModel 1.0 GeneralCardModel.qml\n",
     "LunarLtk/Components/qmldir": "GeneralCardItem 1.0 GeneralCardItem.qml\n"
                                   "CompactGeneralCardItem 1.0 CompactGeneralCardItem.qml\n"
-                                  "CardItem 1.0 CardItem.qml\nPhotoBase 1.0 PhotoBase.qml\n",
+                                  "CardItem 1.0 CardItem.qml\nPhotoBase 1.0 PhotoBase.qml\nPhoto 1.0 Photo.qml\n",
     "LunarLtk/Components/CompactGeneralCardItem.qml": """import QtQuick
 import Fk
 Item {
@@ -161,6 +161,17 @@ Item {
       Image { source: SkinBank.getGeneralPicture(photo.deputyGeneral) }
       SkinMedia {}
     }
+  }
+}
+""",
+    "LunarLtk/Components/Photo.qml": """import QtQuick
+import Fk
+PhotoBase {
+  id: photo
+  property string role
+  Image {
+    objectName: "nativeRoleBadge"
+    source: SkinBank.getGeneralCardDir(photo.role) + photo.role
   }
 }
 """,
@@ -249,7 +260,9 @@ Window {
     width: 500
     height: 380
 
-    PhotoBase { id: battlefield; general: "qiao_heg__qun012"; deputyGeneral: "qiao_heg__han014" }
+    Photo { id: battlefield; general: "qiao_heg__qun012"; deputyGeneral: "qiao_heg__han014"; role: "qun" }
+    Photo { id: opponent; general: "qiao_heg__han014"; deputyGeneral: "qiao_heg__qun012"; role: "han" }
+    PhotoBase { id: popupPhoto; general: battlefield.general; deputyGeneral: battlefield.deputyGeneral }
     GeneralCardItem { id: playerDetails; dataModel: Ltk.createGeneralCardModel(battlefield.general) }
     CompactGeneralCardItem { id: compact; dataModel: Ltk.createGeneralCardModel(battlefield.general) }
     CardItem { id: soul; dataModel: ({ known: true, picName: "general:" + battlefield.general }) }
@@ -296,6 +309,14 @@ Window {
   function changePortraits(main, deputy) {
     battlefield.general = main;
     battlefield.deputyGeneral = deputy;
+  }
+
+  function checkDesktopFactionMarkers() {
+    const cardBadge = photo => find(photo, child => child instanceof Qiao.GuestFactionBadges && child.visible);
+    const roleBadge = photo => find(photo, child => child.objectName === "nativeRoleBadge" && child.visible
+      && String(child.source).endsWith("/" + photo.role));
+    return !cardBadge(battlefield) && !cardBadge(opponent) && !!roleBadge(battlefield) && !!roleBadge(opponent)
+      && !!cardBadge(popupPhoto);
   }
 
   function checkHiddenPortraits(main, deputy) {
@@ -468,6 +489,8 @@ def main():
         check_offer(cai, "han", "qun", f"guest/{cai}.jpg", False)
         if not scene.checkPreviews(True, True):
             fail("The room previews did not show guest artwork and factions together")
+        if not scene.checkDesktopFactionMarkers():
+            fail("Desktop portraits must show only the native role marker, with popup portrait badges preserved")
         scene.changePortraits("anjiang", "anjiang")
         if not scene.checkHiddenPortraits(True, True):
             fail("The concealed battlefield portraits retained a previous artwork or faction")
@@ -508,6 +531,8 @@ def main():
         check_offer(cai, "qun", "", f"{cai}.jpg", False)
         if not scene.checkPreviews(False, False):
             fail("The room previews did not restore default artwork and printed factions together")
+        if not scene.checkDesktopFactionMarkers():
+            fail("Toggling guest artwork changed the desktop role markers or popup portrait badges")
         scene.changePortraits("anjiang", "anjiang")
         if not scene.checkHiddenPortraits(True, True):
             fail("Concealing the generals with guest artwork disabled did not show two dark portraits")
@@ -517,6 +542,7 @@ def main():
         print("PASS: right-click and long press refresh the portrait, factions and ascension badge in place")
         print("PASS: disabling guest replacements restores the ordinary portrait and faction")
         print("PASS: room portraits, role details, private choices, Ci, compact cards and general: cards share both displays")
+        print("PASS: own and opposing desktop portraits keep native role markers without card faction badges")
     finally:
         engine.deleteLater()
         app.processEvents()
