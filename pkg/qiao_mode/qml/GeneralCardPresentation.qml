@@ -136,8 +136,17 @@ QtObject {
       Binding {
         target: portraitArtwork.art
         property: "source"
-        when: !!portraitArtwork.appearance.picture
-        value: portraitArtwork.appearance.picture
+        // Qt 6.10 can leave the previous guest image in the native Image
+        // when a conditional override is released after concealing a general.
+        value: {
+          const name = portraitArtwork.name;
+          if (!name) return "";
+          if (name === "anjiang") return SkinBank.getGeneralPicture(name);
+          const usesDualArt = portraitArtwork.deputy || !!portraitArtwork.photo.deputyGeneral;
+          return portraitArtwork.appearance.picture
+            ?? (usesDualArt ? SkinBank.getGeneralExtraPic(name, "dual/") : undefined)
+            ?? SkinBank.getGeneralPicture(name);
+        }
       }
       Binding {
         target: portraitArtwork.skin

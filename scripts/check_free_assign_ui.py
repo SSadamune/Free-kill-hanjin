@@ -58,7 +58,7 @@ QtObject {
   readonly property url generalsDir: "__GENERALS_DIR__"
   readonly property url generalCardDir: "__CARD_DIR__"
   readonly property url cardDir: "__CARD_DIR__../"
-  function getGeneralPicture(name) { return name === "anjiang" ? "" : generalsDir + name + ".jpg" }
+  function getGeneralPicture(name) { return name === "anjiang" ? "__HIDDEN_PORTRAIT__" : generalsDir + name + ".jpg" }
   function getGeneralExtraPic(name, dir) {
     if (dir === "guest/" && ["qiao_heg__qun012", "qiao_heg__han014"].includes(name))
       return generalsDir + dir + name + ".jpg"
@@ -158,7 +158,7 @@ Item {
     property Item source: Item {
       Image { source: SkinBank.getGeneralPicture(photo.general) }
       SkinMedia {}
-      Image { source: photo.deputyGeneral === "anjiang" ? "" : SkinBank.getGeneralPicture(photo.deputyGeneral) }
+      Image { source: SkinBank.getGeneralPicture(photo.deputyGeneral) }
       SkinMedia {}
     }
   }
@@ -293,10 +293,18 @@ Window {
       && portrait[0].appearance.factions[0] === faction && portrait[1].appearance.factions[0] === "han";
   }
 
-  function concealDeputy() {
-    battlefield.deputyGeneral = "anjiang";
-    return battlefield.children.find(child => child.objectName === "qiaoGuestPortrait" && child.deputy)
-      .appearance.factions.length === 0;
+  function changePortraits(main, deputy) {
+    battlefield.general = main;
+    battlefield.deputyGeneral = deputy;
+  }
+
+  function checkHiddenPortraits(main, deputy) {
+    const portraits = battlefield.children.filter(child => child.objectName === "qiaoGuestPortrait");
+    return portraits.length === 2 && [main, deputy].every((hidden, index) => {
+      const portrait = portraits[index];
+      return String(portrait.art.source).endsWith("/anjiang.jpg") === hidden
+        && (portrait.appearance.factions.length === 0) === hidden;
+    });
   }
 
   function allowOriginalFaction() {
@@ -342,6 +350,10 @@ Window {
     model.initialize()
     // This is the only room route. Do not add a bare roomScene context property.
     Ltk.roomScene = scene
+    // Simulate native restoration leaving a cached URL behind, as seen in Qt 6.10.
+    const nativeArtwork = battlefield.children.find(child => child.maskSource === battlefield.photoMask).source;
+    for (const art of nativeArtwork.children.filter(child => child instanceof Image))
+      art.source = art.source;
     presentation.watch(previews)
     let component = Qt.createComponent("__SOURCE__")
     box = component.createObject(scene, { dataModel: model })
@@ -359,6 +371,8 @@ def write_fixture(root):
         text = text.replace("__GENERALS_DIR__", (ROOT / "image/generals").as_uri() + "/")
         text = text.replace("__CARD_DIR__", (RUNTIME_ROOT / "image/card/general").as_uri() + "/")
         text = text.replace("__KINGDOM_DIR__", (ROOT / "image/kingdom").as_uri() + "/")
+        text = text.replace("__HIDDEN_PORTRAIT__",
+                            (RUNTIME_ROOT / "packages/standard/image/generals/anjiang.jpg").as_uri())
         path.write_text(text, encoding="utf-8")
     for rel in RUNTIME_FILES:
         shutil.copyfile(RUNTIME_ROOT / rel, imports / rel)
@@ -454,6 +468,15 @@ def main():
         check_offer(cai, "han", "qun", f"guest/{cai}.jpg", False)
         if not scene.checkPreviews(True, True):
             fail("The room previews did not show guest artwork and factions together")
+        scene.changePortraits("anjiang", "anjiang")
+        if not scene.checkHiddenPortraits(True, True):
+            fail("The concealed battlefield portraits retained a previous artwork or faction")
+        scene.changePortraits(cai, "anjiang")
+        if not scene.checkHiddenPortraits(False, True):
+            fail("Revealing the main general did not leave the deputy portrait concealed")
+        scene.changePortraits(cai, "qiao_heg__han014")
+        if not scene.checkPreviews(True, True):
+            fail("Revealing both generals did not restore their proper artwork and factions")
 
         QTest.mouseClick(scene, Qt.RightButton, Qt.NoModifier, center_point(offer))
         QTest.qWait(150)
@@ -485,8 +508,9 @@ def main():
         check_offer(cai, "qun", "", f"{cai}.jpg", False)
         if not scene.checkPreviews(False, False):
             fail("The room previews did not restore default artwork and printed factions together")
-        if not scene.concealDeputy():
-            fail("The hidden deputy still shows faction information")
+        scene.changePortraits("anjiang", "anjiang")
+        if not scene.checkHiddenPortraits(True, True):
+            fail("Concealing the generals with guest artwork disabled did not show two dark portraits")
 
         if any("font" not in warning.lower() for warning in warnings):
             fail("Unexpected QML diagnostics")
