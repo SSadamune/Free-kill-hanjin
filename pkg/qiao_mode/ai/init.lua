@@ -1,4 +1,5 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
+local Skills = require "packages.qiao.pkg.qiao_mode.ai.skills"
 
 local Robot = SmartAI:subclass("HanjinRobot")
 
@@ -27,6 +28,32 @@ end
 
 function Robot:handlePlayCard()
   return Cards.play(self)
+end
+
+function Robot:handleAskForSkillInvoke(data)
+  local invoke = Skills.invoke(self, data)
+  if invoke ~= nil then return invoke and "1" or "" end
+  return SmartAI.handleAskForSkillInvoke(self, data)
+end
+
+function Robot:handleAskForUseActiveSkill(data)
+  local reply = Skills.active(self, data)
+  if reply ~= nil then return reply end
+  return SmartAI.handleAskForUseActiveSkill(self, data)
+end
+
+function Robot:handleAskForChoices(data)
+  return Skills.choice(self, data)
+end
+
+function Robot:handleAskForUseCard(data)
+  if data[2] == "slash" then return Cards.playEnemySlash(self) end
+  return SmartAI.handleAskForUseCard(self, data)
+end
+
+function Robot:handleAskForCardChosen(data)
+  -- Object-form requests are allowed to omit the prompt in FreeKill.
+  if data[3] then return SmartAI.handleAskForCardChosen(self, data) end
 end
 
 local M = {}

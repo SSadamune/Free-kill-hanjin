@@ -40,7 +40,7 @@ local function physicalReply(ai)
   return { card = ai:getSelectedCard().id, targets = table.map(ai:getSelectedTargets(), Util.IdMapper) }
 end
 
-local function bestTarget(ai, score)
+function M.bestTarget(ai, score)
   local best, bestScore
   for _, target in ipairs(ai:getEnabledTargets()) do
     local value = score(target)
@@ -56,7 +56,7 @@ end
 -- Single-target plays stop there. Support plays may also take additional legal targets.
 local function selectTargets(ai, score, extend)
   while extend or not ai:okButtonEnabled() do
-    local target = bestTarget(ai, score)
+    local target = M.bestTarget(ai, score)
     if not target then break end
     ai:selectTarget(target, true)
   end
@@ -77,8 +77,14 @@ local function hurt(ai, card)
   return selectTargets(ai, score)
 end
 
-function M.enemySlash(ai, card)
-  return hurt(ai, card)
+function M.playEnemySlash(ai)
+  for _, id in ipairs(ai:getEnabledCards("slash")) do
+    local card = Fk:getCardById(id)
+    ai:selectCard(id, true)
+    local reply = hurt(ai, card)
+    if reply then return reply end
+    ai:selectCard(id, false)
+  end
 end
 
 local function fixedGroup(ai, card, safe, useful)
@@ -131,7 +137,7 @@ local function playSelected(ai, card)
     -- legal holder when its only secondary targets are friendly or unknown.
     local rejected = {}
     while true do
-      local holder = bestTarget(ai, function(target)
+      local holder = M.bestTarget(ai, function(target)
         if not rejected[target] and ai:isEnemy(target) then
           return #target:getEquipments(Card.SubtypeWeapon)
         end
