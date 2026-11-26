@@ -1,9 +1,11 @@
+local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+
 local M = {}
 
 local damage = {
   qiao__slash = true, qiao__fire__slash = true, qiao__thunder__slash = true,
   qiao__ice__slash = true, qiao__unexpectation = true, qiao__duel = true,
-  qiao__drowning = true,
+  qiao__drowning = true, qiao__fire_attack = true,
 }
 local elemental = {
   qiao__fire__slash = true, qiao__thunder__slash = true, qiao__ice__slash = true,
@@ -26,6 +28,51 @@ function M.safeDamage(ai, card, target)
   return table.every(ai.room:getPresentPlayers(), function(other)
     return not other.chained or ai:isEnemy(other)
   end)
+end
+
+function M.isHarmful(card)
+  local name = card.name
+  return damage[name] or removal[name] or enemyPhase[name] or enemyGroup[name] or name == "qiao__collateral"
+end
+
+function M.scoreTarget(ai, card, target)
+  local name = card.name
+  if damage[name] or enemyGroup[name] then
+    if M.safeDamage(ai, card, target) then return 20 - target.hp end
+  elseif removal[name] then
+    if ai:isEnemy(target) and not target:isNude() then
+      local obtains = name == "qiao__snatch"
+        or (name == "qiao__chasing_near" and ai.player:distanceTo(target) == 1)
+      return (obtains and 8 or 0) + 2 * #target:getCardIds("e") + target:getHandcardNum()
+    end
+  elseif enemyPhase[name] then
+    if ai:isEnemy(target) then return target:getHandcardNum() end
+  elseif name == "qiao__restore_heartland" then
+    if ai:isFriend(target) then return target == ai.player and 1 or 2 end
+  elseif name == "qiao__iron_chain" then
+    if target.chained and ai:isFriend(target) then return 20 - target.hp end
+  end
+end
+
+local function hasSlashTarget(ai)
+  return table.find(ai:getEnabledCards("slash"), function(id)
+    local card = Fk:getCardById(id)
+    return table.find(card:getAvailableTargets(ai.player, ai.handler.extra_data), function(target)
+      return M.safeDamage(ai, card, target)
+    end) ~= nil
+  end) ~= nil
+end
+
+local function fireSuits(ai, card)
+  local suits = {}
+  for _, id in ipairs(ai.player:getCardIds("h")) do
+    local material = Fk:getCardById(id)
+    if id ~= card.id and material.suit ~= Card.NoSuit and Cost.value(ai, id) <= 2
+      and not ai.player:prohibitDiscard(id) then
+      table.insertIfNeed(suits, material.suit)
+    end
+  end
+  return #suits
 end
 
 local function emptySlot(player, card)
@@ -60,7 +107,9 @@ local function selectTargets(ai, score, extend)
     if not target then break end
     ai:selectTarget(target, true)
   end
-  if ai:okButtonEnabled() then return physicalReply(ai) end
+  if ai:okButtonEnabled() and table.every(ai:getSelectedTargets(), function(target) return score(target) ~= nil end) then
+    return physicalReply(ai)
+  end
 end
 
 local function hurt(ai, card)
@@ -95,23 +144,13 @@ local function fixedGroup(ai, card, safe, useful)
 end
 
 local function playSelected(ai, card)
-  local name, player = card.name, ai.player
-  if selfBenefit[name] or card.type == Card.TypeEquip then
+  local name = card.name
+  if selfBenefit[name] or name == "qiao__analeptic" or card.type == Card.TypeEquip then
     if ai:okButtonEnabled() then return physicalReply(ai) end
   elseif damage[name] then
     return hurt(ai, card)
-  elseif removal[name] then
-    return selectTargets(ai, function(target)
-      if ai:isEnemy(target) and not target:isNude() then
-        local obtains = name == "qiao__snatch"
-          or (name == "qiao__chasing_near" and player:distanceTo(target) == 1)
-        return (obtains and 8 or 0) + 2 * #target:getCardIds("e") + target:getHandcardNum()
-      end
-    end)
-  elseif enemyPhase[name] then
-    return selectTargets(ai, function(target)
-      if ai:isEnemy(target) then return target:getHandcardNum() end
-    end)
+  elseif removal[name] or enemyPhase[name] then
+    return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end)
   elseif enemyGroup[name] then
     local safe = function(target) return M.safeDamage(ai, card, target) end
     return fixedGroup(ai, card, safe, safe)
@@ -120,18 +159,12 @@ local function playSelected(ai, card)
     return fixedGroup(ai, card, function(target)
       return not target:isWounded() or ai:isFriend(target)
     end, woundedFriend)
-  elseif name == "qiao__restore_heartland" then
-    return selectTargets(ai, function(target)
-      if ai:isFriend(target) then return target == player and 1 or 2 end
-    end, true)
+  elseif name == "qiao__restore_heartland" or name == "qiao__iron_chain" then
+    return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end, true)
   elseif name == "qiao__befriend_attacking" then
     return selectTargets(ai, function(target)
       if ai:isEnemy(target) then return target.hp end
     end)
-  elseif name == "qiao__iron_chain" then
-    return selectTargets(ai, function(target)
-      if target.chained and ai:isFriend(target) then return 20 - target.hp end
-    end, true)
   elseif name == "qiao__collateral" then
     -- Both the weapon holder and any victim must be enemies. Retry another
     -- legal holder when its only secondary targets are friendly or unknown.
@@ -164,6 +197,8 @@ local function priority(ai, card)
   end
   local name = card.name
   if name == "qiao__restore_heartland" then return 90 end
+  if name == "qiao__analeptic" and hasSlashTarget(ai) then return 65 end
+  if name == "qiao__fire_attack" and fireSuits(ai, card) < 3 then return end
   if name == "qiao__befriend_attacking" then return 80 end
   if name == "qiao__iron_chain" or name == "qiao__god_salvation" then return 75 end
   if removal[name] or enemyPhase[name] or name == "qiao__collateral" then return 70 end
@@ -184,9 +219,27 @@ function M.play(ai)
   for _, candidate in ipairs(candidates) do
     local card = candidate.card
     ai:selectCard(card.id, true)
-    local reply = playSelected(ai, card)
+    local reply = not ai:getSelectedSkill() and playSelected(ai, card)
     if reply then return reply end
     ai:selectCard(card.id, false)
+  end
+end
+
+function M.recast(ai)
+  local hand = ai.player:getCardIds("h")
+  local enabled = ai:getEnabledCards()
+  table.sort(enabled)
+  for _, id in ipairs(enabled) do
+    local card = Fk:getCardById(id)
+    if table.contains(card.special_skills or {}, "recast") and table.contains(hand, id)
+      and Fk.skills.recast:canUse(ai.player) then
+      ai:selectCard(id, true)
+      ai.handler:selectSpecialUse("recast")
+      if ai:okButtonEnabled() then
+        return { card = id, targets = {}, special_skill = "recast" }
+      end
+      ai:selectCard(id, false)
+    end
   end
 end
 

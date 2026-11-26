@@ -1,6 +1,8 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 
+local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
+
 local M = {}
 
 local free = {
@@ -103,10 +105,16 @@ function M.activeReply(ai)
   return ""
 end
 
-local function selectTarget(ai, score)
-  local target = Cards.bestTarget(ai, score)
-  if target then ai:selectTarget(target, true) end
-  return target
+local function chooseTargets(ai, score, limit)
+  for _ = #ai:getSelectedTargets() + 1, limit or 1 do
+    local target = Cards.bestTarget(ai, score)
+    if not target then break end
+    ai:selectTarget(target, true)
+  end
+  if table.every(ai:getSelectedTargets(), function(target) return score(target) ~= nil end) then
+    return M.activeReply(ai)
+  end
+  return ""
 end
 
 function M.active(ai, data)
@@ -114,6 +122,22 @@ function M.active(ai, data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  if key == "#qiao_adaptation_support" then
+    return Adaptation.support(ai, extra) and M.activeReply(ai) or ""
+  end
+  if key == "#qiao_adaptation_add_target" or key == "#qiao_adaptation_remove_target"
+    or key == "#qiao_adaptation_sub_target" then
+    local use = parentData(ai, GameEvent.UseCard)
+    if not use then return "" end
+    return chooseTargets(ai, function(target)
+      return Adaptation.targetScore(ai, use.card, target, key)
+    end)
+  end
+  if key == "#qiao__skill_wei004_1-choose" or key == "#qiao__skill_wei004_1-invoke" then
+    return chooseTargets(ai, function(target)
+      if ai:isEnemy(target) then return target:getHandcardNum() end
+    end, extra.num)
+  end
   if skill == "discard_skill" or skill == "choose_cards_skill" then
     if key == "#axe-invoke" then
       local target = M.promptTarget(ai, fields, 3)
@@ -141,26 +165,90 @@ function M.active(ai, data)
   end
   if key == "#qiao__triblade-invoke" then
     if not Cost.select(ai, 1, 3) then return "" end
-    selectTarget(ai, function(target)
+    return chooseTargets(ai, function(target)
       if ai:isEnemy(target) and (target.hp <= 1 or
         (target.hp == 2 and ai.player:getHandcardNum() > ai.player:getMaxCards())) then
         return 20 - target.hp
       end
     end)
-    return M.activeReply(ai)
   end
   if key == "#qiao__taigong_tactics-choose" then
-    selectTarget(ai, function(target)
+    return chooseTargets(ai, function(target)
       if ai:isFriend(target) and target.chained then return 20 - target.hp end
     end)
-    return M.activeReply(ai)
   end
   if key == "#qiao__retinue_skill_fuxin_sishi-slash" or key == "#qiao__retinue_skill_fuxin_sishi-slash-invoke" then
     local slash = Fk:cloneCard("qiao__slash")
-    selectTarget(ai, function(target)
+    return chooseTargets(ai, function(target)
       if Cards.safeDamage(ai, slash, target) then return 20 - target.hp end
     end)
-    return M.activeReply(ai)
+  end
+end
+
+function M.play(ai)
+  local buttons = ai:getEnabledSkills()
+  table.sort(buttons)
+  for _, name in ipairs(buttons) do
+    if name == "qiao__retinue_skill_lujiang_shangjia"
+      and ai.player:getHandcardNum() < #ai.player:getCardIds("e") then
+      ai:selectSkill(name, true)
+      local reply = M.activeReply(ai)
+      if reply ~= "" then return reply end
+      ai:unSelectAll()
+    elseif name == "qiao__skill_wu001_1" then
+      ai:selectSkill(name, true)
+      for _ = 1, ai.player.maxHp do
+        if not Cost.select(ai, 1, 2) then break end
+      end
+      local reply = M.activeReply(ai)
+      if reply ~= "" then return reply end
+      ai:unSelectAll()
+    end
+  end
+end
+
+function M.arrange(ai, data)
+  if #data.names ~= 2 or data.names[1] ~= "Top" or data.names[2] ~= "Bottom"
+    or data.pattern ~= "." or data.poxi_type ~= "" or ai.room.current ~= ai.player
+    or #ai.player:getCardIds("j") > 0 then return end
+  local cards = table.connect(table.unpack(data.cards))
+  table.sort(cards, function(a, b)
+    local va, vb = Cost.value(ai, a), Cost.value(ai, b)
+    if va == vb then return a < b end
+    return va > vb
+  end)
+  local top, bottom = {}, {}
+  local upper = math.min(data.capacities[1], #cards - data.limits[2])
+  local lower = math.max(data.limits[1], #cards - data.capacities[2])
+  local topCount = math.max(lower, math.min(2, upper))
+  for _, id in ipairs(cards) do
+    table.insert(#top < topCount and top or bottom, id)
+  end
+  return { top, bottom }
+end
+
+function M.chosen(ai, data)
+  local target, areas, prompt = table.unpack(data)
+  if type(target) == "number" then target = ai.room:getPlayerById(target) end
+  if not target or type(areas) ~= "string" or not ai:isEnemy(target) then return end
+  local fields = (prompt or ""):split(":")
+  local key = fields[1]
+  local removal = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__chasing_near-choose-discard"
+    or key == "#qiao_ice_damage_skill-discard" or key == "#qiao_adaptation_discard_equip"
+    or (key == "#AskForChooseCard" and (fields[4] == "dismantlement_skill" or fields[4] == "snatch_skill"))
+  if removal and areas:find("e", 1, true) then
+    local best, bestValue
+    for _, id in ipairs(target:getCardIds("e")) do
+      local card = target:getVirtualEquip(id) or Fk:getCardById(id)
+      local value = card.sub_type == Card.SubtypeArmor and 3
+        or card.sub_type == Card.SubtypeDefensiveRide and 2 or 1
+      if not bestValue or value > bestValue then best, bestValue = id, value end
+    end
+    if best then return best end
+  end
+  if (removal or key == "#qiao__unexpectation-show" or key == "#qiao__skill_wei004_1-take")
+    and areas:find("h", 1, true) and not target:isKongcheng() then
+    return -1 -- The engine randomly chooses the hidden hand card.
   end
 end
 

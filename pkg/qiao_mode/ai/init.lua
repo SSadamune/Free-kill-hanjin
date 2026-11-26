@@ -27,7 +27,7 @@ function Robot:isEnemy(target)
 end
 
 function Robot:handlePlayCard()
-  return Cards.play(self)
+  return Cards.play(self) or Skills.play(self) or Cards.recast(self)
 end
 
 function Robot:handleAskForSkillInvoke(data)
@@ -51,7 +51,13 @@ function Robot:handleAskForUseCard(data)
   return SmartAI.handleAskForUseCard(self, data)
 end
 
+function Robot:handleAskForArrangeCards(data)
+  return Skills.arrange(self, data)
+end
+
 function Robot:handleAskForCardChosen(data)
+  local card = Skills.chosen(self, data)
+  if card then return card end
   -- Object-form requests are allowed to omit the prompt in FreeKill.
   if data[3] then return SmartAI.handleAskForCardChosen(self, data) end
 end
