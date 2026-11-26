@@ -9,6 +9,9 @@ local M = {}
 M.YUJUE_DRAW_MARK = "qiao_han003_yujue_draw-turn"
 M.XUANHU_RED_MARK = "qiao_han021_red_discarded-turn"
 M.ZHENGPI_TWICE_MARK = "qiao_wei021b_zhengpi_twice-turn"
+M.JUEYAN_DRAW_MARK = "qiao_wu019_jueyan_draw-turn"
+M.JUEYAN_SLASH_MARK = "qiao_wu019_jueyan_slash-turn"
+M.JUEYAN_RANGE_MARK = "qiao_wu019_jueyan_range-turn"
 M.WUDANG_PENDING_MARK = "qiao_wudang_feijun_pending-turn"
 
 --- 汉晋定向叠置：仅平置改为叠置，已叠置不反向平置。

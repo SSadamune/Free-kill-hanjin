@@ -3,6 +3,7 @@
 --   1. 刘宏【鬻爵】：本回合下次造成伤害后摸两张牌；
 --   2. 曹节【悬壶】：追踪本回合角色手牌/装备区实体红牌置入弃牌堆（含经处理区，不含判定区）；
 --   3. 无当飞军：防止本回合下一次回复体力，回合结束时未触发则每区弃一；
+--   4. 陆抗【决堰】：本回合摸牌数、出杀次数、攻击范围三项增益；
 --   6. 军令四：补充包含手牌的混合转化牌禁使用／打出防护。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
@@ -145,6 +146,36 @@ skill:addEffect(fk.TurnEnd, {
       if RemovedTargets.isPresent(player) then
         Quan.discardOnePerArea(room, player, "qiao__retinue_skill_wudang_feijun")
       end
+    end
+  end,
+})
+
+-- 4. 陆抗【决堰】：本回合摸牌数、出杀次数与攻击范围三项增益。
+skill:addEffect(fk.DrawNCards, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and inQiao(player.room)
+      and player:getMark(Quan.JUEYAN_DRAW_MARK) > 0
+  end,
+  on_refresh = function(self, event, target, player, data)
+    data.n = data.n + player:getMark(Quan.JUEYAN_DRAW_MARK)
+  end,
+})
+
+skill:addEffect("targetmod", {
+  residue_func = function(self, player, skillObj, scope, card, to)
+    if player ~= nil and scope == Player.HistoryPhase and card ~= nil and card.trueName == "slash" then
+      local bonus = player:getMark(Quan.JUEYAN_SLASH_MARK)
+      if bonus > 0 then return bonus end
+    end
+  end,
+})
+
+skill:addEffect("atkrange", {
+  correct_func = function(self, from, to)
+    if from ~= nil then
+      local bonus = from:getMark(Quan.JUEYAN_RANGE_MARK)
+      if type(bonus) == "number" and bonus > 0 then return bonus end
     end
   end,
 })

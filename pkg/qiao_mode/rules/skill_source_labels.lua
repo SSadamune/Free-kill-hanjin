@@ -137,6 +137,9 @@ function M.register(retinues)
     if name == "qiao__skill_jin013_1" then
       return (text:gsub("<富甲→改为雷电伤害>", "&lt;富甲→改为雷电伤害&gt;"))
     end
+    if name == "qiao__skill_wu019_2" then
+      return (text:gsub("<孤军→获得或消耗一枚阴阳鱼标记>", "&lt;孤军→获得或消耗一枚阴阳鱼标记&gt;"))
+    end
     return text
   end
 

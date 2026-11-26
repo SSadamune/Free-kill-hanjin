@@ -6,12 +6,12 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 6
+M.generalCount = 7
 M.retinueCount = 1
 M.commanderCount = 1
-M.skillCount = 9
+M.skillCount = 11
 M.retinueSkillCount = 1
-M.kingdoms = { "han", "wei", "shu" }
+M.kingdoms = { "han", "wei", "shu", "wu" }
 
 M.generals = {
   -- 汉势力
@@ -198,6 +198,40 @@ M.generals = {
         text = [==[锁定技，其他角色交给你至少两张牌后，令其摸一张牌；当你受到其他角色的伤害后，令其需展示并交给你一张红桃牌，否则失去1点体力。]==],
         related = false,
         tags = { [==[Compulsory]==] },
+      },
+    },
+  },
+  -- 吴势力
+  {
+    number = [==[WU019]==],
+    id = [==[qiao_heg__wu019]==],
+    name = [==[陆抗]==],
+    kingdom = [==[wu]==],
+    title = [==[孤柱扶廈]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = -1,
+    deputyHpAdjust = 0,
+    guests = {  },
+    companionText = [==[—]==],
+    companionNames = {  },
+    companions = {  },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_wu019_1]==],
+        name = [==[决堰]==],
+        text = [==[主将技（☯️-1），准备阶段，你可以选择区域内一张牌，令一名其他角色将此牌当冰【杀】对你使用，然后你令本回合摸牌阶段摸牌数、使用【杀】次数、攻击范围共计+3。]==],
+        related = false,
+        tags = { [==[MainPlace]==] },
+      },
+      {
+        id = [==[qiao__skill_wu019_2]==],
+        name = [==[恪守]==],
+        text = [==[你可以将两张牌当【闪】或【无懈可击】使用且具有<孤军→获得或消耗一枚阴阳鱼标记>。]==],
+        related = false,
+        tags = {  },
       },
     },
   },
