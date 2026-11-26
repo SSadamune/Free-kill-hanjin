@@ -484,6 +484,23 @@ function Testqiao_robot_ai:testLeijiAndGuidaoChangePublicJudgmentForEnemy()
   end)
 end
 
+function Testqiao_robot_ai:testGuidaoKeepsLeijiRecoveryAtOneHp()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    for index = 3, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    room:handleAddLoseSkills(player, "qiao__skill_qun010_1|qiao__skill_qun010_2", nil, false, true)
+    room:setPlayerProperty(player, "hp", 1)
+    room:setPlayerProperty(enemy, "hp", 2)
+    local cost = give(room, player, "qiao__lightning", 5, Card.Spade)
+    local jink = give(room, player, "qiao__jink")
+    room:moveCardTo(room:printCard("qiao__slash", Card.Club, 3), Card.DrawPile)
+    room:responseCard { from = player, card = jink }
+    lu.assertEquals(player.hp, 2)
+    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(room:getCardOwner(cost.id).id, player.id)
+  end)
+end
+
 function Testqiao_robot_ai:testShebianMovesOnlyBeneficialBoardCards()
   scenario(function(room, player, enemy, ally)
     player.serverplayer:setState(fk.Player_Robot)

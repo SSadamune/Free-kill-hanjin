@@ -16,6 +16,18 @@ local function good(reason, suit, number)
   if reason == "qiao__skill_wei007_2" then return suit == Card.Spade or suit == Card.Club end
 end
 
+local function leijiValue(source, target, suit)
+  local damage = suit == Card.Spade and 2 or suit == Card.Club and 1 or 0
+  local value = 2 * damage
+  if damage > 0 and damage >= target.hp + target.shield then value = value + 3 end
+  if suit == Card.Club and source:isWounded() then
+    -- At one HP, the healing is worth keeping even if the extra damage could
+    -- put a two-HP enemy into dying.
+    value = value + (source.hp <= 1 and 5 or source.hp == 2 and 4 or 3)
+  end
+  return value
+end
+
 local function value(ai, data, suit, number)
   local friendly, hostile = ai:isFriend(data.who), ai:isEnemy(data.who)
   if not friendly and not hostile then return end
@@ -23,10 +35,11 @@ local function value(ai, data, suit, number)
     local current = ai.room.logic:getCurrentEvent()
     local effect = current and current:findParent(GameEvent.SkillEffect, true)
     local source = effect and effect.data.who
-    local damage = suit == Card.Spade and 2 or suit == Card.Club and 1 or 0
-    if friendly and ai:isEnemy(source) then return -damage end
+    if friendly and ai:isEnemy(source) then return -leijiValue(source, data.who, suit) end
     if hostile and ai:isFriend(source)
-      and Cards.safeDamage(ai, Fk:cloneCard("qiao__thunder__slash"), data.who) then return damage end
+      and Cards.safeDamage(ai, Fk:cloneCard("qiao__thunder__slash"), data.who) then
+      return leijiValue(source, data.who, suit)
+    end
     return
   end
   local success = good(data.reason, suit, number)
