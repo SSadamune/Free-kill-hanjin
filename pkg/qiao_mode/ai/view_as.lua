@@ -14,6 +14,13 @@ local converters = {
   peach = { longdan, "qiao__skill_qun001_1" },
 }
 
+local function targetedReply(ai, card)
+  local function score(target) return Cards.scoreTarget(ai, card, target) end
+  local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
+  if fixed and (#fixed == 0 or not table.every(fixed, function(target) return score(target) ~= nil end)) then return "" end
+  return Requests.targets(ai, score)
+end
+
 local function convert(ai, result, budget, useTarget)
   local enabled = ai:getEnabledSkills()
   for _, name in ipairs(converters[result]) do
@@ -29,9 +36,7 @@ local function convert(ai, result, budget, useTarget)
         ai:selectCard(id, true)
         local card = ai.handler:getUsingCard()
         if card and card.trueName == result then
-          local reply = useTarget and Requests.targets(ai, function(target)
-            return Cards.scoreTarget(ai, card, target)
-          end) or Requests.reply(ai)
+          local reply = useTarget and targetedReply(ai, card) or Requests.reply(ai)
           if reply ~= "" then return reply end
         end
         ai:unSelectAllTargets()

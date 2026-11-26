@@ -5,15 +5,6 @@ local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
 local M = {}
 local play = {}
 
-local function effectable(player, name)
-  local skill = Fk.skills[name]
-  return skill and player:hasSkill(name) and skill:isEffectable(player)
-end
-
-local function zhaxiangTrade(player)
-  return player.hp >= 3 and effectable(player, "qiao__skill_wu004_2")
-end
-
 local function preferWeakEnemy(ai, target)
   if ai:isEnemy(target) then return 20 - target.hp end
 end
@@ -57,13 +48,13 @@ play.qiao__skill_han007_1 = M.minsi
 function play.qiao__skill_wu004_1(ai)
   -- Losing HP is worthwhile here because the real HpLost event also triggers
   -- Zhaxiang. Recheck the skill on this player, even for granted copies.
-  if zhaxiangTrade(ai.player) then return Request.reply(ai) end
+  if Cost.zhaxiangTrade(ai.player) then return Request.reply(ai) end
 end
 
 function play.qiao__skill_wei012_1(ai)
   local player = ai.player
   local weapon = table.find(player:getCardIds("h"), function(id) return spareWeapon(ai, id) end)
-  local combo = zhaxiangTrade(player)
+  local combo = Cost.zhaxiangTrade(player)
   if not weapon and player.hp < 3 then return end
   ai.handler:updateInteraction((weapon and not combo) and "#qiao__skill_wei012_1-discard" or "#qiao__skill_wei012_1-hp")
   return Request.targets(ai, function(target)
@@ -116,7 +107,7 @@ function play.qiao__skill_wu015a_1(ai)
     if ai.room:getCardArea(id) == Card.PlayerHand then return true end
     local card = Fk:getCardById(id)
     -- Preserve our slot coverage while letting Xiaoji pay back the move.
-    return effectable(player, "qiao__skill_wu008_2")
+    return Cost.effectable(player, "qiao__skill_wu008_2")
       and card.sub_type == Card.SubtypeWeapon and #player:getEquipments(Card.SubtypeWeapon) > 1
   end, function(target)
     if ai:isFriend(target) then return 20 - target.hp end

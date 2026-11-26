@@ -27,6 +27,21 @@ function M.usedThisTurn(player)
   return History.used(player)
 end
 
+function M.mouduanConditions(player)
+  local suits, types = {}, {}
+  for _, record in ipairs(M.usedThisTurn(player)) do
+    if record.suit == Card.Spade or record.suit == Card.Heart
+      or record.suit == Card.Club or record.suit == Card.Diamond then
+      suits[record.suit] = true
+    end
+    types[record.type] = true
+  end
+  local suitCount, typeCount = 0, 0
+  for _ in pairs(suits) do suitCount = suitCount + 1 end
+  for _ in pairs(types) do typeCount = typeCount + 1 end
+  return suitCount >= 4, typeCount >= 3
+end
+
 --- 本回合 player 的出牌阶段内真实使用的牌记录。
 ---@param player ServerPlayer
 ---@return table[]

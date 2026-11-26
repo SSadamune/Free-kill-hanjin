@@ -56,6 +56,10 @@ function M.invoke(ai, original, fields)
     local draw = currentData(ai)
     return draw ~= nil and type(draw.n) == "number" and draw.n + 2 + player:getHandcardNum() <= 5
   end
+  if key == "#qiao__skill_wu003_3-invoke" then
+    return not Cost.effectable(player, "qiao__skill_wu005_1")
+      and not (player:getHandcardNum() <= 1 and Cost.effectable(player, "qiao__skill_wu014_1"))
+  end
 end
 
 local allyDrawTargets = {
@@ -77,6 +81,13 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__skill_wu013_2-target" or key == "#qiao__skill_wu013_2-invoke" then
+    local trade = Cost.zhaxiangTrade(ai.player)
+    return function(target)
+      local hand = target:getHandcardNum()
+      if trade and ai:isFriend(target) and hand <= 1 then return 2 - hand end
+    end
+  end
   if key == "#qiao__retinue_skill_xiyuanjun-target" or key == "#qiao__retinue_skill_xiyuanjun-invoke" then
     local frame = Selection.currentCost(ai.player)
     local current = frame and frame.target

@@ -5,6 +5,8 @@ local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Play = require "packages.qiao.pkg.qiao_mode.ai.play_policies"
 local Judgment = require "packages.qiao.pkg.qiao_mode.ai.judgment"
+local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
+local WuPhases = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -67,6 +69,13 @@ function M.invoke(ai, data)
     local target = M.promptTarget(ai, fields, 3)
     return ai:isEnemy(target) and target.hp <= 0
   end
+  if key == "#qiao__skill_wei008_2-invoke" or key == "#qiao__retinue_skill_huweijun-invoke" then
+    return Board.worthMoving(ai)
+  end
+  if key == "#qiao__skill_wu003_2-invoke" then
+    local suits, types = WuPhases.mouduanConditions(player)
+    return (suits and types and not player:hasSkill("qiao__skill_wu003_3")) or Board.worthMoving(ai)
+  end
   if key == "#qiao__skill_wei017_2-invoke" or key == "#qiao__retinue_skill_fuxin_sishi-give-invoke" then
     return ai:isFriend(M.promptTarget(ai, fields, key == "#qiao__skill_wei017_2-invoke" and 3 or 2))
   end
@@ -110,6 +119,9 @@ function M.active(ai, data)
   local key, budget = fields[1], nil
   if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
   if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
+  if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
+    return Board.choosePlayers(ai)
+  end
   if key == "#qiao__skill_wei002_2-ask" or key == "#qiao__skill_qun010_2-ask" then
     return Judgment.choose(ai, key == "#qiao__skill_qun010_2-ask") and Requests.reply(ai) or ""
   end
@@ -160,6 +172,17 @@ function M.active(ai, data)
       budget = 2
     elseif key == "#qiao__retinue_skill_jinfanjun-discard" then
       budget = 3
+    elseif key == "#qiao__skill_wei009_1-discard-judge" then
+      local player = ai.player
+      if not table.find(player:getCardIds("j"), function(id)
+        return Board.harmfulDelay(player:getVirtualEquip(id) or Fk:getCardById(id))
+      end) then return "" end
+      budget = 2
+    elseif key == "#qiao__skill_wei009_1-discard-discard" then
+      if ai.player:getHandcardNum() - ai.player:getMaxCards() < 3 then return "" end
+      return Cost.select(ai, 1, 2, function(id)
+        return ai.room:getCardArea(id) == Card.PlayerHand
+      end) and Requests.reply(ai) or ""
     elseif key == "#qiao__skill_wei016_1-discard" then
       if not ai:isEnemy(M.promptTarget(ai, fields, 3)) then return "" end
       budget = 2
@@ -237,6 +260,25 @@ function M.play(ai)
 end
 
 function M.arrange(ai, data)
+  if data.poxi_type == "qiao_shelie" then
+    local remaining, chosen, suits = {}, {}, {}
+    local cards = table.connect(table.unpack(data.cards))
+    table.sort(cards, function(a, b)
+      local va, vb = Cost.value(ai, a), Cost.value(ai, b)
+      if va == vb then return a < b end
+      return va > vb
+    end)
+    for _, id in ipairs(cards) do
+      local suit = Fk:getCardById(id).suit
+      if suit ~= Card.NoSuit and not suits[suit] and #chosen < data.capacities[2] then
+        table.insert(chosen, id)
+        suits[suit] = true
+      else
+        table.insert(remaining, id)
+      end
+    end
+    return { remaining, chosen }
+  end
   if #data.names ~= 2 or data.names[1] ~= "Top" or data.names[2] ~= "Bottom"
     or data.pattern ~= "." or data.poxi_type ~= "" or ai.room.current ~= ai.player
     or ai.player.phase == Player.Finish or #ai.player:getCardIds("j") > 0 then return end

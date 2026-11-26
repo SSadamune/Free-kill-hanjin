@@ -1,5 +1,14 @@
 local M = {}
 
+function M.effectable(player, name)
+  local skill = Fk.skills[name]
+  return skill and player:hasSkill(name) and skill:isEffectable(player)
+end
+
+function M.zhaxiangTrade(player)
+  return player.hp >= 3 and M.effectable(player, "qiao__skill_wu004_2")
+end
+
 local function copies(ai, card)
   local selected = (ai.command == "AskForUseActiveSkill" or ai.command == "PlayCard")
     and ai:getSelectedCards() or {}

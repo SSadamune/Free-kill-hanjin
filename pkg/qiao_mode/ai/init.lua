@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Skills = require "packages.qiao.pkg.qiao_mode.ai.skills"
 local ViewAs = require "packages.qiao.pkg.qiao_mode.ai.view_as"
+local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 
 local Robot = SmartAI:subclass("HanjinRobot")
 
@@ -69,6 +70,12 @@ end
 
 function Robot:handleAskForArrangeCards(data)
   return Skills.arrange(self, data)
+end
+
+function Robot:handleAskForPoxi(data)
+  if data.type == "AskForCardsChosen" and data.extra_data and data.extra_data.prompt == "#qiao_move_board_pick" then
+    return Board.chooseCard(self, data.data)
+  end
 end
 
 function Robot:handleAskForCardChosen(data)

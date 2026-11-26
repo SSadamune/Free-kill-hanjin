@@ -484,4 +484,89 @@ function Testqiao_robot_ai:testLeijiAndGuidaoChangePublicJudgmentForEnemy()
   end)
 end
 
+function Testqiao_robot_ai:testShebianMovesOnlyBeneficialBoardCards()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    for index = 4, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    local name = "qiao__skill_wei008_2"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local weapon = give(room, ally, "qiao__blade")
+    room:moveCardTo(weapon, Card.PlayerEquip, ally, fk.ReasonPut)
+    room:loseHp(player, 1, "test")
+    lu.assertEquals(player:usedSkillTimes(name, Player.HistoryGame), 0)
+    lu.assertEquals(room:getCardOwner(weapon.id).id, ally.id)
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local delayed = give(room, ally, "qiao__indulgence")
+    room:moveCardTo(delayed, Card.PlayerJudge, ally, fk.ReasonPut)
+    room:loseHp(player, 1, "test")
+    lu.assertEquals(room:getCardOwner(delayed.id).id, enemy.id)
+    lu.assertEquals(room:getCardOwner(armor.id).id, enemy.id)
+    room:loseHp(player, 1, "test")
+    lu.assertTrue(player.ai:isFriend(room:getCardOwner(armor.id)))
+    lu.assertEquals(room:getCardOwner(delayed.id).id, enemy.id)
+  end)
+end
+
+function Testqiao_robot_ai:testQiaobianPaysCheapCardToSkipHarmfulJudgment()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei009_1", nil, false, true)
+    local cost = give(room, player, "qiao__lightning")
+    local function checkJudge()
+      local data = PhaseData:new { who = player, reason = "game_rule", phase = Player.Judge }
+      room.logic:trigger(fk.EventPhaseChanging, player, data)
+      return data.skipped == true
+    end
+    lu.assertFalse(checkJudge())
+    lu.assertEquals(room:getCardOwner(cost.id).id, player.id)
+    local delayed = give(room, player, "qiao__indulgence")
+    room:moveCardTo(delayed, Card.PlayerJudge, player, fk.ReasonPut)
+    lu.assertTrue(checkJudge())
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(delayed.id), Card.PlayerJudge)
+  end)
+end
+
+function Testqiao_robot_ai:testFenjiValuesZhaxiangFromActualHpLoss()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu013_2", nil, false, true)
+    local history = require "packages.qiao.pkg.qiao_mode.rules.wu_history"
+    for _, target in ipairs(room.players) do room:setPlayerMark(target, history.LOST_HAND, 0) end
+    local old = ally:getCardIds("h")
+    if #old > 0 then room:throwCard(old, "test", ally, ally) end
+    local cost = give(room, ally, "qiao__jink")
+    room:throwCard(cost.id, "test", ally, ally)
+    lu.assertEquals(ally:getMark(history.LOST_HAND), 1)
+    room:setPlayerProperty(player, "hp", 3)
+    local hp = player.hp
+    room.logic:trigger(fk.TurnEnd, ally, {})
+    lu.assertEquals(player.hp, hp)
+    lu.assertEquals(ally:getHandcardNum(), 0)
+    room:handleAddLoseSkills(player, "qiao__skill_wu004_2", nil, false, true)
+    room.logic:trigger(fk.TurnEnd, ally, {})
+    lu.assertEquals(ally:getHandcardNum(), 2)
+    lu.assertEquals(player.hp, hp - 1)
+    lu.assertEquals(player:getHandcardNum(), 3)
+  end)
+end
+
+function Testqiao_robot_ai:testShelieTakesBestCardOfEachPublicSuit()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu003_3", nil, false, true)
+    local peach = room:printCard("qiao__peach", Card.Heart, 3)
+    local heart = room:printCard("qiao__jink", Card.Heart, 2)
+    local club = room:printCard("qiao__jink", Card.Club, 2)
+    local spade = room:printCard("qiao__slash", Card.Spade, 3)
+    local diamond = room:printCard("qiao__slash", Card.Diamond, 4)
+    room:moveCardTo({ peach.id, heart.id, club.id, spade.id, diamond.id }, Card.DrawPile)
+    room:setPlayerProperty(player, "phase", Player.Draw)
+    room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Draw })
+    lu.assertItemsEquals(player:getCardIds("h"), { peach.id, club.id, spade.id, diamond.id })
+    lu.assertEquals(room:getCardArea(heart.id), Card.DiscardPile)
+  end)
+end
+
 return { name = "qiao_robot_ai" }
