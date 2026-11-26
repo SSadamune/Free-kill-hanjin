@@ -4,6 +4,7 @@
 --   2. 曹节【悬壶】：追踪本回合角色手牌/装备区实体红牌置入弃牌堆（含经处理区，不含判定区）；
 --   3. 无当飞军：防止本回合下一次回复体力，回合结束时未触发则每区弃一；
 --   4. 陆抗【决堰】：本回合摸牌数、出杀次数、攻击范围三项增益；
+--   5. 袁术【庸肆】：记录本回合执行过摸牌动作的角色（公开标记供客户端目标筛选）；
 --   6. 军令四：补充包含手牌的混合转化牌禁使用／打出防护。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
@@ -50,7 +51,7 @@ skill:addEffect(fk.Damage, {
   end,
 })
 
--- 2. 曹节【悬壶】红牌入弃牌堆。
+-- 2 & 5. 统一移牌记录：曹节【悬壶】红牌入弃牌堆 + 袁术【庸肆】本回合摸过牌。
 skill:addEffect(fk.AfterCardsMove, {
   global = true,
   can_refresh = function(self, event, target, player, data)
@@ -60,6 +61,13 @@ skill:addEffect(fk.AfterCardsMove, {
     local room = player.room
     local owners = processingOwners(room)
     for _, move in ipairs(data) do
+      -- 庸肆：记录本回合执行过“摸牌”动作的角色（仅 ReasonDraw 且实际摸到牌）。
+      if move.moveReason == fk.ReasonDraw and move.to ~= nil and #(move.moveInfo or {}) > 0 then
+        if move.to:getMark(Quan.DRAWN_TURN_MARK) == 0 then
+          room:setPlayerMark(move.to, Quan.DRAWN_TURN_MARK, 1)
+        end
+      end
+
       -- 悬壶：追踪手牌区/装备区实体红牌直接或经处理区进入弃牌堆（判定区红牌不计入）。
       for _, info in ipairs(move.moveInfo or {}) do
         local id = info.cardId

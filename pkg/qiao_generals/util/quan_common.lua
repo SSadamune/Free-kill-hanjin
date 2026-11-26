@@ -12,7 +12,9 @@ M.ZHENGPI_TWICE_MARK = "qiao_wei021b_zhengpi_twice-turn"
 M.JUEYAN_DRAW_MARK = "qiao_wu019_jueyan_draw-turn"
 M.JUEYAN_SLASH_MARK = "qiao_wu019_jueyan_slash-turn"
 M.JUEYAN_RANGE_MARK = "qiao_wu019_jueyan_range-turn"
+M.DRAWN_TURN_MARK = "qiao_quan_drawn-turn"
 M.WUDANG_PENDING_MARK = "qiao_wudang_feijun_pending-turn"
+M.WEIDI_SKILL = "qiao__skill_qun021_2"
 
 --- 汉晋定向叠置：仅平置改为叠置，已叠置不反向平置。
 function M.directedStack(target)
@@ -98,6 +100,28 @@ function M.discardOnePerArea(room, target, skillName)
       room:throwCard({ id }, skillName, target, target)
     end
   end
+end
+
+--- 场上公开装备区是否存在实体【玉玺】（排除移出游戏角色；客户端与服务端共用）。
+function M.hasPhysicalJadeSeal(room)
+  room = room or Fk:currentRoom()
+  if room == nil then return false end
+  for _, p in ipairs(room:getPresentPlayers()) do
+    for _, id in ipairs(p:getCardIds(Player.Equip)) do
+      local card = p:getVirtualEquip(id) or Fk:getCardById(id)
+      if card ~= nil and (card.name == "qiao__jade_seal" or card.trueName == "jade_seal") then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+--- 袁术【伪帝】当前是否正视为装备【玉玺】（两端共用）。
+function M.virtualJadeSealActive(player, room)
+  if player == nil or player.dead or player:isRemoved() then return false end
+  if not player:hasShownSkill(M.WEIDI_SKILL) then return false end
+  return not M.hasPhysicalJadeSeal(room or Fk:currentRoom())
 end
 
 --- 为目标登记一份【无当飞军】本回合防回血及回合末惩罚实例。

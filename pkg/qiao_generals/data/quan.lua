@@ -6,12 +6,12 @@ local M = {}
 
 M.version = 1
 M.mode = "qiao_heg_mode"
-M.generalCount = 8
+M.generalCount = 9
 M.retinueCount = 1
 M.commanderCount = 1
-M.skillCount = 13
+M.skillCount = 15
 M.retinueSkillCount = 1
-M.kingdoms = { "han", "wei", "shu", "wu" }
+M.kingdoms = { "han", "wei", "shu", "wu", "qun" }
 
 M.generals = {
   -- 汉势力
@@ -265,6 +265,40 @@ M.generals = {
         text = [==[出牌阶段限一次，你可以选择两名装备区牌数差小于等于X的角色（X为你已损失体力值），令这些角色交换装备区的所有牌。]==],
         related = false,
         tags = {  },
+      },
+    },
+  },
+  -- 群势力
+  {
+    number = [==[QUN021]==],
+    id = [==[qiao_heg__qun021]==],
+    name = [==[袁术]==],
+    kingdom = [==[qun]==],
+    title = [==[画脂镂冰、鸱枭僭主]==],
+    halfHp = 2.0,
+    hp = 4,
+    mainHpAdjust = 0,
+    deputyHpAdjust = 0,
+    guests = { [==[han]==] },
+    companionText = [==[纪灵]==],
+    companionNames = { [==[纪灵]==] },
+    companions = { [==[qiao_heg__qun015]==] },
+    companionsUnresolved = {  },
+    gender = "male",
+    skills = {
+      {
+        id = [==[qiao__skill_qun021_1]==],
+        name = [==[庸肆]==],
+        text = [==[出牌阶段限一次，你可以对本回合摸过牌的一名其他角色发起“军令”。若其不执行，你获得其所有手牌，然后交给其等量的牌。]==],
+        related = false,
+        tags = {  },
+      },
+      {
+        id = [==[qiao__skill_qun021_2]==],
+        name = [==[伪帝]==],
+        text = [==[锁定技，若场上没有【玉玺】，你视为装备着【玉玺】；当你成为【知己知彼】的目标后，你展示所有手牌。]==],
+        related = false,
+        tags = { [==[Compulsory]==] },
       },
     },
   },

@@ -285,6 +285,81 @@ function Testqiao_quan_wu_qun_jin:testWu024WuguotaiBuyiAndGanlu()
   lu.assertTrue(table.contains(wuAlly:getCardIds("e"), eqA2.id), "未防住的装备应换入盟友装备区")
 end
 
+function Testqiao_quan_wu_qun_jin:testQun021YuanshuYongsiAndWeidi()
+  local yuanshu, drawnTarget, undrawnTarget = p(3), p(5), p(6)
+  inRoom(function()
+    skill_test.installDualGenerals(room(), yuanshu, { main = "qiao_heg__qun021", deputy = "qiao_test__qun_2", kingdom = "qun" })
+    room().current = yuanshu
+    yuanshu.phase = Player.Play
+    drawnTarget:drawCards(2, "test_draw")
+  end)
+  give(undrawnTarget, "qiao__jink", Card.Club, 2) -- ReasonJustMove 不算摸牌
+  local yongsi = assert(Fk.skills["qiao__skill_qun021_1"])
+
+  -- 客户端校验：仅本回合摸过牌的其他角色可选
+  client_room.run(room(), function(clients)
+    local me = clients[3]
+    clients[5].mark[Quan.DRAWN_TURN_MARK] = 1
+    lu.assertTrue(yongsi:canUse(me))
+    lu.assertTrue(yongsi:targetFilter(me, clients[5], {}))
+    lu.assertFalse(yongsi:targetFilter(me, clients[6], {}))
+    lu.assertFalse(yongsi:targetFilter(me, me, {}))
+  end)
+
+  -- 庸肆不执行军令：获得目标所有手牌（2张），然后交还等量（2张）牌
+  local origAsk = Junling.ask
+  Junling.ask = function() return false end
+  give(yuanshu, "qiao__slash", Card.Spade, 2)
+  skill_test.withSkillRequests(room(), "qiao__skill_qun021_1", {
+    askToCards = function(self, who, params)
+      lu.assertEquals(params.min_num, 2)
+      local ids = who:getCardIds("h")
+      return { ids[1], ids[2] }
+    end,
+  }, function()
+    inRoom(function()
+      room():useSkill(yuanshu, yongsi, function()
+        yongsi:onUse(room(), { from = yuanshu, cards = {}, tos = { drawnTarget } })
+      end, { from = yuanshu, cards = {}, tos = { drawnTarget } })
+    end)
+  end)
+  Junling.ask = origAsk
+  lu.assertEquals(drawnTarget:getHandcardNum(), 2, "庸肆应交还实际获得张数的牌")
+  lu.assertEquals(yuanshu:getHandcardNum(), 1)
+
+  -- 伪帝：场上无实体玉玺 -> 视为装备玉玺（大势力 + 摸牌+1）；实体玉玺入场后立即让位
+  inRoom(function()
+    lu.assertTrue(Quan.virtualJadeSealActive(yuanshu, room()))
+    lu.assertTrue(H.isBigKingdomPlayer(yuanshu), "无实体玉玺时伪帝应为大势力")
+    local drawData = { n = 2 }
+    room().logic:trigger(fk.DrawNCards, yuanshu, drawData)
+    lu.assertEquals(drawData.n, 3, "无实体玉玺时伪帝摸牌阶段+1")
+  end)
+  local seal = equip(drawnTarget, "qiao__jade_seal", Card.Club, 12)
+  inRoom(function()
+    lu.assertFalse(Quan.virtualJadeSealActive(yuanshu, room()), "实体玉玺在场时伪帝让位")
+    local drawData = { n = 2 }
+    room().logic:trigger(fk.DrawNCards, yuanshu, drawData)
+    lu.assertEquals(drawData.n, 2, "实体玉玺在场时伪帝不再+1摸牌")
+  end)
+  lu.assertNotNil(seal)
+
+  -- 伪帝：成为【知己知彼】目标后展示所有手牌
+  local shownCards
+  local origShow = yuanshu.showCards
+  yuanshu.showCards = function(self, cards)
+    shownCards = cards
+    return origShow(self, cards)
+  end
+  inRoom(function()
+    local kb = Fk:cloneCard("qiao__known_both")
+    room().logic:trigger(fk.TargetConfirmed, yuanshu, { from = drawnTarget, to = yuanshu, card = kb })
+  end)
+  yuanshu.showCards = origShow
+  lu.assertNotNil(shownCards)
+  lu.assertEquals(#shownCards, yuanshu:getHandcardNum(), "成为知己知彼目标后应展示所有手牌")
+end
+
 function Testqiao_quan_wu_qun_jin:testShouxiProtectsEquipmentUsedByAnotherFaction()
   local lukang, caojie, enemy = p(1), p(2), p(7)
   local jueyan, shouxi = "qiao__skill_wu019_1", "qiao__skill_han021_1"
