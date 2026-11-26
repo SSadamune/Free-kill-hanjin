@@ -25,6 +25,7 @@ ColumnLayout {
   property string inspectedCi: ""
   readonly property var selectedNames: mode === "give" ? (groups[selectedKingdom] ?? []) : [selectedCi]
   readonly property var actions: actionsByCard[selectedCi] ?? []
+  readonly property var roomScene: Ltk.roomScene
   signal submitted(var choice)
   signal canceled()
 
@@ -94,6 +95,11 @@ ColumnLayout {
         z: index
         autoBack: false
         generalName: modelData
+        GuestCardAppearance {
+          card: card
+          enabledInContext: root.roomScene?.guestIllustrations ?? false
+          factions: root.roomScene?.guestCardFactions?.[card.modelData] ?? []
+        }
         onClicked: root.inspect(modelData)
         onRightClicked: root.inspect(modelData)
         // Match the hit region to the part left visible by the card on its right.
@@ -148,7 +154,7 @@ ColumnLayout {
       rootText: (catalog, theme) => {
         const name = root.inspectedCi;
         if (!name) return "";
-        const groups = [{ name, detail: Ltk.getGeneralDetail(name) }];
+        const groups = [{ name, detail: Ltk.getGeneralDetail(name), factions: root.roomScene?.guestCardFactions?.[name] }];
         return SkillLinks.generalText(catalog, theme, groups, key => Lua.tr(key), true);
       }
     }

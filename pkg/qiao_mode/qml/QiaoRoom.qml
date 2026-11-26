@@ -312,6 +312,7 @@ Room {
         markTooltips.createObject(marks);
       if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
         stateButton.createObject(marks, {
+          photo,
           states: Qt.binding(() => {
             room.skillStatusRevision;
             photo.general;

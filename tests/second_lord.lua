@@ -237,6 +237,13 @@ end
 
 function Testsecond_lord:testFormalHanLiuxieAscendsOnFirstTurn()
   local candidate = player(1)
+  local animation
+  local currentRoom = room()
+  local doAnimate = currentRoom.doAnimate
+  function currentRoom:doAnimate(kind, data)
+    if kind == "InvokeUltSkill" and data.name == "qiao_lord_ascension" then animation = table.simpleClone(data) end
+    return doAnimate(self, kind, data)
+  end
   FkTest.runInRoom(function()
     room():setBanner("all_kingdoms", { "han", "wei", "shu", "qun" })
     hidden(candidate, "qiao_heg__han001", "qiao_test__han_2", "han")
@@ -246,6 +253,7 @@ function Testsecond_lord:testFormalHanLiuxieAscendsOnFirstTurn()
   lu.assertEquals(prompts.convert, { candidate.seat })
   lu.assertEquals(candidate.general, "qiao_heg__em_han001")
   lu.assertEquals(candidate.kingdom, "han")
+  lu.assertEquals(animation, { name = "qiao_lord_ascension", player = candidate.id, deputy = false })
 end
 
 function Testsecond_lord:testFormalWuSunquanAscendsOnFirstTurn()
