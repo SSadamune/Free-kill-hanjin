@@ -4,6 +4,7 @@ local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Play = require "packages.qiao.pkg.qiao_mode.ai.play_policies"
+local Judgment = require "packages.qiao.pkg.qiao_mode.ai.judgment"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -109,6 +110,23 @@ function M.active(ai, data)
   local key, budget = fields[1], nil
   if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
   if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
+  if key == "#qiao__skill_wei002_2-ask" or key == "#qiao__skill_qun010_2-ask" then
+    return Judgment.choose(ai, key == "#qiao__skill_qun010_2-ask") and Requests.reply(ai) or ""
+  end
+  if key == "#qiao__skill_wu006_2-invoke" then
+    local frame = Selection.currentCost(ai.player)
+    local card = frame and frame.data and frame.data.card
+    if not card then return "" end
+    local byCard = extra.targetsByCard or {}
+    if not Cost.select(ai, 1, ai.player.hp <= 1 and 4 or 2, function(id)
+      return table.find(byCard[tostring(id)] or {}, function(targetId)
+        return Cards.safeDamage(ai, card, ai.room:getPlayerById(targetId))
+      end) ~= nil
+    end) then return "" end
+    return chooseTargets(ai, function(target)
+      if Cards.safeDamage(ai, card, target) then return 20 - target.hp end
+    end)
+  end
   if skill == "choose_players_skill" then
     local use = key == "#qiao__skill_jin012_1-targets" and parentData(ai, GameEvent.UseCard)
     local score, extend = Triggers.targetScore(ai, key, use)
@@ -258,7 +276,8 @@ function M.chosen(ai, data)
     end
     if best then return best end
   end
-  if (removal or key == "#qiao__unexpectation-show" or key == "#qiao__skill_wei004_1-take")
+  if (removal or key == "#qiao__unexpectation-show" or key == "#qiao__skill_wei004_1-take"
+      or key == "#qiao__retinue_skill_xiyuanjun-card")
     and areas:find("h", 1, true) and not target:isKongcheng() then
     return -1 -- The engine randomly chooses the hidden hand card.
   end

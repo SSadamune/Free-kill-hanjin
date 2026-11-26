@@ -136,6 +136,16 @@ function M.playEnemySlash(ai)
   end
 end
 
+function M.respond(ai, pattern)
+  local enabled = ai:getEnabledCards(pattern)
+  table.sort(enabled)
+  for _, id in ipairs(enabled) do
+    ai:selectCard(id, true)
+    if not ai:getSelectedSkill() and ai:okButtonEnabled() then return physicalReply(ai) end
+    ai:selectCard(id, false)
+  end
+end
+
 local function fixedGroup(ai, card, safe, useful)
   local targets = card:getAvailableTargets(ai.player, ai.handler.extra_data)
   if table.every(targets, safe) and table.find(targets, useful) and ai:okButtonEnabled() then

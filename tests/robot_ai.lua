@@ -416,4 +416,72 @@ function Testqiao_robot_ai:testYinghunTargetsAllyWithDrawOption()
   end)
 end
 
+function Testqiao_robot_ai:testQingguoUsesCheapBlackCardForBothJinkRequests()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_wei007_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local cost = give(room, player, "qiao__lightning", 5, Card.Spade)
+    for _, method in ipairs({ "askToUseCard", "askToResponse" }) do
+      local answer = room[method](room, player, { pattern = "jink", skill_name = "jink", cancelable = true })
+      lu.assertNotNil(answer, method)
+      lu.assertEquals(answer.card.name, "qiao__jink")
+      lu.assertEquals(answer.card.subcards, { cost.id })
+    end
+  end)
+end
+
+function Testqiao_robot_ai:testQixiTargetsAnEnemyWithCheapBlackMaterial()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    for index = 3, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    local name = "qiao__skill_wu002_1"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local cost = give(room, player, "qiao__lightning", 5, Card.Spade)
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local answer = reply(player, "PlayCard", {})
+    lu.assertEquals(answer.card.skill, name)
+    lu.assertEquals(answer.card.subcards, { cost.id })
+    lu.assertEquals(answer.targets, { enemy.id })
+    room:handleUseCardReply(player, answer)
+    lu.assertEquals(room:getCardArea(armor.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testYingshiOnlyChangesUnfavorableAllyJudgment()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local name = "qiao__skill_wei002_2"
+    room:handleAddLoseSkills(player, name, nil, false, true)
+    local cost = give(room, player, "qiao__lightning")
+    local function judge(suit)
+      room:moveCardTo(room:printCard("qiao__slash", suit, 3), Card.DrawPile)
+      room:judge { who = ally, reason = "indulgence_skill", pattern = ".|.|^heart" }
+    end
+    judge(Card.Heart)
+    lu.assertEquals(room:getCardOwner(cost.id).id, player.id)
+    judge(Card.Spade)
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testLeijiAndGuidaoChangePublicJudgmentForEnemy()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    for index = 3, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    room:handleAddLoseSkills(player, "qiao__skill_qun010_1|qiao__skill_qun010_2", nil, false, true)
+    local cost = give(room, player, "qiao__lightning", 5, Card.Spade)
+    local jink = give(room, player, "qiao__jink")
+    local first = room:printCard("qiao__slash", Card.Heart, 3)
+    room:moveCardTo(first, Card.DrawPile)
+    local hp = enemy.hp
+    room:responseCard { from = player, card = jink }
+    lu.assertEquals(enemy.hp, hp - 2)
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardOwner(first.id).id, player.id)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

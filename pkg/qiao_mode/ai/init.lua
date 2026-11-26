@@ -1,5 +1,6 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Skills = require "packages.qiao.pkg.qiao_mode.ai.skills"
+local ViewAs = require "packages.qiao.pkg.qiao_mode.ai.view_as"
 
 local Robot = SmartAI:subclass("HanjinRobot")
 
@@ -27,7 +28,7 @@ function Robot:isEnemy(target)
 end
 
 function Robot:handlePlayCard()
-  return Cards.play(self) or Skills.play(self) or Cards.recast(self)
+  return Cards.play(self) or Skills.play(self) or ViewAs.play(self) or Cards.recast(self)
 end
 
 function Robot:handleAskForSkillInvoke(data)
@@ -52,8 +53,18 @@ end
 
 function Robot:handleAskForUseCard(data)
   if data[1] == "qiao__retinue_skill_niujin" then return Cards.play(self) end
-  if data[2] == "slash" then return Cards.playEnemySlash(self) end
+  if data[2] == "slash" then return Cards.playEnemySlash(self) or ViewAs.slash(self) end
+  if data[2] == "jink" then return ViewAs.response(self, "jink") end
+  if data[2] == "peach" or data[2] == "peach,analeptic" then
+    local reply = ViewAs.rescue(self, data)
+    if reply ~= nil then return reply end
+  end
   return SmartAI.handleAskForUseCard(self, data)
+end
+
+function Robot:handleAskForResponseCard(data)
+  if data[2] == "slash" or data[2] == "jink" then return ViewAs.response(self, data[2]) end
+  return SmartAI.handleAskForResponseCard(self, data)
 end
 
 function Robot:handleAskForArrangeCards(data)

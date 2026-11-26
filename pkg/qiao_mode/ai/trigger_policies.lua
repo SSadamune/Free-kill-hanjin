@@ -77,6 +77,15 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__retinue_skill_xiyuanjun-target" or key == "#qiao__retinue_skill_xiyuanjun-invoke" then
+    local frame = Selection.currentCost(ai.player)
+    local current = frame and frame.target
+    return function(target)
+      if ai:isFriend(current) and ai:isEnemy(target) and current:inMyAttackRange(target) then
+        return 20 - target.hp
+      end
+    end
+  end
   if allyDrawTargets[key] then
     return function(target)
       local cap = key == "#qiao__skill_wei013_2-choose" and math.min(5, target.maxHp) or target.maxHp
@@ -103,6 +112,12 @@ function M.targetScore(ai, key, use)
   if enemyDamageTargets[key] then
     return function(target)
       if ai:isEnemy(target) then return 20 - target.hp end
+    end
+  end
+  if key == "#qiao__skill_han008_2-target" or key == "#qiao__skill_han008_2-invoke" then
+    local aim = currentData(ai)
+    return function(target)
+      if aim and aim.card and Cards.safeDamage(ai, aim.card, target) then return 20 - target.hp end
     end
   end
   if key == "#qiao__skill_qun016_1-target" or key == "#qiao__skill_qun016_1-invoke" then
