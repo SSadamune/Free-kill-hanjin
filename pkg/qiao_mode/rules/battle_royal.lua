@@ -3,9 +3,11 @@
 -- 进入时机沿用国战：回合开始满足条件、第一次洗牌设置以及其它技能调用
 -- HegUtil.enterBattleRoyalMode 的情况。汉晋房间始终安装“桃只能当杀/闪”的
 -- 汉晋来源，不再让上游 battle_royal& / new_battle_royal& 施加桃当酒等用途。
--- 不改上游 util.lua，也不替换全局函数；只在本房间内清理上游残留技能。
+-- 两个进入入口共用房间开关，上游技能的清理也只作用于本房间。
 local O = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local H = require "packages.hegemony.util"
 
 local M = {}
 
@@ -17,6 +19,20 @@ M.SOURCE_DEF = "battle_royal"
 M.SOURCE_PREFIX = "battle_royal:"
 M.PERSONAL_TAG = "qiao_personal_battle_royal"
 M.PERSONAL_PREFIX = "battle_royal_personal:"
+M.settingKey = "qiao_locked_battle_royal"
+
+local function enabled(room)
+  return room:getSettings("gameMode") ~= Modes.locked or room:getSettings(M.settingKey) == true
+end
+
+function M.install()
+  if M._installed then return end
+  M._installed = true
+  local upstreamEnter = H.enterBattleRoyalMode
+  H.enterBattleRoyalMode = function(room)
+    if enabled(room) then return upstreamEnter(room) end
+  end
+end
 
 function M.entered(room)
   return room ~= nil and room:getTag(M.TAG) == true
@@ -139,7 +155,7 @@ end
 
 --- 安装/补全鏖战状态。可重复调用；已进入时只补全汉晋来源与清理残留。
 function M.enter(room)
-  if room == nil or type(room.getTag) ~= "function" then return end
+  if room == nil or type(room.getTag) ~= "function" or not enabled(room) then return end
   Variants.apply(room)
   local already = M.entered(room)
   local hadUpstream = false
@@ -179,8 +195,7 @@ function M.onAcquire(room, player, name)
 end
 
 function M.shouldEnter(room)
-  if M.entered(room) then return false end
-  local H = require "packages.hegemony.util"
+  if not enabled(room) or M.entered(room) then return false end
   local threshold = #room.players > 6 and 5 or 4
   if #room.alive_players >= threshold then return false end
   local Counts=require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_qun"
@@ -199,7 +214,7 @@ function M.onTurnStart(room)
 end
 
 function M.onFirstShuffle(room)
-  if not M.entered(room) and room:getSettings("enterBattleRoyalOnFirstShuffle") then
+  if enabled(room) and not M.entered(room) and room:getSettings("enterBattleRoyalOnFirstShuffle") then
     M.enter(room)
     return true
   end

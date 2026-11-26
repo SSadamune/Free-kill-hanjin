@@ -4,6 +4,7 @@ local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
+local PrivateMarks = require "packages.qiao.pkg.qiao_mode.rules.private_marks"
 local WuLord = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
 local M = {}
@@ -228,13 +229,7 @@ function M.syncZuociMarks(room, holder, souls)
   if room == nil or holder == nil then return end
   souls = souls or {}
   room:setPlayerMark(holder, M.ZUOCI_COUNT_MARK, #souls)
-  -- 座位的 doNotify 会转发给旁观者。这里与本人重连使用同一条持有者连接。
-  local recipient = holder._splayer
-  if recipient:getState() ~= fk.Player_Robot then
-    recipient:doNotify("SetPlayerMark", cbor.encode({
-      holder.id, M.ZUOCI_PRIVATE_MARK, #souls > 0 and souls or 0,
-    }))
-  end
+  PrivateMarks.notify(holder, M.ZUOCI_PRIVATE_MARK, #souls > 0 and souls or 0)
 end
 
 function M.zuociSouls(room, player)
@@ -332,47 +327,15 @@ end
 --- 汉晋房间级接线：重连序列化时仅为「魂」当前持有者本人的快照补入私密武将名列表，
 --- 不向其他座位或旁观者（tellRoomToObserver 借用首座视角生成的 Observe 快照）泄露。
 function M.installServer(room)
-  if room == nil or room.qiaoBianSerializeInstalled then return end
-  room.qiaoBianSerializeInstalled = true
-  local originalTellObserver = room.tellRoomToObserver
-  if type(originalTellObserver) == "function" then
-    function room:tellRoomToObserver(observer)
-      local prev = self._qiao_serializing_observer
-      self._qiao_serializing_observer = true
-      local ok, err = pcall(originalTellObserver, self, observer)
-      self._qiao_serializing_observer = prev
-      if not ok then error(err, 0) end
-    end
-  end
-  local originalSerialize = room.serialize
-  function room:serialize(viewer)
-    local o = originalSerialize(self, viewer)
-    if self._qiao_serializing_observer then
-      return o
-    end
-    if viewer ~= nil and type(o) == "table" and type(o.players) == "table" then
-      local reg = self:getTag(M.ZUOCI_TAG)
-      if type(reg) == "table" then
-        local souls = {}
-        for _, entry in pairs(reg) do
-          if entry.holder_id == viewer.id and type(entry.souls) == "table" then
-            for _, name in ipairs(entry.souls) do
-              table.insertIfNeed(souls, name)
-            end
-          end
-        end
-        local pdata = o.players[viewer.id]
-        if #souls > 0 and type(pdata) == "table" and type(pdata.mark) == "string" then
-          local ok, marks = pcall(cbor.decode, pdata.mark)
-          if ok and type(marks) == "table" then
-            marks[M.ZUOCI_PRIVATE_MARK] = souls
-            pdata.mark = cbor.encode(marks)
-          end
-        end
+  PrivateMarks.register(room, M.ZUOCI_PRIVATE_MARK, function(currentRoom, viewer)
+    local souls = {}
+    for _, entry in pairs(currentRoom:getTag(M.ZUOCI_TAG) or {}) do
+      if entry.holder_id == viewer.id then
+        for _, name in ipairs(entry.souls) do table.insertIfNeed(souls, name) end
       end
     end
-    return o
-  end
+    if #souls > 0 then return souls end
+  end)
 end
 
 -- 武将变更完成监听：暗置或明置左慈武将牌被变更换走后，余下「魂」立即置入武将弃牌堆并清标记。

@@ -947,4 +947,26 @@ function Testqiao_bian_han_wei_shu:testWei022WanweiPartialVisibilityAndObserverW
   lu.assertFalse(observerWudu, "关闭旁观查看手牌时，旁观视角不应看到武督替代手牌")
 end
 
+function Testqiao_bian_han_wei_shu:testShownJiliAndYuejianUseSharedStatusPanel()
+  local room, smk = FkTest.room, p(1)
+  local status = require "packages.qiao.pkg.qiao_mode.skill_status"
+  local function entry(id)
+    return table.find(status.forPlayer(smk), function(item) return item.id == id end)
+  end
+  inRoom(function()
+    skill_test.installDualGenerals(room, smk, {
+      main = "qiao_heg__shu020", deputy = "qiao_test__shu_2", kingdom = "shu",
+    })
+    lu.assertEquals(entry("jili").value, tostring(smk:getAttackRange()))
+    smk:hideGeneral(false)
+    lu.assertNil(entry("jili"))
+    local mark = "qiao_wei022_yuejian-turn"
+    lu.assertTrue(status.watches(mark))
+    room:setPlayerMark(smk, mark, 1)
+    lu.assertEquals(entry(mark).title, "约俭")
+    room:setPlayerMark(smk, mark, 0)
+    lu.assertNil(entry(mark))
+  end)
+end
+
 return { name = "qiao_bian_han_wei_shu" }

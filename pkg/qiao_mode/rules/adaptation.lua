@@ -459,6 +459,13 @@ function A.prepare(room, use)
   return state.result
 end
 
+function A.choiceLabel(entry, index, satisfied)
+  -- The unrendered source field identifies duplicate condition/effect pairs.
+  local label = satisfied and "qiao_ignore_option_satisfied" or "qiao_ignore_option"
+  return string.format("%s:%d::qiao_condition_%s:qiao_adaptation_%s",
+    label, index, entry.condition, entry.effect)
+end
+
 local function tryIgnore(room, use, state, entry, natural)
   for _, token in ipairs(state.tokens) do
     if not token.spent then
@@ -475,7 +482,7 @@ local function tryIgnore(room, use, state, entry, natural)
           selected = available[1]
         elseif #available > 1 then
           local choices = table.map(available, function(e, i)
-            return "qiao_ignore_option:::" .. i .. ":qiao_condition_" .. e.condition
+            return A.choiceLabel(e, i)
           end)
           local choice = room:askToChoice(use.from, { choices = choices, cancelable = false,
             skill_name = "#qiao_adaptation_rule", prompt = "#qiao_adaptation_ignore" })

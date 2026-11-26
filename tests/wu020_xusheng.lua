@@ -185,10 +185,20 @@ local function checkPojunAtTurnEnd(targetDies)
   lu.assertEquals(room:getCardArea(second), Card.Void)
   local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
   assertMoveViews(first, Card.PlayerHand, Card.Void, { target })
+  local returnedLabel
+  local sendLog = room.sendLog
+  room.sendLog = function(self, log, ...)
+    if log.type == "#InvokeSkill" and log.arg == "qiao__wu020_pojun_rule" then
+      returnedLabel = Fk:translate(log.arg, "zh_CN")
+    end
+    return sendLog(self, log, ...)
+  end
   inRoom(function()
     if targetDies then room:killPlayer { who = target } end
     room.logic:trigger(fk.TurnEnd, player, TurnData:new(player, "game_rule", { Player.Start }))
   end)
+  room.sendLog = sendLog
+  if not targetDies then lu.assertEquals(returnedLabel, "破军") end
   local area = targetDies and Card.DiscardPile or Card.PlayerHand
   local viewers = targetDies and room.players or { target }
   assertMoveViews(first, Card.Void, area, viewers)

@@ -7,6 +7,7 @@ local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_target
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
 
 local skill = fk.CreateSkill { name = "qiao__bian_rules" }
@@ -184,10 +185,11 @@ end
 local function usedLimitedSkills(target)
   local choices, retinueSet = {}, {}
   if target == nil or target.dead then return choices, retinueSet end
-  for _, s in ipairs(target.player_skills) do
+  for _, s in ipairs(target:getAllSkills()) do
     local skel = s:getSkeleton()
     local name = skel and skel.name or s.name
-    if s:hasTag(Skill.Limited) and target:hasShownSkill(name)
+    if Sources.isGeneralSkill(s, target) and not Bian.isLimitedRetinueSkill(name)
+      and s:hasTag(Skill.Limited) and target:hasShownSkill(name)
       and (target:usedSkillTimes(name, Player.HistoryGame) > 0 or hasCustomLimitedUsed(target, name)) then
       table.insertIfNeed(choices, name)
     end

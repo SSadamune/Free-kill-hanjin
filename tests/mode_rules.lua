@@ -293,7 +293,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealMain()
   local p = room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealMain:::qiao_test__wei_1" } })
+  turnStart(p, { { "revealMain:::qiao_test__wei_1" }, "__cancel" })
   lu.assertEquals(p.general, "qiao_test__wei_1")
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
@@ -301,7 +301,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealDeputy()
   local p = room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealDeputy:::qiao_test__wei_2" } })
+  turnStart(p, { { "revealDeputy:::qiao_test__wei_2" }, "__cancel" })
   lu.assertEquals(p.general, "anjiang")
   lu.assertEquals(p.deputyGeneral, "qiao_test__wei_2")
 end
@@ -309,7 +309,7 @@ end
 function Testmode_rules:testRevealPromptAtTurnStartCanRevealBothOrCancel()
   local current, p = room(), room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
-  turnStart(p, { { "revealAll" } })
+  turnStart(p, { { "revealMain:::qiao_test__wei_1" }, { "qiao_turn_reveal_also_deputy" } })
   lu.assertEquals(p.general, "qiao_test__wei_1")
   lu.assertEquals(p.deputyGeneral, "qiao_test__wei_2")
 
@@ -320,6 +320,31 @@ function Testmode_rules:testRevealPromptAtTurnStartCanRevealBothOrCancel()
   lu.assertEquals(second.deputyGeneral, "anjiang")
 end
 
+function Testmode_rules:testRobotTurnStartUsesRevealFallback()
+  local current, robot = room(), room().players[2]
+  hidden(robot, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
+  robot.serverplayer:setState(fk.Player_Robot)
+
+  -- Let the engine receive the bot's real reply. Fix only the random fallback
+  -- so the regression consistently exercises a legal reveal rather than Cancel.
+  local fallbacks = {}
+  local main = "revealMain:::qiao_test__wei_1"
+  local deputy = "revealDeputy:::qiao_test__wei_2"
+  local alsoDeputy = "qiao_turn_reveal_also_deputy"
+  local pick = current.tableRandomPick
+  current.tableRandomPick = function(self, candidates, count)
+    if table.contains(candidates, main) or table.contains(candidates, alsoDeputy) then
+      table.insert(fallbacks, table.simpleClone(candidates))
+      return { candidates[1] }
+    end
+    return pick(self, candidates, count)
+  end
+  turnStart(robot)
+  lu.assertEquals(fallbacks, { { main, deputy, "Cancel" }, { alsoDeputy, "Cancel" } })
+  lu.assertEquals(robot.general, "qiao_test__wei_1")
+  lu.assertEquals(robot.deputyGeneral, "qiao_test__wei_2")
+end
+
 function Testmode_rules:testRevealProhibitionIsRespectedByTheRealPrompt()
   local current, p = room(), room().players[1]
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
@@ -327,32 +352,39 @@ function Testmode_rules:testRevealProhibitionIsRespectedByTheRealPrompt()
     current:setPlayerMark(p, "RevealProhibited", { "m" })
   end)
   local captured
-  local original = current.askToChoice
-  current.askToChoice = function(self, target, params)
+  local original = current.askToOptions
+  current.askToOptions = function(self, target, params)
     if target == p and params.prompt == "#HegRevealGenerals" then captured = params end
     return original(self, target, params)
   end
-  turnStart(p, { { "Cancel" } })
-  current.askToChoice = original
+  local attemptedReveal = false
+  local reveal = p.revealGeneral
+  p.revealGeneral = function(self, deputy)
+    attemptedReveal = true
+    return reveal(self, deputy)
+  end
+  turnStart(p, { "__cancel" })
+  p.revealGeneral = reveal
+  current.askToOptions = original
   lu.assertNotNil(captured)
-  lu.assertFalse(table.contains(captured.choices, "revealMain:::qiao_test__wei_1"))
-  lu.assertTrue(table.contains(captured.choices, "revealDeputy:::qiao_test__wei_2"))
+  lu.assertEquals(captured.options, { "revealDeputy:::qiao_test__wei_2" })
+  lu.assertFalse(attemptedReveal)
   lu.assertEquals(p.general, "anjiang")
+  lu.assertEquals(p.deputyGeneral, "anjiang")
 
-  -- Both positions prohibited: the upstream prompt offers no reveal option.
+  -- Both positions prohibited: there is no actionable reveal request.
   hidden(p, "qiao_test__wei_1", "qiao_test__wei_2", "wei")
   FkTest.runInRoom(function()
     current:setPlayerMark(p, "RevealProhibited", { "m", "d" })
   end)
   local prohibited
-  current.askToChoice = function(self, target, params)
+  current.askToOptions = function(self, target, params)
     if target == p and params.prompt == "#HegRevealGenerals" then prohibited = params end
     return original(self, target, params)
   end
   turnStart(p, nil)
-  current.askToChoice = original
-  lu.assertNotNil(prohibited)
-  lu.assertEquals(prohibited.choices, { "Cancel" })
+  current.askToOptions = original
+  lu.assertNil(prohibited)
   lu.assertEquals(p.general, "anjiang")
   lu.assertEquals(p.deputyGeneral, "anjiang")
 end
@@ -369,16 +401,18 @@ function Testmode_rules:testNativeLordConversionDoesNotPreemptQiaoAscension()
     end
   end)
   local prompts = {}
-  local original = current.askToChoice
-  current.askToChoice = function(self, target, params)
-    if target == p then table.insert(prompts, params.prompt) end
+  local original = current.askToOptions
+  current.askToOptions = function(self, target, params)
+    if target == p and params.prompt == "#HegRevealGenerals" then
+      table.insert(prompts, table.simpleClone(params.options))
+    end
     return original(self, target, params)
   end
-  turnStart(p, { { "Cancel" }, { "Cancel" } })
-  current.askToChoice = original
-  lu.assertTrue(table.contains(prompts, "#QiaoSecondLordConvert"))
-  lu.assertTrue(table.contains(prompts, "#HegRevealGenerals"))
-  lu.assertFalse(table.contains(prompts, "#HegPrepareConvertLord"))
+  turnStart(p, { { "Cancel" } })
+  current.askToOptions = original
+  lu.assertEquals(prompts, { {
+    A.ASCEND_ACCEPT, "qiao_turn_reveal:::" .. G.wei_normal.name, "qiao_turn_reveal_deputy:::" .. G.wei_deputy.name,
+  } })
   lu.assertEquals(p.general, "anjiang")
   lu.assertFalse(A.has_lord(current, "wei"))
 end

@@ -18,16 +18,11 @@ end
 --- 合纵标记属于实体牌。牌堆构建时由模式写入公开的 @@alliance 卡牌标记并同步到
 --- 客户端；静态 extra_data 只在服务端打印牌时另行写入。两端都接受这两种来源，
 --- 避免客户端只能看到牌面标记时无法点亮或提交装备区的神授思召。
-local function isAllianceCard(card)
-  if card == nil then return false end
-  if card:hasMark("@@alliance", MarkEnum.CardTempMarkSuffix) ~= nil then return true end
-  return M.isHeji(card)
-end
-
 local function canSelect(player, id, selected)
   if #selected >= 3 then return false end
   if table.contains(player:getCardIds(Player.Hand), id) then
-    return isAllianceCard(Fk:getCardById(id))
+    local card = Fk:getCardById(id)
+    return M.hasAllianceMark(card) or M.isHeji(card)
   end
   -- 装备区的授权来自这张武器本身，实体牌标记是手牌合纵的通用条件。
   return id == shenshouId(player) and player:getMark(ACTIVE) == 0

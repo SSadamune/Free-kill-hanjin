@@ -76,6 +76,7 @@ end
 function M.installServer(room)
   if room == nil or room.qiaoActiveSkillLimitsInstalled then return end
   room.qiaoActiveSkillLimitsInstalled = true
+  Ci.installPlayRequest()
 
   local handleReply = room.handleUseCardReply
   function room:handleUseCardReply(player, data, params)
@@ -91,7 +92,7 @@ function M.installServer(room)
       if (data.card.skill == Array.skill or data.card.skill == Bian.ZUOCI_SKILL)
         and not skill:canUse(player) then return nil end
       if not Selection.validDirectOption(skill, player, data) then return nil end
-      if data.card.skill == Ci.CONSUME and (not Ci.canChoose(player, data.interaction_data)
+      if data.card.skill == Ci.CONSUME and (not Ci.validAction(player, data.interaction_data, self)
         or #(data.card.subcards or {}) > 0 or #(data.targets or {}) > 0) then return nil end
     end
     return handleReply(self, player, data, params)

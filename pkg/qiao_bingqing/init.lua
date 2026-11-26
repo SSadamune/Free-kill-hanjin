@@ -2,6 +2,7 @@
 -- 独立包：登记 EM(JIN001) 君司马炎；其余内容仍为空。
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local package = Package:new("qiao_bingqing", Package.GeneralPack)
 package.extensionName = "qiao"
 package.game_modes_whitelist = Modes.names
@@ -41,6 +42,7 @@ for _, data in ipairs(Sources) do
     generalObj.prefix = general.id == "qiao_heg__em_han001" and "qiao_prefix_shi_vec" or "qiao_prefix_nu"
     generalObj.mainMaxHpAdjustedValue = general.mainHpAdjust or 0
     generalObj.deputyMaxHpAdjustedValue = general.deputyHpAdjust or 0
+    if #general.guests > 0 then Guest.registerGuest(general.id, general.guests) end
     for _, skill in ipairs(general.skills) do
       if skill.related then generalObj:addRelatedSkill(skill.id) else generalObj:addSkill(skill.id) end
     end

@@ -39,20 +39,10 @@ GraphicsBox {
       required property string modelData
       generalName: modelData
       scene: root.parent
-      selectable: !root.dataModel.disable_cards.includes(modelData)
+      selectable: root.dataModel.max > 0 && !root.dataModel.disable_cards.includes(modelData)
       autoBack: false
-
-      onSelectedChanged: {
-        chosenInBox = selected;
-        root.dataModel.toggleGeneral(modelData, selected);
-      }
-
-      Connections {
-        target: root.dataModel
-        function onRequestGeneralUnselect(name) {
-          if (name === generalCard.modelData) generalCard.selected = false;
-        }
-      }
+      chosenInBox: Array.isArray(root.dataModel.result) && root.dataModel.result.includes(modelData)
+      onClicked: if (selectable) root.dataModel.toggleGeneral(modelData, !chosenInBox)
 
       onRightClicked: root.parent.showInfoPopup(
         Qt.createComponent("LunarLtk.Pages.InfoPopups", "GeneralDetail"), { generals: [modelData] })
@@ -64,6 +54,14 @@ GraphicsBox {
     anchors.bottomMargin: 10
     anchors.horizontalCenter: parent.horizontalCenter
     spacing: 8
+
+    MetroButton {
+      visible: root.dataModel.max === 0 && root.dataModel.cards.length > 0
+      text: Lua.tr("Show General Detail")
+      onClicked: root.parent.showInfoPopup(
+        Qt.createComponent("LunarLtk.Pages.InfoPopups", "GeneralDetail"),
+        { generals: Array.from(root.dataModel.cards) })
+    }
 
     TextField {
       id: search
@@ -99,5 +97,4 @@ GraphicsBox {
     }
   }
 
-  Component.onCompleted: dataModel.syncOkEnabled()
 }

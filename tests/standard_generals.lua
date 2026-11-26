@@ -204,6 +204,7 @@ function Teststandard_generals:testEverySkillIsDisplayOnlyWithExactTextAndOrder(
   for _, data in ipairs(Data.retinues) do
     retinueTotal = retinueTotal + 1
     lu.assertEquals(Fk:translate(data.skill.id), data.name)
+    lu.assertTrue(Fk.skills[data.skill.id]:isPlayerSkill(), data.skill.id)
     lu.assertEquals(Fk:translate(":" .. data.skill.id), data.skill.text)
     local skel = assert(Fk.skill_skels[data.skill.id], "Missing retinue skeleton")
     if skel.qiaoImplemented == true then

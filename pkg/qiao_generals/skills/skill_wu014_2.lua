@@ -2,8 +2,7 @@
 --
 -- 出牌阶段限一次：选择两名其他角色，弃置等同于其手牌数差的牌，令其交换
 -- 手牌；然后可以对其中手牌未增加的角色纵横“好施”，直到其下一个回合结束。
--- 弃置是发动消耗，按项目通则须实际弃置至少一张，手牌数相等（差为 0）不能
--- 作为消耗支付；因此不能选择手牌数相等的两名角色。
+-- 手牌数相等时可以选择两名角色，直接交换，不产生弃牌事件。
 -- “纵横好施”由预注册静态技能 `qiao__wu_dimeng_expiry` 在目标自己的下一个
 -- 回合结束时按来源移除，不会因授予时所在回合（含额外回合）提前清理。
 local skill = fk.CreateSkill {
@@ -45,7 +44,7 @@ end
 
 local function canPay(a, b, minCards, maxCards)
   local diff = handGap(a, b)
-  return a ~= b and diff > 0 and diff >= minCards and diff <= maxCards
+  return a ~= b and diff >= minCards and diff <= maxCards
 end
 
 local function canPayAnyPair(player)
@@ -53,7 +52,7 @@ local function canPayAnyPair(player)
   local owned = discardableCount(player)
   for i = 1, #list do
     for j = i + 1, #list do
-      if canPay(list[i], list[j], 1, owned) then return true end
+      if canPay(list[i], list[j], 0, owned) then return true end
     end
   end
   return false
@@ -63,7 +62,7 @@ skill:addEffect("active", {
   anim_type = "control",
   prompt = "#qiao__skill_wu014_2-prompt",
   target_num = 2,
-  min_card_num = 1,
+  min_card_num = 0,
   max_card_num = function(self, player) return discardableCount(player) end,
   include_equip = true,
   max_phase_use_time = 1,
@@ -82,7 +81,7 @@ skill:addEffect("active", {
     end) ~= nil
   end,
   feasible = function(self, player, targets, cards)
-    return #targets == 2 and #cards > 0 and #cards == handGap(targets[1], targets[2])
+    return #targets == 2 and #cards == handGap(targets[1], targets[2])
   end,
   can_use = function(self, player)
     return self:withinTimesLimit(player, Player.HistoryPhase) and canPayAnyPair(player)
@@ -98,13 +97,13 @@ skill:addEffect("active", {
     local beforeA, beforeB = a:getHandcardNum(), b:getHandcardNum()
     local diff = math.abs(beforeA - beforeB)
     local costCards = effect.cards or {}
-    if diff == 0 or #costCards ~= diff then return end
+    if #costCards ~= diff then return end
     local seen = {}
     for _, id in ipairs(costCards) do
       if seen[id] or not canDiscard(player, id) then return end
       seen[id] = true
     end
-    room:throwCard(costCards, skill.name, player, player)
+    if #costCards > 0 then room:throwCard(costCards, skill.name, player, player) end
     if player.dead or a.dead or b.dead or a:isRemoved() or b:isRemoved() then return end
 
     room:swapAllCards(player, { a, b }, skill.name)

@@ -10,9 +10,11 @@ local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skil
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
@@ -256,6 +258,39 @@ end
 
 local QiaoClient = BaseClient:subclass("QiaoClient")
 
+local hiddenGeneralMarks = { __heg_general = true, __heg_deputy = true }
+
+function QiaoClient:ownHiddenGenerals(playerId)
+  if self.observing or self.replaying or not Self or Self.id ~= playerId
+    or Self.general ~= "anjiang" or Self.deputyGeneral ~= "anjiang" then return false end
+  local main = Self:getMark("__heg_general")
+  local deputy = Self:getMark("__heg_deputy")
+  if not Fk.generals[main] or not Fk.generals[deputy] then return false end
+  return { main, deputy }
+end
+
+function QiaoClient:handleSetPlayerMark(data)
+  BaseClient.handleSetPlayerMark(self, data)
+  if SkillStatus.watches(data[2]) then
+    self:notifyUI("QiaoSkillStatusChanged", {})
+  end
+  if hiddenGeneralMarks[data[2]] and Self and data[1] == Self.id then
+    self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
+  end
+end
+
+function QiaoClient:sendDataToUI(data)
+  BaseClient.sendDataToUI(self, data)
+  self:notifyUI("QiaoSkillStatusChanged", {})
+  self:notifyUI("QiaoGuestFactionsChanged", {})
+  self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
+  self:notifyUI("QiaoDiscardChanged", {})
+end
+
+function QiaoClient:skillStates(playerId)
+  return SkillStatus.forPlayer(self:getPlayerById(playerId))
+end
+
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
 --- 辅助／额外发动与无次数声明的转化由 M.appliesTo 排除，其他模式由 M.exhausted 排除。
 local function exhaustedActiveSkill(request, name)
@@ -280,7 +315,6 @@ end
 
 local pileActions = {
   QiaoEdict = Han.CONSUME,
-  QiaoCi = Ci.CONSUME,
 }
 
 local pileActionUpdates = {
@@ -296,33 +330,50 @@ local pileActionUpdates = {
 function QiaoPlayCard:canUsePileAction(holderId, skill)
   return RemovedTargets.inMode(self.room) and self.player.id == holderId
     and self.skill_name == nil and self.selected_card == nil
-    and (skill == Ci.CONSUME or self.player:hasSkill(skill)) and self:skillButtonValidity(skill)
+    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
+  if elemType == "Interaction" and self.skill_name == Ci.CONSUME then
+    if action == "cancel" then
+      self:doCancelButton()
+    elseif action == "finish" and Ci.validAction(self.player, data) then
+      self:updateInteraction(data, true)
+      if self:feasible() then return ReqPlayCard.update(self, "Button", "OK", action, data) end
+    end
+    return false
+  end
   local skill = pileActions[elemType]
   if not skill then
     return ReqPlayCard.update(self, elemType, id, action, data)
   end
   if action ~= "click" or not self:canUsePileAction(id, skill) then return false end
-  local chosenCi = elemType == "QiaoCi" and data and data.general
-  if elemType == "QiaoCi" and not Ci.canChoose(self.player, chosenCi) then return false end
   self:selectSkill(skill, { selected = true })
   if not self:feasible() then
     self:doCancelButton()
     return false
   end
-  if chosenCi then Fk.skills[skill].interaction.data = chosenCi end
-  local accepted = ReqPlayCard.update(self, "Button", "OK", action, data)
-  if chosenCi then Fk.skills[skill].interaction.data = nil end
-  return accepted
+  return ReqPlayCard.update(self, "Button", "OK", action, data)
 end
 
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
+  self.lockedPairing = nil
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
+end
+
+function QiaoClient:playCard(data)
+  self.qiaoCiActions = type(data) == "table" and data.qiaoCiActions or nil
+  return BaseClient.playCard(self, data)
+end
+
+function QiaoClient:getSettings(key)
+  if key == "enableFreeAssign" and BaseClient.getSettings(self, "gameMode") == Modes.locked then
+    return false
+  end
+  return BaseClient.getSettings(self, key)
 end
 
 function QiaoClient:canUsePileAction(holderId, action)
@@ -336,11 +387,6 @@ function QiaoClient:canConsumeEdict(holderId)
   return self:canUsePileAction(holderId, "QiaoEdict")
 end
 
-function QiaoClient:canConsumeCi(holderId, general)
-  return self:canUsePileAction(holderId, "QiaoCi")
-    and Ci.canChoose(self.current_request_handler.player, general)
-end
-
 function QiaoClient:ciCardsForDisplay(holderId)
   local holder = self:getPlayerById(holderId)
   return holder and holder:getMark(Ci.MARK) ~= 0 and Ci.cards(holder) or false
@@ -352,34 +398,69 @@ function QiaoClient:handleSetBanner(data)
   if data[1] == Han.TRICK_BANNER then
     self:notifyUI("QiaoPileActionChanged", {})
   end
+  if data[1] == "all_kingdoms" then
+    self:notifyUI("QiaoGuestFactionsChanged", {})
+  end
+  if data[1] == "qiao_discard_before_turn" then
+    self:notifyUI("QiaoDiscardChanged", {})
+  end
 end
 
 function QiaoClient:guestIllustrationsEnabled()
   return self.settings ~= nil and Guest.replacementEnabled(self)
 end
 
+function QiaoClient:guestCardFactions()
+  local allowed = self:getBanner("all_kingdoms")
+  if not self:guestIllustrationsEnabled() or not allowed then return {} end
+  local factions = {}
+  for name, registered in pairs(Guest.guests) do
+    local entry = Guest.resolve(name, allowed)
+    if entry and entry.guest then factions[name] = registered end
+  end
+  return factions
+end
+
 -- 读取客户端同步的实体弃牌堆。桌面动画消失时，这些牌可能仍在堆中。
 function QiaoClient:discardCardsForDisplay()
   local cards = {}
   local lordEquipment = Fk.packages.qiao_cards.qiao.lordEquipment
+  local beforeTurn = self:getBanner("qiao_discard_before_turn")
+  local older = {}
+  for _, id in ipairs(beforeTurn or {}) do older[id] = true end
   for index = #self.discard_pile, 1, -1 do
     local id = self.discard_pile[index]
     local card = Fk:getCardById(id, true)
+    local thisTurn = beforeTurn ~= nil and not older[id]
     if card and Self:cardVisible(id) then
-      local marks = table.map(Adaptation.displayEntries(card), function(entry)
-        return Fk:translate("qiao_condition_" .. entry.condition)
-      end)
-      if Fk.packages.qiao_cards.qiao_cards.isHeji(card) then table.insert(marks, "合纵") end
+      local fallback = {}
+      -- 直接弃置的可见牌可能未经过手牌／处理区的应变显示同步。
+      for index, entry in ipairs(Adaptation.displayEntries(card)) do
+        local key = Adaptation.markKey(index, entry.condition)
+        if card:getMark(key) == 0 then
+          table.insert(fallback, { k = key, v = Adaptation.markValue(entry) })
+        end
+      end
+      if Cards.isHeji(card) and not Cards.hasAllianceMark(card) then
+        table.insert(fallback, { k = Cards.ALLIANCE_PUBLIC, v = 1 })
+      end
       table.insert(cards, {
-        id = id, name = Fk:translate(card.name), suit = card:getSuitString(), rank = card:getNumberStr(),
-        marks = table.concat(marks, " · "),
+        id = id, name = Fk:translate(card.name), markFallbacks = fallback,
         lord = lordEquipment[card.name] ~= nil,
+        thisTurn = thisTurn,
       })
     else
-      table.insert(cards, { name = Fk:translate("unknown_card") })
+      table.insert(cards, { name = Fk:translate("unknown_card"), thisTurn = thisTurn })
     end
   end
   return cards
+end
+
+function QiaoClient:setCardMark(data)
+  BaseClient.setCardMark(self, data)
+  if data[2]:startsWith("@") and self:getCardArea(data[1]) == Card.DiscardPile then
+    self:notifyUI("QiaoDiscardChanged", {})
+  end
 end
 
 function QiaoClient:handleShuffleDrawPile(data)
@@ -435,6 +516,17 @@ function LtkUI:getCardData(id, filterCard)
   return data
 end
 
+local getSameGenerals = LtkUI.getSameGenerals
+function LtkUI:getSameGenerals(name)
+  local names = getSameGenerals(self, name)
+  local room = Fk:currentRoom()
+  local pairing = room and room.lockedPairing
+  if pairing then
+    return table.filter(names, function(alternative) return pairing[alternative] ~= nil end)
+  end
+  return names
+end
+
 function QiaoClient:virtualCardPicture(name)
   local formal = "qiao__" .. name
   if Fk.all_card_types[formal] and Fk.all_card_types[formal].package.extensionName == "qiao" then
@@ -462,10 +554,28 @@ function QiaoClient:parseMsg(msg, nocolor, visible_data)
 end
 
 function QiaoClient:notifyUI(command, data)
+  if self.settings and self:getSettings("gameMode") == Modes.locked then
+    if command == "CustomDialog" then
+      local model = data.component and data.component.model
+      local extra = model and model.prop and model.prop.extraData
+      self.lockedPairing = extra and extra.locked and extra.pairing or nil
+    elseif command == "CancelRequest" or command == "GameStart" or command == "GameOver"
+      or command == "ChangeSelf" then
+      self.lockedPairing = nil
+    end
+  end
+  if command == "SetPlayerMark" and SkillStatus.watches(data[2]) and isQiaoMode() then
+    return
+  end
   if command == "SetPlayerMark" and data[2] == Ci.MARK and isQiaoMode() then
     -- Both live updates and the rejoin snapshot take this path. The room's
     -- picture-mark row owns the button, so omit the default text mark.
     return BaseClient.notifyUI(self, "QiaoCiChanged", { data[1] })
+  end
+  if command == "AskForChoices" and data[8] and not data[7]
+    and data[3][1] == 1 and data[3][2] == 1 and isQiaoMode() then
+    -- Keep the server request and its AI strategy. Let the room choose where to display it.
+    return BaseClient.notifyUI(self, "QiaoSingleChoice", data)
   end
   if (command == "AddSkill" or command == "LoseSkill") and data[3]
     and isQiaoMode() and not SkillPrelight.canPrelight(data[2]) then
@@ -487,15 +597,25 @@ function QiaoClient:notifyUI(command, data)
     data = stripRichText(data)
   end
   if command == "CustomDialog" and data.component
-    and data.component.url == "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml"
+    and (data.component.url == "packages/utility/qml/ChooseGeneralsAndChoiceBox.qml"
+      or data.component.url == "packages/hegemony/qml/KnownBothBox.qml")
     and isQiaoMode() then
     data = table.simpleClone(data)
     data.component = table.simpleClone(data.component)
     data.component.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoiceBox.qml"
+    if data.component.model
+      and data.component.model.url == "packages/utility/qml/models/ChooseGeneralsAndChoiceModel.qml" then
+      data.component.model = table.simpleClone(data.component.model)
+      data.component.model.url = "packages/qiao/pkg/qiao_mode/qml/QiaoGeneralChoicesModel.qml"
+    end
   end
   BaseClient.notifyUI(self, command, data)
+  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.isJili(data[2]) and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
+  end
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
+    BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})

@@ -48,6 +48,7 @@ function M.registerRetinue(general, skillName)
   end
   assert(type(skillName) == "string" and Fk.skills[skillName] ~= nil,
     "retinue_instance_sources: missing retinue skill for " .. general)
+  assert(Fk.skills[skillName]:isPlayerSkill(), "Retinue skill must be a player skill: " .. skillName)
   mapping[general] = skillName
   return skillName
 end
@@ -175,6 +176,7 @@ function M.migrateExchange(room, context)
         skill = plan.skill,
         origin = "entity",
         position = plan.toDeputy and "deputy" or "main",
+        skillLost = plan.instance.skillLost,
       })
       -- 实例身份跟牌：保留原 id 与整局 uses，不用姓名/位置作副本唯一键。
       for key,value in pairs(plan.instance) do
@@ -191,6 +193,13 @@ function M.migrateExchange(room, context)
   end
   M.syncRoom(room, true)
   return true
+end
+
+if ok then
+  -- 翼从在牌面保留技能说明。对局由实例提供技能，避免换位或刷新时重复授技。
+  Exchange.registerSkillProviderFilter(function(room, general, skillName)
+    if isQiaoRoom(room) and mapping[general] == skillName then return false end
+  end)
 end
 
 -- 交换中间态保护：Exchange.exchange 内部会先 setPosition，再由 Commander

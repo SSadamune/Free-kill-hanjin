@@ -19,8 +19,6 @@ local skill = fk.CreateSkill {
 Fk:loadTranslationTable {
   ["qiao__bronze_sparrow_skill"] = "铜雀",
   ["#qiao__bronze_sparrow-choose"] = "铜雀：你可以选择一项应变效果，无视其条件",
-  ["qiao__bronze_sparrow_option"] = "%arg（%arg2）",
-  ["qiao__bronze_sparrow_option_satisfied"] = "%arg（%arg2）（已满足）",
 }
 
 --- 本次使用中【铜雀】可忽略的条目。“无视次数”在 PreCardUse 已经锁定，
@@ -46,11 +44,7 @@ skill:addEffect(fk.AfterCardUseDeclared, {
     local natural = A.snapshot(room, data)
     local choices = {}
     for index, entry in ipairs(entries) do
-      local label = natural[entry.condition] and "qiao__bronze_sparrow_option_satisfied"
-        or "qiao__bronze_sparrow_option"
-      -- 将序号放入模板未使用的来源字段，避免效果和条件相同的条目使用同一回包。
-      choices[index] = string.format("%s:%d::qiao_adaptation_%s:qiao_condition_%s",
-        label, index, entry.effect, entry.condition)
+      choices[index] = A.choiceLabel(entry, index, natural[entry.condition])
     end
     local choice = Selection.askOption(room, player, {
       choices = choices,

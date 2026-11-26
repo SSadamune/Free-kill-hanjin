@@ -304,6 +304,19 @@ function M.positionSkills(generalName, isDeputy, isLord, includeRelated, room)
   return result
 end
 
+--- Maps the skills still supplied by a position to their actual engine IDs.
+function M.positionSkillKeys(room, player, deputy, includeRelated)
+  local general = M.actualGeneral(player, deputy)
+  local sameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
+  local names = {}
+  for _, name in ipairs(M.positionSkills(general, deputy, isLordPlayer(room, player), includeRelated, room)) do
+    if M.cardProvidesSkill(room, general, name) then
+      names[sameName.historyKey(player, general, name)] = name
+    end
+  end
+  return names
+end
+
 local function normalizePosition(position)
   if not isTable(position) or not position.player or type(position.player.id) ~= "number" then
     return nil

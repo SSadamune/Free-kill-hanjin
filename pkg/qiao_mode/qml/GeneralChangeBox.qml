@@ -34,12 +34,7 @@ GraphicsBox {
   height: grid.height + 104
 
   function factionsFor(name) {
-    const factions = Array.from(guestFactions[name] ?? []);
-    if (factions.length > 2) {
-      const order = ["han", "wei", "shu", "wu", "qun", "jin"];
-      factions.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    }
-    return factions;
+    return GuestIllustration.roomFactions(guestFactions[name]);
   }
 
   function matchesPartner(name) {
@@ -94,17 +89,12 @@ GraphicsBox {
         readonly property var factions: root.factionsFor(generalName)
         dataModel: {
           const properties = { heg: true, inPosition: root.isDeputy ? -1 : 1 };
-          if (factions.length > 0) {
-            properties.kingdom = factions[0];
-            properties.subkingdom = factions[1] ?? "";
-          }
           properties.hasCompanion = root.matchesPartner(generalName);
           return Ltk.createGeneralCardModel(generalName, properties);
         }
-        cardFrontSource: GuestIllustration.picture(generalName, root.guestIllustrations) ?? dataModel.frontSkin
-
-        GuestFactionBadges {
+        GuestCardAppearance {
           card: card
+          enabledInContext: root.guestIllustrations
           factions: card.factions
         }
         GuestFactionBorder {

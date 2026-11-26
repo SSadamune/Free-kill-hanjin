@@ -20,34 +20,27 @@ GraphicsBox {
   // Dynamic CustomDialog instances do not inherit the room page's bare
   // `roomScene` context. Use the public singleton route set by RoomBase.qml.
   readonly property var scene: Ltk.roomScene
+  readonly property bool freeAssignmentEnabled: dataModel.extraData.freeAssign
+    ?? Lua.client.getSettings("enableFreeAssign")
+  readonly property bool guestIllustrations: dataModel.extraData.guestIllustrations
+    ?? GuestIllustration.enabledInRoom()
 
   property alias generalCardList: generalCardList
+
+  SelectionAscensionBadges {
+    cards: generalCardList
+    eligible: root.dataModel.extraData.ascensions ?? ({})
+  }
 
   property var draggingCard: null
 
   property bool waitingForRedraw: false
 
   function displayFactions(name) {
-    const kingdoms = Array.from(dataModel.extraData.guestFactions[name] ?? []);
-    if (kingdoms.length >= 3) {
-      const rank = { han: 0, wei: 1, shu: 2, wu: 3, qun: 4, jin: 5 };
-      kingdoms.sort((a, b) => (rank[a] ?? 6) - (rank[b] ?? 6));
-    }
-    return kingdoms;
+    return GuestIllustration.roomFactions(dataModel.extraData.guestFactions?.[name]);
   }
 
-  function setFactions(model) {
-    const kingdoms = displayFactions(model.name);
-    if (kingdoms.length > 0) {
-      model.kingdom = kingdoms[0];
-      model.subkingdom = kingdoms[1] || "";
-    }
-  }
-
-  onShown: {
-    for (const model of dataModel.generalDict) setFactions(model);
-    arrangeCards();
-  }
+  onShown: arrangeCards()
 
   function updateData(message) {
     const [slot, original, next, extra] = message;
@@ -56,9 +49,7 @@ GraphicsBox {
     dataModel.extraData = extra;
     if (next !== original) {
       dataModel.moveGeneral(index, false);
-      const model = Ltk.createGeneralCardModel(next);
-      setFactions(model);
-      dataModel.changeGeneral(index, model);
+      dataModel.changeGeneral(index, Ltk.createGeneralCardModel(next));
     }
     waitingForRedraw = false;
   }
@@ -67,10 +58,14 @@ GraphicsBox {
     target: root.dataModel
     function onGeneralChanged(idx, newName) {
       const item = generalCardList.itemAt(idx);
-      root.setFactions(root.dataModel.generalDict[idx]);
       item.dataModel = root.dataModel.generalDict[idx];
       arrangeCards();
     }
+  }
+
+  Component {
+    id: freeAssignment
+    QiaoFreeAssign {}
   }
 
   title.text: dataModel.promptText
@@ -212,7 +207,7 @@ GraphicsBox {
       required property int index
       dataModel: root.dataModel.generalDict[index]
       generalName: dataModel.name
-      preferredSkin: Config.enabledSkins?.[generalName] ?? ""
+      preferredSkin: root.freeAssignmentEnabled ? "" : (Config.enabledSkins?.[generalName] ?? "")
       selectable: {
         const result = root.dataModel.resultInt?.map(e => Number(e));
         if (result) {
@@ -223,12 +218,11 @@ GraphicsBox {
       draggable: !root.draggingCard || root.draggingCard === this
 
       readonly property var factions: root.displayFactions(dataModel.name)
-      cardFrontSource: GuestIllustration.picture(dataModel.name,
-        root.dataModel.extraData.guestIllustrations ?? GuestIllustration.enabledInRoom()) ?? dataModel.frontSkin
       readonly property var factionColors: ({ wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
                                                qun: "#92959a", han: "#aa832e", jin: "#845ba8" })
-      GuestFactionBadges {
+      GuestCardAppearance {
         card: card
+        enabledInContext: root.guestIllustrations
         factions: card.factions
       }
 
@@ -263,12 +257,11 @@ GraphicsBox {
       }
 
       onRightClicked: {
-        // The server puts the authoritative flag into the request data. Keep the
-        // room-setting lookup as a fallback for clients where it is available,
-        // but never depend on it to open the entry.
-        if (root.dataModel.extraData?.freeAssign || Lua.client.getSettings("enableFreeAssign")) {
-          root.scene.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "FreeAssign"),
-            { dataModel: root.dataModel, index: index });
+        if (root.freeAssignmentEnabled) {
+          root.scene.showInfoPopup(freeAssignment, {
+            dataModel: root.dataModel, index, guestIllustrations: root.guestIllustrations,
+            displayFactions: name => root.displayFactions(name),
+          });
         }
       }
 

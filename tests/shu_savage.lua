@@ -136,12 +136,22 @@ function Testqiao_shu_savage:testLiehenPindianWinGainsCard()
   inRoom(function() room().current = p1; p1.phase = Player.Play; p2.hp = p2.maxHp end)
   local oldPindian = p1.pindian
   p1.pindian = function() return { results = { [p2] = { winner = p1 } } } end
+  local cardPrompt
+  local choose = room().askToChooseCards
+  room().askToChooseCards = function(self, player, params)
+    if params.skill_name == LIEHEN then cardPrompt = params.prompt end
+    return choose(self, player, params)
+  end
   FkTest.setNextReplies(p1, { "1" })
   local before = #p2:getCardIds("he")
   inRoom(function()
     room():useCard(UseCardData:new { from = p1, tos = { p2 }, card = Fk:getCardById(slash), extra_data = {} })
   end)
   p1.pindian = oldPindian
+  room().askToChooseCards = choose
+  local key, source = table.unpack(cardPrompt:split(":"))
+  lu.assertEquals(tonumber(source), p2.id)
+  lu.assertEquals(Fk:translate(key, "zh_CN"), "烈刃：选择 %src 的一张牌获得")
   lu.assertEquals(p2.hp, p2.maxHp - 1)
   lu.assertEquals(#p2:getCardIds("he"), before - 1)
   lu.assertTrue(#p1:getCardIds("he") >= 2)

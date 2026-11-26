@@ -112,6 +112,7 @@ skill:addEffect(fk.PreCardUse, {
 
 Fk:loadTranslationTable {
   ["qiao__skill_jin005_1"] = "柔克",
+  [FOLLOW_LISTENER] = "柔克",
   [":qiao__skill_jin005_1"] = "与你势力相同的角色每回合使用首张【杀】可以改为冰【杀】，然后若此牌未造成伤害，你可以令至多两名角色横置或重置。你的手牌上限+X（X为横置角色数）。",
   ["#qiao__skill_jin005_1-invoke"] = "柔克：是否将你本回合使用的首张【杀】改为冰【杀】",
   ["#qiao__skill_jin005_1-follow"] = "柔克：你可以选择至多两名角色，切换其横置状态",

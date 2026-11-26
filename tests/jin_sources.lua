@@ -3,6 +3,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local Qianxi = require "packages.qiao.pkg.qiao_generals.util.shu019_qianxi"
 local JinDeck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
 
@@ -129,6 +130,120 @@ function Testqiao_jin_sources:testEjueLosesNamedGeneralSkillAndRaisesDamage()
   lu.assertTrue(owner:hasSkill(EJUE))
 end
 
+function Testqiao_jin_sources:testEjueOffersOnlyTheFourGeneralSkillsInTheReportedPair()
+  local room = prepare("qiao_heg__jin010")
+  local owner, victim = p1(), p2()
+  local ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+  local commander = "qiao_commander_ability"
+  local vanguard = "vanguard_skill&"
+  local equip = "qiao__kylin_bow_skill"
+  local taikang = "qiao__skill_em_jin001_1"
+  inRoom(function()
+    skill_test.installDualGenerals(room, owner, {
+      main = "qiao_heg__em_jin001", deputy = "qiao_heg__jin010", kingdom = "jin",
+    })
+    room:handleAddLoseSkills(owner, ci.SKILL, taikang, false, true)
+    room:handleAddLoseSkills(owner, commander .. "|" .. vanguard, "qiao__general_card_skills_rule", false, true)
+    ci.save(room, owner, { "qiao_heg__jin004" })
+    local bow = room:printCard("qiao__kylin_bow", Card.Heart, 5)
+    room:moveCardTo(bow, Card.PlayerEquip, owner, fk.ReasonJustMove)
+  end)
+  for _, name in ipairs({ ci.SKILL, ci.CONSUME, commander, vanguard, equip }) do
+    lu.assertTrue(owner:hasSkill(name, true, true), name)
+  end
+
+  local options
+  skill_test.withSkillRequests(room, EJUE, {
+    askToChoice = function(_, _, params)
+      options = params.choices
+      return "Cancel"
+    end,
+  }, function()
+    inRoom(function() room:damage { from = owner, to = victim, damage = 1 } end)
+  end)
+
+  lu.assertNotNil(options)
+  lu.assertEquals(table.map(options, function(label) return label:match("^%[%d+%] (.-)（") end), {
+    Fk:translate(taikang), Fk:translate("qiao__skill_em_jin001_2"),
+    Fk:translate("qiao__skill_em_jin001_3"), Fk:translate(SHANGSHI),
+  })
+end
+
+function Testqiao_jin_sources:testEjueLosesOneRetinueSkillSourceAtATime()
+  local room, owner, victim, other = prepare("qiao_heg__jin010"), p1(), p2(), p3()
+  local retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+  local sources = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
+  local general, skill = "qiao_heg__retinue_bingzhou_langqi", "qiao__retinue_skill_bingzhou_langqi"
+  inRoom(function()
+    room:changeHero(owner, general, false, true, false, false, false)
+    room:setPlayerMark(owner, "__heg_deputy", general)
+    retinues.grant(owner, { general = general, skill = skill, origin = "granted" })
+  end)
+  lu.assertTrue(Fk.skills[skill]:isPlayerSkill(owner))
+  lu.assertEquals(Fk:translate(skill), Fk:translate(general))
+  lu.assertEquals(retinues.countForSkill(owner, skill), 2)
+
+  local function payWith(target, label, expectedChoices)
+    local startedHp = target.hp
+    skill_test.withSkillRequests(room, EJUE, {
+      askToChoice = function(_, _, params)
+        local options = table.filter(params.choices, function(choice)
+          return choice:find("并州狼骑", 1, true) ~= nil
+        end)
+        lu.assertEquals(#options, expectedChoices)
+        return assert(table.find(options, function(choice) return choice:find(label, 1, true) ~= nil end))
+      end,
+    }, function()
+      inRoom(function() room:damage { from = owner, to = target, damage = 1 } end)
+    end)
+    lu.assertEquals(target.hp, startedHp - 2)
+  end
+
+  payWith(victim, "（副将位翼从）", 2)
+  lu.assertTrue(retinues.entityInstances(owner, true)[1].skillLost)
+  lu.assertTrue(owner:hasSkill(skill, true, true))
+  lu.assertEquals(retinues.countForSkill(owner, skill), 1)
+  payWith(other, "（翼从）", 1)
+  inRoom(function() sources.syncPlayer(owner) end)
+  lu.assertFalse(owner:hasSkill(skill, true, true))
+  lu.assertEquals(owner.deputyGeneral, general)
+  lu.assertEquals(retinues.publicCount(owner), 2)
+  lu.assertEquals(retinues.publicInstances(owner), {})
+end
+
+function Testqiao_jin_sources:testEjueCanLoseAGrantedGeneralSkill()
+  local room = prepare("qiao_heg__jin010")
+  local owner, victim = p1(), p2()
+  local direct = "qiao__skill_han001_1"
+  local derived = "qiao__skill_jin001_2"
+  local startedHp = victim.hp
+  inRoom(function()
+    room:handleAddLoseSkills(owner, direct, nil, false, true)
+    room:handleAddLoseSkills(owner, derived, SHANGSHI, false, true)
+  end)
+  lu.assertTrue(owner:hasSkill(direct))
+  lu.assertTrue(owner:hasSkill(derived))
+
+  local options
+  skill_test.withSkillRequests(room, EJUE, {
+    askToChoice = function(_, _, params)
+      options = params.choices
+      return table.find(options, function(label)
+        return label:find(Fk:translate(derived), 1, true) ~= nil
+      end) or "Cancel"
+    end,
+  }, function()
+    inRoom(function() room:damage { from = owner, to = victim, damage = 1 } end)
+  end)
+
+  lu.assertNotNil(options)
+  lu.assertTrue(table.find(options, function(label) return label:find(Fk:translate(direct), 1, true) ~= nil end) ~= nil)
+  lu.assertFalse(owner:hasSkill(derived))
+  lu.assertTrue(owner:hasSkill(direct))
+  lu.assertTrue(owner:hasSkill(SHANGSHI))
+  lu.assertEquals(victim.hp, startedHp - 2)
+end
+
 function Testqiao_jin_sources:testShangshiDrawsToLostHpAtAnotherFinishPhase()
   local room = prepare("qiao_heg__jin010")
   local owner, target = p1(), p2()
@@ -181,6 +296,14 @@ function Testqiao_jin_sources:testFuliDrawsExtraThenGivesShownCardAndMarksSuit()
   lu.assertNotNil(shown)
   lu.assertTrue(table.contains(zhangHua:getCardIds("h"), shown))
   lu.assertEquals(drawer:getMark("qiao_jin016_1_suit" .. Fk:getCardById(shown).suit .. "-turn"), 1)
+  withClientRoom(room, function(clients)
+    local player = clients[2]
+    local state = table.find(SkillStatus.forPlayer(player), function(entry) return entry.id == "fuli" end)
+    lu.assertNotNil(state)
+    lu.assertEquals(state.value, JinDeck.suitSymbols({ Fk:getCardById(shown).suit }))
+    player:setMark(SkillStatus.fuliSuitMark(Fk:getCardById(shown).suit), 0)
+    lu.assertNil(table.find(SkillStatus.forPlayer(player), function(entry) return entry.id == "fuli" end))
+  end)
 end
 
 function Testqiao_jin_sources:testFengwuClientCanUseWithoutPlayerRoom()

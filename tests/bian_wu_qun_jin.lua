@@ -423,6 +423,12 @@ function Testqiao_bian_wu_qun_jin:testFeixiongjunMultiInstanceLimitedAndBypassDi
     lu.assertTrue(Bian.resetOneLimitedRetinue(holder, Bian.FEIXIONG_SKILL))
   end)
   lu.assertTrue(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder), "复原一份实例后飞熊军应再次可用")
+  inRoom(function()
+    local unused = Bian.availableLimitedRetinues(holder, Bian.FEIXIONG_SKILL)[1]
+    lu.assertTrue(Retinues.loseSkill(holder, unused.id))
+    lu.assertFalse(Fk.skills[Bian.FEIXIONG_SKILL]:canUse(holder))
+    lu.assertEquals(#Bian.usedLimitedRetinues(holder, Bian.FEIXIONG_SKILL), 1)
+  end)
 end
 
 -- JIN018 陈骞：忽辱（全权挑牌同花色且同类别双生效 + 自伤不重问）+ 武督（可选自己 + 叠置跳过回合顺延清除）
@@ -817,14 +823,18 @@ end
 function Testqiao_bian_wu_qun_jin:testQun009ZuociObserverDoesNotLeakPrivateSouls()
   local room = FkTest.room
   local owner, other = p(1), p(2)
+  local tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
+  local hiddenSkills = "qiao_shu_tieqi_private-turn"
   local obsReceived, obsCount, obsPrivate, ownPrivate, otherPrivate
   local publicUpdates, observerLists, ownerLists = {}, {}, {}
   local added = "qiao_heg__shu001"
   inRoom(function()
     skill_test.installBlankGenerals(room, { "qun", "wei", "shu", "wu" })
     skill_test.installDualGenerals(room, owner, {
-      main = "qiao_heg__qun009", deputy = "qiao_test__qun_2", kingdom = "qun", hp = 4,
+      main = "qiao_heg__qun009", deputy = "qiao_heg__shu001", kingdom = "qun", hp = 4,
     })
+    owner:hideGeneral(true)
+    tieqi.mark(room, owner, true)
     Bian.addZuociSouls(room, owner, { "qiao_heg__wei004", "qiao_heg__wu003" }, true)
 
     local observer = {
@@ -835,6 +845,7 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociObserverDoesNotLeakPrivateSouls
       if cmd == "Observe" then
         local msg = cbor.decode(bytes)
         local marks = cbor.decode(msg.players[owner.id].mark)
+        lu.assertNil(marks[hiddenSkills])
         obsReceived = msg.settings.isObserver
         obsCount = marks[Bian.ZUOCI_COUNT_MARK]
         obsPrivate = marks[Bian.ZUOCI_PRIVATE_MARK]
@@ -869,7 +880,9 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociObserverDoesNotLeakPrivateSouls
     room.room.hasObserver = hasObserver
     room.getSettings = prevSettings
 
-    ownPrivate = cbor.decode(room:serialize(owner).players[owner.id].mark)[Bian.ZUOCI_PRIVATE_MARK]
+    local ownMarks = cbor.decode(room:serialize(owner).players[owner.id].mark)
+    lu.assertTrue(table.contains(ownMarks[hiddenSkills], "qiao__skill_shu001_1"))
+    ownPrivate = ownMarks[Bian.ZUOCI_PRIVATE_MARK]
     otherPrivate = cbor.decode(room:serialize(other).players[owner.id].mark)[Bian.ZUOCI_PRIVATE_MARK]
   end)
   lu.assertTrue(obsReceived)
@@ -996,6 +1009,23 @@ function Testqiao_bian_wu_qun_jin:testQun022aNaoxiCannotSplitFixedTargetsButAllo
   lu.assertEquals(promptsOverlap, 0, "固定目标队列扩大后与原目标重叠时不得拆分使用挠袭")
   lu.assertEquals(promptsDisjoint, 1, "固定目标集合与原目标完全不重叠时仍应允许发动挠袭")
   lu.assertEquals(repeatTargetsDisjoint, { joining.id }, "完全不重叠时应对完整新固定目标生效")
+end
+
+function Testqiao_bian_wu_qun_jin:testXiongsuanRestoresRoleGrantedLimitedSkill()
+  local room, lijue, recipient = FkTest.room, p(1), p(2)
+  local name = "qiao__skill_qun022a_1"
+  inRoom(function()
+    skill_test.installBlankGenerals(room, "qun")
+    room:handleAddLoseSkills(recipient, name)
+    lu.assertTrue(recipient:hasShownSkill(name))
+    lu.assertFalse(table.contains(recipient.player_skills, Fk.skills[name]))
+    recipient:setSkillUseHistory(name, 1, Player.HistoryGame)
+    room:setTag("qiao_qun022a_xiongsuan_pending", {
+      { source_id = lijue.id, target_id = recipient.id },
+    })
+    room.logic:trigger(fk.TurnEnd, lijue, TurnData:new(lijue, "game_rule"))
+    lu.assertEquals(recipient:usedSkillTimes(name, Player.HistoryGame), 0)
+  end)
 end
 
 return { name = "qiao_bian_wu_qun_jin" }

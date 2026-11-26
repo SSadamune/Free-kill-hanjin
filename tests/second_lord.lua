@@ -57,13 +57,99 @@ local function revealed(p, main, deputy, kingdom)
   content.setupRevealed(room(), p, main, deputy, kingdom)
 end
 
-local function triggerTurnStart(p, firstChoice)
+local function triggerTurnStart(p, firstChoice, secondReply)
   FkTest.cleanNextReplies(p)
-  -- The first reply belongs to the HanJin ascension prompt (when offered); the
-  -- second cancels the upstream national-war reveal prompt that still follows.
-  FkTest.setNextReplies(p, { { firstChoice or "Cancel" }, { "Cancel" } })
+  local replies = { { firstChoice or "Cancel" } }
+  if secondReply then table.insert(replies, secondReply) end
+  FkTest.setNextReplies(p, replies)
   FkTest.runInRoom(function() room().logic:trigger(fk.TurnStart, p, {}) end)
   FkTest.cleanNextReplies(p)
+end
+
+function Testsecond_lord:testOneHiddenPositionLeftSkipsFollowUp()
+  local actor = player(1)
+  local deputy = "qiao_turn_reveal_deputy:::" .. G.wei_deputy.name
+  local main = "qiao_turn_reveal:::" .. G.wei_normal.name
+  lu.assertEquals(Fk:translate("qiao_turn_reveal"), "明置%arg")
+  lu.assertEquals(Fk:translate("qiao_turn_reveal_deputy"), "明置%arg")
+  FkTest.runInRoom(function() hidden(actor, G.wei_normal.name, G.wei_deputy.name, "wei") end)
+  local asks = {}
+  FkTest.setRoomBreakpoint(actor, "AskForOptions", function(data)
+    table.insert(asks, { prompt = data[6], choices = table.simpleClone(data[1]) })
+    return false
+  end)
+  triggerTurnStart(actor, deputy, "__cancel")
+  lu.assertEquals(asks, {
+    { prompt = "#HegRevealGenerals", choices = { A.ASCEND_ACCEPT, main, deputy } },
+    { prompt = "#QiaoTurnRevealAlso", choices = { "qiao_turn_reveal_also_main" } },
+  })
+  lu.assertEquals(actor.general, "anjiang")
+  lu.assertEquals(actor.deputyGeneral, G.wei_deputy.name)
+  triggerTurnStart(actor, main)
+  lu.assertEquals(asks[3], {
+    prompt = "#HegRevealGenerals", choices = { A.ASCEND_ACCEPT, main },
+  })
+  lu.assertEquals(#asks, 3)
+  lu.assertEquals(actor.general, G.wei_normal.name)
+end
+
+function Testsecond_lord:testAscensionAndDeputyRevealWaitForBothReplies()
+  local actor = player(1)
+  FkTest.runInRoom(function() hidden(actor, G.wei_normal.name, G.wei_deputy.name, "wei") end)
+  local duringFollowUp
+  FkTest.setRoomBreakpoint(actor, "AskForOptions", function(data)
+    if data[6] == "#QiaoTurnRevealAlso" then
+      duringFollowUp = { actor.general, actor.deputyGeneral, actor.kingdom, data[5], data[1] }
+    end
+    return false
+  end)
+  triggerTurnStart(actor, A.ASCEND_ACCEPT, { "qiao_turn_reveal_also_deputy" })
+  lu.assertEquals(duringFollowUp, {
+    "anjiang", "anjiang", "unknown", "heg_rule", { "qiao_turn_reveal_also_deputy" },
+  })
+  lu.assertEquals(actor.general, V.lord_version(G.wei_normal.name))
+  lu.assertEquals(actor.deputyGeneral, G.wei_deputy.name)
+  lu.assertTrue(A.has_lord(room(), "wei"))
+end
+
+function Testsecond_lord:testHiddenMainDoesNotChangePublicTurnStartFocus()
+  local r, actor, other = room(), player(1), player(2)
+  local ordinaryMain = "qiao_test__wei_1"
+  local public, private = {}, {}
+  local broadcast = r.doBroadcastNotify
+  local function observeTurn(main)
+    FkTest.runInRoom(function() hidden(actor, main, G.wei_deputy.name, "wei") end)
+    public, private = {}, {}
+    r.doBroadcastNotify = function(self, command, data, recipients)
+      if command == "MoveFocus" then
+        lu.assertNil(recipients)
+        table.insert(public, { table.simpleClone(data[1]), data[2], data[3] })
+      end
+      return broadcast(self, command, data, recipients)
+    end
+    triggerTurnStart(actor, "Cancel")
+    r.doBroadcastNotify = broadcast
+    lu.assertEquals(actor.general, "anjiang")
+    lu.assertEquals(actor.deputyGeneral, "anjiang")
+    lu.assertEquals(#private, 1)
+    return public, private[1]
+  end
+  FkTest.setRoomBreakpoint(actor, "AskForOptions", function(data)
+    table.insert(private, table.simpleClone(data[1]))
+    return false
+  end)
+  local leaked = false
+  FkTest.setRoomBreakpoint(other, "AskForOptions", function()
+    leaked = true
+    return false
+  end)
+  local eligibleFocus, eligibleChoices = observeTurn(G.wei_normal.name)
+  local ordinaryFocus, ordinaryChoices = observeTurn(ordinaryMain)
+  lu.assertTrue(table.contains(eligibleChoices, A.ASCEND_ACCEPT))
+  lu.assertFalse(table.contains(ordinaryChoices, A.ASCEND_ACCEPT))
+  lu.assertEquals(eligibleFocus, { { { actor.id }, "heg_rule", r.timeout * 1000 } })
+  lu.assertEquals(eligibleFocus, ordinaryFocus)
+  lu.assertFalse(leaked)
 end
 
 --- Record ascension prompts so a blocked target can be distinguished from a
@@ -72,12 +158,19 @@ local function captureAscensionPrompts()
   local prompts = { convert = {}, succession = {} }
   FkTest.runInRoom(function()
     local r = room()
+    local askOptions = r.askToOptions
+    function r:askToOptions(target, params)
+      if params.prompt == "#HegRevealGenerals" and table.find(params.options, function(option)
+        return option == A.ASCEND_ACCEPT or option:startsWith(A.ASCEND_KINGDOM .. ":::")
+      end) then
+        table.insert(prompts.convert, target.seat)
+      end
+      return askOptions(self, target, params)
+    end
     local original = r.askToChoice
     function r:askToChoice(target, params)
       local prompt = params and params.prompt
-      if prompt == "#QiaoSecondLordConvert" then
-        table.insert(prompts.convert, target.seat)
-      elseif prompt == "#QiaoSecondLordSuccession" then
+      if prompt == "#QiaoSecondLordSuccession" then
         table.insert(prompts.succession, target.seat)
       end
       return original(self, target, params)
