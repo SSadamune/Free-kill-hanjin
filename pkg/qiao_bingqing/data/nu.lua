@@ -38,6 +38,16 @@ M.generals = {
       { id = "qiao__skill_jin076_2", name = "天述", text = "当一名角色的判定牌生效时，若与本局上次判定结果颜色相同，你可以令其摸一张牌。" },
     },
   },
+  {
+    id = "qiao_heg__qun029", name = "高顺", title = "此志无前",
+    kingdom = "qun", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_xianzhenying", card = "qiao__chasing_near", cardText = "逐近弃远", name = "陷阵营" },
+    skills = {
+      { id = "qiao__skill_qun029_1", name = "迅击", text = "每回合结束时，你可以依次视为对任意名本回合使用过【酒】的角色或明置过武将牌的非当前回合角色各使用一张【杀】。" },
+      { id = "qiao__skill_qun029_2", name = "擐甲", text = "当你指定/成为【杀】的目标后，你可以将一个目标/使用者装备区的一张牌置入你装备区，结算后将你装备区同副类别的牌移动给其。" },
+    },
+  },
 }
 M.retinues = {
   {
@@ -47,6 +57,10 @@ M.retinues = {
   {
     id = "qiao_heg__retinue_suwei_zhongjun", name = "宿卫中军",
     skill = { id = "qiao__retinue_skill_suwei_zhongjun", name = "宿卫中军", text = "其他势力角色回合结束时，你可以判定X次（X为你本回合使用过的牌数），其中每包含一种颜色，你视为对其使用一张【杀】。" },
+  },
+  {
+    id = "qiao_heg__retinue_xianzhenying", name = "陷阵营",
+    skill = { id = "qiao__retinue_skill_xianzhenying", name = "陷阵营", text = "当你使用【杀】造成伤害时，你可以弃置一张【桃】、【酒】或装备牌，然后此伤害+1。" },
   },
 }
 return M

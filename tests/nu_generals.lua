@@ -103,6 +103,23 @@ function T:testShizhongSingleTargetStillDrawsOnce()
     lu.assertEquals(li:getHandcardNum(), n + 1)
   end)
 end
+function T:testHuanjiaBorrowsWeaponAndReturnsOnlyToEmptySlot()
+  run(function(room, gao, target)
+    general(room, gao, "qun029")
+    local sword = room:printCard("qiao__spear", Card.Spade, 12)
+    room:moveCardIntoEquip(target, sword.id)
+    local asks = 0
+    fixture.withSkillRequests(room, id("qun029_2"), {
+      askToSkillInvoke = function() asks = asks + 1; return true end,
+      askToChooseCard = function() return sword.id end,
+    }, function()
+      room:useCard { from = gao, tos = { target }, card = Fk:cloneCard("qiao__slash") }
+    end)
+    lu.assertEquals(asks, 1)
+    lu.assertTrue(room:getCardOwner(sword.id) == target)
+    lu.assertEquals(room:getCardArea(sword.id), Card.PlayerEquip)
+  end)
+end
 function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
   run(function(room, yang, friend, victim)
     general(room, yang, "han043")
@@ -185,6 +202,34 @@ function T:testDanyangCopiesRememberEachTargetIndependently()
     grant(p, "danyang_qingjin")
     use()
     lu.assertEquals(p:getHandcardNum(), before + 3)
+  end)
+end
+
+function T:testXianzhenyingTwoCopiesPayTwoSeparateLegalCards()
+  run(function(room, p, target)
+    local name = "qiao__retinue_skill_xianzhenying"
+    grant(p, "xianzhenying")
+    grant(p, "xianzhenying", "deputy")
+    local peach, wine = card(room, p, "qiao__peach"), card(room, p, "qiao__analeptic")
+    local jink = card(room, p, "qiao__jink")
+    local offered, hp = 0, target.hp
+    room:throwCard(target:getCardIds("h"), "test", target, target)
+    fixture.withSkillRequests(room, name, {
+      askToDiscard = function(_, actor, params)
+        local cost = offered == 0 and peach or wine
+        local pattern = Exppattern:Parse(params.pattern)
+        lu.assertTrue(pattern:match(cost))
+        lu.assertFalse(pattern:match(jink))
+        offered = offered + 1
+        return { cost.id }
+      end,
+    }, function()
+      room:useCard { from = p, tos = { target }, card = Fk:cloneCard("qiao__slash") }
+    end)
+    lu.assertEquals(offered, 2)
+    lu.assertEquals(hp - target.hp, 3)
+    lu.assertEquals(room:getCardArea(peach.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(wine.id), Card.DiscardPile)
   end)
 end
 
@@ -281,6 +326,44 @@ function T:testSuweiJudgesTwiceUsesTwoColorsAgainstDistantCurrentPlayer()
 end
 
 
+function T:testHuanjiaReturnsBothSaddlesAfterBorrowedDualMountWasReplaced()
+  run(function(room, gao, other)
+    general(room, gao, "qun029")
+    local mount = room:printCard("qiao__liulongcanjia", Card.Heart, 13)
+    local attack = room:printCard("qiao__chitu", Card.Heart, 5)
+    local defense = room:printCard("qiao__jueying", Card.Spade, 5)
+    local Placement = require "packages.qiao.pkg.qiao_mode.rules.mount_placement"
+    local prior = room:printCard("qiao__zixing", Card.Diamond, 13)
+    Placement.put(room, gao, prior.id, "test")
+    room:moveCardIntoEquip(other, mount.id)
+    room:throwCard(other:getCardIds("h"), "test", other, other)
+    local damage, exchanged = room.damage, false
+    room.damage = function(self, data)
+      if data.to == other and not exchanged then
+        exchanged = true
+        lu.assertTrue(room:getCardOwner(mount.id) == gao)
+        lu.assertEquals(room:getCardArea(prior.id), Card.DiscardPile)
+        Placement.put(room, gao, attack.id, "test")
+        Placement.put(room, gao, defense.id, "test")
+      end
+      return damage(self, data)
+    end
+    fixture.withSkillRequests(room, id("qun029_2"), {
+      askToSkillInvoke = function() return true end,
+      askToChooseCard = function() return mount.id end,
+    }, function()
+      room:useCard { from = gao, tos = { other }, card = Fk:cloneCard("qiao__slash") }
+    end)
+    room.damage = damage
+    lu.assertTrue(exchanged)
+    lu.assertEquals(room:getCardArea(mount.id), Card.DiscardPile)
+    lu.assertTrue(room:getCardOwner(attack.id) == other)
+    lu.assertTrue(room:getCardOwner(defense.id) == other)
+  end)
+end
+
+
+local bajia = id("han043_1")
 local Yu = require "packages.qiao.pkg.qiao_bingqing.bajia"
 local function pickYu(room, yang, owner, equip, deputy)
   if (deputy and yang.deputyGeneral or yang.general) ~= "anjiang" then yang:hideGeneral(deputy == true) end
@@ -511,6 +594,36 @@ local function equip(room, owner, name)
   local equipment = card(room, owner, name)
   room:moveCardIntoEquip(owner, equipment.id)
   return equipment
+end
+
+function T:testProtectedTreasureExcludedFromHuanjiaAndBajia()
+  run(function(room, gao, yang, sun)
+    general(room, gao, "qun029")
+    general(room, yang, "han043")
+    general(room, sun, "em_wu001")
+    local treasure = equip(room, sun, "qiao__bronze_sparrow")
+    local original = equip(room, gao, "qiao__luminous_pearl")
+    fixture.withSkillRequests(room, id("qun029_2"), {
+      askToSkillInvoke = function() error("只有受保护的宝物时不能发动擐甲") end,
+    }, function()
+      room:useCard { from = gao, tos = { sun }, card = Fk:cloneCard("qiao__slash"), extraUse = true }
+    end)
+    lu.assertEquals(gao:getEquipments(Card.SubtypeTreasure), { original.id })
+    local weapon = equip(room, sun, "qiao__spear")
+    yang:hideGeneral(false)
+    local asked = false
+    fixture.withSkillRequests(room, id("han043_1"), {
+      askToChoosePlayers = function() return { sun } end,
+      askToChooseCard = function(_, _, params)
+        lu.assertEquals(params.flag.card_data[1][2], { weapon.id })
+        asked = true
+        return weapon.id
+      end,
+    }, function() yang:revealGeneral(false) end)
+    lu.assertTrue(asked)
+    lu.assertIs(room:getCardOwner(weapon.id), yang)
+    lu.assertEquals(sun:getEquipments(Card.SubtypeTreasure), { treasure.id })
+  end)
 end
 
 function T:testTijunCannotReplaceSunsProtectedTreasure()
