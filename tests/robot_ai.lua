@@ -1681,4 +1681,60 @@ function Testqiao_robot_ai:testChuliPrefersVisibleArmorAndDoesNotSelectAnAlly()
   end)
 end
 
+function Testqiao_robot_ai:testYijiObtainsBothCardsFromTheActualDamageTrigger()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 4)
+    room:setPlayerProperty(player, "shield", 0)
+    room:handleAddLoseSkills(player, "qiao__skill_wei006_2", nil, false, true)
+    local before = ally:getHandcardNum()
+    room:damage { from = enemy, to = player, damage = 1 }
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(player:getHandcardNum(), 2)
+    lu.assertEquals(ally:getHandcardNum(), before)
+  end)
+end
+
+function Testqiao_robot_ai:testTianmingTradesCheapCardsAndKeepsItsLastDefense()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 4)
+    room:handleAddLoseSkills(player, "qiao__skill_han001_1", nil, false, true)
+    local peach = give(room, player, "qiao__peach")
+    local jink = give(room, player, "qiao__jink")
+    local attack = Fk:cloneCard("qiao__slash")
+    room:useCard { from = enemy, tos = { player }, card = attack }
+    lu.assertEquals(player:getHandcardNum(), 1)
+    lu.assertEquals(room:getCardArea(peach.id), Card.PlayerHand)
+    lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+
+    room:throwCard(peach.id, "test", player, player)
+    local first = give(room, player, "qiao__lightning")
+    local second = give(room, player, "qiao__lure_tiger")
+    room:useCard { from = enemy, tos = { player }, card = attack }
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
+    lu.assertEquals(player:usedSkillTimes("qiao__skill_han001_1", Player.HistoryGame), 1)
+  end)
+end
+
+function Testqiao_robot_ai:testDuanbingAddsOnlyAKnownEnemy()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu016_1", nil, false, true)
+    local neighbor = room.players[#room.players]
+    room:setPlayerProperty(neighbor, "kingdom", "wei")
+    room:setPlayerProperty(ally, "kingdom", "wei")
+    local function attack()
+      local slash = Fk:cloneCard("qiao__slash")
+      local use = { from = player, tos = { enemy }, card = slash }
+      room:useCard(use)
+      return table.map(use.tos, Util.IdMapper)
+    end
+    lu.assertEquals(attack(), { enemy.id })
+    room:setPlayerProperty(neighbor, "kingdom", "shu")
+    lu.assertEquals(attack(), { enemy.id, neighbor.id })
+  end)
+end
+
 return { name = "qiao_robot_ai" }

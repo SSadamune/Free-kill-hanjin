@@ -18,6 +18,7 @@ local M = {}
 
 local free = {
   ["#qiao__skill_han002_1-invoke"] = true, -- 诗怨
+  ["#qiao__skill_han001_1-invoke"] = true, -- 天命无可弃手牌
   ["#qiao__skill_han012_1-black"] = true, -- 铸典亮黑牌后摸牌
   ["#qiao__skill_han022_2-invoke"] = true, -- 安境
   ["#qiao__skill_jin014_2-invoke"] = true, -- 夺气
@@ -136,6 +137,10 @@ function M.active(ai, data)
     return Command.keep(ai) and Requests.reply(ai) or ""
   end
   if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
+  if key == "#qiao__skill_wei006_2-give" then
+    if not Cost.select(ai, math.min(2, #ai:getEnabledCards())) then return "" end
+    return chooseTargets(ai, Triggers.targetScore(ai, key))
+  end
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
   end
@@ -163,7 +168,8 @@ function M.active(ai, data)
     end)
   end
   if skill == "choose_players_skill" then
-    local use = key == "#qiao__skill_jin012_1-targets" and parentData(ai, GameEvent.UseCard)
+    local use = (key == "#qiao__skill_jin012_1-targets" or key == "#qiao__skill_wu016_1-extra")
+      and parentData(ai, GameEvent.UseCard)
     local score, extend = Triggers.targetScore(ai, key, use)
     if score then return chooseTargets(ai, score, extend and extra.num or 1) end
   end
@@ -216,6 +222,29 @@ function M.active(ai, data)
         local name = Fk:getCardById(id).trueName
         return name ~= "slash" and name ~= "duel"
       end) and Requests.reply(ai) or ""
+    elseif key == "#qiao__skill_han001_1-discard" then
+      budget = 4
+    elseif key == "#qiao__skill_jin007_2-give" then
+      if not ai:isFriend(M.promptTarget(ai, fields, 3)) or ai.player:isHandAreaSealed() then return "" end
+      budget = 5
+    elseif key == "#qiao__qun011-dmg" then
+      budget = 2
+    elseif key == "#qiao__qun011-def" or key == "#qiao__skill_jin004_2-discard" then
+      local use = parentData(ai, GameEvent.UseCard)
+      local target = key == "#qiao__qun011-def" and M.promptTarget(ai, fields, 3) or ai.player
+      if not target or not use or not use.card or not Triggers.protects(ai, use, target) then return "" end
+      if key == "#qiao__skill_jin004_2-discard" then
+        budget = target.hp <= 1 and use.card.is_damage_card and 4 or 2
+      end
+    elseif key == "#qiao__skill_jin010_1-cards" then
+      local target = M.promptTarget(ai, fields, 2)
+      return Cost.select(ai, 1, 2, function(id) return Triggers.shangshiMaterial(ai, target, id) end)
+        and Requests.reply(ai) or ""
+    elseif key == "#qiao__skill_wu013_1-place" then
+      local suits = table.map(ai.player:getPile("创"), function(id) return Fk:getCardById(id).suit end)
+      if Cost.select(ai, 1, nil, function(id) return not table.contains(suits, Fk:getCardById(id).suit) end) then
+        return Requests.reply(ai)
+      end
     elseif key == "#qiao__retinue_skill_lujiang_shangjia-discard" then
       local isNotSlash = function(id) return Fk:getCardById(id).trueName ~= "slash" end
       local count = extra.min_num or 1
@@ -385,6 +414,7 @@ function M.chosen(ai, data)
   if type(areas) ~= "string" then return end
   local fields = (prompt or ""):split(":")
   local key = fields[1]
+  if key == "#qiao__skill_qun006_1-card" then return Removal.pick(ai, target, areas, true) end
   if key == "#qiao__skill_qun008_2-ask" then return Removal.pick(ai, target, "e", false) end
   if key == "#qiao__skill_qun001_2-card" then return Removal.pick(ai, target, areas, false, true) end
   local obtains = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__skill_wei002_1-choose"
@@ -409,7 +439,13 @@ end
 
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
-  local pick = Triggers.choice(ai, choices, (prompt or ""):split(":"))
+  local fields = (prompt or ""):split(":")
+  local pick = Triggers.choice(ai, choices, fields)
+  if fields[1] == "#qiao__skill_shu008_1-choice" or fields[1] == "#qiao__skill_shu013_1-choice" then
+    pick = Triggers.slashChoice(ai, fields, parentData(ai, GameEvent.UseCard))
+  elseif fields[1] == "#qiao__skill_wu010_2-choice" then
+    pick = Triggers.yingyang(ai, parentData(ai, GameEvent.Pindian))
+  end
   if prompt == "#qiao__skill_han009_1-options" then
     local use = parentData(ai, GameEvent.UseCard)
     local to = use and #use.tos == 1 and use.tos[1]

@@ -94,6 +94,30 @@ function M.invoke(ai, original, fields)
     return not Cost.effectable(player, "qiao__skill_wu005_1")
       and not (player:getHandcardNum() <= 1 and Cost.effectable(player, "qiao__skill_wu014_1"))
   end
+  if key == "#qiao__skill_shu011_3-view" then
+    return ai:isEnemy(ai.room.current) and not ai.room.current:isKongcheng()
+  end
+  if key == "#qiao__skill_wei006_2-invoke" then
+    local score = M.targetScore(ai, "#qiao__skill_wei006_2-give")
+    return table.find(ai.room:getPresentPlayers(), function(target) return score(target) ~= nil end) ~= nil
+  end
+  if key == "#qiao__skill_em_qun010_2-invoke" then
+    return ai.room.current == player and player.phase < Player.Draw and #player:getCardIds("j") == 0
+  end
+  if key == "#qiao__skill_qun006_1-invoke" then
+    local gains = false
+    for _, other in ipairs(ai.room:getOtherPlayers(player, false)) do
+      if #other:getCardIds("hej") > 0 then
+        if not Removal.pick(ai, other, "hej", true) then return false end
+        gains = true
+      end
+    end
+    return gains
+  end
+  if key == "#qiao__skill_wei014_2-invoke" then
+    local score = M.targetScore(ai, key)
+    return table.find(ai.room:getOtherPlayers(player, false), function(target) return score(target) ~= nil end) ~= nil
+  end
 end
 
 local allyDrawTargets = {
@@ -115,6 +139,29 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__skill_wei006_2-give" or key == "#qiao__skill_wei006_2-rest" then
+    return function(target)
+      if ai:isFriend(target) and not target:isHandAreaSealed() then
+        return target == ai.player and 20 or 1 / (target:getHandcardNum() + 1)
+      end
+    end
+  end
+  if key == "#qiao__skill_wei014_2-choose" or key == "#qiao__skill_wei014_2-invoke" then
+    return function(target)
+      if ai:isFriend(target) and target ~= ai.player and not target.faceup
+        and not target:isHandAreaSealed() then return 20 - target:getHandcardNum() end
+      if target.faceup and #target:getCardIds("e") + target:getHandcardNum() <= 1 then
+        return ai:hostileScore(target, 8)
+      end
+    end
+  end
+  if key == "#qiao__skill_wu016_1-extra" then
+    return function(target)
+      if use and use.card and Cards.safeDamage(ai, use.card, target, use) then
+        return ai:hostileScore(target, 20 - target.hp)
+      end
+    end
+  end
   if key == "#qiao__skill_wei018_1-target" or key == "#qiao__skill_wei018_1-invoke" then
     return function(target)
       local _, score = Removal.pick(ai, target, "hej", false)
@@ -193,6 +240,54 @@ function M.targetScore(ai, key, use)
   end
 end
 
+function M.shangshiMaterial(ai, target, id)
+  local card = Fk:cloneCard("qiao__ice__slash")
+  card.skillName = "qiao__skill_jin010_1"
+  card:addSubcard(id)
+  return Cards.safeDamage(ai, card, target) and not ai.player:prohibitUse(card)
+    and not ai.player:isProhibited(target, card)
+end
+
+function M.slashChoice(ai, fields, use)
+  local target = playerAt(ai, fields, 2)
+  if fields[1] == "#qiao__skill_shu008_1-choice" then
+    local noResponse = "#qiao__skill_shu008_1-disresponsive"
+    if not use or not use.card or not ai:isEnemy(target) then return noResponse end
+    local nature = Damage.cardNature(use.card, use)
+    local amount = Damage.cardAmount(use.card, use, ai.player)
+    local boosted = Damage.assess(ai, target, amount + 1, nature, { source = ai.player, card = use.card })
+    if target:isKongcheng() and Damage.worth(boosted) then return "#qiao__skill_shu008_1-damage" end
+    return noResponse
+  end
+  local nullify = "#qiao__skill_shu013_1-nullify"
+  if not use or not use.card or not Cards.safeDamage(ai, use.card, target, use) then return nullify end
+  local budget = target.hp + target.shield <= Damage.cardAmount(use.card, use, ai.player) and 4 or 2
+  if table.find(ai.player:getCardIds("he"), function(id)
+    return Fk:getCardById(id).type == Card.TypeBasic and not ai.player:prohibitDiscard(id)
+      and Cost.value(ai, id) <= budget
+  end) then return "#qiao__skill_shu013_1-discard" end
+  return nullify
+end
+
+function M.yingyang(ai, pindian)
+  if not pindian or not pindian.fromCard then return end
+  local player = ai.player
+  local function swing(own, other)
+    return own and other and own.number <= other.number and math.min(13, own.number + 3) >= other.number
+      and (own.number < other.number or own.number < 13)
+  end
+  local useful
+  if pindian.from == player then
+    for target, result in pairs(pindian.results or {}) do
+      if ai:isEnemy(target) and swing(pindian.fromCard, result.toCard) then useful = true end
+    end
+  elseif ai:isEnemy(pindian.from) then
+    local result = pindian.results and pindian.results[player]
+    useful = result and swing(result.toCard, pindian.fromCard)
+  end
+  if useful then return "qiao__skill_wu010_2-plus3" end
+end
+
 function M.shunliuWorth(ai)
   local damage = currentData(ai)
   if not damage or not ai:isEnemy(damage.to) then return false end
@@ -221,7 +316,20 @@ end
 
 function M.choice(ai, choices, fields)
   local key, player = fields[1], ai.player
-  if key == "#qiao__skill_jin001_2-choice" then
+  if key == "#qiao__skill_qun016_2-choice" then
+    local value = 0
+    for _, id in ipairs(player:getCardIds("h")) do value = value + Cost.value(ai, id) end
+    if player.hp > 1 and (value >= (player.hp == 2 and 11 or 8)
+      or (value > 0 and Cost.zhaxiangTrade(player))) then return "#qiao__skill_qun016_2-losehp" end
+    return "#qiao__skill_qun016_2-discard"
+  elseif key == "#qiao__skill_jin010_1-choice" then
+    local draw = "#qiao__skill_jin010_1-draw"
+    if table.contains(choices, draw) then return draw end
+    local target = playerAt(ai, fields, 3)
+    if table.find(player:getCardIds("h"), function(id)
+      return Cost.value(ai, id) <= 2 and M.shangshiMaterial(ai, target, id)
+    end) then return "#qiao__skill_jin010_1-slash" end
+  elseif key == "#qiao__skill_jin001_2-choice" then
     local heal = "qiao__skill_jin001_2-option_equip"
     if table.contains(choices, heal)
       and table.find(player:getCardIds("h"), function(id) return M.xingtuMaterial(ai, id) end)

@@ -48,6 +48,9 @@ function M.benefit(ai, player, source, amount)
   if canDraw(player) and Cost.effectable(player, "qiao__skill_wei001_1") then
     result = result + 3
   end
+  if canDraw(player) and Cost.effectable(player, "qiao__skill_wei006_2") then
+    result = result + 6
+  end
   if Cost.effectable(player, "qiao__skill_wei013_2") then
     result = result + jiemingBenefit(ai, player, amount)
   end
