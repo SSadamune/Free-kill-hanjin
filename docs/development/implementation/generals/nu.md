@@ -1,9 +1,20 @@
 # 弩包
 
-目前仅下表的君主版正式接入。[弩包平行武将及关联内容](../../../rules/nu-generals.md)仍处于规则审阅阶段。下表技能和专属效果链接到已接入的实现。
+兵情篇收录君司马炎与十二名弩包普通武将。九条统领来源共用七种普通翼从，【青州精锐】沿用臧霸的实现，【无当飞军】与权包王平共用。[牌面与统领登记](../../../../pkg/qiao_bingqing/data/nu.lua) · [原生专项](../../../../tests/nu_generals.lua)
 
 ## 逐将检索
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
 | EM(JIN001) | [君司马炎](nu/em-jin001.md) | [太康](nu/em-jin001.md#em-jin001-1)、[採幸](nu/em-jin001.md#em-jin001-2)、[鼎沸](nu/em-jin001.md#em-jin001-3)、[诸王敕封册与赐](nu/em-jin001.md#em-jin001-banner)（派生／标记） |
+| HAN043 | [杨奉&韩暹](nu/han043.md) | [拔驾](nu/han043.md#han043-1) |
+
+## 统领与翼从
+
+- [丹阳青巾](../../../../pkg/qiao_bingqing/skills/retinue_danyang_qingjin.lua)
+- [虎豹骑](../../../../pkg/qiao_bingqing/skills/retinue_hubaoqi.lua)
+- [无当飞军](../../../../pkg/qiao_generals/skills/retinue_skill_wudang_feijun.lua)
+- [解烦卫](../../../../pkg/qiao_bingqing/skills/retinue_jiefanwei.lua)
+- [陷阵营](../../../../pkg/qiao_bingqing/skills/retinue_xianzhenying.lua)
+- [青州精锐](../../../../pkg/qiao_generals/skills/retinue_skill_qingzhou_jingrui.lua)
+- [宿卫中军](../../../../pkg/qiao_bingqing/skills/retinue_suwei_zhongjun.lua)

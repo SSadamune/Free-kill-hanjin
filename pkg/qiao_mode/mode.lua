@@ -309,6 +309,7 @@ function M.create(base, name)
       FaqRules.installServer(self.room)
       Ascension.installTurnReveal()
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)
+      require("packages.qiao.pkg.qiao_bingqing.bajia").reveal.install(self.room)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)
@@ -508,7 +509,7 @@ function M.create(base, name)
     })
   end
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
-  local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
+  local whitelist = { "qiao_generals", "qiao_bingqing", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
     name = name, minPlayer = locked and 3 or base.minPlayer, maxPlayer = locked and 4 or base.maxPlayer,
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,

@@ -1,4 +1,5 @@
 local suites = {}
+table.insert(suites, __dofile("../../../tests/nu_generals.lua"))
 table.insert(suites, __dofile("../../../tests/room_records.lua"))
 table.insert(suites, __dofile("../../../tests/array_summon.lua"))
 table.insert(suites, __dofile("../../../tests/console_timeout.lua"))

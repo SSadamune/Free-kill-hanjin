@@ -1082,6 +1082,7 @@ function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
   end
 
   local room = freshRoom()
+  table.insertIfNeed(room.disabled_packs, "qiao_bingqing")
   setupJin(room)
   local ok
   FkTest.runInRoom(function()
