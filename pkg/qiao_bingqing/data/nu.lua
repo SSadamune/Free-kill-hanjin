@@ -76,6 +76,15 @@ M.generals = {
       { id = "qiao__skill_shu054_2", name = "抗锐", text = "有角色于其回合内首次扣减体力后，你可以选择一项：1.其回复1点体力；2.其本回合下次造成伤害时，此伤害+1且其本回合手牌上限为0。" },
     },
   },
+  {
+    id = "qiao_heg__wei034", name = "曹真", title = "渊然难测",
+    kingdom = "wei", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_hubaoqi", card = "qiao__jink", cardText = "闪", name = "虎豹骑" },
+    skills = {
+      { id = "qiao__skill_wei034_1", name = "司镇", text = "你响应过牌的阶段结束时，你可以视为使用一张【杀】（若与你势力相同的角色此阶段均未受到过伤害，此【杀】无距离限制）。" },
+    },
+  },
 }
 M.retinues = {
   {
@@ -89,6 +98,10 @@ M.retinues = {
   {
     id = "qiao_heg__retinue_xianzhenying", name = "陷阵营",
     skill = { id = "qiao__retinue_skill_xianzhenying", name = "陷阵营", text = "当你使用【杀】造成伤害时，你可以弃置一张【桃】、【酒】或装备牌，然后此伤害+1。" },
+  },
+  {
+    id = "qiao_heg__retinue_hubaoqi", name = "虎豹骑",
+    skill = { id = "qiao__retinue_skill_hubaoqi", name = "虎豹骑", text = "每回合首张由拥有虎豹骑的角色使用且目标唯一的【杀】结算后，你可以对相同目标使用一张【杀】并摸一张牌。" },
   },
 }
 return M

@@ -185,6 +185,29 @@ function T:testHuanjiaBorrowsWeaponAndReturnsOnlyToEmptySlot()
     lu.assertEquals(room:getCardArea(sword.id), Card.PlayerEquip)
   end)
 end
+function T:testHubaoqiFirstSlashOffersOnePhysicalFollowup()
+  run(function(room, cao, target, ally)
+    general(room, cao, "wei034")
+    grant(ally, "hubaoqi")
+    local slash = card(room, ally, "qiao__slash")
+    local hp, n = target.hp, ally:getHandcardNum()
+    local used = 0
+    room:throwCard(target:getCardIds("h"), "test", target, target)
+    fixture.withSkillRequests(room, "qiao__retinue_skill_hubaoqi", {
+      askToUseCard = function(_, actor)
+        lu.assertTrue(actor == ally)
+        used = used + 1
+        return { from = ally, tos = { target }, card = slash }
+      end,
+    }, function()
+      for _ = 1, 2 do room:useCard { from = ally, tos = { target }, card = Fk:cloneCard("qiao__slash"), extraUse = true } end
+    end)
+    lu.assertEquals(used, 1)
+    lu.assertEquals(ally:getHandcardNum(), n)
+    lu.assertEquals(target.hp, hp - 3)
+    lu.assertEquals(room:getCardArea(slash.id), Card.DiscardPile)
+  end)
+end
 function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
   run(function(room, yang, friend, victim)
     general(room, yang, "han043")
@@ -405,6 +428,32 @@ function T:testBajiaLossOnlyPenalizesInsideAPhase()
   end)
 end
 
+
+function T:testSizhenJinkResponseAllowsDistantSlashAtPhaseEnd()
+  run(function(room, cao, current, _, far)
+    general(room, cao, "wei034")
+    local jink = card(room, cao, "qiao__jink")
+    room:throwCard(far:getCardIds("h"), "test", far, far)
+    local hp, asked = far.hp, 0
+    lu.assertFalse(cao:inMyAttackRange(far))
+    fixture.withSkillRequests(room, id("wei034_1"), {
+      askToUseVirtualCard = function(_, p)
+        asked = asked + 1
+        local slash = Fk:cloneCard("qiao__slash")
+        slash.skillName = id("wei034_1")
+        return { from = p, tos = { far }, card = slash }
+      end,
+    }, function()
+      runStartPhase(room, current, "qiao_test_nu_sizhen_jink", function()
+        FkTest.setNextReplies(cao, { { card = jink.id } })
+        room:useCard { from = current, tos = { cao }, card = Fk:cloneCard("qiao__slash") }
+        lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+      end)
+    end)
+    lu.assertEquals(asked, 1)
+    lu.assertEquals(far.hp, hp - 1)
+  end)
+end
 
 function T:testSuweiJudgesTwiceUsesTwoColorsAgainstDistantCurrentPlayer()
   run(function(room, p, _, _, current)
@@ -693,6 +742,9 @@ local function checkNestedHubaoqi(addTarget)
     lu.assertEquals(offers, { addTarget and nested.id or first.id })
   end)
 end
+function T:testHubaoqiNestedSlashKeepsFirstDeclaredTarget() checkNestedHubaoqi(false) end
+function T:testHubaoqiFallsBackWhenFirstSlashGainsATarget() checkNestedHubaoqi(true) end
+
 local function equip(room, owner, name)
   local equipment = card(room, owner, name)
   room:moveCardIntoEquip(owner, equipment.id)

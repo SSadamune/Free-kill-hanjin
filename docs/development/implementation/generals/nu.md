@@ -15,11 +15,12 @@
 | QUN139 | [管亥](nu/qun139.md) | [卸尾](nu/qun139.md#qun139-1)、[诱阙](nu/qun139.md#qun139-2)、[青州精锐](nu/qun139.md#retinue-qingzhou-jingrui)（统领） |
 | SHU036 | [张嶷](nu/shu036.md) | [越险](nu/shu036.md#shu036-1)、[无当飞军](nu/shu036.md#retinue-wudang-feijun)（统领） |
 | SHU054 | [张翼](nu/shu054.md) | [殿军](nu/shu054.md#shu054-1)、[抗锐](nu/shu054.md#shu054-2) |
+| WEI034 | [曹真](nu/wei034.md) | [司镇](nu/wei034.md#wei034-1)、[虎豹骑](nu/wei034.md#retinue-hubaoqi)（统领） |
 
 ## 统领与翼从
 
 - [丹阳青巾](nu/retinue-danyang-qingjin.md#danyang-qingjin)
-- [虎豹骑](../../../../pkg/qiao_bingqing/skills/retinue_hubaoqi.lua)
+- [虎豹骑](nu/retinue-hubaoqi.md#hubaoqi)
 - [无当飞军](../../../../pkg/qiao_generals/skills/retinue_skill_wudang_feijun.lua)
 - [解烦卫](../../../../pkg/qiao_bingqing/skills/retinue_jiefanwei.lua)
 - [陷阵营](nu/retinue-xianzhenying.md#xianzhenying)
