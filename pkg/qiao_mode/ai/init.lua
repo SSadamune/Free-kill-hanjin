@@ -8,6 +8,7 @@ local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
+local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -67,18 +68,21 @@ function Robot:makeReply()
   error(reply, 0)
 end
 
-local playStages = { "draw", "setup", "disrupt", "damage", "delayed" }
-
 function Robot:handlePlayCard()
   if Cost.effectable(self.player, "qiao__skill_han014_1") then
     local index = Cuipo.useIndex(self.player, self.room.logic:getCurrentEvent())
-    for _, stage in ipairs(playStages) do
+    for _, stage in ipairs(Personality.standardOrder) do
       local reply = Cards.play(self, stage, index) or ViewAs.play(self, stage, index)
       if reply then return reply end
     end
   end
-  for _, stage in ipairs(playStages) do
-    local reply = Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
+  for _, stage in ipairs(Personality.playOrder(self)) do
+    local reply
+    if stage == "cheap_recast" then
+      reply = Cards.recast(self, true)
+    else
+      reply = Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
+    end
     if reply then return reply end
     if stage == "draw" then
       reply = Skills.cooperativeAlliance(self)
@@ -173,6 +177,7 @@ function M.install(room)
     player.ai = Robot:new(player)
     player.ai.room = room
   end
+  Personality.assign(room)
 end
 
 return M

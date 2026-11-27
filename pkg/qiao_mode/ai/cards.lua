@@ -229,6 +229,7 @@ local function stageOf(card)
   local name = card.name
   if name == "qiao__foresight" or name == "qiao__strengthen_state"
     or name == "qiao__restore_heartland" or name == "qiao__befriend_attacking" then return "draw" end
+  if name == "qiao__god_salvation" or name == "qiao__iron_chain" then return "support" end
   if removal[name] or name == "qiao__collateral" then return "disrupt" end
   if enemyPhase[name] then return "delayed" end
   if damage[name] or enemyGroup[name] or name == "qiao__analeptic" then return "damage" end
@@ -268,13 +269,17 @@ function M.play(ai, stage, cuipoIndex)
   end
 end
 
-function M.recast(ai)
+function M.recast(ai, cheap)
   local hand = ai.player:getCardIds("h")
+  local rescueChain = cheap and table.find(ai.room:getPresentPlayers(), function(target)
+    return target.chained and ai:isFriend(target)
+  end)
   local enabled = ai:getEnabledCards()
   table.sort(enabled)
   for _, id in ipairs(enabled) do
     local card = Fk:getCardById(id)
     if table.contains(card.special_skills or {}, "recast") and table.contains(hand, id)
+      and (not cheap or (Cost.value(ai, id) <= 3 and not (rescueChain and card.name == "qiao__iron_chain")))
       and Fk.skills.recast:canUse(ai.player) then
       ai:selectCard(id, true)
       ai.handler:selectSpecialUse("recast")

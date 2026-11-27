@@ -5,11 +5,14 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 
 Testqiao_robot_ai = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
-local function scenario(fn)
+local function scenario(fn, useAssignedPersonality)
   local ok, err
   FkTest.runInRoom(function()
     local room = FkTest.room
     local player, enemy, ally, unknown = table.unpack(room.players)
+    if not useAssignedPersonality then
+      for _, actor in ipairs(room.players) do actor.ai.personality = nil end
+    end
     skillTest.installBlankGenerals(room, { "wei", "shu", "wei", "wu", "wu", "qun", "han", "jin" })
     room:setPlayerProperty(unknown, "kingdom", "unknown")
     room:setPlayerProperty(player, "phase", Player.Play)
@@ -1266,6 +1269,60 @@ function Testqiao_robot_ai:testJianxiongCanSaveSlashAndEquipmentButAvoidsLethalD
     savage()
     lu.assertEquals(player.hp, 1)
     lu.assertEquals(room:getCardArea(slash.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testPersonalityIsAssignedAtRoomStartAndStaysStable()
+  scenario(function(room, player)
+    local profiles = { aggressive = true, conservative = true, supportive = true, draw = true }
+    local assigned = {}
+    for _, actor in ipairs(room.players) do
+      lu.assertTrue(profiles[actor.ai.personality])
+      assigned[actor] = actor.ai.personality
+    end
+    reply(player, "PlayCard", {})
+    reply(player, "PlayCard", {})
+    for actor, profile in pairs(assigned) do lu.assertEquals(actor.ai.personality, profile) end
+  end, true)
+end
+
+function Testqiao_robot_ai:testAggressiveAndConservativeProfilesChangeThePlayOrder()
+  scenario(function(room, player)
+    local duel = give(room, player, "qiao__duel")
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:setPlayerProperty(player, "hp", 2)
+    lu.assertEquals(reply(player, "PlayCard", {}).card, armor.id)
+    player.ai.personality = "aggressive"
+    lu.assertEquals(reply(player, "PlayCard", {}).card, duel.id)
+    local draw = give(room, player, "qiao__foresight")
+    local peach = give(room, player, "qiao__peach")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, draw.id)
+    player.ai.personality = "conservative"
+    lu.assertEquals(reply(player, "PlayCard", {}).card, peach.id)
+  end)
+end
+
+function Testqiao_robot_ai:testSupportiveAndDrawProfilesChangeThePlayOrder()
+  scenario(function(room, player, _, ally)
+    for _, actor in ipairs(room.players) do room:setPlayerProperty(actor, "hp", actor.maxHp) end
+    room:setPlayerProperty(ally, "hp", ally.maxHp - 1)
+    local armor = give(room, player, "qiao__eight_diagram")
+    local salvation = give(room, player, "qiao__god_salvation")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, armor.id)
+    player.ai.personality = "supportive"
+    lu.assertEquals(reply(player, "PlayCard", {}).card, salvation.id)
+    room:setPlayerProperty(ally, "kingdom", "unknown")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, armor.id)
+    room:throwCard({ armor.id, salvation.id }, "test", player, player)
+
+    player.ai.personality = "draw"
+    local chain = give(room, player, "qiao__iron_chain")
+    local duel = give(room, player, "qiao__duel")
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card, chain.id)
+    lu.assertEquals(action.special_skill, "recast")
+    room:throwCard(chain.id, "test", player, player)
+    lu.assertEquals(reply(player, "PlayCard", {}).card, duel.id)
   end)
 end
 
