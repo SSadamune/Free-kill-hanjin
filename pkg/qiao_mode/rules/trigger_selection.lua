@@ -6,6 +6,13 @@ local otherSelectionSources = {
   ["#qiao_adaptation_rule"] = true,
 }
 
+function M.confirm(room, player)
+  local frame = room.qiaoTriggerSelection
+  if frame and frame.player == player and room.current_cost_skill == frame.skill then
+    frame.confirmed = true
+  end
+end
+
 -- Native single-choice requests display every option and submit on the click.
 -- Keep the visible list even when only one option is available, so the engine
 -- cannot auto-return it and disabled alternatives are still explained.
@@ -29,10 +36,7 @@ function M.askOption(room, player, params)
     })
   end
   if choice == "Cancel" or not table.contains(params.choices, choice) then return end
-  local frame = room.qiaoTriggerSelection
-  if frame and frame.player == player and room.current_cost_skill == frame.skill then
-    frame.confirmed = true
-  end
+  M.confirm(room, player)
   return choice
 end
 

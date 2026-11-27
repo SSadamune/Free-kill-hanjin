@@ -1,9 +1,25 @@
 # 变包
 
-目前仅下表的君主版正式接入。[变包平行武将及关联内容](../../../rules/bian-generals.md)仍处于规则审阅阶段。下表技能和专属效果链接到已接入的实现。
+正式登记 12 张普通武将、1 张君主版（君孙权）与 1 种普通翼从（飞熊军）。本包在程序中共用 `qiao_zhenshi`（君临天下）加载包，角标为 `qiao_prefix_bian`（“变”），此索引按卡面包别编排。规则定稿见[变包索引](../../../rules/bian-generals.md)，当前全量验收记录见[开发状态](../../status.md#最近验证记录)。
 
 ## 逐将检索
 
 | 编号 | 武将 | 技能 |
 | --- | --- | --- |
+| HAN023 | [伍琼&种辑](bian/han023.md) | [除奸](bian/han023.md#han023-1)、[心疾](bian/han023.md#han023-2) |
+| HAN024 | [灵雎](bian/han024.md) | [竭缘](bian/han024.md#han024-1)、[焚心](bian/han024.md#han024-2) |
+| WEI020 | [荀攸](bian/wei020.md) | [奇策](bian/wei020.md#wei020-1)、[智愚](bian/wei020.md#wei020-2) |
+| WEI022 | [卞夫人](bian/wei022.md) | [挽危](bian/wei022.md#wei022-1)、[约俭](bian/wei022.md#wei022-2) |
+| SHU020 | [沙摩柯](bian/shu020.md) | [蒺藜](bian/shu020.md#shu020-1) |
+| SHU022 | [马谡](bian/shu022.md) | [散谣](bian/shu022.md#shu022-1)、[制蛮](bian/shu022.md#shu022-2) |
 | EM(WU001) | [君孙权](bian/em-wu001.md) | [嘉禾](bian/em-wu001.md#em-wu001-1)、[敛资](bian/em-wu001.md#em-wu001-2)、[聚宝](bian/em-wu001.md#em-wu001-3)、[缘江烽火图](bian/em-wu001.md#em-wu001-flag)（派生／标记）、[攻心](bian/em-wu001.md#em-wu001-gongxin)（派生／标记） |
+| WU021 | [凌统](bian/wu021.md) | [旋略](bian/wu021.md#wu021-1)、[勇进](bian/wu021.md#wu021-2) |
+| WU022 | [吕范](bian/wu022.md) | [调度](bian/wu022.md#wu022-1)、[典财](bian/wu022.md#wu022-2) |
+| QUN009 | [左慈](bian/qun009.md) | [化形](bian/qun009.md#qun009-1) |
+| QUN022A | [李傕](bian/qun022a.md) | [凶算](bian/qun022a.md#qun022a-1)、[挠袭](bian/qun022a.md#qun022a-2)、[飞熊军](bian/retinue-feixiongjun.md#feixiongjun)（关联翼从） |
+| JIN018 | [陈骞](bian/jin018.md) | [忽辱](bian/jin018.md#jin018-1)、[武督](bian/jin018.md#jin018-2) |
+| JIN020 | [荀勖](bian/jin020.md) | [应政](bian/jin020.md#jin020-1)、[拨律](bian/jin020.md#jin020-2) |
+
+## 本包翼从
+
+- [飞熊军](bian/retinue-feixiongjun.md#feixiongjun)

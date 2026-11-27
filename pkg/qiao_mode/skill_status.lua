@@ -19,7 +19,12 @@ local fuli = table.map(suits, M.fuliSuitMark)
 
 M.hengjiang = "qiao_hengjiang_limit-turn"
 
+M.jiliCount = "qiao_use_respond_count-turn"
+local jiliSkills = { "qiao__skill_shu020_1", "ld__jilis" }
+function M.isJili(skillName) return table.contains(jiliSkills, skillName) end
+
 local entries = {
+  { "qiao_wei022_yuejian-turn", "qiao__skill_wei022_2", "本回合手牌上限的初值为体力上限。弃牌阶段结束时，若本阶段未弃置牌，摸一张牌。" },
   { "@@qiao__skill_shu004_2_kong", "qiao__skill_shu004_2", "下次摸牌前，【杀】和【决斗】对你无效。" },
   { "@[qiao_luanji_suits]", "qiao__skill_qun004_1", "本回合发动【乱击】时，不能再选择这些花色。", Deck.suitSymbols },
   { M.hengjiang, "qiao__skill_wei023_1", "本回合手牌上限减少所示数值。", function(value) return "−" .. value end },
@@ -71,7 +76,7 @@ local entries = {
   { "@@lure_tiger-turn", "@@lure_tiger-turn", "暂时移出游戏。" },
 }
 
-local watched = {}
+local watched = { [M.jiliCount] = true }
 for _, entry in ipairs(entries) do watched[entry[1]] = true end
 for _, mark in ipairs(fuli) do watched[mark] = true end
 
@@ -103,10 +108,12 @@ function M.forPlayer(player)
       "本回合不能使用或打出所示花色的牌。", Deck.suitSymbols(banned))
   end
 
-  -- 沙摩柯可从自由选将使用国战原版；只有公开技能才显示其动态门槛。
-  if Fk.skills["ld__jilis"] and player:hasShownSkill("ld__jilis") then
-    append(states, "jili", "ld__jilis",
-      "本回合使用或打出第 X 张牌时可摸 X 张牌，X 为当前攻击范围。", tostring(player:getAttackRange()))
+  for _, name in ipairs(jiliSkills) do
+    if Fk.skills[name] and player:hasShownSkill(name) then
+      append(states, "jili", name,
+        "本回合已使用或打出的牌数。使用或打出第 X 张牌时可摸 X 张，X 为当前攻击范围。", tostring(player:getMark(M.jiliCount)))
+      break
+    end
   end
   return states
 end

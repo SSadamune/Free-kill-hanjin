@@ -99,6 +99,7 @@ function Testmode_rules:testActiveAndPrelightButtonsFromHiddenSkillNotifications
   local wusheng = "qiao__skill_shu002_1"
   local shangyi = "qiao__skill_wu017_1"
   local kanpo = "qiao__skill_shu011_3"
+  local reconnectPackets = {}
   FkTest.runInRoom(function()
     skill_test.installBlankGenerals(room, "jin")
     skill_test.installDualGenerals(room, serverPlayer, {
@@ -110,10 +111,24 @@ function Testmode_rules:testActiveAndPrelightButtonsFromHiddenSkillNotifications
     lu.assertTrue(serverPlayer:isFakeSkill(sanchen))
     room.callbacks.prelight(room, serverPlayer.id, { "", "prelight", sanchen, "true" })
     lu.assertFalse(table.contains(serverPlayer.prelighted_skills, Fk.skills[sanchen]))
+
+    serverPlayer:addFakeSkill(minsi)
+    serverPlayer:addFakeSkill(wusheng)
+    local notify = serverPlayer.doNotify
+    function serverPlayer:doNotify(command, data)
+      if command == "Reconnect" or command == "AddSkill" then
+        table.insert(reconnectPackets, { command, data })
+      end
+      return notify(self, command, data)
+    end
+    local ok, err = pcall(serverPlayer.reconnect, serverPlayer)
+    serverPlayer.doNotify = notify
+    if not ok then error(err, 0) end
   end)
 
   client_room.run(room, function(clients)
     local player = clients[1]
+    player.player_skills = table.simpleClone(player.player_skills)
     player._fake_skills = table.simpleClone(player._fake_skills)
     player._manually_fake_skills = table.simpleClone(player._manually_fake_skills)
     local buttons = {}
@@ -136,15 +151,27 @@ function Testmode_rules:testActiveAndPrelightButtonsFromHiddenSkillNotifications
       lu.assertEquals(buttons[name].prelight == true, name == wusheng or name == shangyi or name == kanpo, name)
     end
 
-    -- A room summary restores dark skills separately from the request handler's
-    -- skill list. Rebuild the same client-side state, then send the real snapshot.
+    -- 重连从空的客户端技能列表开始，暗将技能由服务端在房间摘要之后单独补发。
     player.player_skills = {}
-    player._manually_fake_skills = { Fk.skills[sanchen], Fk.skills[minsi], Fk.skills[wusheng] }
+    player.derivative_skills = {}
+    player._fake_skills = {}
+    player._manually_fake_skills = {}
     player.prelighted_skills = {}
     buttons = {}
+    lu.assertEquals(reconnectPackets[1][1], "Reconnect")
     local previousClient = ClientInstance
     ClientInstance = client
-    local ok, err = pcall(player.sendDataToUI, player)
+    local ok, err = pcall(function()
+      for _, packet in ipairs(reconnectPackets) do
+        local command, data = table.unpack(packet)
+        if command == "Reconnect" then
+          player:deserialize(data.players[player.id])
+          player:sendDataToUI()
+        else
+          client:addSkill(data)
+        end
+      end
+    end)
     ClientInstance = previousClient
     if not ok then error(err, 0) end
     lu.assertEquals(buttons[sanchen], { regular = true })

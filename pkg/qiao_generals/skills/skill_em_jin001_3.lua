@@ -11,6 +11,7 @@ local TAIKANG = "qiao__skill_em_jin001_1"
 local XINGTU = "qiao__skill_jin001_2"
 local LIMIT = "qiao_jin001_dingfei_used"
 local LOST = "qiao_jin001_taikang_lost"
+skill.qiao_limited_used_marks = { LIMIT }
 
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 Exchange.registerSkillProviderFilter(function(room, generalName, skillName)

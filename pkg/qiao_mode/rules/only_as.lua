@@ -180,7 +180,8 @@ local function evaluate(room, source)
   if holder == nil or holder.dead then return false, false end
   if source.skill ~= nil then
     local main, deputy = generalsOf(holder)
-    if not generalHasSkill(main, source.skill) and not generalHasSkill(deputy, source.skill) then
+    if not generalHasSkill(main, source.skill) and not generalHasSkill(deputy, source.skill)
+      and not holder:hasSkill(source.skill, true, true) then
       return false, false
     end
     if not holder:hasShownSkill(source.skill) then
@@ -327,6 +328,24 @@ function M.reset(room)
   room:setTag(M.TURN_TAG, 0)
   for _, player in ipairs(room.players) do
     room:setPlayerMark(player, M.SOURCE_MARK, 0)
+  end
+end
+
+--- 汉晋房间级接线：技能被临时无效化或恢复时立即同步“只能当”来源，避免客户端/服务端滞后。
+function M.installServer(room)
+  if room == nil or room.qiaoOnlyAsInvalidityInstalled then return end
+  room.qiaoOnlyAsInvalidityInstalled = true
+  local origInvalidate = room.invalidateSkill
+  function room:invalidateSkill(player, skill_name, temp, source_skill)
+    local ret = origInvalidate(self, player, skill_name, temp, source_skill)
+    M.refresh(self)
+    return ret
+  end
+  local origValidate = room.validateSkill
+  function room:validateSkill(player, skill_name, temp, source_skill)
+    local ret = origValidate(self, player, skill_name, temp, source_skill)
+    M.refresh(self)
+    return ret
   end
 end
 
@@ -503,7 +522,7 @@ local function clientSources(player)
   local ret = {}
   for _, rec in ipairs(mark) do
     local def = M.defs[rec.def]
-    if def ~= nil then
+    if def ~= nil and (rec.skill == nil or player:hasShownSkill(rec.skill)) then
       local source = {
         uid = rec.uid,
         def = rec.def,
