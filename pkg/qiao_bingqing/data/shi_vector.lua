@@ -34,5 +34,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__jin037", name = "成济&成倅",
+      title = "袒忿半瓦", kingdom = "jin",
+      hp = 4, gender = "male",
+      guests = {}, companions = {},
+      skills = {
+        {
+          id = "qiao__skill_jin037_1", name = "养刀",
+          text = "锁定技，若你的装备区里没有武器牌，你视为装备着场上攻击范围最大的所有武器牌。",
+        },
+        {
+          id = "qiao__skill_jin037_2", name = "畜鸣",
+          text = "其他角色出牌阶段限一次，其可以将一张【杀】当【酒】对你使用，然后将此【杀】交给你并视为对你使用一张无视武器限制的【借刀杀人】或【过河拆桥】。",
+        },
+      },
+    },
   },
 }

@@ -41,6 +41,44 @@ Testqiao_shi_vector = {
 }
 local T = Testqiao_shi_vector
 
+function T:testYangdaoGrantsTiedWeaponsButNeverCreatesEquipment()
+  run(function(room, p, a, b)
+    asGeneral(room, p, "jin037")
+    local spear = room:printCard("qiao__spear", Card.Spade, 12)
+    local blade = room:printCard("qiao__blade", Card.Spade, 5)
+    room:moveCardTo(spear, Card.PlayerEquip, a, fk.ReasonPut)
+    room:moveCardTo(blade, Card.PlayerEquip, b, fk.ReasonPut)
+    lu.assertEquals(p:getAttackRange(), 3)
+    lu.assertEquals(#p:getEquipments(Card.SubtypeWeapon), 0)
+    for _, card in ipairs({ spear, blade }) do
+      for _, sk in ipairs(card:getEquipSkills(p)) do lu.assertTrue(p:hasSkill(sk.name), sk.name) end
+    end
+    room:throwCard(spear, "test", a, a)
+    for _, sk in ipairs(spear:getEquipSkills(p)) do lu.assertFalse(p:hasSkill(sk.name)) end
+  end)
+end
+
+function T:testChumingUsesWineOnRecipientThenGivesSlashAndHandlesNoWeapon()
+  run(function(room, user, brothers)
+    asGeneral(room, brothers, "jin037")
+    local material = give(room, user, "qiao__fire__slash")
+    local before = user:usedCardTimes("analeptic", Player.HistoryTurn)
+    user:addCardUseHistory("analeptic", 1)
+    local choices = 0
+    fixture.withSkillRequests(room, id("jin037_2"), {
+      askToChoice = function() choices = choices + 1; return "qiao__collateral" end,
+      askToChoosePlayers = function(_, _, params) return { params.targets[1] } end,
+    }, function()
+      room:handleUseCardReply(user, FkTest.ReplyUseSkill("qiao__chuming_other&", { brothers }, { material.id }))
+    end)
+    lu.assertEquals(choices, 1)
+    lu.assertTrue(room:getCardOwner(material.id) == brothers)
+    lu.assertEquals(brothers.drank, 1)
+    lu.assertEquals(user.drank, 0)
+    lu.assertEquals(user:usedCardTimes("analeptic", Player.HistoryTurn), before + 1)
+  end)
+end
+
 function T:testJingchuRemovesUntilTwoRemainAndOnlyThenDrawsAndGives()
   run(function(room, tian, remaining, a, b)
     asGeneral(room, tian, "han047")
@@ -86,6 +124,27 @@ function T:testSuolingCanGiveSecondBlackCardAndChooseYuanweiAsSlashTarget()
     lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
   end)
 end
+
+function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
+  run(function(room, p, other)
+    asGeneral(room, p, "jin037")
+    local spear = room:printCard("qiao__spear", Card.Spade, 12)
+    room:moveCardTo(spear, Card.PlayerEquip, other, fk.ReasonPut)
+    local weaponSkill = spear:getEquipSkills(p)[1].name
+    lu.assertTrue(p:hasSkill(weaponSkill))
+    room:invalidateSkill(p, id("jin037_1"))
+    lu.assertFalse(p:hasSkill(weaponSkill))
+    room:validateSkill(p, id("jin037_1"))
+    lu.assertTrue(p:hasSkill(weaponSkill))
+    room:moveCardTo(spear, Card.PlayerEquip, p, fk.ReasonPut)
+    lu.assertTrue(p:hasSkill(weaponSkill))
+    room:invalidateSkill(p, id("jin037_1"))
+    lu.assertTrue(p:hasSkill(weaponSkill))
+    room:throwCard(spear, "test", p, p)
+    lu.assertFalse(p:hasSkill(weaponSkill))
+  end)
+end
+
 
 function T:testSuolingSecondOptionUsesTwoConvertedSlashesOnRecipient()
   run(function(room, yuan, a, b)
@@ -142,5 +201,32 @@ local function checkSuolingFocus(suit)
 end
 function T:testSuolingPublicFocusWithBlackHandCard() checkSuolingFocus(Card.Club) end
 function T:testSuolingPublicFocusWithRedHandCard() checkSuolingFocus(Card.Heart) end
+
+function T:testChumingUsesCollateralSecondaryTargetRules()
+  run(function(room, user, brothers, victim)
+    asGeneral(room, brothers, "jin037")
+    local slash = give(room, user, "qiao__slash")
+    local prohibited = user.isProhibited
+    user.isProhibited = function(self, to, card, ...)
+      if to == victim and card.trueName == "collateral" then return true end
+      return prohibited(self, to, card, ...)
+    end
+    local trick = Fk:cloneCard("qiao__collateral")
+    lu.assertTrue(trick.skill:targetFilter(user, victim, { brothers }, {}, trick))
+    local chosen
+    fixture.withSkillRequests(room, id("jin037_2"), {
+      askToChoice = function() return trick.name end,
+      askToChoosePlayers = function(_, _, params)
+        lu.assertTrue(table.contains(params.targets, victim))
+        chosen = victim
+        return { victim }
+      end,
+    }, function()
+      room:handleUseCardReply(user, FkTest.ReplyUseSkill("qiao__chuming_other&", { brothers }, { slash.id }))
+    end)
+    user.isProhibited = prohibited
+    lu.assertIs(chosen, victim)
+  end)
+end
 
 return { name = "qiao_shi_vector" }
