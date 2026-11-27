@@ -2,6 +2,7 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
+local Command = require "packages.qiao.pkg.qiao_mode.ai.command"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -122,6 +123,9 @@ function M.active(ai, data)
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
   if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
+  if skill == "#command_skill" and key == "#command6-select" then
+    return Command.keep(ai) and Requests.reply(ai) or ""
+  end
   if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
@@ -384,7 +388,9 @@ end
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local pick = Triggers.choice(ai, choices, (prompt or ""):split(":"))
-  if skillName == "trigger" then
+  if skillName == "do_command" then
+    pick = Command.choice(ai, choices)
+  elseif skillName == "trigger" then
     pick = choices[1]
   elseif skillName == "qiao__restore_heartland_skill" then
     pick = "restore_heartland_draw"

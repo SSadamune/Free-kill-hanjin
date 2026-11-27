@@ -2,6 +2,7 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skillTest = __dofile("../../../tests/support/skill_test.lua")
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Heg = require "packages.hegemony.util"
 
 Testqiao_robot_ai = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
@@ -1427,6 +1428,74 @@ function Testqiao_robot_ai:testZhoujunRespondsToRealPreparationWithUsefulSlashCa
     lu.assertEquals(player:getMark("qiao_zhoujun_slash"), 2)
     local slash = Fk:cloneCard("qiao__slash")
     lu.assertEquals(slash:getSkill(player):getMaxUseTime(player, Player.HistoryPhase, slash), 3)
+  end)
+end
+
+local function changling(from, target, index)
+  return Heg.Command {
+    from = from, tos = { target }, command = "command" .. index, skillName = "qiao__skill_wei024_1",
+  }
+end
+
+function Testqiao_robot_ai:testChanglingComparesDamageAndHpLossAgainstRefusal()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room.current = enemy
+    room:setPlayerProperty(player, "hp", 4)
+    room:setPlayerProperty(ally, "hp", 1)
+    room:setPlayerProperty(ally, "shield", 0)
+    FkTest.setNextReplies(enemy, { { targets = { ally.id }, card = { subcards = {} } } })
+    lu.assertFalse(changling(enemy, player, 1))
+    lu.assertEquals(ally.hp, 1)
+    local target = room.players[5]
+    room:setPlayerProperty(target, "hp", 4)
+    room:setPlayerProperty(target, "shield", 0)
+    FkTest.setNextReplies(enemy, { { targets = { target.id }, card = { subcards = {} } } })
+    lu.assertTrue(changling(enemy, player, 1))
+    lu.assertEquals(target.hp, 3)
+    lu.assertTrue(changling(enemy, player, 3))
+    lu.assertEquals(player.hp, 3)
+    room:setPlayerProperty(player, "hp", 2)
+    lu.assertFalse(changling(enemy, player, 3))
+    lu.assertEquals(player.hp, 2)
+  end)
+end
+
+function Testqiao_robot_ai:testChanglingAvoidsLosingVitalResponsesAndAcceptsReset()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room.current = enemy
+    room:setPlayerProperty(player, "hp", 1)
+    local jink = give(room, player, "qiao__jink")
+    lu.assertFalse(changling(enemy, player, 4))
+    lu.assertEquals(player:getMark("@@command4_effect-turn"), 0)
+    room:throwCard(jink.id, "test", player, player)
+    lu.assertTrue(changling(enemy, player, 4))
+    lu.assertEquals(player:getMark("@@command4_effect-turn"), 1)
+    room:setPlayerProperty(player, "hp", 3)
+    lu.assertFalse(changling(enemy, player, 5))
+    room:setPlayerProperty(player, "faceup", false)
+    lu.assertTrue(changling(enemy, player, 5))
+    lu.assertTrue(player.faceup)
+  end)
+end
+
+function Testqiao_robot_ai:testChanglingGivesCheapCardsAndKeepsMostValuableCard()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room.current = enemy
+    local cheap = give(room, player, "qiao__lightning")
+    local spare = give(room, player, "qiao__lure_tiger")
+    local peach = give(room, player, "qiao__peach")
+    room:moveCardTo(room:printCard("qiao__duel", Card.Club, 7), Card.DrawPile)
+    lu.assertTrue(changling(enemy, player, 2))
+    lu.assertEquals(room:getCardOwner(cheap.id).id, enemy.id)
+    lu.assertEquals(room:getCardOwner(spare.id).id, enemy.id)
+    lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+    local excess = give(room, player, "qiao__lightning")
+    lu.assertTrue(changling(enemy, player, 6))
+    lu.assertEquals(room:getCardArea(excess.id), Card.DiscardPile)
+    lu.assertItemsEquals(player:getCardIds("h"), { peach.id })
   end)
 end
 
