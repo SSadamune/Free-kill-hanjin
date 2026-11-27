@@ -1,11 +1,13 @@
-"""Verify the stock lobby's room-size and ban-scheme wiring for Locked Factions.
+"""Verify the stock lobby's rule descriptions, room sizes, and ban-scheme wiring.
 
 Run with PySide6 available and the development runtime's freekill-core checkout
 present. The fixture loads unpatched stock QML. Services and the Lua bridge are
 stubbed, with the real Lua feasibility rules covered by tests/locked_factions.lua.
 """
+import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -50,7 +52,8 @@ singletons = {
 ''',
     'Lua': '''
   function tr(label) {
-    return ({
+    const ruleHelp = RULE_HELP;
+    return ruleHelp[label] ?? ({
       qiao_locked_landlord: "斗地主", qiao_locked_2v2: "2v2", qiao_locked_human_vs_ai: "人机对抗",
       "Player num": "房间人数",
       qiao_locked_game_rule: "游戏规则", "Enable free assign": "自由选将", "$RoomName": "%1",
@@ -126,6 +129,13 @@ ApplicationWindow {
     find(createRoom, item => item.objectName === "gameModeSelectPage").gameMode = mode;
   }
 
+  function checkRuleHelp(rule, id) {
+    const key = "help: " + id;
+    const subtitle = Lua.tr(key);
+    check(subtitle !== key && subtitle.length >= 20 && subtitle.length <= 30, "missing or long rule help");
+    check(rule.subTitle === subtitle, "wrong description for " + id);
+  }
+
   Timer {
     interval: 75
     running: true
@@ -143,6 +153,7 @@ ApplicationWindow {
           check(rule && rule.parent.children[1] === rule, "rule should be the first setting");
           check(!freeAssign.enabled && !freeAssign.suffixLoader.item.checked, "free assignment should appear off");
           check(rule.suffixLoader.item.displayText === "斗地主", "default choice");
+          checkRuleHelp(rule, "qiao_locked_landlord");
           check(!playerCount.enabled && playerCount.value === 3, "default capacity should be disabled at 3");
           check(createRoom.config.playerNum === 3 && confirm.enabled, "3-player room confirmation");
           confirm.clicked();
@@ -158,6 +169,7 @@ ApplicationWindow {
           secondOption.clicked();
         } else if (phase === 3) {
           check(rule.suffixLoader.item.displayText === "2v2", "2v2 choice");
+          checkRuleHelp(rule, "qiao_locked_2v2");
           check(!playerCount.enabled && playerCount.value === 4, "2v2 capacity should be disabled at 4");
           check(createRoom.config.playerNum === 4 && confirm.enabled, "4-player room confirmation");
           confirm.clicked();
@@ -180,10 +192,12 @@ ApplicationWindow {
           switchMode("qiao_locked_mode");
         } else if (phase === 7) {
           check(rule.suffixLoader.item.displayText === "2v2", "saved 2v2 choice should be restored");
+          checkRuleHelp(rule, "qiao_locked_2v2");
           check(!playerCount.enabled && playerCount.value === 4, "saved rule should restore capacity 4");
           rule.suffixLoader.item.activated(0);
         } else if (phase === 8) {
           check(!playerCount.enabled && playerCount.value === 3, "switching back should restore capacity 3");
+          checkRuleHelp(rule, "qiao_locked_landlord");
           rule.suffixLoader.item.popup.open();
         } else if (phase === 9) {
           const popup = rule.suffixLoader.item.popup;
@@ -192,6 +206,7 @@ ApplicationWindow {
           humanVsAI.clicked();
         } else if (phase === 10) {
           check(rule.suffixLoader.item.displayText === "人机对抗", "human vs AI choice");
+          checkRuleHelp(rule, "qiao_locked_human_vs_ai");
           check(playerCount.enabled, "human vs AI should enable capacity changes");
           playerCount.value = 9;
         } else if (phase === 11) {
@@ -205,7 +220,8 @@ ApplicationWindow {
           rule.suffixLoader.item.activated(1);
         } else if (phase === 12) {
           check(!playerCount.enabled && playerCount.value === 4, "switching back to 2v2 should lock capacity at 4");
-          console.log("PASS: built-in lobby sends fixed and editable capacities, saves human vs AI, and restores controls");
+          checkRuleHelp(rule, "qiao_locked_2v2");
+          console.log("PASS: built-in lobby switches rule descriptions, sends capacities, and restores controls");
           Qt.exit(0);
         }
         phase++;
@@ -229,6 +245,11 @@ def copy_from_stock(folder, path):
     output.write_bytes(subprocess.check_output(['git', '-C', str(CORE), 'show', 'HEAD:' + path]))
 
 def main():
+    translations = (ROOT / 'pkg/qiao_mode/init.lua').read_text(encoding='utf-8')
+    rule_help = dict(re.findall(
+        r'\["(help: qiao_locked_(?:game_rule|landlord|2v2|human_vs_ai))"\] = "([^"]+)"',
+        translations,
+    ))
     qInstallMessageHandler(lambda _level, _context, message: print(message, flush=True))
     with TemporaryDirectory(dir=ROOT / '.dev') as tmp:
         folder = Path(tmp)
@@ -256,6 +277,8 @@ def main():
         write(folder, 'Fk/qmldir', 'module Fk\n' +
               '\n'.join(f'singleton {name} 1.0 {name}.qml' for name in singletons) + '\n')
         for name, body in singletons.items():
+            if name == 'Lua':
+                body = body.replace('RULE_HELP', json.dumps(rule_help, ensure_ascii=False))
             write(folder, f'Fk/{name}.qml', 'pragma Singleton\nimport QtQuick\nQtObject {\n' + body + '\n}\n')
         write(folder, 'LunarLtk/qmldir', 'module LunarLtk\nsingleton Ltk 1.0 Ltk.qml\n')
         write(folder, 'LunarLtk/Ltk.qml', 'pragma Singleton\nimport QtQuick\nQtObject {}')

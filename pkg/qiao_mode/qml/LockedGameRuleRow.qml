@@ -19,6 +19,8 @@ W.ActionRow {
   readonly property int fixedCapacity: roomSizes[value] ?? 0
   readonly property bool locksPlayerCount: activeForMode && fixedCapacity > 0
 
+  subTitle: root.model.indexOf(root.value) >= 0 ? Lua.tr("help: " + root.value) : ""
+
   suffixComponent: ComboBox {
     id: choices
 
