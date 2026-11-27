@@ -52,7 +52,7 @@ end
 function Robot:supportScore(target, tactical)
   if not self:isFriend(target) then return tactical end
   local bonus = self.personality == "supportive" and target ~= self.player and 0.5 or 0
-  return tactical + Diplomacy.humanBonus(self, target) + bonus
+  return tactical + Diplomacy.humanBonus(self, target, 0.15) + bonus
 end
 
 function Robot:makeReply()

@@ -69,13 +69,13 @@ end
 
 function M.hostileScore(ai, target, tactical)
   if ai:isEnemy(target) then
-    return tactical - 8 * (M.attitude(ai, target) - enemyAttitude) + M.humanBonus(ai, target)
+    return tactical - 8 * (M.attitude(ai, target) - enemyAttitude) + M.humanBonus(ai, target, 0.1)
   end
 end
 
-function M.humanBonus(ai, target)
+function M.humanBonus(ai, target, bonus)
   local state = target.serverplayer:getState()
-  if target ~= ai.player and state ~= fk.Player_Robot and state ~= fk.Player_Invalid then return 0.25 end
+  if target ~= ai.player and state ~= fk.Player_Robot and state ~= fk.Player_Invalid then return bonus end
   return 0
 end
 
