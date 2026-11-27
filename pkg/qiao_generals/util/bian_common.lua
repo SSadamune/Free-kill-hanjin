@@ -106,6 +106,10 @@ function M.isLimitedRetinueSkill(skillName)
   return LIMITED_RETINUE_SKILLS[skillName] == true
 end
 
+function M.registerLimitedRetinueSkill(skillName)
+  LIMITED_RETINUE_SKILLS[skillName] = true
+end
+
 function M.publishLimitedRetinues(player)
   if not isServerPlayer(player) then return end
   local data = {}

@@ -1,5 +1,6 @@
 local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
+local Placement = require "packages.qiao.pkg.qiao_mode.rules.mount_placement"
 local M = {}
 local incomingExchanges = setmetatable({}, { __mode = "k" })
 
@@ -130,6 +131,7 @@ function M.installServer(logic)
   function logic:trigger(event, target, data, refreshOnly)
     local broken, detail = trigger(self, event, target, data, refreshOnly)
     local room = self.room
+    if event == fk.BeforeCardsMove then Placement.checkReplacement(room, data) end
     local cards = incomingExchanges[room]
     if event == fk.BeforeCardsMove and cards then
       -- 等普通触发和所有延后 refresh 完成。接下来引擎才会应用这一批移动。

@@ -92,6 +92,11 @@ function M.choose(room, sources, root, player)
   return table.find(sources, function(source) return source.label == choice end)
 end
 
+-- 主动技或转化技没有 TriggerEvent 的逐来源询问窗口，仍以同一账本绑定实体牌。
+function M.chooseForSkill(player, effect, root)
+  return M.choose(player.room, candidates(player, effect, root), root, player)
+end
+
 function M.used(event, effect, source)
   local used = event:getSkillData(effect, "marker_sources") or {}
   used[source.key] = true
