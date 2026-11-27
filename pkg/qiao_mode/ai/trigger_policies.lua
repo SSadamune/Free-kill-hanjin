@@ -139,6 +139,15 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__skill_han016_1-target" or key == "#qiao__skill_han016_1-invoke" then
+    local slash = Fk:cloneCard("qiao__slash")
+    return function(target) return Cards.scoreTarget(ai, slash, target) end
+  end
+  if key == "#qiao__skill_jin013_1-turn" or key == "#qiao__skill_jin013_1-turn-invoke" then
+    return function(target)
+      if not target.chained then return ai:hostileScore(target, 20 - target.hp) end
+    end, true
+  end
   if key == "#qiao__skill_wei006_2-give" or key == "#qiao__skill_wei006_2-rest" then
     return function(target)
       if ai:isFriend(target) and not target:isHandAreaSealed() then
@@ -316,7 +325,14 @@ end
 
 function M.choice(ai, choices, fields)
   local key, player = fields[1], ai.player
-  if key == "#qiao__skill_qun016_2-choice" then
+  if key == "#qiao__skill_jin006_1-choice" then
+    if ai.room.current == player and Cost.effectable(player, "qiao__skill_jin006_2")
+      and table.find(player:getCardIds("h"), function(id) return Cost.value(ai, id) <= 3 end)
+      and table.find(Fk:cloneCard("qiao__unexpectation"):getAvailableTargets(player), function(target)
+        return ai:isEnemy(target)
+      end) then return "qiao__skill_jin006_1-restore" end
+    return "qiao__skill_jin006_1-draw"
+  elseif key == "#qiao__skill_qun016_2-choice" then
     local value = 0
     for _, id in ipairs(player:getCardIds("h")) do value = value + Cost.value(ai, id) end
     if player.hp > 1 and (value >= (player.hp == 2 and 11 or 8)

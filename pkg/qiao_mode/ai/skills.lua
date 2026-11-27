@@ -64,6 +64,11 @@ local function parentData(ai, kind)
   return parent and parent.data
 end
 
+function M.retaliationTarget(ai)
+  local use = parentData(ai, GameEvent.UseCard)
+  return use and use.from
+end
+
 function M.invoke(ai, data)
   local name, prompt = data[1], data[2] or ""
   local fields = prompt:split(":")
@@ -140,6 +145,50 @@ function M.active(ai, data)
   if key == "#qiao__skill_wei006_2-give" then
     if not Cost.select(ai, math.min(2, #ai:getEnabledCards())) then return "" end
     return chooseTargets(ai, Triggers.targetScore(ai, key))
+  end
+  if skill == "virtual_viewas" and key == "#qiao__skill_shu001_1-basic" then
+    for _, name in ipairs({ "qiao__peach", "qiao__slash" }) do
+      if table.contains(extra.choices or {}, name) then
+        local card = Fk:cloneCard(name)
+        card.skillName = extra.skillName
+        local target = Cards.bestCandidate(ai, card:getAvailableTargets(ai.player, extra), function(to)
+          if name == "qiao__peach" then
+            if to == ai.player and to:isWounded() then return 1 end
+          else
+            return Cards.scoreTarget(ai, card, to)
+          end
+        end)
+        if target then
+          return { card = { skill = skill, subcards = {} }, targets = { target.id }, interaction_data = name }
+        end
+      end
+    end
+    return ""
+  end
+  if key == "#qiao__skill_jin022b_2-invoke" then
+    local id, cost = Cost.cheapest(ai)
+    if not id or cost > 4 then return "" end
+    ai:selectCard(id, true)
+    local card = Fk:cloneCard("qiao__chasing_near")
+    card:addSubcard(id)
+    return chooseTargets(ai, function(target)
+      if not ai.player:canUseTo(card, target) then return end
+      local value = Removal.effectValue(ai, card, target)
+      if value and value > cost + 1 then return Cards.scoreTarget(ai, card, target) end
+    end)
+  end
+  if key == "#qiao__retinue_skill_zhoucang-give" then
+    local id, score
+    for _, material in ipairs(ai:getEnabledCards()) do
+      local card = Fk:getCardById(material)
+      local value = Cost.value(ai, material) + (card.color == Card.Red and 2 or 0)
+      if not score or value > score or (value == score and material < id) then id, score = material, value end
+    end
+    if not id then return "" end
+    ai:selectCard(id, true)
+    return chooseTargets(ai, function(target)
+      if ai:isFriend(target) and not target:isHandAreaSealed() then return 1 / (1 + target:getHandcardNum()) end
+    end)
   end
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
@@ -234,7 +283,9 @@ function M.active(ai, data)
       local target = key == "#qiao__qun011-def" and M.promptTarget(ai, fields, 3) or ai.player
       if not target or not use or not use.card or not Triggers.protects(ai, use, target) then return "" end
       if key == "#qiao__skill_jin004_2-discard" then
-        budget = target.hp <= 1 and use.card.is_damage_card and 4 or 2
+        if target.hp <= 1 or not ai:isEnemy(use.from) or not use.card.is_damage_card
+          or Damage.cardAmount(use.card, use, use.from) <= 1 + target.shield then return "" end
+        budget = 2
       end
     elseif key == "#qiao__skill_jin010_1-cards" then
       local target = M.promptTarget(ai, fields, 2)
@@ -420,7 +471,7 @@ function M.chosen(ai, data)
   local obtains = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__skill_wei002_1-choose"
     or (key == "#AskForChooseCard" and fields[4] == "snatch_skill")
   local removal = obtains or key == "#qiao__chasing_near-choose-discard"
-    or key == "#qiao__skill_qun016_1-card" or key == "#qiao__skill_wei003_1-discard"
+    or key == "#qiao__skill_qun016_1-card" or key == "#qiao__skill_wei003_1-discard" or key == "#qiao__skill_shu012_1-discard"
     or key == "#qiao__skill_wei018_1-card" or key == "#qiao__skill_han009_1-discard"
     or key == "#qiao__skill_han009_1-counter" or key == "#qiao__skill_jin005_2-discard"
     or key == "#qiao_ice_damage_skill-discard" or key == "#qiao_adaptation_discard_equip"

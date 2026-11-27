@@ -98,7 +98,8 @@ function Robot:handlePlayCard()
       if reply then return reply end
     end
   end
-  return Cards.recast(self) or Skills.fallbackAlliance(self)
+  return Cards.recast(self) or Skills.play(self, "recast") or Skills.play(self, "last")
+    or Skills.fallbackAlliance(self) or Cards.threatenEmperor(self)
 end
 
 function Robot:handleAskForSkillInvoke(data)
@@ -122,7 +123,10 @@ function Robot:handleAskForOptions(data)
 end
 
 function Robot:handleAskForUseCard(data)
-  if data[1] == "qiao__retinue_skill_niujin" then return Cards.play(self) end
+  if data[1] == "qiao__retinue_skill_niujin" or data[1] == "qiao__skill_jin016_2" then return Cards.play(self) end
+  if data[1] == "qiao__skill_jin004_2" and data[3] == "#qiao__skill_jin004_2-use" then
+    return Cards.retaliate(self, Skills.retaliationTarget(self))
+  end
   if data[2] == "slash" then return Cards.playEnemySlash(self) or ViewAs.slash(self) end
   if data[2] == "jink" then
     local reply = ViewAs.response(self, "jink")
@@ -132,15 +136,14 @@ function Robot:handleAskForUseCard(data)
     return reply
   end
   if data[2] == "nullification" then
-    local effect = Damage.effect(self, self.player)
-    -- Only the original effect, never a nested counter-nullification.
-    if effect and effect.card and effect.card.is_damage_card
-      and effect.card.trueName ~= "duel" and effect.card.trueName ~= "collateral"
-      and (data[3] or ""):endsWith(":" .. effect.card.name) then
-      local material, cost = Cost.cheapest(self, function(id)
-        return Fk:getCardById(id).trueName == "nullification"
-      end)
-      if material and Damage.acceptIncoming(self, effect, cost) then return "" end
+    local key, _, id, name = table.unpack((data[3] or ""):split(":"))
+    if key == "#AskForNullification" then
+      local target = tonumber(id) and self.room:getPlayerById(tonumber(id))
+      local effect = target and Damage.effect(self, target)
+      if effect and effect.card and effect.card.name == name then
+        local reply = ViewAs.nullification(self, target, effect)
+        if reply ~= nil then return reply end
+      end
     end
   end
   if data[2] == "peach" or data[2] == "peach,analeptic" then

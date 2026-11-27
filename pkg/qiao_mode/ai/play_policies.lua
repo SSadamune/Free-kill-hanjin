@@ -182,6 +182,76 @@ function play.qiao__retinue_skill_qingzhou_jingrui(ai)
   return Request.targets(ai, function(target) return ai:hostileScore(target, 20 - target.hp) end)
 end
 
+function play.qiao__skill_shu001_1(ai)
+  local player = ai.player
+  if player:getMark("qiao__skill_shu001_1-given-phase") >= 2 then return end
+  local peach, slash = Fk:cloneCard("qiao__peach"), Fk:cloneCard("qiao__slash")
+  local heal = player:isWounded() and player:canUseTo(peach, player)
+  if not heal and not table.find(slash:getAvailableTargets(player, { bypass_times = true }), function(target)
+    return Cards.safeDamage(ai, slash, target)
+  end) then return end
+  if not Cost.select(ai, 2, heal and 5 or 4) then return end
+  return Request.targets(ai, function(target)
+    if ai:isFriend(target) and not target:isHandAreaSealed() then return 4 / (1 + target:getHandcardNum()) end
+  end)
+end
+
+function play.qiao__skill_shu012_1(ai)
+  return Request.targets(ai, function(target)
+    if not ai:isEnemy(target) or not target:isKongcheng() or #target:getHandlyIds(false) > 0
+      or Cost.effectable(target, "qiao__skill_shu002_1") or Cost.effectable(target, "qiao__skill_jin006_3") then return end
+    local _, value = Removal.pick(ai, target, "e", false)
+    if value and value >= 4 then return ai:hostileScore(target, value) end
+  end, 2)
+end
+
+function play.qiao__skill_qun003_1(ai)
+  if not Cost.discard(ai, 1, 3) then return end
+  local remaining = table.filter(ai:getEnabledTargets(), function(target) return ai:isEnemy(target) end)
+  while #remaining > 0 do
+    local target = Cards.bestCandidate(ai, remaining, function(other)
+      return ai:hostileScore(other, 8 - other.hp)
+    end)
+    ai:selectTarget(target, true)
+    local user = Cards.bestTarget(ai, function(other)
+      return ai:hostileScore(other, 4 / (1 + other:getHandcardNum()))
+    end)
+    if user then
+      ai:selectTarget(user, true)
+      local reply = Request.reply(ai)
+      if reply ~= "" then return reply end
+      ai:selectTarget(user, false)
+    end
+    ai:selectTarget(target, false)
+    table.removeOne(remaining, target)
+  end
+end
+
+function play.qiao__skill_jin006_1(ai)
+  return Request.targets(ai, function(target)
+    if ai:isFriend(target) and not target:isHandAreaSealed() then
+      return target == ai.player and 20 or target:getHandcardNum()
+    end
+  end)
+end
+
+function play.qiao__skill_jin016_2(ai)
+  return Request.targets(ai, function(target)
+    if not ai:isFriend(target) or target:isKongcheng() then return end
+    if target ~= ai.player then return target:getHandcardNum() end
+    if table.find(target:getCardIds("h"), function(id)
+      local card = Fk:getCardById(id)
+      return card.trueName == "slash" and table.find(card:getAvailableTargets(target, { bypass_times = true }), function(to)
+        return Cards.safeDamage(ai, card, to)
+      end) ~= nil
+    end) then return 1 end
+  end, 3)
+end
+
+function play.qiao__skill_shu010_1_recast(ai)
+  if Cost.select(ai, 1, 2) then return Request.reply(ai) end
+end
+
 function M.alliance(ai, cooperation)
   local name = "qiao__alliance"
   if not ai.player:isFakeSkill(name) and not ai.player:hasSkill(name) then return end
@@ -297,6 +367,12 @@ local stages = {
   qiao__skill_wei012_1 = "damage", -- 强袭
   qiao__skill_qun007_2 = "damage", -- 乱武
   qiao__retinue_skill_qingzhou_jingrui = "damage",
+  qiao__skill_shu001_1 = "support", -- 仁德
+  qiao__skill_shu012_1 = "disrupt", -- 挑衅
+  qiao__skill_qun003_1 = "damage", -- 离间
+  qiao__skill_jin006_1 = "draw", -- 三陈
+  qiao__skill_jin016_2 = "last", -- 风物
+  qiao__skill_shu010_1_recast = "recast",
 }
 
 function M.play(ai, name, stage)

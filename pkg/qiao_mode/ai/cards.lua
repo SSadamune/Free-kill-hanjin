@@ -59,9 +59,10 @@ end
 
 local function fireSuits(ai, card)
   local suits = {}
+  local used = Card:getIdList(card)
   for _, id in ipairs(ai.player:getCardIds("h")) do
     local material = Fk:getCardById(id)
-    if id ~= card.id and material.suit ~= Card.NoSuit and Cost.value(ai, id) <= 2
+    if not table.contains(used, id) and material.suit ~= Card.NoSuit and Cost.value(ai, id) <= 2
       and not ai.player:prohibitDiscard(id) then
       table.insertIfNeed(suits, material.suit)
     end
@@ -134,6 +135,23 @@ function M.playEnemySlash(ai)
   end
 end
 
+function M.retaliate(ai, target)
+  if not ai:isEnemy(target) then return end
+  local cards = ai:getEnabledCards()
+  table.sort(cards)
+  for _, id in ipairs(cards) do
+    local card = Fk:getCardById(id)
+    if card.trueName == "slash" or card.trueName == "duel" or card.name == "qiao__unexpectation" then
+      ai:selectCard(id, true)
+      local reply = selectTargets(ai, function(other)
+        if other == target then return M.scoreTarget(ai, card, other) end
+      end)
+      if reply then return reply end
+      ai:selectCard(id, false)
+    end
+  end
+end
+
 function M.respond(ai, pattern)
   local enabled = ai:getEnabledCards(pattern)
   table.sort(enabled, function(a, b)
@@ -202,7 +220,7 @@ local function playSelected(ai, card)
   end
 end
 
-local function priority(ai, card)
+function M.priority(ai, card)
   if selfBenefit[card.name] then
     if card.name == "qiao__peach" and not ai.player:isWounded() then return end
     return selfBenefit[card.name]
@@ -245,7 +263,7 @@ function M.play(ai, stage, cuipoIndex)
   local candidates = {}
   for _, id in ipairs(ai:getEnabledCards()) do
     local card = Fk:getCardById(id)
-    local value = priority(ai, card)
+    local value = M.priority(ai, card)
     if value and (not stage or stageOf(card) == stage) and (not cuipoIndex or M.matchesCuipo(ai, card, cuipoIndex)) then
       table.insert(candidates, { card = card, value = value, keep = Cost.value(ai, id) })
     end
@@ -281,6 +299,25 @@ function M.recast(ai, cheap)
       if ai:okButtonEnabled() then
         return { card = id, targets = {}, special_skill = "recast" }
       end
+      ai:selectCard(id, false)
+    end
+  end
+end
+
+function M.threatenEmperor(ai)
+  local player = ai.player
+  if not player.faceup or player:getHandcardNum() - 1 > player:getMaxCards()
+    or player:isHandAreaSealed() then return end
+  local cards = ai:getEnabledCards()
+  table.sort(cards)
+  for _, id in ipairs(cards) do
+    if Fk:getCardById(id).name == "qiao__threaten_emperor"
+      and table.find(player:getCardIds("h"), function(other)
+        return other ~= id and not player:prohibitDiscard(other) and Cost.value(ai, other) <= 4
+      end) then
+      ai:selectCard(id, true)
+      local reply = selectTargets(ai, function(target) if target == player then return 1 end end)
+      if reply then return reply end
       ai:selectCard(id, false)
     end
   end
