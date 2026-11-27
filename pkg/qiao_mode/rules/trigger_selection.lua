@@ -110,6 +110,15 @@ end
 
 local installed = false
 
+-- Server-side facts for a pending invocation. Keep them off the wire.
+function M.currentCost(player)
+  local room = player.room
+  local frame = room.qiaoTriggerSelection
+  if frame and frame.player == player and frame.skill == room.current_cost_skill then
+    return frame
+  end
+end
+
 function M.install(room)
   if room.qiaoTriggerSelectionInstalled then return end
   room.qiaoTriggerSelectionInstalled = true
@@ -122,7 +131,7 @@ function M.install(room)
       if not Modes.inRoom(current) then return doCost(self, event, target, player, data) end
       local previous = current.qiaoTriggerSelection
       local previousCost = current.current_cost_skill
-      current.qiaoTriggerSelection = { skill = self, player = player }
+      current.qiaoTriggerSelection = { skill = self, player = player, event = event, target = target, data = data }
       local ok, result = pcall(doCost, self, event, target, player, data)
       current.qiaoTriggerSelection = previous
       if (previous and previousCost == previous.skill) or not ok then

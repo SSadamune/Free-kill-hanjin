@@ -12,6 +12,8 @@ local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Wild = require "packages.qiao.pkg.qiao_mode.rules.wild_allegiance"
 local M = {}
 
+M.MIN_WILD_PLAYERS = 5
+
 -- normal -> { normal = name, lord = name|nil }
 M.families = {}
 M.lords = {} -- lord -> { normal = name, kingdoms = { ... } }
@@ -178,7 +180,7 @@ function M.planPool(playerCount, names, previous, wildCount, pick, get, opts)
 
   -- 四人及以下：原版野心家专属武将完全不参与发将，全部由登记的效忠版代替。
   local keptWild = {}
-  if playerCount > 4 then
+  if playerCount >= M.MIN_WILD_PLAYERS then
     keptWild = pick(wild, math.min(wildCount, #wild))
   end
   local keptWildSet = {}

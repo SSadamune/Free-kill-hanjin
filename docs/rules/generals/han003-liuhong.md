@@ -25,4 +25,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__han003` / `qiao__skill_han003_1`），共用汉晋军令公共规则与模式延时规则。实现与专项测试见[刘宏实现页](../../development/implementation/generals/quan/han003.md)。

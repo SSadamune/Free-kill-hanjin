@@ -2,6 +2,7 @@
 -- 准备阶段：将一张手牌交给一名其他势力角色，对其发起一次军令。其执行则
 -- 自己摸一张；不执行则本回合摸牌阶段多摸三张。
 local H = require "packages.hegemony.util"
+local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 
 local skill = fk.CreateSkill { name = "qiao__skill_wei024_1" }
 skill.qiaoImplemented = true
@@ -65,10 +66,7 @@ skill:addEffect(fk.EventPhaseStart, {
     if card == nil or not isLegalTarget(player, to) then return end
     if not table.contains(player:getCardIds(Player.Hand), card) then return end
     room:obtainCard(to, card, false, fk.ReasonGive, player, skill.name)
-    local executed = H.askToCommand(player, {
-      tos = { to },
-      skill_name = skill.name,
-    })
+    local executed = Junling.ask(player, to, skill.name)
     if executed then
       if not player.dead then player:drawCards(1, skill.name) end
     else

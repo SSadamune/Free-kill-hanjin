@@ -27,6 +27,7 @@ GraphicsBox {
   SelectionAscensionBadges {
     cards: generalCardList
     eligible: root.dataModel.extraData.ascensions ?? ({})
+    loyaltyEligible: root.dataModel.extraData.loyaltyAscensions ?? ({})
   }
 
   property var draggingCard: null

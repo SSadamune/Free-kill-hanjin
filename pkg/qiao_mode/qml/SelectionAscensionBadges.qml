@@ -7,6 +7,7 @@ QtObject {
 
   required property Repeater cards
   required property var eligible
+  property var loyaltyEligible: ({})
 
   function attach(card) {
     if (card && !card.children.some(child => child.objectName === "qiaoSelectionBadges")) {
@@ -48,7 +49,8 @@ QtObject {
 
       SelectionBadge {
         objectName: "qiaoAscensionBadge"
-        caption: Lua.tr("qiao_selection_can_ascend")
+        caption: Lua.tr(root.loyaltyEligible[tags.card.dataModel?.name] === true
+          ? "qiao_selection_can_pledge_loyalty" : "qiao_selection_can_ascend")
         visible: root.eligible[tags.card.dataModel?.name] === true
       }
 

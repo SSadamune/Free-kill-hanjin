@@ -14,8 +14,11 @@ local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
+local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
 local Retinues = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
@@ -356,8 +359,39 @@ function QiaoPlayCard:update(elemType, id, action, data)
   return ReqPlayCard.update(self, "Button", "OK", action, data)
 end
 
+local roomSummaryInstalled = false
+local function installRoomSummary()
+  if roomSummaryInstalled or not GetUIDataOfSettings then return end
+  roomSummaryInstalled = true
+  local getUIData = GetUIDataOfSettings
+  function GetUIDataOfSettings(mode, settings, isBoardGame)
+    local groups = getUIData(mode, settings, isBoardGame)
+    -- The native summary passes room settings, including disabledPack. The
+    -- native editor passes an unsubmitted config and needs all of its controls.
+    if isBoardGame or not Modes.isHanjin(mode) or settings.disabledPack == nil then return groups end
+    local room = ClientInstance
+    local capacity = room and room.capacity
+    if not capacity then return groups end
+
+    local hidden = {
+      [Ascension.lordSetting] = capacity < FaqRules.MIN_LORD_PLAYERS,
+      qiao_wild_count = capacity < Versions.MIN_WILD_PLAYERS,
+      [FaqRules.seatLuckSetting] = capacity < FaqRules.BONUS_LUCK_MIN_PLAYERS,
+      watchNextDeputy = room:getSettings("revealAllOnStart") == true,
+    }
+    return table.map(groups, function(group)
+      local result = table.simpleClone(group)
+      result._children = table.filter(group._children, function(row)
+        return not hidden[row._settingsKey]
+      end)
+      return result
+    end)
+  end
+end
+
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
+  installRoomSummary()
   self.lockedPairing = nil
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)

@@ -8,3 +8,4 @@
 | 阵包 | [八阵兵](zhen/retinue-bazhenbing.md#bazhenbing) |
 | 势包 | [青州精锐](shi/retinue-qingzhou-jingrui.md#qingzhou-jingrui) · [庐江上甲](shi/retinue-lujiang-shangjia.md#lujiang-shangjia) |
 | 变包 | [飞熊军](bian/retinue-feixiongjun.md#feixiongjun) |
+| 权包 | [无当飞军](quan/retinue-wudang-feijun.md#wudang-feijun) · [胡车儿](quan/retinue-hucheer.md#hucheer) |

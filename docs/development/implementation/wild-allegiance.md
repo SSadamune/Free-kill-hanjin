@@ -15,7 +15,7 @@
 | 准备阶段升变 | `pkg/qiao_mode/rules/ascension.lua`：`wild_candidates`、`on_preparation`、`ascend`；由 `pkg/qiao_mode/skills/ascension_rule.lua` 在 `fk.EventPhaseStart` 的 `Player.Start` 触发 |
 | 模式接线 | `pkg/qiao_mode/mode.lua`：选将流程使用 `Versions.plan` → `Pool.resolve`；升变规则由模式规则技能加载 |
 
-准备阶段效忠和君主升变共用[目标版本禁用检查](second-lord.md#扩展内实现)。开局将池可派生排除未参与发将的效忠版，局内升变按房间原始禁将设置及禁包名单过滤目标。
+准备阶段效忠按房间原始禁将和禁包名单过滤目标，与君主升变的「自由选择」共用版本禁用检查。开局将池可派生排除未参与发将的效忠版。[目标版本禁用检查](second-lord.md#扩展内实现)
 
 开局纯规则位于 `general_versions.planPool`（房间入口 `Versions.plan`），候选势力与允许上限来自房主设置（`faction_ban.resolveSettings`），不从将池或版本自身势力推断。它在发将前按本局人数和 `qiao_wild_count` 决定原版保留/替换：四人及以下全部替换，五人以上按上限随机保留原版，未保留原版由已登记的效忠版代替；效忠版按自身登记势力参与允许集筛选，未通过、候选外或被直接放入牌堆的版本会被排除并禁用。每个原版只对应一个效忠版，入池路径按版本名去重。开局直接以效忠版入池不构成升变。
 

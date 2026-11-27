@@ -3,17 +3,23 @@ local Wu = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 local M = {}
 local incomingExchanges = setmetatable({}, { __mode = "k" })
 
---- 容量检查可用于选牌时预计腾出的原装备，也可用于实际落栏。
-local function canReceive(player, card, outgoing)
-  local function hasRoom(subtype)
+-- 选牌时可预计 outgoing 腾出的栏位。批量落栏时为已接受的牌预留相应栏位。
+local function canReceive(player, card, outgoing, reserved)
+  local slots = { card.sub_type }
+  if Fk.packages.qiao_cards.qiao_cards.isDualMount(card) then
+    slots = { Card.SubtypeOffensiveRide, Card.SubtypeDefensiveRide }
+  end
+  for _, subtype in ipairs(slots) do
     local equips = player:getEquipments(subtype)
     local remaining = #equips - (table.contains(equips, outgoing) and 1 or 0)
-    return #player:getAvailableEquipSlots(subtype) > remaining
+    if remaining + (reserved and reserved[subtype] or 0) >= #player:getAvailableEquipSlots(subtype) then
+      return false
+    end
   end
-  if Fk.packages.qiao_cards.qiao_cards.isDualMount(card) then
-    return hasRoom(Card.SubtypeOffensiveRide) and hasRoom(Card.SubtypeDefensiveRide)
+  if reserved then
+    for _, subtype in ipairs(slots) do reserved[subtype] = (reserved[subtype] or 0) + 1 end
   end
-  return hasRoom(card.sub_type)
+  return true
 end
 
 local function canExchangeBetween(a, b)
@@ -71,21 +77,18 @@ local function moveIncoming(room, moves)
   if not ok then error(err, 0) end
 end
 
---- 由 chooser 从 a、b 的装备区里各选一张装备牌并交换。仅服务端结算时调用。
---- skillName 记录操作来源。可用 promptKey 指定询问文案的翻译键。
---- 返回是否已执行交换操作。牌最终所在区域取决于移牌结算。
-function M.swapOneEach(room, chooser, a, b, skillName, promptKey)
-  if not chooser or not chooser:isAlive() or not canExchangeBetween(a, b) then return false end
-  local idA = chooseEquip(room, chooser, a, firstCandidates(chooser, a, b), skillName, promptKey)
-  if not idA or not chooser:isAlive() or not canExchangeBetween(a, b) then return false end
-  local idB = chooseEquip(room, chooser, b, secondCandidates(chooser, a, b, idA), skillName, promptKey)
-  if not idB or not chooser:isAlive() or not canExchangeBetween(a, b)
-    or not table.contains(secondCandidates(chooser, a, b, idA), idB) then return false end
-
-  local transfers = {
-    { from = a, to = b, id = idA, virtual = a:getVirtualEquip(idA) },
-    { from = b, to = a, id = idB, virtual = b:getVirtualEquip(idB) },
-  }
+--- 执行已选定的装备交换。两侧先同时离场，再将仍在处理区的牌置入对方可用栏位。
+function M.swapEquips(room, chooser, a, b, idsA, idsB, skillName)
+  local transfers, allIds = {}, {}
+  local function collect(from, to, ids)
+    for _, id in ipairs(ids) do
+      table.insert(transfers, { from = from, to = to, id = id, virtual = from:getVirtualEquip(id) })
+      table.insert(allIds, id)
+    end
+  end
+  collect(a, b, idsA)
+  collect(b, a, idsB)
+  if #allIds == 0 then return end
   local outgoing, incoming = {}, {}
   for _, transfer in ipairs(transfers) do
     table.insert(outgoing, {
@@ -94,10 +97,11 @@ function M.swapOneEach(room, chooser, a, b, skillName, promptKey)
     })
   end
   room:moveCards(table.unpack(outgoing))
+  local reserved = { [a] = {}, [b] = {} }
   for _, transfer in ipairs(transfers) do
     local to = transfer.to
     if room:getCardArea(transfer.id) == Card.Processing and to:isAlive() and not to:isRemoved()
-      and canReceive(to, transfer.virtual or Fk:getCardById(transfer.id)) then
+      and canReceive(to, transfer.virtual or Fk:getCardById(transfer.id), nil, reserved[to]) then
       table.insert(incoming, {
         ids = { transfer.id }, fromArea = Card.Processing, to = to, toArea = Card.PlayerEquip,
         virtualEquip = transfer.virtual, moveReason = fk.ReasonExchange, proposer = chooser,
@@ -106,7 +110,18 @@ function M.swapOneEach(room, chooser, a, b, skillName, promptKey)
     end
   end
   moveIncoming(room, incoming)
-  room:cleanProcessingArea({ idA, idB }, skillName)
+  room:cleanProcessingArea(allIds, skillName)
+end
+
+--- 由 chooser 从 a、b 的装备区里各选一张装备牌并交换。
+function M.swapOneEach(room, chooser, a, b, skillName, promptKey)
+  if not chooser or not chooser:isAlive() or not canExchangeBetween(a, b) then return false end
+  local idA = chooseEquip(room, chooser, a, firstCandidates(chooser, a, b), skillName, promptKey)
+  if not idA or not chooser:isAlive() or not canExchangeBetween(a, b) then return false end
+  local idB = chooseEquip(room, chooser, b, secondCandidates(chooser, a, b, idA), skillName, promptKey)
+  if not idB or not chooser:isAlive() or not canExchangeBetween(a, b)
+    or not table.contains(secondCandidates(chooser, a, b, idA), idB) then return false end
+  M.swapEquips(room, chooser, a, b, { idA }, { idB }, skillName)
   return true
 end
 
@@ -118,14 +133,17 @@ function M.installServer(logic)
     local cards = incomingExchanges[room]
     if event == fk.BeforeCardsMove and cards then
       -- 等普通触发和所有延后 refresh 完成。接下来引擎才会应用这一批移动。
+      local reserved = {}
       room:cancelMove(data, nil, function(move, info)
         local skillName = cards[info.cardId]
         if not skillName or skillName ~= move.skillName or info.fromArea ~= Card.Processing
           or move.toArea ~= Card.PlayerEquip or move.moveReason ~= fk.ReasonExchange then return false end
         local to = move.to
-        return not to or not to:isAlive() or to:isRemoved()
-          or room:getCardArea(info.cardId) ~= Card.Processing
-          or not canReceive(to, info.virtualEquip or Fk:getCardById(info.cardId))
+        if not to or not to:isAlive() or to:isRemoved() or room:getCardArea(info.cardId) ~= Card.Processing then
+          return true
+        end
+        reserved[to] = reserved[to] or {}
+        return not canReceive(to, info.virtualEquip or Fk:getCardById(info.cardId), nil, reserved[to])
       end)
     end
     return broken, detail

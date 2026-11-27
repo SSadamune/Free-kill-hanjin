@@ -1,47 +1,20 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import Fk
 import Fk.Pages.Lobby as Lobby
 import Fk.Widgets as W
 
-W.ActionRow {
+ModeChoiceRow {
   id: root
 
-  property string value
-  required property var model
   required property string modeName
   required property var roomSizes
   property Item lobby: null
   property Item playerCountRow: null
-  readonly property bool locksPlayerCount: lobby?.config?.gameMode === modeName
-
-  suffixComponent: ComboBox {
-    id: choices
-
-    model: root.model
-    currentIndex: root.model.indexOf(root.value)
-    displayText: Lua.tr(currentText)
-    onActivated: index => root.value = root.model[index]
-
-    background: Rectangle {
-      color: "transparent"
-      implicitHeight: root.height - 16
-      implicitWidth: 120
-    }
-
-    delegate: ItemDelegate {
-      required property int index
-      required property string modelData
-
-      width: choices.width
-      text: Lua.tr(modelData)
-      highlighted: index === choices.highlightedIndex
-    }
-  }
-
-  onClicked: root.suffixLoader.item.popup.open()
+  readonly property bool activeForMode: lobby?.config?.gameMode === modeName
+  readonly property int fixedCapacity: roomSizes[value] ?? 0
+  readonly property bool locksPlayerCount: activeForMode && fixedCapacity > 0
 
   function findChild(item, matches) {
     if (matches(item)) return item;
@@ -80,11 +53,11 @@ W.ActionRow {
   }
 
   function updateRoomSettings() {
-    if (locksPlayerCount && playerCountRow) {
+    if (activeForMode && playerCountRow) {
       // CreateRoom expands these same per-package lists when it sends the request.
       lobby.config.qiaoLockedBanScheme = Config.curScheme;
       lobby.config.qiaoLockedHiddenPacks = Config.serverHiddenPacks;
-      playerCountRow.value = roomSizes[value] ?? roomSizes[model[0]];
+      if (locksPlayerCount) playerCountRow.value = fixedCapacity;
       lobby.updateFeasible();
     }
   }

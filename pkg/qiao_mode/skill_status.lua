@@ -2,6 +2,7 @@
 -- underlying marks and their existing cleanup rules as the source of truth.
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
+local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
 local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
 local ZhenShiJin = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
 local M = {}
@@ -54,6 +55,16 @@ local entries = {
   { ZhenShiJin.RANGE, "qiao__skill_jin022b_1", "本回合攻击范围增加所示数值。", function(value) return "+" .. value end },
   { "@@qiao_duanchang", "qiao__skill_qun012_2", "场上的武将牌因【断肠】失去了技能。" },
   { "qiao_wei024_extra_draw", "qiao__skill_wei024_1", "本回合摸牌阶段多摸所示数量的牌。", function(value) return "+" .. value end },
+  { Quan.YUJUE_DRAW_MARK, "qiao__skill_han003_1", "本回合下次造成伤害后摸两张牌。", function(value)
+    return value > 1 and ("×" .. value) or ""
+  end },
+  { Quan.ZHENGPI_TWICE_MARK, "qiao__skill_wei021b_1", "本回合【征辟】的出牌阶段发动次数上限改为两次。" },
+  { Quan.WUDANG_PENDING_MARK, "qiao__retinue_skill_wudang_feijun", "防止本回合下一次回复体力；回合结束时若未触发，弃置每个区域各一张牌。", function(value)
+    return value > 1 and ("×" .. value) or ""
+  end },
+  { Quan.JUEYAN_DRAW_MARK, "qiao__skill_wu019_1", "本回合摸牌阶段摸牌数增加所示数值。", function(value) return "+" .. value end },
+  { Quan.JUEYAN_SLASH_MARK, "qiao__skill_wu019_1", "本回合使用【杀】的次数上限增加所示数值。", function(value) return "+" .. value end },
+  { Quan.JUEYAN_RANGE_MARK, "qiao__skill_wu019_1", "本回合攻击范围增加所示数值。", function(value) return "+" .. value end },
   { "@qiao_zhaoran-phase", "qiao__skill_jin003_1", "本出牌阶段手牌公开，所示花色已结算过失去最后一张手牌的效果。", function(value)
     return value == " " and "" or value
   end },
