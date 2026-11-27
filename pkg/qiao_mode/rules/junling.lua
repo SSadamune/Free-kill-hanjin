@@ -13,6 +13,17 @@ local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_target
 
 local M = {}
 local installed = false
+local contexts = setmetatable({}, { __mode = "k" })
+
+function M.pending(room)
+  return contexts[room]
+end
+
+function M.context(room, data)
+  local context = contexts[room]
+  if context and context.from == data.from and context.to == (data.tos or {})[1]
+    and context.skillName == data.skillName then return context.effect end
+end
 
 local function inQiao(room)
   return room ~= nil and type(room.getSettings) == "function" and Modes.inRoom(room)
@@ -148,15 +159,22 @@ local hanjinCommands = {
 ---@param from ServerPlayer
 ---@param to ServerPlayer
 ---@param skillName string
+---@param effect? table @ 当前技能结算事实，仅供服务端决策
 ---@return boolean, table?
-function M.ask(from, to, skillName)
+function M.ask(from, to, skillName, effect)
   if from == nil or to == nil or from.dead or not RemovedTargets.isPresent(to) then
     return false, nil
   end
-  local executed, data = H.askToCommand(from, {
+  local params = {
     tos = { to },
     skill_name = skillName,
-  })
+  }
+  local room = from.room
+  local previous = contexts[room]
+  contexts[room] = { from = from, to = to, skillName = skillName, effect = effect }
+  local ok, executed, data = pcall(H.askToCommand, from, params)
+  contexts[room] = previous
+  if not ok then error(executed, 0) end
   return executed == true, data
 end
 

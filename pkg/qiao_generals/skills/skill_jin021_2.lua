@@ -28,7 +28,7 @@ skill:addEffect(fk.DamageInflicted, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     if player.dead or not RemovedTargets.isPresent(target) then return end
-    local executed = Junling.ask(player, target, skill.name)
+    local executed = Junling.ask(player, target, skill.name, { damage = data })
     if target.dead then
       data:preventDamage()
       return

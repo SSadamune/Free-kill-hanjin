@@ -4,6 +4,7 @@ local A = {}
 local Config = require "packages.qiao.pkg.qiao_mode.rules.config"
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
 local states = setmetatable({}, { __mode = "k" })
+local supportContexts = setmetatable({}, { __mode = "k" })
 local conditions = { "fujia", "canqu", "zhuzhan", "kongchao", "gujun" }
 local effects = {}
 A.Triggered = TriggerEvent:subclass("QiaoAdaptationTriggered")
@@ -383,7 +384,12 @@ local function validSupportCard(player, use, reply)
     and not player:prohibitDiscard(id) then return id end
 end
 
-function A.askForSupport(room, use)
+function A.supportContext(extraData)
+  local context = supportContexts[extraData]
+  if context then return context.use, context.entry end
+end
+
+function A.askForSupport(room, use, entry)
   -- The shared focus notification names participants. Use public eligibility
   -- here and check the private card type only in each request and its reply.
   local candidates = table.filter(room:getPresentPlayers(), function(p)
@@ -393,9 +399,15 @@ function A.askForSupport(room, use)
     local req = Request:new(candidates, "AskForUseActiveSkill", 1)
     req.focus_text = "qiao_condition_zhuzhan"
     for _, p in ipairs(candidates) do
-      req:setData(p, { "discard_skill", "#qiao_adaptation_support:" .. use.from.id .. "::" .. use.card:getTypeString(), true,
-        { num = 1, min_num = 1, include_equip = false, skillName = "#qiao_adaptation_rule",
-          pattern = ".|.|.|hand|.|" .. use.card:getTypeString() } })
+      local extraData = {
+        num = 1, min_num = 1, include_equip = false, skillName = "#qiao_adaptation_rule",
+        pattern = ".|.|.|hand|.|" .. use.card:getTypeString(),
+      }
+      -- Keep the live use and the current entry on the server. Human request
+      -- contents and eligibility stay identical.
+      if entry then supportContexts[extraData] = { use = use, entry = entry } end
+      req:setData(p, { "discard_skill", "#qiao_adaptation_support:" .. use.from.id .. "::" .. use.card:getTypeString(),
+        true, extraData })
     end
     -- Invalid replies are cancellations, not race winners. All requests are still sent together.
     local originalCheck = req._checkReply
@@ -521,7 +533,7 @@ function A.resolve(room, use)
         entry.satisfied = natural[entry.condition] == true
         if not entry.satisfied then entry.satisfied = tryIgnore(room, use, state, entry, natural) end
         if entry.condition == "zhuzhan" and not entry.satisfied then
-          entry.satisfied, entry.support = A.askForSupport(room, use)
+          entry.satisfied, entry.support = A.askForSupport(room, use, entry)
         end
       end
       local handler = effects[entry.effect]

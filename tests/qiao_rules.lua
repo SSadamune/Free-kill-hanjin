@@ -3,6 +3,7 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
+local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 Testqiao_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 function Testqiao_rules:testModeAndRealSelection()
@@ -224,6 +225,14 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
     return item._settingsKey
   end), { "qiao_candidate_han", "qiao_candidate_jin" })
   lu.assertNil(collection.qiao_wolves)
+  lu.assertEquals(Fk:translate("qiao_heg_mode"), "汉晋大合集")
+  lu.assertEquals(Fk:translate("qiao_free_mode"), "平行时空")
+  lu.assertEquals(Fk:translate("qiao_locked_mode"), "锁定势力国战")
+  lu.assertTrue(collection[Ascension.lordSetting].value)
+  lu.assertEquals(Fk:translate(collection[Ascension.lordSetting].subTitle), "启用君主升变规则")
+  lu.assertEquals(free[Ascension.lordSetting].value, Ascension.lordByBanScheme)
+  lu.assertEquals(free[Ascension.lordSetting].model,
+    { Ascension.lordEnabled, Ascension.lordDisabled, Ascension.lordByBanScheme })
   lu.assertNil(collection.qiao_late_seat_compensation)
   lu.assertNil(collection.qiao_kingdom_limit)
   lu.assertFalse(collection.qiao_faction_ban_enabled.value)
@@ -245,51 +254,99 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
   end
 end
 
-function Testqiao_rules:testOnlyCollectionDisablesOverriddenGameSettings()
-  local function rows(mode, useOperationTimeout)
-    local data = GetUIDataOfSettings(mode, {
-      gameMode = mode, timeout = 40, _mode = {},
-      _game = { generalTimeout = 50, timeoutAsGeneralTimeout = useOperationTimeout },
-    }, true)
+function Testqiao_rules:testHanjinGameSettingsExcludeUnusedRoomSummaryRows()
+  local function rows(mode, isBoardGame)
+    local settings = {
+      gameMode = mode, timeout = 40, _mode = { qiao_offer_count = 5, generalTimeout = 45 },
+      _game = { generalNum = 3, generalTimeout = 10, timeoutAsGeneralTimeout = true,
+        luckTime = 3, enableDeputy = true, enableFreeAssign = true },
+    }
     local result = {}
-    for _, group in ipairs(data) do
+    for _, group in ipairs(GetUIDataOfSettings(mode, settings, isBoardGame)) do
+      if group._qml.url and group._qml.url:endsWith("/GameProperties.qml") then
+        if isBoardGame then
+          lu.assertEquals(group.title, "Properties")
+        else
+          lu.assertTrue(group.selectionSettings)
+          lu.assertEquals(#group._children, 2)
+          lu.assertTrue(group._children[1].editable)
+          lu.assertTrue(group._children[2].editable)
+        end
+      end
       for _, row in ipairs(group._children) do result[row._settingsKey] = row end
     end
     return result
   end
 
-  local collection = rows("qiao_heg_mode", true)
-  local free = rows("qiao_free_mode", false)
-  local upstream = rows("new_heg_mode", false)
-  local overridden = { "generalNum", "generalTimeout", "luckTime", "enableDeputy" }
-  if upstream.timeoutAsGeneralTimeout then
-    table.insert(overridden, "timeoutAsGeneralTimeout")
-  else
-    lu.assertNil(collection.timeoutAsGeneralTimeout)
-    lu.assertNil(free.timeoutAsGeneralTimeout)
+  for _, mode in ipairs({ "qiao_heg_mode", "qiao_free_mode", "qiao_locked_mode" }) do
+    local game, modeSettings = rows(mode, true), rows(mode, false)
+    for _, key in ipairs({ "generalNum", "generalTimeout", "timeoutAsGeneralTimeout", "enableDeputy" }) do
+      lu.assertNil(game[key], mode .. ": " .. key)
+    end
+    lu.assertEquals(game.luckTime ~= nil, mode == "qiao_free_mode", mode)
+    lu.assertEquals(game.enableFreeAssign ~= nil, mode ~= "qiao_locked_mode", mode)
+    lu.assertNotNil(game.disableSameConvert, mode)
+    lu.assertNotNil(game.enableObserverViewCard, mode)
+    lu.assertNotNil(modeSettings.qiao_offer_count, mode)
+    lu.assertEquals(modeSettings.generalTimeout.value, 45, mode)
+    lu.assertEquals(modeSettings[Ascension.lordSetting] ~= nil, mode ~= "qiao_locked_mode", mode)
   end
-  for _, key in ipairs(overridden) do
-    lu.assertNotNil(collection[key], key)
-    lu.assertFalse(collection[key].enabled, key)
-    lu.assertNotNil(collection[key].subTitle, key)
-    lu.assertNotEquals(free[key].enabled, false, key)
-    lu.assertNotEquals(upstream[key].enabled, false, key)
+  local upstream = rows("new_heg_mode", true)
+  lu.assertNotNil(upstream.generalNum)
+  lu.assertNotNil(upstream.generalTimeout)
+  lu.assertNotNil(upstream.enableDeputy)
+  lu.assertNotNil(upstream.luckTime)
+  lu.assertNotNil(upstream.enableFreeAssign)
+end
+
+function Testqiao_rules:testRoomSummaryOmitsSettingsThatCannotApply()
+  local mode = "qiao_free_mode"
+  local previousClient = ClientInstance
+  local room = Fk:getBoardGame(mode).client_klass:new(previousClient.client)
+  room.settings = { gameMode = mode, disabledPack = {}, _game = {}, _mode = {
+    qiao_wild_count = 4, qiao_late_seat_compensation = "qiao_late_seat_luck_card",
+    watchNextDeputy = true, revealAllOnStart = true,
+  } }
+  local function rows(config)
+    local keys = {}
+    for _, group in ipairs(GetUIDataOfSettings(mode, config, false)) do
+      for _, row in ipairs(group._children) do keys[row._settingsKey] = true end
+    end
+    return keys
   end
-  lu.assertNil(collection.generalTimeout.value)
-  lu.assertNotEquals(collection.enableFreeAssign.enabled, false)
-  lu.assertNotEquals(collection.disableSameConvert.enabled, false)
-  -- Some boards leave the saved timeout to QML instead of returning a Lua value.
-  lu.assertEquals(free.generalTimeout, upstream.generalTimeout)
-  local freeLinked = rows("qiao_free_mode", true)
-  local upstreamLinked = rows("new_heg_mode", true)
-  lu.assertEquals(freeLinked.generalTimeout, upstreamLinked.generalTimeout)
-  if upstream.timeoutAsGeneralTimeout then
-    lu.assertEquals(free.generalTimeout.value, 50)
-    lu.assertFalse(freeLinked.generalTimeout.enabled)
-    lu.assertEquals(freeLinked.generalTimeout.value, 40)
-  else
-    lu.assertEquals(freeLinked.generalTimeout, free.generalTimeout)
-  end
+
+  ClientInstance = room
+  local ok, err = pcall(function()
+    room.capacity = 4
+    local summary = rows(room.settings)
+    lu.assertNil(summary.qiao_wild_count)
+    lu.assertNil(summary[Ascension.lordSetting])
+    lu.assertNil(summary.qiao_late_seat_compensation)
+    lu.assertNil(summary.watchNextDeputy)
+    lu.assertTrue(summary.revealAllOnStart)
+    lu.assertTrue(summary.qiao_offer_count)
+    lu.assertTrue(summary.generalTimeout)
+
+    room.capacity = 5
+    summary = rows(room.settings)
+    lu.assertTrue(summary.qiao_wild_count)
+    lu.assertTrue(summary[Ascension.lordSetting])
+    lu.assertNil(summary.qiao_late_seat_compensation)
+
+    room.capacity = 7
+    room.settings._mode.revealAllOnStart = false
+    summary = rows(room.settings)
+    lu.assertTrue(summary.qiao_wild_count)
+    lu.assertTrue(summary.qiao_late_seat_compensation)
+    lu.assertTrue(summary.watchNextDeputy)
+
+    local editor = rows { _mode = room.settings._mode }
+    lu.assertTrue(editor.qiao_wild_count)
+    lu.assertTrue(editor.qiao_late_seat_compensation)
+    lu.assertTrue(editor.watchNextDeputy)
+  end)
+  ClientInstance = previousClient
+  assert(ok, err)
 end
 
 function Testqiao_rules:testCollectionUsesModeSettingsInSelectionRequest()

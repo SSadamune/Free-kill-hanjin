@@ -33,7 +33,7 @@ skill:addEffect(fk.AfterDying, {
     local room = player.room
     local source = data and data.damage and data.damage.from
     if player.dead or source == nil or not RemovedTargets.isPresent(source) then return end
-    local executed = Junling.ask(player, source, skill.name)
+    local executed = Junling.ask(player, source, skill.name, { recoveryTarget = target })
     if not executed and RemovedTargets.isPresent(target) and target:isWounded() then
       room:recover {
         who = target,
