@@ -1,6 +1,7 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.shi"
 local skill = fk.CreateSkill { name = "qiao__skill_wei035_1" }
 local types, targets = "qiao_pindi_types-turn", "qiao_pindi_targets-turn"
+skill.qiao_exchange_marks = { types, targets }
 local function cardOK(p, id)
   return table.contains(p:getCardIds("he"), id) and not p:prohibitDiscard(id)
     and not table.contains(p:getTableMark(types), Fk:getCardById(id).type)

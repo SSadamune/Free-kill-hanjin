@@ -98,6 +98,36 @@ function T:testPindiRecordsActualTypeAndTargetAndChainsOnlyOnce()
   end)
 end
 
+function T:testPindiKeepsItsTurnChoicesAfterExchange()
+  run(function(room, chen, receiver, first, second)
+    local name = id("wei035_1")
+    asGeneral(room, chen, "wei035")
+    fixture.withSkillRequests(room, name, {
+      askToChoice = function(_, _, params) return params.choices[1] end,
+    }, function()
+      local firstCost = give(room, chen, "qiao__slash")
+      room:handleUseCardReply(chen, FkTest.ReplyUseSkill(name, { first }, { firstCost.id }))
+      assert(E.exchange(room, { player = chen }, { player = receiver }))
+      lu.assertEquals(chen:getMark("qiao_pindi_types-turn"), 0)
+      lu.assertEquals(chen:getMark("qiao_pindi_targets-turn"), 0)
+      lu.assertEquals(receiver:getTableMark("qiao_pindi_types-turn"), { Card.TypeBasic })
+      lu.assertEquals(receiver:getTableMark("qiao_pindi_targets-turn"), { first.id })
+
+      local duel = give(room, receiver, "qiao__duel")
+      local before = second:getHandcardNum()
+      fixture.withSkillRequests(room, "#qiao_shi_pindi_select", {
+        askToUseActiveSkill = function()
+          return true, { cards = { duel.id }, targets = { second } }
+        end,
+      }, function()
+        room:damage { from = first, to = receiver, damage = 1 }
+      end)
+      lu.assertEquals(second:getHandcardNum(), before + 2)
+      lu.assertEquals(receiver:getTableMark("qiao_pindi_targets-turn"), { first.id, second.id })
+    end)
+  end)
+end
+
 function T:testFaenChainsAndStacksButNotUnchainsOrDuplicateChain()
   run(function(room, chen, to)
     asGeneral(room, chen, "wei035")
@@ -234,6 +264,55 @@ function T:testJingchuRemovesUntilTwoRemainAndOnlyThenDrawsAndGives()
     lu.assertTrue(a:isRemoved() and b:isRemoved())
     lu.assertEquals(tian:getHandcardNum(), before + 1)
     lu.assertEquals(remaining:getHandcardNum(), others + 1)
+  end)
+end
+
+function T:testJingchuTransfersSkillsAfterPrelightAndReveal()
+  run(function(room, tian, chen)
+    asGeneral(room, tian, "han047")
+    asGeneral(room, chen, "wei035")
+    local jingchu, pindi = id("han047_2"), id("wei035_1")
+    local tianSkills = { id("han047_1"), jingchu }
+    local chenSkills = { pindi, id("wei035_2") }
+    for _, pair in ipairs({ { tian, tianSkills }, { chen, chenSkills } }) do
+      local player, skills = table.unpack(pair)
+      room:setPlayerMark(player, "__heg_kingdom", "wei")
+      player:hideGeneral(false)
+      for _, name in ipairs(skills) do
+        player:prelightSkill(name, true)
+        lu.assertTrue(player:isFakeSkill(name), name)
+        lu.assertTrue(player:hasSkill(name), name)
+      end
+      player:revealGeneral(false)
+      for _, name in ipairs(skills) do lu.assertTrue(player:hasShownSkill(name), name) end
+    end
+    lu.assertEquals({ tian.kingdom, chen.kingdom }, { "wei", "wei" })
+
+    local queue = table.filter(room:getPresentPlayers(), function(p) return p ~= tian and p ~= chen end)
+    fixture.withSkillRequests(room, jingchu, {
+      askToChoosePlayers = function() return { table.remove(queue, 1) } end,
+      askToCards = function() return { tian:getCardIds("h")[1] } end,
+      askToChoice = function(_, chooser, params)
+        lu.assertIs(chooser, chen)
+        local choice = "qiao_shi_exchange:::qiao_heg__wei035:qiao_heg__han047"
+        lu.assertTrue(table.contains(params.choices, choice))
+        return choice
+      end,
+    }, function()
+      for _ = 1, #queue do
+        assert(rooms.playCard(room, tian, give(room, tian, "qiao__foresight"), { tian }))
+      end
+    end)
+
+    lu.assertEquals({ tian.general, chen.general }, { "qiao_heg__wei035", "qiao_heg__han047" })
+    for _, name in ipairs(tianSkills) do
+      lu.assertFalse(tian:hasSkill(name, true, true), name)
+      lu.assertTrue(chen:hasShownSkill(name), name)
+    end
+    for _, name in ipairs(chenSkills) do
+      lu.assertTrue(tian:hasShownSkill(name), name)
+      lu.assertFalse(chen:hasSkill(name, true, true), name)
+    end
   end)
 end
 
