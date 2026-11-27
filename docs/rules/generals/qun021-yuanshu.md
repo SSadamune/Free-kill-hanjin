@@ -7,7 +7,7 @@
 - 称号：画脂镂冰、鸱枭僭主。
 - 单将体力贡献：2（原码 `6969`，对应 4 单独阴阳鱼）。
 - 珠联璧合：`QUN015`（纪灵）。
-- 客将备注：紫乔专栏确认袁术含**汉**客将形态（登记时以客将表为准）。
+- 客将势力：**汉**（紫乔专栏 `1178873011318554633` 卡面 `G.QUN(&HAN) 021` 确认）。
 - 公共依据：[通用约定](../general-principles.md)、[基础牌表：玉玺](../card-deck.md)、[军令](../../../rulebook/terms/description-terms/junling.md)及[权包索引](../quan-generals.md)。
 
 ## 庸肆
@@ -38,4 +38,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__qun021` / `qiao__skill_qun021_1`、`qiao__skill_qun021_2`，客将势力：汉）。实现与专项测试见[袁术实现页](../../development/implementation/generals/quan/qun021.md)。

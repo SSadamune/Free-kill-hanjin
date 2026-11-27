@@ -7,7 +7,7 @@
 - 称号：慈怀瑾瑜、懿哲之霖。
 - 单将体力贡献：1.5（原码 `696`，对应 3 单独阴阳鱼）。
 - 珠联璧合：`WU009`（孙坚）。
-- 客将备注：紫乔专栏确认吴国太含**蜀**客将形态（登记时以客将表为准）。
+- 客将势力：**蜀**（紫乔专栏 `1178873011318554633` 卡面 `G.WU(&SHU) 024` 确认）。
 - 公共依据：[通用约定](../general-principles.md)、[军令](../../../rulebook/terms/description-terms/junling.md)、[双副类别坐骑](../equipment-movement.md#双副类别坐骑)及[权包索引](../quan-generals.md)。
 
 ## 补益
@@ -39,4 +39,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__wu024` / `qiao__skill_wu024_1`、`qiao__skill_wu024_2`，客将势力：蜀）。实现与专项测试见[吴国太实现页](../../development/implementation/generals/quan/wu024.md)。

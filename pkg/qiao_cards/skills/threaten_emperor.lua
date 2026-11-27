@@ -48,7 +48,7 @@ skill:addEffect("cardskill", {
     return player ~= nil and card ~= nil and room ~= nil and room.current == player
       and player.phase == Player.Play
       and not player:isProhibited(player, card)
-      and H.isBigKingdomPlayer(player)
+      and (table.contains(card.skillNames, "qiao__skill_wei021b_2") or H.isBigKingdomPlayer(player))
       and not insideExtraTurn(player)
   end,
   on_use = function(self, room, use)
