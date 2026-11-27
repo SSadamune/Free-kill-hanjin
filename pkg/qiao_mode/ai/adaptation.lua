@@ -57,6 +57,8 @@ local function benefit(ai, use, entry, temporary)
   local card, effect = use.card, entry.effect
   local options = {
     partner = temporary and use.from.ai or nil,
+    source = use.from,
+    card = card,
     -- Water Attack discards every equipped card before dealing thunder.
     ignoreTargetArmor = effect == "execute_both" and card.name == "qiao__drowning",
   }

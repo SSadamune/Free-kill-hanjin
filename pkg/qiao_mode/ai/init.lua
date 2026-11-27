@@ -5,6 +5,7 @@ local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local Diplomacy = require "packages.qiao.pkg.qiao_mode.ai.diplomacy"
 local Deadline = require "packages.qiao.pkg.qiao_mode.ai.deadline"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Heg = require "packages.hegemony.util"
@@ -111,8 +112,23 @@ function Robot:handleAskForUseCard(data)
   if data[1] == "qiao__retinue_skill_niujin" then return Cards.play(self) end
   if data[2] == "slash" then return Cards.playEnemySlash(self) or ViewAs.slash(self) end
   if data[2] == "jink" then
-    if Damage.acceptSlash(self) then return "" end
-    return ViewAs.response(self, "jink")
+    local reply = ViewAs.response(self, "jink")
+    local effect = Damage.effect(self, self.player)
+    if effect and effect.card and effect.card.trueName == "slash"
+      and Damage.acceptIncoming(self, effect, Reactions.responseCost(self, reply)) then return "" end
+    return reply
+  end
+  if data[2] == "nullification" then
+    local effect = Damage.effect(self, self.player)
+    -- Only the original effect, never a nested counter-nullification.
+    if effect and effect.card and effect.card.is_damage_card
+      and effect.card.trueName ~= "duel" and effect.card.trueName ~= "collateral"
+      and (data[3] or ""):endsWith(":" .. effect.card.name) then
+      local material, cost = Cost.cheapest(self, function(id)
+        return Fk:getCardById(id).trueName == "nullification"
+      end)
+      if material and Damage.acceptIncoming(self, effect, cost) then return "" end
+    end
   end
   if data[2] == "peach" or data[2] == "peach,analeptic" then
     local reply = ViewAs.rescue(self, data)
@@ -122,7 +138,14 @@ function Robot:handleAskForUseCard(data)
 end
 
 function Robot:handleAskForResponseCard(data)
-  if data[2] == "slash" or data[2] == "jink" then return ViewAs.response(self, data[2]) end
+  if data[2] == "slash" or data[2] == "jink" then
+    local reply = ViewAs.response(self, data[2])
+    local effect = Damage.effect(self, self.player)
+    local expected = data[2] == "slash" and "savage_assault" or "archery_attack"
+    if effect and effect.card and effect.card.trueName == expected
+      and Damage.acceptIncoming(self, effect, Reactions.responseCost(self, reply)) then return "" end
+    return reply
+  end
   return SmartAI.handleAskForResponseCard(self, data)
 end
 

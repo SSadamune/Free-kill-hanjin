@@ -1197,4 +1197,76 @@ function Testqiao_robot_ai:testZhihengUsesOnlyOneEquippedCardForXiaojiAndKeepsCo
   end)
 end
 
+function Testqiao_robot_ai:testGroupAndChainDiscountEnemiesWhoBenefitFromDamage()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, second, third = diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(unknown, "hp", 3)
+    room:setPlayerProperty(ally, "hp", 3)
+    local card = give(room, player, "qiao__archery_attack")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, card.id)
+
+    chainPlayers(room, { enemy, second, ally }, true)
+    local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+    lu.assertTrue(Damage.worth(Damage.assess(player.ai, enemy, 1, fk.FireDamage, { source = player })))
+    for _, opponent in ipairs({ enemy, second, third }) do
+      room:handleAddLoseSkills(opponent, "qiao__skill_wei013_2", nil, false, true)
+    end
+    lu.assertFalse(Damage.worth(Damage.assess(player.ai, enemy, 1, fk.FireDamage, { source = player })))
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+  end)
+end
+
+function Testqiao_robot_ai:testJianxiongKeepsJinkWhenSafeAndDodgesInBattleRoyal()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei001_1", nil, false, true)
+    room:setPlayerProperty(player, "hp", 4)
+    room:setPlayerProperty(player, "shield", 0)
+    local jink = give(room, player, "qiao__jink")
+    room:moveCardTo(room:printCard("qiao__duel", Card.Spade, 7), Card.DrawPile)
+    local function slash()
+      local attack = give(room, enemy, "qiao__slash")
+      room:useCard { from = enemy, tos = { player }, card = attack, extraUse = true }
+    end
+    slash()
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(room:getCardArea(jink.id), Card.PlayerHand)
+    lu.assertEquals(player:getHandcardNum(), 2)
+    room:setPlayerProperty(player, "hp", 4)
+    room:setTag("BattleRoyalMode", true)
+    slash()
+    lu.assertEquals(player.hp, 4)
+    lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testJianxiongCanSaveSlashAndEquipmentButAvoidsLethalDamage()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei001_1", nil, false, true)
+    room:setPlayerProperty(player, "hp", 4)
+    room:setPlayerProperty(player, "shield", 0)
+    local slash = give(room, player, "qiao__slash")
+    local function savage()
+      local card = give(room, enemy, "qiao__savage_assault")
+      room:useCard { from = enemy, tos = { player }, card = card }
+    end
+    savage()
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(room:getCardArea(slash.id), Card.PlayerHand)
+    local gear = give(room, player, "qiao__blade")
+    room:moveCardTo(gear, Card.PlayerEquip, player, fk.ReasonPut)
+    give(room, player, "qiao__peach")
+    give(room, player, "qiao__peach")
+    local drowning = give(room, enemy, "qiao__drowning")
+    room:useCard { from = enemy, tos = { player }, card = drowning }
+    lu.assertEquals(player.hp, 2)
+    lu.assertEquals(room:getCardArea(gear.id), Card.PlayerEquip)
+    room:setPlayerProperty(player, "hp", 1)
+    savage()
+    lu.assertEquals(player.hp, 1)
+    lu.assertEquals(room:getCardArea(slash.id), Card.DiscardPile)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

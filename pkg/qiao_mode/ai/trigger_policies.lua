@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local M = {}
@@ -72,7 +73,7 @@ function M.invoke(ai, original, fields)
     if not ai:isEnemy(to) or damage.chain then return false end
     local required = to.hp + to.shield
     return damage.damage < required and damage.damage * 2 >= required
-      and Damage.worth(Damage.assess(ai, to, damage.damage * 2, damage.damageType))
+      and Damage.worth(Damage.assess(ai, to, damage.damage * 2, damage.damageType, { source = damage.from }))
   end
   if key == "#qiao__skill_jin009_1-invoke" then
     local suit = tonumber(fields[2])
@@ -130,8 +131,8 @@ function M.targetScore(ai, key, use)
   end
   if allyDrawTargets[key] then
     return function(target)
-      local cap = key == "#qiao__skill_wei013_2-choose" and math.min(5, target.maxHp) or target.maxHp
-      local missing = cap - target:getHandcardNum()
+      local missing = key == "#qiao__skill_wei013_2-choose" and Reactions.jiemingMissing(target)
+        or target.maxHp - target:getHandcardNum()
       if ai:isFriend(target) and missing > 0 then return missing end
     end, key == "#qiao__skill_han015_3-target"
   end
@@ -147,7 +148,7 @@ function M.targetScore(ai, key, use)
   end
   if key == "#qiao__skill_qun010_1-target" then
     return function(target)
-      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, 2, fk.ThunderDamage)) then
+      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, 2, fk.ThunderDamage, { source = ai.player })) then
         return ai:hostileScore(target, 20 - target.hp)
       end
     end

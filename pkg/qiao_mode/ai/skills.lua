@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -99,7 +100,7 @@ function M.invoke(ai, data)
     local damage = parentData(ai, GameEvent.Damage)
     if not ai:isEnemy(target) or target.hp < 3 or #target:getCardIds("e") < 2
       or not damage or damage.damage ~= 1 then return false end
-    local outcome = Damage.assess(ai, target, damage.damage, damage.damageType, { alreadyChained = damage.chain })
+    local outcome = Damage.assess(ai, target, damage.damage, damage.damageType, { alreadyChained = damage.chain, source = damage.from })
     return not (outcome.propagates and Damage.worth(outcome))
   end
   if key == "#qiao__skill_jin015_1-invoke" then
@@ -239,7 +240,7 @@ function M.active(ai, data)
       local damage = frame and frame.data
       if not damage or damage.chain or not ai:isFriend(damage.from) or not ai:isEnemy(damage.to)
         or damage.damage ~= damage.to.hp + damage.to.shield - 1 then return "" end
-      if not Damage.worth(Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType)) then return "" end
+      if not Damage.worth(Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType, { source = damage.from })) then return "" end
       budget = 2
     elseif key == "#qiao__skill_wei001_1-discard" then
       local damage = parentData(ai, GameEvent.Damage)
@@ -389,10 +390,11 @@ function M.choice(ai, data)
   elseif skillName == "qiao__drowning" then
     local player = ai.player
     local effect = Damage.effect(ai, player)
-    local card = effect and effect.card or Fk:cloneCard("qiao__drowning")
-    local outcome = Damage.assess(ai, player, Damage.cardAmount(card, effect), Damage.cardNature(card, effect))
-    if outcome.direct == 0 or Damage.worth(outcome) or (not outcome.propagates and not outcome.unsafe
-      and player.hp > 2 and #player:getCardIds("e") > 1) then
+    local loss = Reactions.equipmentLoss(ai)
+    local accept, outcome
+    if effect then accept, outcome = Damage.acceptIncoming(ai, effect, loss) end
+    if outcome and (accept or (not outcome.propagates and not outcome.unsafe
+      and player.hp > 2 and loss >= 9)) then
       pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
     else
       pick = "qiao__drowning_throw"

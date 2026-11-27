@@ -15,7 +15,7 @@ end
 
 local function leijiValue(ai, source, target, suit)
   local amount = suit == Card.Spade and 2 or suit == Card.Club and 1 or 0
-  local score = Damage.value(Damage.assess(ai, target, amount, fk.ThunderDamage))
+  local score = Damage.value(Damage.assess(ai, target, amount, fk.ThunderDamage, { source = source }))
   if suit == Card.Club and source:isWounded() then
     -- At one HP, keep the healing if the extra damage ties its value.
     local healing = source.hp <= 1 and 5 or source.hp == 2 and 4 or 3

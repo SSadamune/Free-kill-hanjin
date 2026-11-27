@@ -25,7 +25,8 @@ function M.safeDamage(ai, card, target, use, source)
   source = source or ai.player
   local amount = Damage.cardAmount(card, use, source)
   local ignoreTargetArmor = not use and card.trueName == "slash" and Cost.effectable(source, "#qinggang_sword_skill")
-  return Damage.worth(Damage.assess(ai, target, amount, nature, { ignoreTargetArmor = ignoreTargetArmor }))
+  return Damage.worth(Damage.assess(ai, target, amount, nature,
+    { ignoreTargetArmor = ignoreTargetArmor, source = source, card = card }))
 end
 
 function M.isHarmful(card)
