@@ -17,13 +17,14 @@
 | SHU054 | [张翼](nu/shu054.md) | [殿军](nu/shu054.md#shu054-1)、[抗锐](nu/shu054.md#shu054-2) |
 | WEI034 | [曹真](nu/wei034.md) | [司镇](nu/wei034.md#wei034-1)、[虎豹骑](nu/wei034.md#retinue-hubaoqi)（统领） |
 | WEI061 | [曹纯](nu/wei061.md) | [督锐](nu/wei061.md#wei061-1)、[虎豹骑](nu/wei061.md#retinue-hubaoqi)（统领） |
+| WU028 | [韩当](nu/wu028.md) | [弓骑](nu/wu028.md#wu028-1)、[驰援](nu/wu028.md#wu028-2)、[解烦卫](nu/wu028.md#retinue-jiefanwei)（统领） |
 
 ## 统领与翼从
 
 - [丹阳青巾](nu/retinue-danyang-qingjin.md#danyang-qingjin)
 - [虎豹骑](nu/retinue-hubaoqi.md#hubaoqi)
 - [无当飞军](../../../../pkg/qiao_generals/skills/retinue_skill_wudang_feijun.lua)
-- [解烦卫](../../../../pkg/qiao_bingqing/skills/retinue_jiefanwei.lua)
+- [解烦卫](nu/retinue-jiefanwei.md#jiefanwei)
 - [陷阵营](nu/retinue-xianzhenying.md#xianzhenying)
 - [青州精锐](../../../../pkg/qiao_generals/skills/retinue_skill_qingzhou_jingrui.lua)
 - [宿卫中军](nu/retinue-suwei-zhongjun.md#suwei-zhongjun)

@@ -79,6 +79,22 @@ function T:testLizhiDrawThresholdAndRealDistributionOnDying()
     lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
   end)
 end
+function T:testGongqiChangesRangeAndDiscardsOpponentsCard()
+  run(function(room, han, to)
+    general(room, han, "wu028")
+    local weapon = card(room, han, "qiao__spear")
+    local robbed = card(room, to, "qiao__slash")
+    local base = han:getAttackRange()
+    fixture.withSkillRequests(room, id("wu028_1"), {
+      askToChoosePlayers = function() return { to } end,
+      askToChooseCard = function() return robbed.id end,
+    }, function() playSkill(room, han, id("wu028_1"), {}, { weapon.id }) end)
+    lu.assertEquals(han:getAttackRange(), base + 4)
+    lu.assertEquals(room:getCardArea(weapon.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(robbed.id), Card.DiscardPile)
+    lu.assertFalse(Fk.skills[id("wu028_1")]:canUse(han))
+  end)
+end
 function T:testDianjunPaysHealthAndSealsSecondConversion()
   run(function(room, zhang, to)
     general(room, zhang, "shu054")
@@ -206,6 +222,22 @@ function T:testHubaoqiFirstSlashOffersOnePhysicalFollowup()
     lu.assertEquals(ally:getHandcardNum(), n)
     lu.assertEquals(target.hp, hp - 3)
     lu.assertEquals(room:getCardArea(slash.id), Card.DiscardPile)
+  end)
+end
+function T:testJiefanweiEachCopyWorksOnceAndMustHealWounded()
+  run(function(room, p, to)
+    local name = "qiao__retinue_skill_jiefanwei"
+    grant(p, "jiefanwei", "main")
+    grant(p, "jiefanwei", "deputy")
+    lu.assertFalse(Fk.skills[name]:targetFilter(p, to, {}, {}, nil))
+    to.hp = to.maxHp - 2
+    for _ = 1, 2 do
+      lu.assertTrue(Fk.skills[name]:canUse(p))
+      local a, b = card(room, p, "qiao__slash"), card(room, p, "qiao__slash")
+      playSkill(room, p, name, { to }, { a.id, b.id })
+    end
+    lu.assertEquals(to.hp, to.maxHp)
+    lu.assertFalse(Fk.skills[name]:canUse(p))
   end)
 end
 function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
@@ -424,6 +456,27 @@ function T:testShizhongAddsTargetAndDrawsForDifferentBoardSizes()
     lu.assertEquals(first.hp, hp1 - 1)
     lu.assertEquals(extra.hp, hp2 - 1)
     lu.assertEquals(li:getHandcardNum(), count + 2)
+  end)
+end
+
+function T:testJiefanweiRefreshesGongqiForASecondUse()
+  run(function(room, han)
+    general(room, han, "wu028")
+    grant(han, "jiefanwei")
+    local gongqi, jiefan = id("wu028_1"), "qiao__retinue_skill_jiefanwei"
+    local base = han:getAttackRange()
+    playSkill(room, han, gongqi, {}, { card(room, han, "qiao__slash").id })
+    local a, b = card(room, han, "qiao__slash"), card(room, han, "qiao__slash")
+    han.hp = han.maxHp - 1
+    fixture.withSkillRequests(room, jiefan, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, gongqi))
+        return gongqi
+      end,
+    }, function() playSkill(room, han, jiefan, { han }, { a.id, b.id }) end)
+    lu.assertEquals(han:usedSkillTimes(gongqi, Player.HistoryPhase), 0)
+    playSkill(room, han, gongqi, {}, { card(room, han, "qiao__slash").id })
+    lu.assertEquals(han:getAttackRange(), base + 8)
   end)
 end
 
@@ -896,6 +949,46 @@ local function healWithRetinue(room, user, target)
   playSkill(room, user, jiefanwei, { target }, { a.id, b.id })
 end
 
+function T:testJiefanweiCannotRestoreItsOwnLimitedUseByHealingSelf()
+  run(function(room, user)
+    grant(user, "jiefanwei")
+    user.hp = user.maxHp - 2
+    fixture.withSkillRequests(room, jiefanwei, {
+      askToChoice = function() error("自己没有用过出牌阶段限一次的技能") end,
+    }, function() healWithRetinue(room, user, user) end)
+    lu.assertEquals(user.hp, user.maxHp - 1)
+    lu.assertFalse(Fk.skills[jiefanwei]:canUse(user))
+  end)
+end
+
+
+function T:testJiefanweiTwoAlliesRestoreTwoSpentCopies()
+  run(function(room, holder, first, second)
+    grant(holder, "jiefanwei", "main")
+    grant(holder, "jiefanwei", "deputy")
+    grant(first, "jiefanwei")
+    grant(second, "jiefanwei")
+    holder.hp = holder.maxHp - 2
+    first.hp = first.maxHp - 2
+    healWithRetinue(room, holder, first)
+    healWithRetinue(room, holder, first)
+    lu.assertFalse(Fk.skills[jiefanwei]:canUse(holder))
+    local restored = 0
+    fixture.withSkillRequests(room, jiefanwei, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, jiefanwei))
+        restored = restored + 1
+        return jiefanwei
+      end,
+    }, function()
+      healWithRetinue(room, first, holder)
+      healWithRetinue(room, second, holder)
+    end)
+    lu.assertEquals(restored, 2)
+    for _, instance in ipairs(R.instancesForSkill(holder, jiefanwei)) do lu.assertEquals(instance.uses, 0) end
+  end)
+end
+
 local function checkLordReset(key, activate)
   run(function(room, user, lord)
     general(room, lord, key)
@@ -927,4 +1020,19 @@ local function checkLordReset(key, activate)
     lu.assertEquals(invoked, 2)
   end)
 end
+function T:testJiefanweiRestoresJizhaoForNextDying()
+  checkLordReset("em_shu001", function(room, lord)
+    lord.hp = 0
+    room.logic:trigger(fk.EnterDying, lord, { who = lord })
+  end)
+end
+function T:testJiefanweiRestoresDingfeiForNextFinish()
+  checkLordReset("em_jin001", function(room, lord)
+    room:setPlayerProperty(lord, "kingdom", "jin")
+    lord.phase = Player.Finish
+    lord.hp = 1
+    room.logic:trigger(fk.EventPhaseStart, lord, { phase = Player.Finish })
+  end)
+end
+
 return { name = "qiao_nu_generals" }

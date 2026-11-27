@@ -94,6 +94,16 @@ M.generals = {
       { id = "qiao__skill_wei061_1", name = "督锐", text = "与你势力相同的角色共计造成过至少2点伤害的回合结束时，你可以视为使用一张【杀】， 若本回合受到过伤害且存活的角色仅有一名，此【杀】对其造成伤害时，伤害+1。" },
     },
   },
+  {
+    id = "qiao_heg__wu028", name = "韩当", title = "义勇的昭公",
+    kingdom = "wu", hp = 4, gender = "male",
+    guests = {}, companions = { "qiao_heg__wu004", "qiao_heg__wu027" },
+    commander = { retinue = "qiao_heg__retinue_jiefanwei", card = "qiao__slash", cardText = "杀", name = "解烦卫" },
+    skills = {
+      { id = "qiao__skill_wu028_1", name = "弓骑", text = "出牌阶段限一次，你可以弃置一张牌并令你本回合的攻击范围+4，若此牌为装备牌，你弃置一名其他角色的一张牌。" },
+      { id = "qiao__skill_wu028_2", name = "驰援", text = "限定技，出牌阶段，你可以选择一名角色，令攻击范围内含有其的角色各选择一项：1.弃置一张武器牌；2.令其摸一张牌。" },
+    },
+  },
 }
 M.retinues = {
   {
@@ -111,6 +121,10 @@ M.retinues = {
   {
     id = "qiao_heg__retinue_hubaoqi", name = "虎豹骑",
     skill = { id = "qiao__retinue_skill_hubaoqi", name = "虎豹骑", text = "每回合首张由拥有虎豹骑的角色使用且目标唯一的【杀】结算后，你可以对相同目标使用一张【杀】并摸一张牌。" },
+  },
+  {
+    id = "qiao_heg__retinue_jiefanwei", name = "解烦卫",
+    skill = { id = "qiao__retinue_skill_jiefanwei", name = "解烦卫", text = "限定技，出牌阶段，你可以弃置两张牌并令一名角色回复1点体力。若为你，则你复原自己一个“出牌阶段限一次”的技能，否则你复原其一个限定技。" },
   },
 }
 return M
