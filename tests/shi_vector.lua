@@ -41,6 +41,46 @@ Testqiao_shi_vector = {
 }
 local T = Testqiao_shi_vector
 
+function T:testRosterPackageAndGuestFrameColors()
+  run(function(room)
+    local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+    lu.assertEquals(#generals.generals, 12)
+    for _, entry in ipairs(generals.generals) do
+      local g = Fk.generals[entry.id]
+      lu.assertEquals(g.package.name, "qiao_bingqing")
+      lu.assertEquals(g.prefix, "qiao_prefix_shi_vec")
+      for _, sk in ipairs(entry.skills) do
+        lu.assertTrue(#Fk.skill_skels[sk.id].effects > 0)
+        lu.assertEquals(Fk:translate(":" .. sk.id), sk.text)
+      end
+    end
+    lu.assertFalse(table.contains(room.disabled_packs, "qiao_bingqing"))
+    lu.assertItemsEquals(Guest.guestKingdoms("qiao_heg__han047"), { "wei", "qun" })
+    lu.assertItemsEquals(Guest.guestKingdoms("qiao_heg__wei035"), { "han", "shu" })
+    lu.assertEquals(Guest.guestKingdoms("qiao_heg__shu091"), { "wei" })
+    local tian, xiahou = Fk.generals.qiao_heg__han047, Fk.generals.qiao_heg__wei003
+    room:setBanner("all_kingdoms", { "han", "wei", "shu", "wu", "qun", "jin" })
+    lu.assertFalse(tian:isCompanionWith(xiahou))
+    room:setBanner("all_kingdoms", { "wei", "shu", "wu", "jin" })
+    lu.assertTrue(xiahou:isCompanionWith(tian))
+  end)
+end
+
+function T:testMizhongPreventsOnlyAtExactHandSize()
+  run(function(room, p, other)
+    asGeneral(room, p, "wu032")
+    room:throwCard(p:getCardIds("h"), "test", p, p)
+    p.hp = 2
+    give(room, p, "qiao__slash")
+    give(room, p, "qiao__slash")
+    room:damage { from = other, to = p, damage = 1 }
+    lu.assertEquals(p.hp, 2)
+    give(room, p, "qiao__slash")
+    room:damage { from = other, to = p, damage = 1 }
+    lu.assertEquals(p.hp, 1)
+  end)
+end
+
 function T:testPindiRecordsActualTypeAndTargetAndChainsOnlyOnce()
   run(function(room, chen, a, b)
     asGeneral(room, chen, "wei035")

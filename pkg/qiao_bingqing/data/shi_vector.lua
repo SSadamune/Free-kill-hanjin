@@ -183,5 +183,22 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__wu032", name = "顾雍",
+      title = "持恒以渐、庙堂的玉磬", kingdom = "wu",
+      hp = 3, gender = "male",
+      guests = { "han" }, companions = {},
+      guestCompanions = { "qiao_heg__han012" },
+      skills = {
+        {
+          id = "qiao__skill_wu032_1", name = "密重",
+          text = "锁定技，当你受到伤害时，若你的手牌数等于体力值，此伤害-1。",
+        },
+        {
+          id = "qiao__skill_wu032_2", name = "秉壹",
+          text = "每阶段限一次，当你因弃置而失去牌后，你可以展示手牌，若颜色均相同，你令至多等同你手牌数的角色各摸一张牌。",
+        },
+      },
+    },
   },
 }

@@ -18,3 +18,12 @@
 | WEI035 | [陈群](shi-vector/wei035.md) | [品第](shi-vector/wei035.md#wei035-1)、[法恩](shi-vector/wei035.md#wei035-2) |
 | WEI044 | [程昱](shi-vector/wei044.md) | [胆戾](shi-vector/wei044.md#wei044-1)、[脱先](shi-vector/wei044.md#wei044-2) |
 | WU027 | [程普](shi-vector/wu027.md) | [铁脊](shi-vector/wu027.md#wu027-1)、[醇义](shi-vector/wu027.md#wu027-2) |
+| WU032 | [顾雍](shi-vector/wu032.md) | [密重](shi-vector/wu032.md#wu032-1)、[秉壹](shi-vector/wu032.md#wu032-2) |
+
+## 本地验证（2026-11-27）
+
+[矢包原生专项](../../../../tests/shi_vector.lua)共 26 项，全部通过。覆盖客将势力与珠联、移将与暗置、跨角色响应、临时授技及袁隗【唆令】连续使用转化的属性【杀】。
+
+另测三项交互。蔡夫人遇到仅有受保护宝物的君孙权时正常摸牌；袁隗交出黑牌后，只改变收牌人原手牌颜色，两次均收到相同的公开读条；成济＆成倅的【借刀杀人】使用普通牌的次目标候选。
+
+以主线 1b137f2 为基线，默认原生全量 1,508/1,508 通过，包含已经合入主线的【三陈】暗置重连用例。
