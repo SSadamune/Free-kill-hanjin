@@ -85,6 +85,15 @@ M.generals = {
       { id = "qiao__skill_wei034_1", name = "司镇", text = "你响应过牌的阶段结束时，你可以视为使用一张【杀】（若与你势力相同的角色此阶段均未受到过伤害，此【杀】无距离限制）。" },
     },
   },
+  {
+    id = "qiao_heg__wei061", name = "曹纯", title = "英才孰比",
+    kingdom = "wei", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_hubaoqi", card = "qiao__slash", cardText = "杀", name = "虎豹骑" },
+    skills = {
+      { id = "qiao__skill_wei061_1", name = "督锐", text = "与你势力相同的角色共计造成过至少2点伤害的回合结束时，你可以视为使用一张【杀】， 若本回合受到过伤害且存活的角色仅有一名，此【杀】对其造成伤害时，伤害+1。" },
+    },
+  },
 }
 M.retinues = {
   {

@@ -379,6 +379,30 @@ function T:testBajiaLordAssignmentsIncludeSecondGenerationAndWild()
 end
 
 
+function T:testDuruiBoostsSlashAgainstOnlyWoundedSurvivor()
+  run(function(room, cao, victim, ally)
+    general(room, cao, "wei061")
+    room:throwCard(victim:getCardIds("h"), "test", victim, victim)
+    room:setPlayerProperty(victim, "maxHp", 6)
+    victim.hp = 6
+    local asked = 0
+    fixture.withSkillRequests(room, id("wei061_1"), {
+      askToUseVirtualCard = function(_, p)
+        asked = asked + 1
+        local slash = Fk:cloneCard("qiao__slash")
+        slash.skillName = id("wei061_1")
+        return { from = p, tos = { victim }, card = slash, extraUse = true }
+      end,
+    }, function()
+      runStartPhase(room, ally, "qiao_test_nu_durui_turn", function()
+        room:damage { from = ally, to = victim, damage = 2 }
+      end)
+    end)
+    lu.assertEquals(asked, 1)
+    lu.assertEquals(victim.hp, 2)
+  end)
+end
+
 function T:testShizhongAddsTargetAndDrawsForDifferentBoardSizes()
   run(function(room, li, first, extra)
     general(room, li, "jin067")

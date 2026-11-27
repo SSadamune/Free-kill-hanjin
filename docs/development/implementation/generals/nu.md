@@ -16,6 +16,7 @@
 | SHU036 | [张嶷](nu/shu036.md) | [越险](nu/shu036.md#shu036-1)、[无当飞军](nu/shu036.md#retinue-wudang-feijun)（统领） |
 | SHU054 | [张翼](nu/shu054.md) | [殿军](nu/shu054.md#shu054-1)、[抗锐](nu/shu054.md#shu054-2) |
 | WEI034 | [曹真](nu/wei034.md) | [司镇](nu/wei034.md#wei034-1)、[虎豹骑](nu/wei034.md#retinue-hubaoqi)（统领） |
+| WEI061 | [曹纯](nu/wei061.md) | [督锐](nu/wei061.md#wei061-1)、[虎豹骑](nu/wei061.md#retinue-hubaoqi)（统领） |
 
 ## 统领与翼从
 
