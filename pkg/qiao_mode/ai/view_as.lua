@@ -136,8 +136,25 @@ function M.slash(ai)
   return convert(ai, "slash", 3, true)
 end
 
+local function keshou(ai, name, budget)
+  local skill = "qiao__skill_wu019_2"
+  if ai.command ~= "AskForUseCard" or not table.contains(ai:getEnabledSkills(), skill) then return end
+  ai:selectSkill(skill, true)
+  ai.handler:updateInteraction(name)
+  if Cost.select(ai, 2, budget) then
+    local card = ai.handler:getUsingCard()
+    if card and card.name == name then
+      local reply = Requests.reply(ai)
+      if reply ~= "" then return reply end
+    end
+  end
+  ai:unSelectAll()
+end
+
 function M.response(ai, pattern)
-  return Cards.respond(ai, pattern) or convert(ai, pattern, ai.player.hp <= 1 and 6 or 4, false)
+  local budget = ai.player.hp <= 1 and 6 or 4
+  return Cards.respond(ai, pattern) or convert(ai, pattern, budget, false)
+    or (pattern == "jink" and keshou(ai, "qiao__jink", budget))
 end
 
 function M.nullification(ai, target, effect)
@@ -146,8 +163,9 @@ function M.nullification(ai, target, effect)
   if Removal.isCard(card) and (not ai:isEnemy(effect.from) or #target:getCardIds("e") + target:getHandcardNum() == 0) then
     return
   end
-  local reply = Cards.respond(ai, "nullification")
-    or convert(ai, "nullification", target.hp <= 1 and card.is_damage_card and 4 or 3, false)
+  local budget = target.hp <= 1 and card.is_damage_card and 5 or 3
+  local reply = Cards.respond(ai, "nullification") or convert(ai, "nullification", math.min(4, budget), false)
+    or keshou(ai, "qiao__nullification", budget)
   if reply and card.is_damage_card and card.trueName ~= "duel" and card.trueName ~= "collateral"
     and target == ai.player and Damage.acceptIncoming(ai, effect, Reactions.responseCost(ai, reply)) then
     return ""

@@ -21,16 +21,17 @@ local function moveScore(ai, from, id)
   end
 end
 
-local function pairScore(ai, from, to)
+local function pairScore(ai, from, to, zone, allowed)
   if from == to then return end
   local area
   if ai:isEnemy(from) and ai:isFriend(to) then area = Player.Equip end
   if ai:isFriend(from) and ai:isEnemy(to) then area = Player.Judge end
-  if not area then return end
+  if not area or (zone == "e" and area ~= Player.Equip) then return end
   local best
   for _, id in ipairs(from:getCardIds(area)) do
     local score = moveScore(ai, from, id)
-    if score and (not best or score > best) and from:canMoveCardInBoardTo(to, id) then best = score end
+    if score and (not best or score > best)
+      and (allowed and allowed(from, to, id) or not allowed and from:canMoveCardInBoardTo(to, id)) then best = score end
   end
   if best then
     local enemy, friend = from, to
@@ -39,19 +40,19 @@ local function pairScore(ai, from, to)
   end
 end
 
-function M.worthMoving(ai)
+function M.worthMoving(ai, zone, allowed)
   local players = ai.room:getPresentPlayers()
   return table.find(players, function(from)
-    return table.find(players, function(to) return pairScore(ai, from, to) ~= nil end) ~= nil
+    return table.find(players, function(to) return pairScore(ai, from, to, zone, allowed) ~= nil end) ~= nil
   end) ~= nil
 end
 
-function M.choosePlayers(ai)
+function M.choosePlayers(ai, zone, allowed)
   local bestFrom, bestTo, best
   for _, from in ipairs(ai:getEnabledTargets()) do
     ai:selectTarget(from, true)
     for _, to in ipairs(ai:getEnabledTargets()) do
-      local score = pairScore(ai, from, to)
+      local score = pairScore(ai, from, to, zone, allowed)
       if score and (not best or score > best) then bestFrom, bestTo, best = from, to, score end
     end
     ai:unSelectAllTargets()

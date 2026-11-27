@@ -4,6 +4,9 @@ local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Command = require "packages.qiao.pkg.qiao_mode.ai.command"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local Expansion = require "packages.qiao.pkg.qiao_mode.ai.expansion"
+local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
+local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -73,9 +76,12 @@ function M.invoke(ai, data)
   local name, prompt = data[1], data[2] or ""
   local fields = prompt:split(":")
   local key, player = fields[1], ai.player
+  local expansion = Expansion.invoke(ai, key, fields)
+  if expansion ~= nil then return expansion end
   if key == "#qiao__skill_wu024_1-invoke" then
     local source, target = M.promptTarget(ai, fields, 2), M.promptTarget(ai, fields, 3)
     return ai:isEnemy(source) and ai:isFriend(target) and target:isWounded()
+      and target:getMark("@@command5_effect-turn") == 0
   end
   if key == "#qiao__skill_jin021_2-invoke" then
     return ai:isFriend(M.promptTarget(ai, fields, 3))
@@ -146,6 +152,13 @@ function M.active(ai, data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  local expansion = Expansion.active(ai, key, fields)
+  if expansion ~= nil then return expansion end
+  if skill == "choose_players_to_move_card_in_board" and key == "#qiao__skill_wu021_2-move" then
+    return Board.choosePlayers(ai, "e", function(from, to, id)
+      return not table.contains(extra.excludeIds or {}, id) and Bian.canMoveEquipTo(from, to, id, ai.player)
+    end)
+  end
   if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
   if key == "#qiao__skill_wei018_1-place" then return Play.huyuan(ai) end
   if skill == "#command_skill" and key == "#command6-select" then
@@ -273,6 +286,7 @@ function M.active(ai, data)
       or key == "#qiao__skill_qun002_2-extra")
       and parentData(ai, GameEvent.UseCard)
     local score, extend = Triggers.targetScore(ai, key, use)
+    score = score or Expansion.targetScore(ai, key, fields)
     if score then return chooseTargets(ai, score, extend and extra.num or 1) end
   end
   if key == "#qiao_adaptation_support" then
@@ -328,7 +342,9 @@ function M.active(ai, data)
       budget = 4
     elseif key == "#qiao__skill_han003_1-invoke" then
       local target = M.promptTarget(ai, fields, 3)
-      if not ai:isEnemy(target) or not target.faceup then return "" end
+      if not ai:isEnemy(target) or not target.faceup
+        or not (Quan.hasHiddenGeneral(target) or Quan.canHideGeneralPosition(target, false)
+          or Quan.canHideGeneralPosition(target, true)) then return "" end
       budget = 1.5
     elseif key == "#qiao__skill_qun005_1-discard" then
       if not ai.player:canSkip(Player.Play) then return "" end
@@ -467,7 +483,7 @@ function M.play(ai, stage)
   local buttons = ai:getEnabledSkills()
   table.sort(buttons)
   for _, name in ipairs(buttons) do
-    local reply = Play.play(ai, name, stage)
+    local reply = Play.play(ai, name, stage) or Expansion.play(ai, name, stage)
     if reply then return reply end
   end
 end
@@ -522,6 +538,19 @@ end
 function M.chosen(ai, data)
   local target, areas, prompt = table.unpack(data)
   if type(target) == "number" then target = ai.room:getPlayerById(target) end
+  local key = (prompt or ""):split(":")[1]
+  if key == "#qiao__skill_wu022_1-card" and type(areas) == "string" and target then
+    return Expansion.diaoduCard(ai, target, target:getCardIds(areas))
+  end
+  if type(areas) == "table" and target then
+    local ids = {}
+    if key == "#qiao__retinue_skill_hucheer-choose" or key == "#qiao__skill_wu019_1-card"
+      or key == "#qiao_quan_discard_equip" or key == "#qiao_quan_discard_judge" then
+      for _, group in ipairs(areas.card_data or {}) do table.insertTable(ids, group[2]) end
+      if key ~= "#qiao__retinue_skill_hucheer-choose" then return Expansion.lowestZoneCard(ai, ids) end
+      return Expansion.chooseEquip(ai, target, ids)
+    end
+  end
   if prompt == "#qiao__skill_wu015a_2-give" and type(areas) == "table" then
     local best, value
     for _, group in ipairs(areas.card_data or {}) do
@@ -549,7 +578,16 @@ function M.chosen(ai, data)
   end
   if type(areas) ~= "string" then return end
   local fields = (prompt or ""):split(":")
-  local key = fields[1]
+  key = fields[1]
+  if key == "#qiao__skill_shu022_2-obtain" then
+    local chosen = Removal.pick(ai, target, areas, true)
+    if chosen then return chosen end
+    if ai:isFriend(target) and not target:isKongcheng() then return -1 end
+  elseif key == "#qiao__skill_wu021_1-discard" then
+    return Removal.pick(ai, target, areas, false)
+  elseif key == "#qiao__em_wu001_jubao-obtain" then
+    return Expansion.jubaoCard(ai, target, areas)
+  end
   if key == "#qiao__skill_qun006_1-card" then return Removal.pick(ai, target, areas, true) end
   if key == "#qiao__skill_qun008_2-ask" then return Removal.pick(ai, target, "e", false) end
   if key == "#qiao__skill_qun001_2-card" then return Removal.pick(ai, target, areas, false, true) end
@@ -579,6 +617,7 @@ function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local fields = (prompt or ""):split(":")
   local pick = Command.issueChoice(ai, skillName, choices) or Triggers.choice(ai, choices, fields)
+    or Expansion.choice(ai, choices, fields)
   if fields[1] == "#qiao__skill_shu008_1-choice" or fields[1] == "#qiao__skill_shu013_1-choice" then
     pick = Triggers.slashChoice(ai, fields, parentData(ai, GameEvent.UseCard))
   elseif fields[1] == "#qiao__skill_wu010_2-choice" then

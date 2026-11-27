@@ -7,6 +7,7 @@ local Deadline = require "packages.qiao.pkg.qiao_mode.ai.deadline"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Expansion = require "packages.qiao.pkg.qiao_mode.ai.expansion"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
@@ -124,7 +125,8 @@ function Robot:handleAskForOptions(data)
 end
 
 function Robot:handleAskForUseCard(data)
-  if data[1] == "qiao__retinue_skill_niujin" or data[1] == "qiao__skill_jin016_2" then return Cards.play(self) end
+  if data[1] == "qiao__retinue_skill_niujin" or data[1] == "qiao__skill_jin016_2"
+    or data[1] == "qiao__skill_shu023_1" then return Cards.play(self) end
   if data[1] == "qiao__skill_jin004_2" and data[3] == "#qiao__skill_jin004_2-use" then
     return Cards.retaliate(self, Skills.retaliationTarget(self))
   end
@@ -169,6 +171,7 @@ end
 function Robot:handleCustomDialog(data)
   local component = data.component
   if component and component.url == "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml" then
+    if component.prop.prompt == "#qiao__skill_wu019_1-alloc" then return Expansion.jueyanAllocation(self, component.prop) end
     return Slash.sealOption(self, component.prop, Cards.safeDamage)
   end
   if component and component.url == "packages/qiao/pkg/qiao_mode/qml/GuzhengGainBox.qml" then
@@ -179,6 +182,7 @@ function Robot:handleCustomDialog(data)
     end)
     return table.slice(cards, 1, component.prop.maxGain + 1)
   end
+  return Expansion.damageDialog(self, component)
 end
 
 function Robot:handleAskForArrangeCards(data)
