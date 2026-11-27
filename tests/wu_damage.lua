@@ -1,6 +1,6 @@
 -- WU 标准包：伤害、拼点与翼从定向验收文件。
 -- 规则依据：docs/rules/standard-generals.md 吴区与翼从表、docs/rules/generals/wu013-zhoutai.md、
--- rulebook 相关事件条文；本文件只覆盖本轮核心行为，未接入 tests/all.lua。
+-- rulebook 相关事件条文。本专项也由 tests/all.lua 运行。
 --   python scripts/test.py --file tests/wu_damage.lua --timeout 180
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
@@ -369,6 +369,68 @@ function Testqiao_wu_damage:testHongyanSpadeHandEquipAndJudge()
   inRoom(function() room:judge(judge) end)
   lu.assertEquals(judge.card.suit, Card.Heart)
   lu.assertEquals(judge.card.id, judgeIds[1])
+end
+
+local function prepareHongyan(room, xiaoqiao, fazheng, slot, hidden)
+  inRoom(function()
+    skill_test.installDualGenerals(room, fazheng, {
+      main = "qiao_heg__shu024", deputy = "qiao_test__shu_2", kingdom = "shu",
+    })
+    skill_test.installDualGenerals(room, xiaoqiao, {
+      main = "qiao_test__wu_1", deputy = "qiao_heg__wu011", kingdom = "wu",
+    })
+    if hidden then xiaoqiao:hideGeneral(true) end
+  end)
+  clearCards(room, xiaoqiao, "he")
+  local id = roomCardAtSlot(room, xiaoqiao, slot)
+  inRoom(function() room:moveCardIntoEquip(xiaoqiao, id, "test", false, xiaoqiao) end)
+  return id
+end
+
+local function assertSuitOnBothSides(id, expected)
+  lu.assertEquals(inRoom(function() return Fk:getCardById(id).suit end), expected)
+  local clientSuit
+  FkTest.runInClient(function() clientSuit = Fk:getCardById(id).suit end)
+  lu.assertEquals(clientSuit, expected)
+end
+
+function Testqiao_wu_damage:testTianxiangPaysWithArmorEquippedBeforeReveal()
+  local room, xiaoqiao, fazheng, target = FkTest.room, p(1), p(2), p(3)
+  local armor = prepareHongyan(room, xiaoqiao, fazheng, "standard2/S/2", true)
+  assertSuitOnBothSides(armor, Card.Spade)
+  inRoom(function() xiaoqiao:revealGeneral(true) end)
+  assertSuitOnBothSides(armor, Card.Heart)
+
+  local hp, targetHp = xiaoqiao.hp, target.hp
+  FkTest.setNextReplies(xiaoqiao, {
+    FkTest.ReplyChooseCards({ armor }), FkTest.ReplyChoosePlayer({ target }), { TIANXIANG_OPT_DAMAGE },
+  })
+  inRoom(function() room:damage { from = fazheng, to = xiaoqiao, damage = 1 } end)
+  lu.assertEquals(xiaoqiao.hp, hp)
+  lu.assertEquals(target.hp, targetHp - 1)
+  lu.assertEquals(room:getCardArea(armor), Card.DiscardPile)
+  assertSuitOnBothSides(armor, Card.Spade)
+end
+
+function Testqiao_wu_damage:testEnyuanChecksEquippedSwordAfterHideAndReveal()
+  local room, xiaoqiao, fazheng = FkTest.room, p(1), p(2)
+  local sword = prepareHongyan(room, xiaoqiao, fazheng, "standard2/S/6", false)
+  assertSuitOnBothSides(sword, Card.Heart)
+  inRoom(function() xiaoqiao:hideGeneral(true) end)
+  assertSuitOnBothSides(sword, Card.Spade)
+
+  local hp = xiaoqiao.hp
+  inRoom(function() room:damage { from = xiaoqiao, to = fazheng, damage = 1 } end)
+  lu.assertEquals(xiaoqiao.hp, hp - 1)
+  lu.assertTrue(table.contains(xiaoqiao:getCardIds("e"), sword))
+
+  inRoom(function() xiaoqiao:revealGeneral(true) end)
+  assertSuitOnBothSides(sword, Card.Heart)
+  FkTest.setNextReplies(xiaoqiao, { FkTest.ReplyChooseCards({ sword }) })
+  inRoom(function() room:damage { from = xiaoqiao, to = fazheng, damage = 1 } end)
+  lu.assertEquals(xiaoqiao.hp, hp - 1)
+  lu.assertTrue(table.contains(fazheng:getCardIds("h"), sword))
+  assertSuitOnBothSides(sword, Card.Spade)
 end
 
 -- 红颜：真实黑桃9雷【杀】经正常回包使用，锁视牌保留原包与逐实体元数据，
