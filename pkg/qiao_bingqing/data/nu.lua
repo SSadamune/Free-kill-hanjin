@@ -104,6 +104,16 @@ M.generals = {
       { id = "qiao__skill_wu028_2", name = "驰援", text = "限定技，出牌阶段，你可以选择一名角色，令攻击范围内含有其的角色各选择一项：1.弃置一张武器牌；2.令其摸一张牌。" },
     },
   },
+  {
+    id = "qiao_heg__wu048", name = "贺齐", title = "喧威静域",
+    kingdom = "wu", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_danyang_qingjin", card = "qiao__chasing_near", cardText = "逐近弃远", name = "丹阳青巾" },
+    skills = {
+      { id = "qiao__skill_wu048_1", name = "闪击", text = "出牌阶段限一次，你可以弃置你与一名其他角色各一张牌，然后若其中有【闪】或你因此离开其攻击范围，你获得弃牌堆中其本回合失去过的一张牌。" },
+      { id = "qiao__skill_wu048_2", name = "华甲", text = "锁定技，你的手牌上限+X（X为所有拥有丹阳青巾的角色装备区牌数之和）。" },
+    },
+  },
 }
 M.retinues = {
   {

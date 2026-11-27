@@ -69,7 +69,7 @@ function Testqiao_smoke:testEmptyGeneralPacks()
   lu.assertEquals(bingqing.type, Package.GeneralPack)
   lu.assertEquals(bingqing.extensionName, "qiao")
   lu.assertTrue(table.contains(bingqing.game_modes_whitelist, "qiao_heg_mode"))
-  lu.assertEquals(#ClientUtil:getGenerals("qiao_bingqing"), 18)
+  lu.assertEquals(#ClientUtil:getGenerals("qiao_bingqing"), 19)
   lu.assertEquals(#bingqing.cards, 0)
 end
 

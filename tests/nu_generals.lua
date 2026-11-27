@@ -62,6 +62,31 @@ Testqiao_nu_generals = {
   tearDown = rooms.clearRoom,
 }
 local T = Testqiao_nu_generals
+function T:testAllGeneralsAndCommandersRegistered()
+  run(function(room)
+    local commanders, kinds = 0, {}
+    lu.assertEquals(#D.generals, 12)
+    for _, entry in ipairs(D.generals) do
+      local g = Fk.generals[entry.id]
+      lu.assertEquals(g.package.name, "qiao_bingqing")
+      lu.assertEquals(g.prefix, "qiao_prefix_nu")
+      if entry.commander then
+        commanders = commanders + 1
+        table.insertIfNeed(kinds, entry.commander.retinue)
+        lu.assertTrue(Commander.isCommander(entry.id))
+        lu.assertTrue(Commander.isRetinue(entry.commander.retinue))
+        lu.assertTrue(Fk.generals[entry.commander.retinue].hidden)
+      end
+      for _, sk in ipairs(entry.skills) do
+        lu.assertTrue(#Fk.skill_skels[sk.id].effects > 0)
+        lu.assertEquals(Fk:translate(":" .. sk.id), sk.text)
+      end
+    end
+    lu.assertEquals(commanders, 9)
+    lu.assertEquals(#kinds, 7)
+    lu.assertFalse(table.contains(room.disabled_packs, "qiao_bingqing"))
+  end)
+end
 function T:testLizhiDrawThresholdAndRealDistributionOnDying()
   run(function(room, tao, a, b)
     general(room, tao, "han055")
@@ -161,6 +186,18 @@ function T:testShizhongSingleTargetStillDrawsOnce()
     lu.assertEquals(li:getHandcardNum(), n + 1)
   end)
 end
+function T:testHuajiaCountsTwoDanyangInstancesOnOnePlayerOnce()
+  run(function(room, he, other)
+    general(room, he, "wu048")
+    grant(other, "danyang_qingjin", "main")
+    grant(other, "danyang_qingjin", "deputy")
+    local weapon = room:printCard("qiao__spear", Card.Spade, 11)
+    local base = he:getMaxCards()
+    room:moveCardTo(weapon, Card.PlayerEquip, other, fk.ReasonPut)
+    lu.assertEquals(he:getMaxCards(), base + 1)
+  end)
+end
+
 function T:testYuexianRejectsOldJinkAndAcceptsDrawnJinkInNextUse()
   run(function(room, zhang, to)
     general(room, zhang, "shu036")
