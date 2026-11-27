@@ -643,7 +643,8 @@ end
 local function prelightedSkillNames(player)
   local result = {}
   for _, skill in ipairs(player.prelighted_skills or {}) do
-    table.insertIfNeed(result, skill.name)
+    -- 明置只撤销暗将技能，预亮设置可能仍留在角色身上。
+    if player:isFakeSkill(skill) then table.insertIfNeed(result, skill.name) end
   end
   return result
 end

@@ -856,6 +856,16 @@ local function forwardParams(room, player, params, rec)
   return ret
 end
 
+--- Expand a true name into concrete card names for server-side use validation.
+function M.concreteNames(trueName)
+  local names = {}
+  for name, card in pairs(Fk.all_card_types) do
+    if card.trueName == trueName then table.insert(names, name) end
+  end
+  table.sort(names)
+  return names
+end
+
 --- Ask for a physical card under a strategy.  The request itself never uses the
 --- card (upstream Room:askToUseCard only returns the constructed use), so the
 --- caller must use the returned, already validated use exactly once.  A server

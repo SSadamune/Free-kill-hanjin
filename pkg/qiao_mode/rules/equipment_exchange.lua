@@ -28,7 +28,7 @@ local function canExchangeBetween(a, b)
 end
 
 local function canMoveEquip(chooser, owner, id)
-  return not (owner:hasShownSkill(Wu.JUBAO) and Wu.isProtectedTreasure(owner, chooser, id))
+  return not Wu.isPubliclyProtectedTreasure(owner, chooser, id)
 end
 
 local function secondCandidates(chooser, a, b, idA)

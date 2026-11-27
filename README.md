@@ -3,7 +3,7 @@
 基于新月杀的《国战的平行时空》扩展。《国战的平行时空》是由紫乔主持设计的DIY应变国战模式，加入了汉、晋两个新势力，以及兵种、客将势力等新机制。
 设计专栏参见：[https://www.bilibili.com/read/readlist/rl931960](https://www.bilibili.com/read/readlist/rl931960)
 
-君临天下·不臣篇、纵横捭阖仍为空分包预留；君临天下·兵情篇已正式登记君司马炎、君刘协两张君主武将。
+君临天下·不臣篇、纵横捭阖仍为空分包预留。兵情篇的武将和翼从登记见[矢包](docs/development/implementation/generals/shi-vector.md)与[弩包](docs/development/implementation/generals/nu.md)。
 
 项目仍在开发中。六势力标准包已实装 90 张武将及 14 种翼从。阵、势包另接入 24 张普通武将、两张君主及三种新翼从，君主经升变或继位取得。正式牌堆已按汉晋牌表接入，包括 14 张君主装备及 7 张游戏外势力锦囊。各包实现、暂行裁定及验收进度见[开发状态](docs/development/status.md)。
 
