@@ -117,6 +117,29 @@ function T:testShizhongSingleTargetStillDrawsOnce()
     lu.assertEquals(li:getHandcardNum(), n + 1)
   end)
 end
+function T:testYuexianRejectsOldJinkAndAcceptsDrawnJinkInNextUse()
+  run(function(room, zhang, to)
+    general(room, zhang, "shu036")
+    local old = card(room, to, "qiao__jink")
+    local hp = to.hp
+    local n = 0
+    fixture.withSkillRequests(room, id("shu036_1"), {
+      askToChoice = function() n = n + 1; return n == 1 and "0" or "1" end,
+    }, function()
+      FkTest.setNextReplies(to, { { card = old.id } })
+      room:useCard { from = zhang, tos = { to }, card = Fk:cloneCard("qiao__slash") }
+      lu.assertEquals(to.hp, hp - 1)
+      lu.assertEquals(room:getCardArea(old.id), Card.PlayerHand)
+      local fresh = room:printCard("qiao__jink", Card.Heart, 9)
+      room:moveCards { ids = { fresh.id }, toArea = Card.DrawPile, drawPilePosition = 1, moveReason = fk.ReasonPut }
+      FkTest.setNextReplies(to, { { card = fresh.id } })
+      room:useCard { from = zhang, tos = { to }, card = Fk:cloneCard("qiao__slash") }
+      lu.assertEquals(to.hp, hp - 1)
+      lu.assertEquals(room:getCardArea(fresh.id), Card.DiscardPile)
+    end)
+    lu.assertEquals(n, 2)
+  end)
+end
 function T:testHuanjiaBorrowsWeaponAndReturnsOnlyToEmptySlot()
   run(function(room, gao, target)
     general(room, gao, "qun029")
@@ -217,6 +240,26 @@ function T:testJinuBlackJinkJudgesAndTianshuDrawsOnSecondColor()
     lu.assertEquals(meng:getHandcardNum(), n + 1)
   end)
 end
+function T:testEightDiagramCannotProvideFreeJinkAgainstYuexian()
+  run(function(room, zhang, target)
+    general(room, zhang, "shu036")
+    local armour = card(room, target, "qiao__eight_diagram")
+    room:moveCardIntoEquip(target, armour.id)
+    local red = room:printCard("qiao__slash", Card.Heart, 12)
+    room:moveCards { ids = { red.id }, toArea = Card.DrawPile, drawPilePosition = 1, moveReason = fk.ReasonPut }
+    local hp, invoked = target.hp, 0
+    fixture.withSkillRequests(room, id("shu036_1"), { askToChoice = function() return "0" end }, function()
+      fixture.withSkillRequests(room, "qiao__eight_diagram_skill", { askToSkillInvoke = function() invoked = invoked + 1; return true end }, function()
+        room:useCard { from = zhang, tos = { target }, card = Fk:cloneCard("qiao__slash") }
+      end)
+    end)
+    lu.assertEquals(target.hp, hp - 1)
+    lu.assertEquals(invoked, 0)
+    lu.assertEquals(room:getCardArea(red.id), Card.DrawPile)
+  end)
+end
+
+
 function T:testDanyangCopiesRememberEachTargetIndependently()
   run(function(room, p, ally)
     grant(p, "danyang_qingjin")

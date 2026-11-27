@@ -58,6 +58,15 @@ M.generals = {
       { id = "qiao__skill_qun139_2", name = "诱阙", text = "出牌阶段，你可以用点数最小的“饵”与一名角色拼点：没赢者展示手牌，弃置其中点数大于拼点牌的牌，视为对赢者使用雷【杀】，此牌造成伤害后，你摸一张牌。" },
     },
   },
+  {
+    id = "qiao_heg__shu036", name = "张嶷", title = "通壮逾古",
+    kingdom = "shu", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_wudang_feijun", card = "qiao__slash", cardText = "杀", name = "无当飞军" },
+    skills = {
+      { id = "qiao__skill_shu036_1", name = "越险", text = "当你指定或成为【杀】的一个目标后，你可以令此目标角色摸一张牌（若其手牌数小于2/未受伤，你可以将摸牌数改为两张/零张），其只能使用因此摸的牌响应此【杀】。" },
+    },
+  },
 }
 M.retinues = {
   {

@@ -13,6 +13,7 @@
 | JIN076 | [孟观](nu/jin076.md) | [积弩](nu/jin076.md#jin076-1)、[天述](nu/jin076.md#jin076-2)、[宿卫中军](nu/jin076.md#retinue-suwei-zhongjun)（统领） |
 | QUN029 | [高顺](nu/qun029.md) | [迅击](nu/qun029.md#qun029-1)、[擐甲](nu/qun029.md#qun029-2)、[陷阵营](nu/qun029.md#retinue-xianzhenying)（统领） |
 | QUN139 | [管亥](nu/qun139.md) | [卸尾](nu/qun139.md#qun139-1)、[诱阙](nu/qun139.md#qun139-2)、[青州精锐](nu/qun139.md#retinue-qingzhou-jingrui)（统领） |
+| SHU036 | [张嶷](nu/shu036.md) | [越险](nu/shu036.md#shu036-1)、[无当飞军](nu/shu036.md#retinue-wudang-feijun)（统领） |
 
 ## 统领与翼从
 

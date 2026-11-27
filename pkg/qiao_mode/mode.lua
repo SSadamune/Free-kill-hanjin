@@ -309,6 +309,7 @@ function M.create(base, name)
       FaqRules.installServer(self.room)
       Ascension.installTurnReveal()
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)
+      Fk.skill_skels.qiao__skill_shu036_1.install(self.room)
       require("packages.qiao.pkg.qiao_bingqing.bajia").reveal.install(self.room)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
