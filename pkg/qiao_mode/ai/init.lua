@@ -2,30 +2,43 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Skills = require "packages.qiao.pkg.qiao_mode.ai.skills"
 local ViewAs = require "packages.qiao.pkg.qiao_mode.ai.view_as"
 local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
+local Diplomacy = require "packages.qiao.pkg.qiao_mode.ai.diplomacy"
+local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
 
-local function knownKingdom(kingdom)
-  return type(kingdom) == "string" and kingdom ~= "" and kingdom ~= "unknown"
-end
+local knownKingdom = Diplomacy.knownKingdom
 
 function Robot:isFriend(target)
   if not target or target.dead or target:isRemoved() then return false end
   if target == self.player then return true end
-  return knownKingdom(self.player.kingdom) and self.player.kingdom ~= "wild"
-    and self.player.kingdom == target.kingdom
+  local own, theirs = Diplomacy.publicFaction(self.player), Diplomacy.publicFaction(target)
+  return type(own) == "string" and own == theirs and Heg.compareKingdomWith(self.player, target)
 end
 
 function Robot:isEnemy(target)
   if not target or target == self.player or target.dead or target:isRemoved()
     or not knownKingdom(target.kingdom) then return false end
-  local kingdom = self.player.kingdom
-  if not knownKingdom(kingdom) then
-    -- A robot knows its own selection. Its eventual reveal can also make it wild,
-    -- so a matching unrevealed faction does not prove an alliance.
-    kingdom = self.player:getMark("__heg_kingdom")
+  local own, theirs = Diplomacy.publicFaction(self.player), Diplomacy.publicFaction(target)
+  if own then
+    return own == self.player or theirs == target or Heg.compareKingdomWith(self.player, target, true)
   end
+  -- A robot knows its own selection. Its eventual reveal can also make it wild,
+  -- so a matching unrevealed faction does not prove an alliance.
+  local kingdom = self.player:getMark("__heg_kingdom")
   return knownKingdom(kingdom) and (kingdom == "wild" or kingdom ~= target.kingdom)
+end
+
+function Robot:attitude(target)
+  return Diplomacy.attitude(self, target)
+end
+
+function Robot:hostileScore(target, tactical)
+  return Diplomacy.hostileScore(self, target, tactical)
+end
+
+function Robot:supportScore(target, tactical)
+  return tactical + (self:isFriend(target) and Diplomacy.humanBonus(self, target) or 0)
 end
 
 function Robot:handlePlayCard()

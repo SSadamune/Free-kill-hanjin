@@ -1,13 +1,10 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Request = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
+local Heg = require "packages.hegemony.util"
 
 local M = {}
 local play = {}
-
-local function preferWeakEnemy(ai, target)
-  if ai:isEnemy(target) then return 20 - target.hp end
-end
 
 local function spareWeapon(ai, id)
   return ai.room:getCardArea(id) == Card.PlayerHand and Fk:getCardById(id).sub_type == Card.SubtypeWeapon
@@ -58,7 +55,7 @@ function play.qiao__skill_wei012_1(ai)
   if not weapon and player.hp < 3 then return end
   ai.handler:updateInteraction((weapon and not combo) and "#qiao__skill_wei012_1-discard" or "#qiao__skill_wei012_1-hp")
   return Request.targets(ai, function(target)
-    if combo or target.hp + target.shield == 1 then return preferWeakEnemy(ai, target) end
+    if combo or target.hp + target.shield == 1 then return ai:hostileScore(target, 20 - target.hp) end
   end)
 end
 
@@ -70,19 +67,27 @@ function play.qiao__skill_qun013_2(ai)
 end
 
 function play.qiao__skill_jin013_2(ai)
+  local previous
   for _, id in ipairs(ai.player:getTableMark("qiao_jin013_2_targets")) do
     local old = ai.room:getPlayerById(id)
-    if ai:isEnemy(old) and old.chained then return end
+    if ai:isEnemy(old) and old.chained then
+      previous = old
+      break
+    end
   end
+  local oldScore = previous and ai:hostileScore(previous, previous:getHandcardNum())
   return Request.targets(ai, function(target)
-    if ai:isEnemy(target) then return target:getHandcardNum() end
+    local score = ai:hostileScore(target, target:getHandcardNum())
+    if score and (not previous or (ai:attitude(target) < ai:attitude(previous) and score > oldScore)) then
+      return score
+    end
   end)
 end
 
 function play.qiao__skill_qun018_1(ai)
   if Cost.select(ai, 1, 2) then
     return Request.targets(ai, function(target)
-      if ai:isEnemy(target) and not target:isNude() then return 20 - target.hp end
+      if not target:isNude() then return ai:hostileScore(target, 20 - target.hp) end
     end)
   end
 end
@@ -130,7 +135,27 @@ function play.qiao__skill_wu008_1(ai)
 end
 
 function play.qiao__retinue_skill_qingzhou_jingrui(ai)
-  return Request.targets(ai, function(target) return preferWeakEnemy(ai, target) end)
+  return Request.targets(ai, function(target) return ai:hostileScore(target, 20 - target.hp) end)
+end
+
+function M.alliance(ai)
+  local name = "qiao__alliance"
+  if not ai.player:isFakeSkill(name) and not ai.player:hasSkill(name) then return end
+  local handler = ai.handler
+  if not handler:skillButtonValidity(name) then return end
+
+  -- The mode grants the public rule action as a fake skill. The upstream AI
+  -- dashboard omits fake buttons, but its native handler can select it directly.
+  handler:selectSkill(name, { selected = true })
+  if Cost.select(ai, 1, 2, function(id) return ai.room:getCardArea(id) == Card.PlayerHand end) then
+    local reply = Request.targets(ai, function(target)
+      if target:isHandAreaSealed() or not Heg.compareKingdomWith(target, ai.player, true) then return end
+      local attitude = ai:attitude(target)
+      if attitude > 0 and ai:isEnemy(target) then return attitude end
+    end)
+    if reply ~= "" then return reply end
+  end
+  handler:selectSkill(name, { selected = false })
 end
 
 function play.qiao__retinue_skill_lujiang_shangjia(ai)
@@ -155,7 +180,7 @@ function M.yinghun(ai)
   ai.handler:updateInteraction("#qiao__skill_wu009_1-discard:::" .. count)
   return Request.targets(ai, function(target)
     local cards = target:getHandcardNum() + #target:getCardIds("e")
-    if ai:isEnemy(target) and cards >= count - 1 then return 20 - cards end
+    if cards >= count - 1 then return ai:hostileScore(target, 20 - cards) end
   end)
 end
 

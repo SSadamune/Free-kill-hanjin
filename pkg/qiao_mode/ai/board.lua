@@ -32,7 +32,11 @@ local function pairScore(ai, from, to)
     local score = moveScore(ai, from, id)
     if score and (not best or score > best) and from:canMoveCardInBoardTo(to, id) then best = score end
   end
-  return best
+  if best then
+    local enemy, friend = from, to
+    if area == Player.Judge then enemy, friend = to, from end
+    return ai:hostileScore(enemy, ai:supportScore(friend, best))
+  end
 end
 
 function M.worthMoving(ai)

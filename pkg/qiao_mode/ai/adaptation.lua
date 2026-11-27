@@ -50,13 +50,13 @@ function M.targetScore(ai, card, target, prompt)
   if prompt == "#qiao_adaptation_remove_target" then
     if Cards.isHarmful(card) and not ai:isEnemy(target) then
       return (ai:isFriend(target) and 30 or 15) - target.hp
-    elseif card.name == "qiao__restore_heartland" and ai:isEnemy(target) then
-      return 1
+    elseif card.name == "qiao__restore_heartland" then
+      return ai:hostileScore(target, 1)
     end
   elseif prompt == "#qiao_adaptation_sub_target" then
-    if card.name == "qiao__collateral" and ai:isEnemy(target) then return 20 - target.hp end
+    if card.name == "qiao__collateral" then return ai:hostileScore(target, 20 - target.hp) end
   elseif card.name == "qiao__collateral" then
-    if ai:isEnemy(target) then return #target:getEquipments(Card.SubtypeWeapon) end
+    return ai:hostileScore(target, #target:getEquipments(Card.SubtypeWeapon))
   else
     return Cards.scoreTarget(ai, card, target)
   end

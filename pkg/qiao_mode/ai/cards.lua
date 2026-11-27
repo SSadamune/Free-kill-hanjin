@@ -38,15 +38,16 @@ end
 function M.scoreTarget(ai, card, target)
   local name = card.name
   if damage[name] or enemyGroup[name] then
-    if M.safeDamage(ai, card, target) then return 20 - target.hp end
+    if M.safeDamage(ai, card, target) then return ai:hostileScore(target, 20 - target.hp) end
   elseif removal[name] then
     if ai:isEnemy(target) and not target:isNude() then
       local obtains = name == "qiao__snatch"
         or (name == "qiao__chasing_near" and ai.player:distanceTo(target) == 1)
-      return (obtains and 8 or 0) + 2 * #target:getCardIds("e") + target:getHandcardNum()
+      local tactical = (obtains and 8 or 0) + 2 * #target:getCardIds("e") + target:getHandcardNum()
+      return ai:hostileScore(target, tactical)
     end
   elseif enemyPhase[name] then
-    if ai:isEnemy(target) then return target:getHandcardNum() end
+    return ai:hostileScore(target, target:getHandcardNum())
   elseif name == "qiao__restore_heartland" then
     if ai:isFriend(target) then return target == ai.player and 1 or 2 end
   elseif name == "qiao__iron_chain" then
@@ -91,6 +92,7 @@ function M.bestTarget(ai, score)
   local best, bestScore
   for _, target in ipairs(ai:getEnabledTargets()) do
     local value = score(target)
+    if value then value = ai:supportScore(target, value) end
     if value and (not bestScore or value > bestScore
       or (value == bestScore and target.seat < best.seat)) then
       best, bestScore = target, value
@@ -113,9 +115,7 @@ local function selectTargets(ai, score, extend)
 end
 
 local function hurt(ai, card)
-  local score = function(target)
-    if M.safeDamage(ai, card, target) then return 20 - target.hp end
-  end
+  local score = function(target) return M.scoreTarget(ai, card, target) end
   local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
   if fixed then
     if #fixed > 0 and table.every(fixed, function(p) return score(p) ~= nil end) then
@@ -173,7 +173,7 @@ local function playSelected(ai, card)
     return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end, true)
   elseif name == "qiao__befriend_attacking" then
     return selectTargets(ai, function(target)
-      if ai:isEnemy(target) then return target.hp end
+      if ai:isEnemy(target) then return 10 * ai:attitude(target) + 0.1 * target.hp end
     end)
   elseif name == "qiao__collateral" then
     -- Both the weapon holder and any victim must be enemies. Retry another
@@ -181,14 +181,14 @@ local function playSelected(ai, card)
     local rejected = {}
     while true do
       local holder = M.bestTarget(ai, function(target)
-        if not rejected[target] and ai:isEnemy(target) then
-          return #target:getEquipments(Card.SubtypeWeapon)
+        if not rejected[target] then
+          return ai:hostileScore(target, #target:getEquipments(Card.SubtypeWeapon))
         end
       end)
       if not holder then break end
       ai:selectTarget(holder, true)
       local reply = selectTargets(ai, function(target)
-        if ai:isEnemy(target) then return 20 - target.hp end
+        return ai:hostileScore(target, 20 - target.hp)
       end)
       if reply then return reply end
       ai:selectTarget(holder, false)

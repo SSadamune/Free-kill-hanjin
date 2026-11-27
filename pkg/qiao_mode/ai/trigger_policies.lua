@@ -122,8 +122,8 @@ function M.targetScore(ai, key, use)
     local frame = Selection.currentCost(ai.player)
     local current = frame and frame.target
     return function(target)
-      if ai:isFriend(current) and ai:isEnemy(target) and current:inMyAttackRange(target) then
-        return 20 - target.hp
+      if ai:isFriend(current) and current:inMyAttackRange(target) then
+        return ai:hostileScore(target, 20 - target.hp)
       end
     end
   end
@@ -147,24 +147,26 @@ function M.targetScore(ai, key, use)
   if key == "#qiao__skill_qun010_1-target" then
     local thunder = Fk:cloneCard("qiao__thunder__slash")
     return function(target)
-      if Cards.safeDamage(ai, thunder, target) then return 20 - target.hp end
+      return Cards.scoreTarget(ai, thunder, target)
     end
   end
   if enemyDamageTargets[key] then
     return function(target)
-      if ai:isEnemy(target) then return 20 - target.hp end
+      return ai:hostileScore(target, 20 - target.hp)
     end
   end
   if key == "#qiao__skill_han008_2-target" or key == "#qiao__skill_han008_2-invoke" then
     local aim = currentData(ai)
     return function(target)
-      if aim and aim.card and Cards.safeDamage(ai, aim.card, target) then return 20 - target.hp end
+      if aim and aim.card and Cards.safeDamage(ai, aim.card, target) then
+        return ai:hostileScore(target, 20 - target.hp)
+      end
     end
   end
   if key == "#qiao__skill_qun016_1-target" or key == "#qiao__skill_qun016_1-invoke" then
     return function(target)
-      if ai:isEnemy(target) and not target:isNude() then
-        return target:getHandcardNum() + 2 * #target:getCardIds("e")
+      if not target:isNude() then
+        return ai:hostileScore(target, target:getHandcardNum() + 2 * #target:getCardIds("e"))
       end
     end
   end

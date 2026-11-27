@@ -32,6 +32,189 @@ local function reply(player, command, data)
   return ai:makeReply()
 end
 
+local function diplomacyTable(room, player, enemy, ally, unknown)
+  local otherEnemy, lastEnemy, weaker, hidden = table.unpack(room.players, 5)
+  for _, target in ipairs(room.players) do
+    local cards = target:getCardIds("h")
+    if #cards > 0 then room:throwCard(cards, "test", target, target) end
+  end
+  for _, opponent in ipairs({ enemy, otherEnemy, lastEnemy }) do
+    room:setPlayerProperty(opponent, "kingdom", "shu")
+    room:setPlayerProperty(opponent, "hp", 4)
+    room:setPlayerProperty(opponent, "shield", 2)
+  end
+  room:setPlayerProperty(player, "hp", 4)
+  room:setPlayerProperty(ally, "hp", 1)
+  room:setPlayerProperty(weaker, "kingdom", "qun")
+  room:setPlayerProperty(weaker, "hp", 1)
+  room:setPlayerProperty(unknown, "hp", 1)
+  room:setPlayerProperty(hidden, "kingdom", "unknown")
+  return weaker, otherEnemy, lastEnemy
+end
+
+function Testqiao_robot_ai:testFactionWeightPrioritizesStrongerOpponentAndRecalculates()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker, otherEnemy, lastEnemy = diplomacyTable(room, player, enemy, ally, unknown)
+    give(room, player, "qiao__duel")
+    lu.assertTrue(player.ai:attitude(enemy) < -0.4)
+    lu.assertTrue(player.ai:attitude(weaker) > 0)
+    lu.assertEquals(player.ai:attitude(ally), 1)
+    lu.assertEquals(player.ai:attitude(unknown), 0)
+    lu.assertTrue(player.ai:isEnemy(weaker))
+    lu.assertEquals(reply(player, "PlayCard", {}).targets, { enemy.id })
+
+    -- Once Shu no longer dominates, the wounded opponent is back on top.
+    room:setPlayerProperty(otherEnemy, "kingdom", "unknown")
+    room:setPlayerProperty(lastEnemy, "kingdom", "unknown")
+    lu.assertEquals(player.ai:attitude(weaker), -0.4)
+    lu.assertEquals(reply(player, "PlayCard", {}).targets, { weaker.id })
+  end)
+end
+
+function Testqiao_robot_ai:testFactionWeightAppliesToDisruptionAndInteractiveSkill()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    give(room, enemy, "qiao__peach")
+    for _ = 1, 4 do give(room, weaker, "qiao__jink") end
+    give(room, player, "qiao__dismantlement")
+    lu.assertEquals(reply(player, "PlayCard", {}).targets, { enemy.id })
+    local picked = room:askToChoosePlayers(player, {
+      min_num = 1, max_num = 1, targets = { weaker, enemy, ally, unknown },
+      skill_name = "qiao__skill_shu005_2", prompt = "#qiao__skill_shu005_2-target", cancelable = true,
+    })
+    lu.assertEquals(table.map(picked, Util.IdMapper), { enemy.id })
+    local sole = room:askToChoosePlayers(player, {
+      min_num = 1, max_num = 1, targets = { weaker, ally, unknown },
+      skill_name = "qiao__skill_shu005_2", prompt = "#qiao__skill_shu005_2-target", cancelable = true,
+    })
+    lu.assertEquals(table.map(sole, Util.IdMapper), { weaker.id })
+  end)
+end
+
+function Testqiao_robot_ai:testBefriendAttackingHelpsTemporaryAllyWithoutPeachRescue()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    local befriend = give(room, player, "qiao__befriend_attacking")
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card, befriend.id)
+    lu.assertEquals(action.targets, { weaker.id })
+    room:useCard(room:handleUseCardReply(player, action))
+    lu.assertEquals(player:getHandcardNum(), 3)
+    lu.assertEquals(weaker:getHandcardNum(), 1)
+    lu.assertEquals(enemy:getHandcardNum(), 0)
+
+    give(room, player, "qiao__peach")
+    room:setPlayerProperty(weaker, "hp", 0)
+    room:setPlayerProperty(ally, "hp", 0)
+    local function askForPeach(target)
+      return room:askToUseCard(player, {
+        skill_name = "peach", pattern = "peach", prompt = "#AskForPeaches:" .. target.id,
+        cancelable = true, extra_data = { fix_targets = { target.id } },
+      })
+    end
+    lu.assertTrue(player.ai:attitude(weaker) > 0)
+    lu.assertNil(askForPeach(weaker))
+    lu.assertNotNil(askForPeach(ally))
+  end)
+end
+
+function Testqiao_robot_ai:testAllianceExchangesOnlyCheapMarkedCardWithTemporaryAlly()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker, otherEnemy, lastEnemy = diplomacyTable(room, player, enemy, ally, unknown)
+    local peach = give(room, player, "qiao__peach", 3, Card.Diamond)
+    local cheap = give(room, player, "qiao__lure_tiger", 10, Card.Diamond)
+    room:setCardMark(peach, "@@alliance-public", 1)
+    room:setCardMark(cheap, "@@alliance-public", 1)
+
+    -- Merely being an eligible recipient is insufficient on a balanced table.
+    room:setPlayerProperty(otherEnemy, "kingdom", "unknown")
+    room:setPlayerProperty(lastEnemy, "kingdom", "unknown")
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    room:setPlayerProperty(otherEnemy, "kingdom", "shu")
+    room:setPlayerProperty(lastEnemy, "kingdom", "shu")
+
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card.skill, "qiao__alliance")
+    lu.assertEquals(action.card.subcards, { cheap.id })
+    lu.assertEquals(action.targets, { weaker.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardOwner(cheap.id).id, weaker.id)
+    lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+    lu.assertEquals(player:getHandcardNum(), 2)
+  end)
+end
+
+function Testqiao_robot_ai:testHiddenRobotUsesItsOwnFactionOnlyForTacticalKnowledge()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(player, "kingdom", "unknown")
+    give(room, player, "qiao__befriend_attacking")
+    local cheap = give(room, player, "qiao__lure_tiger", 10, Card.Diamond)
+    room:setCardMark(cheap, "@@alliance-public", 1)
+    lu.assertTrue(player.ai:isEnemy(enemy))
+    lu.assertFalse(player.ai:isFriend(ally))
+    lu.assertFalse(player.ai:isEnemy(ally))
+    lu.assertTrue(player.ai:attitude(weaker) > 0)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+
+    local duel = give(room, player, "qiao__duel")
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card, duel.id)
+    lu.assertEquals(action.targets, { enemy.id })
+  end)
+end
+
+function Testqiao_robot_ai:testHumanSeatsWinCloseAttackAndSupportChoices()
+  scenario(function(room, player, enemy, ally, unknown)
+    local otherEnemy, otherAlly = table.unpack(room.players, 5)
+    for _, target in ipairs(room.players) do
+      local cards = target:getCardIds("h")
+      if #cards > 0 then room:throwCard(cards, "test", target, target) end
+      if target ~= player and target ~= enemy and target ~= ally then
+        room:setPlayerProperty(target, "kingdom", "unknown")
+      end
+    end
+    room:setPlayerProperty(otherEnemy, "kingdom", "shu")
+    room:setPlayerProperty(otherAlly, "kingdom", "wei")
+    room:setPlayerProperty(otherEnemy, "hp", enemy.hp)
+    room:setPlayerProperty(otherAlly, "maxHp", ally.maxHp)
+    player.serverplayer:setState(fk.Player_Robot)
+    enemy.serverplayer:setState(fk.Player_Robot)
+    ally.serverplayer:setState(fk.Player_Robot)
+    otherEnemy.serverplayer:setState(fk.Player_Online)
+    otherAlly.serverplayer:setState(fk.Player_Trust)
+    unknown.serverplayer:setState(fk.Player_Online)
+    give(room, player, "qiao__duel")
+    lu.assertEquals(reply(player, "PlayCard", {}).targets, { otherEnemy.id })
+    room:setPlayerProperty(enemy, "hp", otherEnemy.hp - 1)
+    lu.assertEquals(reply(player, "PlayCard", {}).targets, { enemy.id })
+
+    local chosen = room:askToChoosePlayers(player, {
+      min_num = 1, max_num = 1, targets = { ally, otherAlly, otherEnemy, unknown },
+      skill_name = "qiao__skill_han015_3", prompt = "#qiao__skill_han015_3-target", cancelable = true,
+    })
+    lu.assertEquals(table.map(chosen, Util.IdMapper), { otherAlly.id })
+  end)
+end
+
+function Testqiao_robot_ai:testWildPlayersShareAGroupOnlyWithPublicCountry()
+  scenario(function(room, player, enemy)
+    for _, target in ipairs({ player, enemy }) do
+      room:setPlayerProperty(target, "kingdom", "wild")
+      room:setPlayerProperty(target, "role", "heg_qin")
+      room:setPlayerProperty(target, "role_shown", false)
+    end
+    lu.assertFalse(player.ai:isFriend(enemy))
+    lu.assertTrue(player.ai:isEnemy(enemy))
+    room:setPlayerProperty(player, "role_shown", true)
+    room:setPlayerProperty(enemy, "role_shown", true)
+    lu.assertTrue(player.ai:isFriend(enemy))
+    lu.assertFalse(player.ai:isEnemy(enemy))
+  end)
+end
+
 function Testqiao_robot_ai:testForesightThroughPlayCard()
   scenario(function(room, player)
     local card = give(room, player, "qiao__foresight")

@@ -140,7 +140,7 @@ function M.active(ai, data)
       end) ~= nil
     end) then return "" end
     return chooseTargets(ai, function(target)
-      if Cards.safeDamage(ai, card, target) then return 20 - target.hp end
+      if Cards.safeDamage(ai, card, target) then return ai:hostileScore(target, 20 - target.hp) end
     end)
   end
   if skill == "choose_players_skill" then
@@ -161,7 +161,7 @@ function M.active(ai, data)
   end
   if key == "#qiao__skill_wei004_1-choose" or key == "#qiao__skill_wei004_1-invoke" then
     return chooseTargets(ai, function(target)
-      if ai:isEnemy(target) then return target:getHandcardNum() end
+      return ai:hostileScore(target, target:getHandcardNum())
     end, extra.num)
   end
   if skill == "discard_skill" or skill == "choose_cards_skill" then
@@ -174,7 +174,7 @@ function M.active(ai, data)
         end)
         if enemyDiscard then
           local card = ai.player:getVirtualEquip(id) or Fk:getCardById(id)
-          local score = Board.equipScore(card)
+          local score = ai:hostileScore(enemyDiscard.proposer, Board.equipScore(card))
           if not bestScore or score > bestScore then best, bestScore = id, score end
         end
       end
@@ -257,9 +257,8 @@ function M.active(ai, data)
   if key == "#qiao__triblade-invoke" then
     if not Cost.select(ai, 1, 3) then return "" end
     return chooseTargets(ai, function(target)
-      if ai:isEnemy(target) and (target.hp <= 1 or
-        (target.hp == 2 and ai.player:getHandcardNum() > ai.player:getMaxCards())) then
-        return 20 - target.hp
+      if target.hp <= 1 or (target.hp == 2 and ai.player:getHandcardNum() > ai.player:getMaxCards()) then
+        return ai:hostileScore(target, 20 - target.hp)
       end
     end)
   end
@@ -271,7 +270,7 @@ function M.active(ai, data)
   if key == "#qiao__retinue_skill_fuxin_sishi-slash" or key == "#qiao__retinue_skill_fuxin_sishi-slash-invoke" then
     local slash = Fk:cloneCard("qiao__slash")
     return chooseTargets(ai, function(target)
-      if Cards.safeDamage(ai, slash, target) then return 20 - target.hp end
+      return Cards.scoreTarget(ai, slash, target)
     end)
   end
 end
@@ -283,6 +282,7 @@ function M.play(ai)
     local reply = Play.play(ai, name)
     if reply then return reply end
   end
+  return Play.alliance(ai)
 end
 
 function M.arrange(ai, data)
