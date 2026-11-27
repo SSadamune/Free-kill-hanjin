@@ -1,12 +1,11 @@
 local H = require "packages.hegemony.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local Interaction = require "packages.qiao.pkg.qiao_bingqing.interaction"
 local M = { present = require("packages.qiao.pkg.qiao_mode.rules.removed_targets").isPresent, allies = H.compareKingdomWith }
 
 function M.choose(p, targets, name, max, optional)
-  if #targets == 0 then return {} end
-  return p.room:askToChoosePlayers(p, { targets = targets, min_num = 1, max_num = math.min(#targets, max or 1),
-    cancelable = optional == true, skill_name = name })
+  return Interaction.choosePlayers(p.room, p, targets, name, max, optional)
 end
 
 function M.invoke(p, skill, to)
@@ -14,9 +13,7 @@ function M.invoke(p, skill, to)
 end
 
 function M.give(p, to, ids, name)
-  if #ids > 0 and p ~= to and M.present(p) and M.present(to) then
-    p.room:moveCardTo(ids, Card.PlayerHand, to, fk.ReasonGive, name, nil, false, p)
-  end
+  return Interaction.give(p.room, p, to, ids, name)
 end
 
 function M.damageHistory(p, scope)

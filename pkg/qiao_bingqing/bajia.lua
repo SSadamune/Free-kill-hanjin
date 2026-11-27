@@ -1,5 +1,6 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.nu"
 local tracker = require "packages.qiao.pkg.qiao_generals.util.reveal_ticket"
+local VirtualEquip = require "packages.qiao.pkg.qiao_bingqing.virtual_equipment"
 local M = { skill = "qiao__skill_han043_1", general = "qiao_heg__han043", mark = "qiao_bajia_yu" }
 M.reveal = tracker(M.general, function() return M.skill end)
 
@@ -41,38 +42,16 @@ function M.lordKingdoms(p)
 end
 
 local GRANTS = "qiao_bajia_skill_grants"
-local function provides(cards, p)
-  local list = {}
-  for _, card in ipairs(cards) do
-    for _, sk in ipairs(card:getEquipSkills(p)) do table.insertIfNeed(list, sk.name) end
-  end
-  return list
-end
 function M.sync(p)
-  local old, wanted = p:getTableMark(GRANTS), {}
-  for _, name in ipairs(provides(M.shared(p, true), p)) do
-    if table.contains(old, name) or not p:hasSkill(name, true, true) then table.insert(wanted, name) end
-  end
-  local remove, add = {}, {}
-  for _, name in ipairs(old) do if not table.contains(wanted, name) then table.insert(remove, "-" .. name) end end
-  for _, name in ipairs(wanted) do if not p:hasSkill(name, true, true) then table.insert(add, name) end end
-  if #remove == 0 and #add == 0 then return end
-  p.room:setPlayerMark(p, GRANTS, #wanted > 0 and wanted or 0)
-  p.room:handleAddLoseSkills(p, remove, M.skill, false, true)
-  p.room:handleAddLoseSkills(p, add, M.skill, false, true)
-  local physical = table.map(p:getCardIds("e"), function(id) return p:getVirtualEquip(id) or Fk:getCardById(id) end)
-  local restore = table.filter(provides(physical, p), function(name)
-    return table.contains(remove, "-" .. name) and not p:hasSkill(name, true, true)
-  end)
-  p.room:handleAddLoseSkills(p, restore, nil, false, true)
+  local supplied = VirtualEquip.skillNames(M.shared(p, true), p)
+  VirtualEquip.syncSkills(p, M.skill, GRANTS, supplied, function(player) return player:getCardIds("e") end)
 end
 function M.suppressed(p, sk)
   local root = sk:getSkeleton()
   if not root or not table.contains(p:getTableMark(GRANTS), root.name) then return false end
-  for _, id in ipairs(p:getCardIds("e")) do
-    if table.contains(provides({ p:getVirtualEquip(id) or Fk:getCardById(id) }, p), root.name) then return false end
-  end
-  return not table.contains(provides(M.shared(p), p), root.name)
+  local physical = VirtualEquip.cardsInEquipZone(p, p:getCardIds("e"))
+  if table.contains(VirtualEquip.skillNames(physical, p), root.name) then return false end
+  return not table.contains(VirtualEquip.skillNames(M.shared(p), p), root.name)
 end
 function M.updateRoom(room)
   for _, p in ipairs(room.players) do M.sync(p) end

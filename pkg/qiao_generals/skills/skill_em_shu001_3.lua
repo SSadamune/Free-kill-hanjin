@@ -8,7 +8,6 @@ local skill = fk.CreateSkill {
 skill.qiaoImplemented = true
 
 local USED = "qiao__skill_em_shu001_3-used"
-skill.qiaoLimitedUseMark = USED
 local ZHANGWU = "qiao__skill_em_shu001_1"
 local RENDE = "qiao__skill_shu001_1"
 skill.qiao_limited_used_marks = { USED }

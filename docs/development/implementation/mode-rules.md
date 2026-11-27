@@ -36,6 +36,8 @@ FreeKill v0.5.25 的原生服务器在收尾时会独立累加离线玩家的逃
 
 ## 明暗置
 
+【闺秀】及兵情篇明置后效果共用一个服务端明置事件入口。双亮只派发一次联合事件，每张实际翻开的武将牌独立记录时机和生效技能。[明置记录](../../../pkg/qiao_generals/util/reveal_ticket.lua)
+
 房间加载[国战明置处理](../../../pkg/qiao_mode/mode.lua)与[预亮入口](../../../pkg/qiao_mode/rules/skill_prelight.lua)。预亮只在正式请求中按引擎支持的技能类型开放，并在提交时复核限制。将牌明暗置、移动或失技之后由[牌上技能监听](../../../pkg/qiao_mode/skills/general_card_skills_rule.lua)同步后天附将技能与阵法入口。作用域与迁移见[武将来源职责](general-exchange.md#公共武将来源职责)。[模式回归](../../../tests/mode_rules.lua#L220)通过真实回合开始询问验证主、副、双亮、取消与禁止明置。[技能来源回归](../../../tests/general_card_skills.lua)覆盖暗置、再亮和失去来源。
 
 ## 轮次、回合、阶段与死亡

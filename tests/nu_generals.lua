@@ -1148,4 +1148,86 @@ function T:testJiefanweiRestoresDingfeiForNextFinish()
   end)
 end
 
+function T:testCombinedRevealDispatchesBajiaAndMifurenOnce()
+  run(function(room, player, source)
+    fixture.installDualGenerals(room, player, {
+      main = Yu.general, deputy = "qiao_heg__shu021", kingdom = "han",
+    })
+    local armor = room:printCard("qiao__eight_diagram", Card.Club, 2)
+    room:moveCardIntoEquip(source, armor.id)
+    player:hideGeneral(false)
+    player:hideGeneral(true)
+    local before, asks = player:getHandcardNum(), 0
+    fixture.withSkillRequests(room, bajia, {
+      askToChoosePlayers = function() return { source } end,
+      askToChooseCard = function()
+        asks = asks + 1
+        return armor.id
+      end,
+    }, function()
+      runTurnWindow(room, player, "qiao_test_nu_combined_reveal", function() player:revealGenerals() end)
+    end)
+    lu.assertEquals(asks, 1)
+    lu.assertEquals(player:getTableMark(Yu.mark), { armor.id })
+    lu.assertEquals(player:getHandcardNum(), before + 2)
+  end)
+end
+
+function T:testJiefanweiUsesSanchensOwnPhaseRestoration()
+  run(function(room, player, first, second)
+    local Jin = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+    local jiefan = "qiao__retinue_skill_jiefanwei"
+    general(room, player, "jin006")
+    grant(player, "jiefanwei")
+    fixture.withSkillRequests(room, Jin.CHEN_SKILL, {
+      askToDiscard = function() return {} end,
+    }, function() playSkill(room, player, Jin.CHEN_SKILL, { first }, {}) end)
+    lu.assertEquals(Jin.sanChenRemaining(player), 0)
+    lu.assertTrue(Jin.sanChenTargeted(player, first))
+
+    player.hp = player.maxHp - 1
+    fixture.withSkillRequests(room, jiefan, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, Jin.CHEN_SKILL))
+        return Jin.CHEN_SKILL
+      end,
+    }, function()
+      playSkill(room, player, jiefan, { player },
+        { card(room, player, "qiao__slash").id, card(room, player, "qiao__slash").id })
+    end)
+    lu.assertEquals(Jin.sanChenRemaining(player), 1)
+    lu.assertTrue(Jin.sanChenTargeted(player, first))
+    fixture.withSkillRequests(room, Jin.CHEN_SKILL, {
+      askToDiscard = function() return {} end,
+    }, function() playSkill(room, player, Jin.CHEN_SKILL, { second }, {}) end)
+    lu.assertTrue(Jin.sanChenTargeted(player, second))
+    lu.assertEquals(Jin.sanChenRemaining(player), 0)
+  end)
+end
+
+function T:testJiefanweiRestoresOneFeixiongInstance()
+  run(function(room, player, target)
+    local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
+    local name = "qiao__retinue_skill_jiefanwei"
+    grant(player, "jiefanwei")
+    for _, position in ipairs({ "main", "deputy" }) do
+      local instance = grant(target, "feixiongjun", position)
+      lu.assertTrue(Bian.spendLimitedRetinue(target, instance, Bian.FEIXIONG_SKILL))
+    end
+    lu.assertFalse(Bian.canUseLimitedRetinue(target, Bian.FEIXIONG_SKILL))
+    target.hp = target.maxHp - 1
+    fixture.withSkillRequests(room, name, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, Bian.FEIXIONG_SKILL))
+        return Bian.FEIXIONG_SKILL
+      end,
+    }, function()
+      playSkill(room, player, name, { target },
+        { card(room, player, "qiao__slash").id, card(room, player, "qiao__slash").id })
+    end)
+    lu.assertEquals(#Bian.availableLimitedRetinues(target, Bian.FEIXIONG_SKILL), 1)
+    lu.assertEquals(#Bian.usedLimitedRetinues(target, Bian.FEIXIONG_SKILL), 1)
+  end)
+end
+
 return { name = "qiao_nu_generals" }

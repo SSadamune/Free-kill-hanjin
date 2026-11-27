@@ -12,6 +12,8 @@ local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_bingzhou_langqi",
 }
+local directUsed = "qiao_bingzhou_direct-phase"
+skill.qiao_play_phase_use_mark = directUsed
 skill.qiaoImplemented = true
 
 local DUEL = "qiao__duel"
@@ -94,7 +96,7 @@ skill:addEffect("active", {
   can_use = function(self, player)
     if player.phase ~= Player.Play or #others(player) == 0 then return false end
     if R.countForSkill(player, skill.name) == 0 then
-      return player:getMark("qiao_bingzhou_direct-phase") == 0
+      return player:getMark(directUsed) == 0
     end
     return Z.canUse(player, skill.name, 1)
   end,
@@ -113,8 +115,8 @@ skill:addEffect("active", {
       Z.spend(player, instance, skill.name)
       addPair(player, to, instance.id)
     else
-      if player:getMark("qiao_bingzhou_direct-phase") ~= 0 then return end
-      room:addPlayerMark(player, "qiao_bingzhou_direct-phase", 1)
+      if player:getMark(directUsed) ~= 0 then return end
+      room:addPlayerMark(player, directUsed, 1)
       addPair(player, to, 0)
     end
     ensureCleanup(room)

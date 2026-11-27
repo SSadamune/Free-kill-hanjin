@@ -6,7 +6,7 @@ local H = require "packages.hegemony.util"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Visibility = require "packages.qiao.pkg.qiao_mode.rules.card_visibility"
-local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
+local LimitedUses = require "packages.qiao.pkg.qiao_mode.rules.limited_skill_uses"
 local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
 
@@ -176,43 +176,19 @@ skill:addEffect(fk.TurnEnd, {
 })
 
 -- 5. 凶算：当前回合结束时复原目标一个已发动过的明置限定技（含独立已用标记与限定翼从实例）。
-local function customLimitedUsedMarks(name)
-  local skel = Fk.skill_skels[name]
-  if skel ~= nil and type(skel.qiao_limited_used_marks) == "table" then
-    return skel.qiao_limited_used_marks
-  end
-  return nil
-end
-
-local function hasCustomLimitedUsed(target, name)
-  local marks = customLimitedUsedMarks(name)
-  if marks == nil then return false end
-  for _, mark in ipairs(marks) do
-    local val = target:getMark(mark)
-    if type(val) == "number" and val > 0 then return true end
-    if type(val) == "table" and next(val) ~= nil then return true end
-    if type(val) == "string" and val ~= "" then return true end
-  end
-  return false
-end
-
 local function usedLimitedSkills(target)
-  local choices, retinueSet = {}, {}
-  if target == nil or target.dead then return choices, retinueSet end
+  local choices = {}
+  if target == nil or target.dead then return choices end
   for _, s in ipairs(target:getAllSkills()) do
     local skel = s:getSkeleton()
     local name = skel and skel.name or s.name
-    if Sources.isGeneralSkill(s, target) and not Bian.isLimitedRetinueSkill(name)
-      and s:hasTag(Skill.Limited) and target:hasShownSkill(name)
-      and (target:usedSkillTimes(name, Player.HistoryGame) > 0 or hasCustomLimitedUsed(target, name)) then
+    if Sources.isGeneralSkill(s, target) and s:hasTag(Skill.Limited)
+      and (target:hasShownSkill(name) or Bian.isLimitedRetinueSkill(name))
+      and LimitedUses.hasUsed(target, name) then
       table.insertIfNeed(choices, name)
     end
   end
-  if #Bian.usedLimitedRetinues(target, Bian.FEIXIONG_SKILL) > 0 then
-    table.insertIfNeed(choices, Bian.FEIXIONG_SKILL)
-    retinueSet[Bian.FEIXIONG_SKILL] = true
-  end
-  return choices, retinueSet
+  return choices
 end
 
 skill:addEffect(fk.TurnEnd, {
@@ -234,7 +210,7 @@ skill:addEffect(fk.TurnEnd, {
       local source = room:getPlayerById(rec.source_id)
       local dest = room:getPlayerById(rec.target_id)
       if source ~= nil and not source.dead and dest ~= nil and not dest.dead then
-        local choices, retinueSet = usedLimitedSkills(dest)
+        local choices = usedLimitedSkills(dest)
         if #choices > 0 then
           local chosen = #choices == 1 and choices[1] or room:askToChoice(source, {
             choices = choices,
@@ -243,21 +219,7 @@ skill:addEffect(fk.TurnEnd, {
             cancelable = false,
           })
           if chosen ~= nil and table.contains(choices, chosen) then
-            if retinueSet[chosen] then
-              Bian.resetOneLimitedRetinue(dest, chosen)
-              dest:setSkillUseHistory(chosen, 0, Player.HistoryGame)
-              room:updateAllLimitSkillUI(dest)
-            else
-              dest:setSkillUseHistory(chosen, 0, Player.HistoryGame)
-              Exchange.resetSkillGameHistory(room, dest, chosen)
-              local marks = customLimitedUsedMarks(chosen)
-              if marks ~= nil then
-                for _, mark in ipairs(marks) do
-                  room:setPlayerMark(dest, mark, 0)
-                end
-              end
-              room:updateAllLimitSkillUI(dest)
-            end
+            LimitedUses.restore(room, dest, chosen)
           end
         end
       end

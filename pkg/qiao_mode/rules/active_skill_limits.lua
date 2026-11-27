@@ -33,6 +33,15 @@ local function limitAt(declarations, scope, owner, player)
   return nil
 end
 
+--- 主出牌效果或其骨架是否声明了出牌阶段限一次。
+function M.declaresOnceInPlayPhase(skill, player)
+  local skeleton = skill:getSkeleton()
+  if not skeleton then return false end
+  return limitAt(skeleton.max_use_time, Player.HistoryPhase, skeleton, player) == 1
+    or (skill:isInstanceOf(ActiveSkill) or skill:isInstanceOf(ViewAsSkill))
+      and limitAt(skill.max_use_time, Player.HistoryPhase, skill, player) == 1
+end
+
 --- 是否为本模块负责的正式出牌技能。
 ---@param skill Skill?
 ---@return boolean

@@ -10,7 +10,6 @@ skill.qiaoImplemented = true
 local TAIKANG = "qiao__skill_em_jin001_1"
 local XINGTU = "qiao__skill_jin001_2"
 local LIMIT = "qiao_jin001_dingfei_used"
-skill.qiaoLimitedUseMark = LIMIT
 local LOST = "qiao_jin001_taikang_lost"
 skill.qiao_limited_used_marks = { LIMIT }
 
