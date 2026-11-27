@@ -3,6 +3,7 @@ local skillTest = __dofile("../../../tests/support/skill_test.lua")
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Heg = require "packages.hegemony.util"
+local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 
 Testqiao_robot_ai = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
@@ -1467,7 +1468,7 @@ function Testqiao_robot_ai:testChanglingComparesDamageAndHpLossAgainstRefusal()
   end)
 end
 
-function Testqiao_robot_ai:testChanglingAvoidsLosingVitalResponsesAndAcceptsReset()
+function Testqiao_robot_ai:testChanglingAvoidsLosingVitalResponsesAndKeepsStackingDirected()
   scenario(function(room, player, enemy)
     player.serverplayer:setState(fk.Player_Robot)
     room.current = enemy
@@ -1482,7 +1483,61 @@ function Testqiao_robot_ai:testChanglingAvoidsLosingVitalResponsesAndAcceptsRese
     lu.assertFalse(changling(enemy, player, 5))
     room:setPlayerProperty(player, "faceup", false)
     lu.assertTrue(changling(enemy, player, 5))
-    lu.assertTrue(player.faceup)
+    lu.assertFalse(player.faceup)
+  end)
+end
+
+function Testqiao_robot_ai:testJunlingComparesActualSkillConsequences()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 2)
+    room:setPlayerProperty(player, "shield", 0)
+    room:setPlayerProperty(enemy, "hp", 1)
+    room:setPlayerProperty(enemy, "maxHp", 4)
+    room:setPlayerProperty(ally, "hp", 1)
+    room:setPlayerProperty(ally, "maxHp", 4)
+    room.current = enemy
+    local ask = Heg.askToCommand
+    Heg.askToCommand = function(from, params)
+      params.pool, params.num = { "command4" }, 1
+      return ask(from, params)
+    end
+    local ok, err = pcall(function()
+      give(room, player, "qiao__jink")
+      lu.assertFalse(Junling.ask(ally, player, "qiao__skill_wu024_1", { recoveryTarget = ally }))
+      lu.assertTrue(Junling.ask(enemy, player, "qiao__skill_wu024_1", { recoveryTarget = enemy }))
+      lu.assertEquals(player:getMark("@@command4_effect-turn"), 1)
+      lu.assertNil(Junling.pending(room))
+      lu.assertTrue(Junling.ask(ally, player, "qiao__skill_jin021_2", { damage = { damage = 2 } }))
+    end)
+    Heg.askToCommand = ask
+    assert(ok, err)
+  end)
+end
+
+function Testqiao_robot_ai:testJunlingIssuerCanSelectBothCommandAndDamageTarget()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    ally.serverplayer:setState(fk.Player_Robot)
+    for _, target in ipairs(room:getOtherPlayers(player, false)) do
+      room:setPlayerProperty(target, "kingdom", player.kingdom)
+    end
+    room:setPlayerProperty(enemy, "kingdom", "shu")
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local ask = Heg.askToCommand
+    Heg.askToCommand = function(from, params)
+      params.pool, params.num = { "command1", "command3" }, 2
+      return ask(from, params)
+    end
+    local ok, err = pcall(function()
+      local executed, data = Junling.ask(player, ally, "qiao__skill_jin021_2", { damage = { damage = 2 } })
+      lu.assertEquals(data.command, "command1")
+      lu.assertTrue(executed)
+      lu.assertEquals(enemy.hp, 3)
+    end)
+    Heg.askToCommand = ask
+    assert(ok, err)
   end)
 end
 

@@ -73,6 +73,16 @@ function M.invoke(ai, data)
   local name, prompt = data[1], data[2] or ""
   local fields = prompt:split(":")
   local key, player = fields[1], ai.player
+  if key == "#qiao__skill_wu024_1-invoke" then
+    local source, target = M.promptTarget(ai, fields, 2), M.promptTarget(ai, fields, 3)
+    return ai:isEnemy(source) and ai:isFriend(target) and target:isWounded()
+  end
+  if key == "#qiao__skill_jin021_2-invoke" then
+    return ai:isFriend(M.promptTarget(ai, fields, 3))
+  end
+  if key == "#qiao__skill_jin021_2-prevent" then
+    return ai:isFriend(M.promptTarget(ai, fields, 3))
+  end
   if free[key] or key == "#qiao__zhoujun-invoke" then return true end
   if key == "#qiao__skill_jin005_2-invoke" then return Triggers.shunliuWorth(ai) end
   if key == "#qiao__skill_qun008_2-invoke" then
@@ -140,6 +150,15 @@ function M.active(ai, data)
   if key == "#qiao__skill_wei018_1-place" then return Play.huyuan(ai) end
   if skill == "#command_skill" and key == "#command6-select" then
     return Command.keep(ai) and Requests.reply(ai) or ""
+  end
+  if key == "#command1-damage" then
+    return chooseTargets(ai, function(target) return Command.damageTargetScore(ai, target) end)
+  end
+  if key == "#qiao__wei024_ask" then
+    if not ai.player:canSkip(Player.Draw) or not Cost.select(ai, 1, 1.5) then return "" end
+    return chooseTargets(ai, function(target)
+      if not target:isHandAreaSealed() then return ai:hostileScore(target, 2) end
+    end)
   end
   if skill == "#qiao__skill_wu009_1_choose" then return Play.yinghun(ai) end
   if key == "#qiao__skill_wei006_2-give" then
@@ -307,6 +326,10 @@ function M.active(ai, data)
       end) and Requests.reply(ai) or ""
     elseif key == "#qiao__skill_han001_1-discard" then
       budget = 4
+    elseif key == "#qiao__skill_han003_1-invoke" then
+      local target = M.promptTarget(ai, fields, 3)
+      if not ai:isEnemy(target) or not target.faceup then return "" end
+      budget = 1.5
     elseif key == "#qiao__skill_qun005_1-discard" then
       if not ai.player:canSkip(Player.Play) then return "" end
       local hand = ai.player:getCardIds("h")
@@ -555,7 +578,7 @@ end
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local fields = (prompt or ""):split(":")
-  local pick = Triggers.choice(ai, choices, fields)
+  local pick = Command.issueChoice(ai, skillName, choices) or Triggers.choice(ai, choices, fields)
   if fields[1] == "#qiao__skill_shu008_1-choice" or fields[1] == "#qiao__skill_shu013_1-choice" then
     pick = Triggers.slashChoice(ai, fields, parentData(ai, GameEvent.UseCard))
   elseif fields[1] == "#qiao__skill_wu010_2-choice" then

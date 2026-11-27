@@ -269,6 +269,14 @@ function play.qiao__skill_em_qun010_3(ai)
   end) then return Request.reply(ai) end
 end
 
+function play.qiao__skill_qun021_1(ai)
+  return Request.targets(ai, function(target)
+    if not ai.player:isHandAreaSealed() and target:getHandcardNum() > 0 then
+      return ai:hostileScore(target, math.min(4, target:getHandcardNum()))
+    end
+  end)
+end
+
 function M.alliance(ai, cooperation)
   local name = "qiao__alliance"
   if not ai.player:isFakeSkill(name) and not ai.player:hasSkill(name) then return end
@@ -392,6 +400,7 @@ local stages = {
   qiao__skill_shu010_1_recast = "recast",
   qiao__skill_jin011_1 = "disrupt", -- 果毅
   qiao__skill_em_qun010_3 = "setup", -- 问道
+  qiao__skill_qun021_1 = "disrupt", -- 庸肆
 }
 
 function M.play(ai, name, stage)
