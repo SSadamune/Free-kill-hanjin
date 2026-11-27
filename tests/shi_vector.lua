@@ -66,6 +66,52 @@ function T:testJingchuRemovesUntilTwoRemainAndOnlyThenDrawsAndGives()
   end)
 end
 
+function T:testSuolingCanGiveSecondBlackCardAndChooseYuanweiAsSlashTarget()
+  run(function(room, yuan, receiver)
+    asGeneral(room, yuan, "han051")
+    room:throwCard(receiver:getCardIds("h"), "test", receiver, receiver)
+    local first = give(room, receiver, "qiao__jink", Card.Club)
+    local gift = give(room, yuan, "qiao__jink", Card.Spade)
+    local hp = yuan.hp
+    fixture.withSkillRequests(room, id("han051_1"), {
+      askToCards = function(_, who)
+        lu.assertTrue(who == receiver)
+        return { first.id, gift.id }
+      end,
+    }, function()
+      room:handleUseCardReply(yuan, FkTest.ReplyUseSkill(id("han051_1"), { receiver, yuan }, { gift.id }))
+    end)
+    lu.assertEquals(yuan.hp, hp - 1)
+    lu.assertEquals(room:getCardArea(gift.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+  end)
+end
+
+function T:testSuolingSecondOptionUsesTwoConvertedSlashesOnRecipient()
+  run(function(room, yuan, a, b)
+    asGeneral(room, yuan, "han051")
+    room:throwCard(a:getCardIds("h"), "test", a, a)
+    local hp = a.hp
+    local gift = give(room, yuan, "qiao__jink", Card.Spade)
+    local first, second = give(room, b, "qiao__jink"), give(room, b, "qiao__jink")
+    local todo = { first, second }
+    fixture.withSkillRequests(room, id("han051_1"), {
+      askToUseCard = function(_, p)
+        lu.assertTrue(p == b)
+        local c = table.remove(todo, 1)
+        if not c then return end
+        local slash = Fk:cloneCard("qiao__fire__slash")
+        slash:addSubcard(c.id)
+        return { from = b, tos = { a }, card = slash }
+      end,
+    }, function() room:handleUseCardReply(yuan, FkTest.ReplyUseSkill(id("han051_1"), { a, b }, { gift.id })) end)
+    lu.assertEquals(a.hp, hp - 2)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
+    lu.assertEquals(b:usedCardTimes("slash", Player.HistoryTurn), 0)
+  end)
+end
+
+
 local function checkSuolingFocus(suit)
   run(function(room, yuan, receiver, target)
     asGeneral(room, yuan, "han051")
@@ -94,4 +140,7 @@ local function checkSuolingFocus(suit)
     lu.assertIs(room:getCardOwner(gift.id), receiver)
   end)
 end
+function T:testSuolingPublicFocusWithBlackHandCard() checkSuolingFocus(Card.Club) end
+function T:testSuolingPublicFocusWithRedHandCard() checkSuolingFocus(Card.Heart) end
+
 return { name = "qiao_shi_vector" }
