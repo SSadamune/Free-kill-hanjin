@@ -432,6 +432,9 @@ function Testqiao_quan_han_wei_shu:testWei021bMaojieZhengpiAndFengying()
   client_room.run(room(), function(clients, clientRoom)
     local me = clients[2]
     clientRoom.current = me
+    local handler = require("ltk.core.request_type.play_card"):new(me)
+    lu.assertTrue(handler:skillButtonValidity(fengying.name), "小势力在出牌请求里应能点击奉迎")
+    lu.assertFalse(me:canUse(Fk:cloneCard("qiao__threaten_emperor")), "普通挟天子仍需要大势力")
     lu.assertTrue(fengying:enabledAtPlay(me), "奉迎客户端应无视大势力限制")
   end)
 
@@ -439,7 +442,7 @@ function Testqiao_quan_han_wei_shu:testWei021bMaojieZhengpiAndFengying()
     local card = fengying:viewAs(maojie, {})
     lu.assertNotNil(card)
     lu.assertEquals(card.name, "qiao__threaten_emperor")
-    lu.assertTrue(card:getMark("qiao_ignore_big_kingdom") > 0)
+    lu.assertTrue(table.contains(card.skillNames, fengying.name))
     -- 模拟被无懈可击抵消，验证“使用时”摸牌仍已完成
     local use = { from = maojie, tos = { maojie }, card = card, nullifiedTargets = { maojie } }
     room():useCard(use)

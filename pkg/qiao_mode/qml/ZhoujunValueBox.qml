@@ -16,6 +16,10 @@ GraphicsBox {
   property var options: []
   property var baseValues: ({ draw: 0, slash: 0, hand: 0 })
   property string prompt: ""
+  property string thirdStat: "hand"
+  property string thirdLabel: "手牌上限"
+  property string instruction: "将一项加 1 或 2，其余两项合计减等量"
+  property bool cancelable: true
   property int drawValue: 0
   property int slashValue: 0
   property int handValue: 0
@@ -25,7 +29,7 @@ GraphicsBox {
   function isLegal(draw, slash, hand) {
     for (let i = 0; i < root.options.length; i++) {
       const option = root.options[i];
-      if (option.draw === draw && option.slash === slash && option.hand === hand)
+      if (option.draw === draw && option.slash === slash && option[root.thirdStat] === hand)
         return true;
     }
     return false;
@@ -35,7 +39,7 @@ GraphicsBox {
     const next = {
       draw: root.drawValue,
       slash: root.slashValue,
-      hand: root.handValue
+      [root.thirdStat]: root.handValue
     };
     next[key] += delta;
     // 只允许仍可补足为合法分配的步骤，同时允许撤销已分配点数。
@@ -51,7 +55,7 @@ GraphicsBox {
     if (!root.canAdjust(key, delta)) return;
     if (key === "draw") root.drawValue += delta;
     else if (key === "slash") root.slashValue += delta;
-    else if (key === "hand") root.handValue += delta;
+    else if (key === root.thirdStat) root.handValue += delta;
   }
 
   function deltaText(value) {
@@ -65,7 +69,7 @@ GraphicsBox {
     const reply = {
       draw: root.drawValue,
       slash: root.slashValue,
-      hand: root.handValue
+      [root.thirdStat]: root.handValue
     };
     close();
     Ltk.roomModel.replyToServer(reply);
@@ -152,8 +156,8 @@ GraphicsBox {
       }
 
       ValueColumn {
-        label: "手牌上限"
-        stat: "hand"
+        label: root.thirdLabel
+        stat: root.thirdStat
         value: root.handValue
       }
     }
@@ -162,7 +166,7 @@ GraphicsBox {
       anchors.horizontalCenter: parent.horizontalCenter
       color: "#C9A26A"
       font.pixelSize: 15
-      text: "将一项加 1 或 2，其余两项合计减等量"
+      text: root.instruction
     }
 
     Row {
@@ -181,6 +185,7 @@ GraphicsBox {
         width: 120
         height: 36
         text: Lua.tr("Cancel")
+        visible: root.cancelable
         onClicked: root.cancel()
       }
     }

@@ -21,7 +21,6 @@ skill:addEffect("viewas", {
     local card = Fk:cloneCard("qiao__threaten_emperor")
     card.skillName = skill.name
     card:addSubcards(hand)
-    card:setMark("qiao_ignore_big_kingdom", 1)
     return card
   end,
   enabled_at_play = function(self, player)

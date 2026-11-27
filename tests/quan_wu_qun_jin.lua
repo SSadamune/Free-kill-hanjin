@@ -83,15 +83,20 @@ function Testqiao_quan_wu_qun_jin:testWu019LukangJueyanAndKeshou()
     room():moveCardTo(ind, Card.PlayerJudge, lukang, fk.ReasonJustMove, "test", nil, true)
   end)
   local baseRange = lukang:getAttackRange()
-  local allocs = { "#qiao__skill_wu019_1-draw", "#qiao__skill_wu019_1-slash", "#qiao__skill_wu019_1-range" }
-  local allocIdx = 0
   skill_test.withSkillRequests(room(), "qiao__skill_wu019_1", {
     askToSkillInvoke = function() return true end,
     askToChooseCard = function() return ind.id end,
     askToChoosePlayers = function() return { enemy } end,
-    askToOptions = function()
-      allocIdx = allocIdx + 1
-      return { allocs[allocIdx] }
+    askToCustomDialog = function(_, _, params)
+      local prop = params.component.prop
+      lu.assertEquals(prop.thirdStat, "range")
+      lu.assertFalse(prop.cancelable)
+      lu.assertEquals(#prop.options, 10)
+      for _, opt in ipairs(prop.options) do
+        lu.assertTrue(opt.draw >= 0 and opt.slash >= 0 and opt.range >= 0)
+        lu.assertEquals(opt.draw + opt.slash + opt.range, 3)
+      end
+      return { draw = 1, slash = 1, range = 1 }
     end,
     askToUseCard = function() return nil end, -- 不出闪
   }, function()

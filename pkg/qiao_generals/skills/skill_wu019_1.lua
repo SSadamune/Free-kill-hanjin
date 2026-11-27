@@ -2,7 +2,6 @@
 -- 主将技（☯️-1），准备阶段，你可以选择区域内一张牌，令一名其他角色将此牌当冰【杀】对你使用，
 -- 然后你令本回合摸牌阶段摸牌数、使用【杀】次数、攻击范围共计+3。
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
-local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
 
 local skill = fk.CreateSkill {
@@ -11,9 +10,12 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local OPT_DRAW = "#qiao__skill_wu019_1-draw"
-local OPT_SLASH = "#qiao__skill_wu019_1-slash"
-local OPT_RANGE = "#qiao__skill_wu019_1-range"
+local allocations = {}
+for draw = 0, 3 do
+  for slash = 0, 3 - draw do
+    table.insert(allocations, { draw = draw, slash = slash, range = 3 - draw - slash })
+  end
+end
 
 local function buildIceSlash(cardId)
   local card = Fk:cloneCard("qiao__ice__slash")
@@ -114,29 +116,25 @@ skill:addEffect(fk.EventPhaseStart, {
 
     -- 然后（冰【杀】结算完毕后），若陆抗仍存活，将共计 3 点自由分配至三项。
     if not RemovedTargets.isPresent(player) then return end
-    local drawAdd, slashAdd, rangeAdd = 0, 0, 0
-    local allOpts = { OPT_DRAW, OPT_SLASH, OPT_RANGE }
-    for step = 1, 3 do
-      if not RemovedTargets.isPresent(player) then break end
-      local pick = TriggerSelection.askOption(room, player, {
-        choices = allOpts,
-        all_choices = allOpts,
-        cancelable = false,
-        buttons = true,
-        skill_name = skill.name,
-        prompt = string.format("#qiao__skill_wu019_1-alloc:::%d:%d:%d:%d",
-          step, drawAdd, slashAdd, rangeAdd),
-      }) or OPT_DRAW
-      if pick == OPT_SLASH then
-        slashAdd = slashAdd + 1
-        room:addPlayerMark(player, Quan.JUEYAN_SLASH_MARK, 1)
-      elseif pick == OPT_RANGE then
-        rangeAdd = rangeAdd + 1
-        room:addPlayerMark(player, Quan.JUEYAN_RANGE_MARK, 1)
-      else
-        drawAdd = drawAdd + 1
-        room:addPlayerMark(player, Quan.JUEYAN_DRAW_MARK, 1)
-      end
+    local reply = room:askToCustomDialog(player, {
+      skill_name = skill.name,
+      component = {
+        url = "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml",
+        prop = {
+          prompt = "#qiao__skill_wu019_1-alloc", options = allocations,
+          baseValues = { draw = 0, slash = 0, range = 0 },
+          thirdStat = "range", thirdLabel = "攻击范围", cancelable = false,
+          instruction = "分配本回合的 3 点增益，可调整已分配的点数",
+        },
+      },
+    })
+    if not RemovedTargets.isPresent(player) then return end
+    local chosen = type(reply) == "table" and table.find(allocations, function(a)
+      return a.draw == reply.draw and a.slash == reply.slash and a.range == reply.range
+    end) or nil
+    chosen = chosen or { draw = 3, slash = 0, range = 0 }
+    for key, mark in pairs({ draw = Quan.JUEYAN_DRAW_MARK, slash = Quan.JUEYAN_SLASH_MARK, range = Quan.JUEYAN_RANGE_MARK }) do
+      if chosen[key] > 0 then room:addPlayerMark(player, mark, chosen[key]) end
     end
   end,
 })
@@ -147,10 +145,7 @@ Fk:loadTranslationTable {
   ["#qiao__skill_wu019_1-invoke"] = "决堰：是否选择区域内一张牌令一名其他角色当冰【杀】对你使用？",
   ["#qiao__skill_wu019_1-card"] = "决堰：选择你区域内的一张牌（手牌、装备或判定区）",
   ["#qiao__skill_wu019_1-user"] = "决堰：选择一名其他角色将此牌当冰【杀】对你使用",
-  ["#qiao__skill_wu019_1-alloc"] = "决堰：分配第 %arg/3 点增益（当前：摸牌+%arg2、杀次数+%arg3、攻击范围+%arg4）",
-  [OPT_DRAW] = "摸牌阶段摸牌数+1",
-  [OPT_SLASH] = "使用【杀】次数+1",
-  [OPT_RANGE] = "攻击范围+1",
+  ["#qiao__skill_wu019_1-alloc"] = "决堰：分配 3 点增益",
 }
 
 return skill
