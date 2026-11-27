@@ -15,7 +15,9 @@ W.ActionRow {
   required property var roomSizes
   property Item lobby: null
   property Item playerCountRow: null
-  readonly property bool locksPlayerCount: lobby?.config?.gameMode === modeName
+  readonly property bool activeForMode: lobby?.config?.gameMode === modeName
+  readonly property int fixedCapacity: roomSizes[value] ?? 0
+  readonly property bool locksPlayerCount: activeForMode && fixedCapacity > 0
 
   suffixComponent: ComboBox {
     id: choices
@@ -80,11 +82,11 @@ W.ActionRow {
   }
 
   function updateRoomSettings() {
-    if (locksPlayerCount && playerCountRow) {
+    if (activeForMode && playerCountRow) {
       // CreateRoom expands these same per-package lists when it sends the request.
       lobby.config.qiaoLockedBanScheme = Config.curScheme;
       lobby.config.qiaoLockedHiddenPacks = Config.serverHiddenPacks;
-      playerCountRow.value = roomSizes[value] ?? roomSizes[model[0]];
+      if (locksPlayerCount) playerCountRow.value = fixedCapacity;
       lobby.updateFeasible();
     }
   }

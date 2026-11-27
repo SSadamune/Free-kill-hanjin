@@ -10,6 +10,7 @@ local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
+local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
 
@@ -242,7 +243,7 @@ function M.askData(room, offers, guests, kingdom, seat)
   local prompt = M.prompt(room)
   if kingdom then
     local key = "#QiaoChooseLockedKingdom"
-    if #room.players == 3 then key = seat == 1 and "#QiaoChooseLandlord" or "#QiaoChooseFarmer" end
+    if Locked.isLandlord(room) then key = seat == 1 and "#QiaoChooseLandlord" or "#QiaoChooseFarmer" end
     prompt = key .. ":::" .. Ban.kingdomLabel(kingdom) .. ":seat#" .. seat
   end
   local wild, guestFactions = {}, {}

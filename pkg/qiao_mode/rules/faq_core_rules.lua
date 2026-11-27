@@ -7,6 +7,7 @@
 -- 本模块仅在汉晋模式房间内生效，其他模式透明委托原生行为。
 local H = require "packages.hegemony.util"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
+local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local M = {}
 
 M.MAX_KINGDOM_PLAYERS = 4
@@ -24,13 +25,8 @@ local function isUnknown(kingdom)
   return kingdom == nil or kingdom == "" or kingdom == "unknown"
 end
 
-local function lockedThree(room)
-  return room and room.players and #room.players == 3 and type(room.getSettings) == "function"
-    and room:getSettings("gameMode") == Modes.locked
-end
-
-local function lockedFarmerKingdom(room, player)
-  if lockedThree(room) and player.seat >= 2 then
+local function guaranteedKingdom(room, player)
+  if Locked.isHumanVsAI(room) or (Locked.isLandlord(room) and player.seat >= 2) then
     local kingdom = player:getMark("__heg_kingdom")
     if type(kingdom) == "string" and not isUnknown(kingdom) and kingdom ~= "wild" then
       return kingdom
@@ -39,8 +35,9 @@ local function lockedFarmerKingdom(room, player)
 end
 
 function M.max_kingdom_players(room)
-  if lockedThree(room) then return 2 end
+  if Locked.isLandlord(room) then return 2 end
   local total = room and room.players and #room.players or 0
+  if Locked.isHumanVsAI(room) then return total end
   return math.min(total // 2, M.MAX_KINGDOM_PLAYERS)
 end
 
@@ -113,7 +110,7 @@ local function installRevealOverflowGuard()
     end
     stack[#stack + 1] = isUnknown(self.kingdom)
     if stack[#stack] and (isDeputy and self.deputyGeneral or self.general) == "anjiang" then
-      local kingdom = lockedFarmerKingdom(room, self)
+      local kingdom = guaranteedKingdom(room, self)
       if kingdom then
         -- The upstream reveal treats an already determined kingdom as exempt
         -- from its hard-coded half-table limit. Only the reveal publishes it.
@@ -293,7 +290,7 @@ function M.install()
   local compareExpected = H.compareExpectedKingdomWith
   H.compareExpectedKingdomWith = function(from, to, diff, ...)
     if from ~= to and isUnknown(from.kingdom) and not isUnknown(to.kingdom) then
-      local kingdom = lockedFarmerKingdom(Fk:currentRoom(), from)
+      local kingdom = guaranteedKingdom(Fk:currentRoom(), from)
       if kingdom then return (kingdom == H.getKingdom(to)) ~= (diff == true) end
     end
     return compareExpected(from, to, diff, ...)

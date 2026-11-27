@@ -167,6 +167,11 @@ function Testlocked_factions:testRoomRuleSelectsCapacity()
   lu.assertTrue(mode:feasible(settings(4, Locked.rules[2])))
   lu.assertFalse(mode:feasible(settings(3, Locked.rules[2])))
   lu.assertTrue(mode:feasible(settings(4)))
+  local humanVsAI = W.toQmlData(mode.ui_settings, settings(6, Locked.humanVsAI))[1]._children[1]
+  lu.assertEquals(humanVsAI.value, Locked.humanVsAI)
+  lu.assertTrue(mode:feasible(settings(2, Locked.humanVsAI)))
+  lu.assertTrue(mode:feasible(settings(10, Locked.humanVsAI)))
+  lu.assertFalse(mode:feasible(settings(11, Locked.humanVsAI)))
 end
 
 function Testlocked_factions:testCreationChecksTheActiveBanSchemeAndHidesWildCount()
@@ -420,6 +425,121 @@ function Testlocked_factions:testClientConversionRespectsAssignment()
   end)
   ClientInstance = prior
   assert(ok, err)
+end
+
+local function startHumanVsAI(humanCount, robotCount)
+  local count = humanCount + robotCount
+  local ids = {}
+  for id = 1, count do table.insert(ids, id) end
+  local backend = FkTest.createFakeRoom(ids)
+  for id = count + 1, 8 do ClientInstance:removePlayer({ id }) end
+  for id = 1, count do
+    local player = backend:getPlayers():at(id - 1)
+    if id > 8 then ClientInstance:addPlayer({ player:getId(), player:getScreenName(), player:getAvatar(), true, 0 }) end
+    if id > humanCount then player:setState(fk.Player_Robot) end
+  end
+
+  local room = support.createRoom {
+    mode = Modes.locked, backend = backend, realSelection = true,
+    settings = { _mode = { [Locked.ruleKey] = Locked.humanVsAI, qiao_offer_count = 2, generalTimeout = 1 } },
+    configure = function(current)
+      local notify = current.notifyMoveFocus
+      function current:notifyMoveFocus(players, command, timeout)
+        local req = self.current_request
+        if command == "AskForGeneral" and req and req.command == "CustomDialog" then
+          self.notifyMoveFocus = notify
+          for _, player in ipairs(req.players) do
+            local prop = req.data[player.id].component.model.prop
+            lu.assertStrContains(prop.prompt, "#QiaoChooseLockedKingdom")
+            lu.assertEquals(#prop.generals, 2)
+            if player.serverplayer:getState() ~= fk.Player_Robot then
+              FkTest.setNextReplies(player, { req.default_reply[player.id] })
+            end
+          end
+        end
+        return notify(self, players, command, timeout)
+      end
+    end,
+  }
+  local clans = {}
+  for _, player in ipairs(room.players) do
+    local assigned = player:getMark("__heg_init_kingdom")
+    lu.assertTrue(Ban.isKnown(assigned))
+    lu.assertEquals(player.kingdom, "unknown")
+    lu.assertFalse(player:hasSkill("m_feiyang", true))
+    lu.assertFalse(player:hasSkill("m_bahu", true))
+    lu.assertEquals(player:getHandcardNum(), 4)
+    local clan = clans[assigned] or { humans = 0, robots = 0 }
+    local kind = player.serverplayer:getState() == fk.Player_Robot and "robots" or "humans"
+    clan[kind] = clan[kind] + 1
+    clans[assigned] = clan
+  end
+  local humans, robots = {}, {}
+  for _, clan in pairs(clans) do
+    lu.assertTrue(clan.humans == 0 or clan.robots == 0)
+    if clan.humans > 0 then table.insert(humans, clan.humans) end
+    if clan.robots > 0 then table.insert(robots, clan.robots) end
+  end
+  table.sort(humans)
+  table.sort(robots)
+  lu.assertEquals(#room:getBanner("all_kingdoms"), #humans + #robots)
+  return room, humans, robots
+end
+
+function Testlocked_factions:testHumanVsAIEqualFactionsExceedNormalCapWithoutTurningWild()
+  local room, humans, robots = startHumanVsAI(5, 5)
+  lu.assertEquals(humans, { 5 })
+  lu.assertEquals(robots, { 5 })
+  FkTest.runInRoom(function()
+    local hidden = room.players[#room.players]
+    for i = 1, #room.players - 1 do
+      local p = room.players[i]
+      p:revealGeneral(true, true)
+      lu.assertEquals(p.kingdom, p:getMark("__heg_init_kingdom"))
+    end
+    local ally = table.find(room.players, function(p) return p ~= hidden and p.kingdom == hidden:getMark("__heg_init_kingdom") end)
+    lu.assertTrue(H.compareExpectedKingdomWith(hidden, ally))
+    hidden:revealGeneral(false, true)
+    lu.assertEquals(hidden.kingdom, hidden:getMark("__heg_init_kingdom"))
+  end)
+end
+
+function Testlocked_factions:testHumanVsAIKeepsSingleExtraRobotTogether()
+  local _, humans, robots = startHumanVsAI(2, 3)
+  lu.assertEquals(humans, { 2 })
+  lu.assertEquals(robots, { 3 })
+end
+
+function Testlocked_factions:testHumanVsAISplitsMoreNumerousHumans()
+  local _, humans, robots = startHumanVsAI(2, 1)
+  lu.assertEquals(humans, { 1, 1 })
+  lu.assertEquals(robots, { 1 })
+end
+
+function Testlocked_factions:testHumanVsAISplitsMoreNumerousRobots()
+  local _, humans, robots = startHumanVsAI(2, 5)
+  lu.assertEquals(humans, { 2 })
+  lu.assertEquals(robots, { 2, 3 })
+end
+
+function Testlocked_factions:testHumanVsAIRejectsMissingRobotSide()
+  for id = 3, 8 do ClientInstance:removePlayer({ id }) end
+  local room, message
+  local ok = pcall(support.createRoom, {
+    mode = Modes.locked, backend = FkTest.createFakeRoom({ 1, 2 }), realSelection = true,
+    settings = { _mode = { [Locked.ruleKey] = Locked.humanVsAI } },
+    configure = function(current)
+      room = current
+      local original = room.sendLog
+      function current:sendLog(log, ...)
+        if log.type == "#QiaoLockedMissingHumanOrRobot" then message = log end
+        return original(self, log, ...)
+      end
+    end,
+  })
+  lu.assertFalse(ok)
+  lu.assertNotNil(message)
+  lu.assertTrue(room.game_finished)
 end
 
 return { name = "locked_factions" }

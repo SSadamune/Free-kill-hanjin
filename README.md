@@ -59,7 +59,7 @@ python scripts/setup_dependencies.py
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Action play
 ```
 
-脚本会核验依赖，将本项目的游戏内容复制到 `packages/qiao/`，然后启动新月杀。创建房间时可选“大合集”“自由模式”或“锁定势力”。三个模式共用汉晋武将和游戏牌。自由模式提供更多房间设置，“锁定势力”在「模式设置」中选择「斗地主」或「2v2」，房间容量随之设为 3 人或 4 人。[锁定势力规则](docs/rules/faction-ban.md#锁定势力)
+脚本会核验依赖，将本项目的游戏内容复制到 `packages/qiao/`，然后启动新月杀。创建房间时可选“大合集”“自由模式”或“锁定势力”。三个模式共用汉晋武将和游戏牌。自由模式提供更多房间设置，“锁定势力”在「模式设置」中选择「斗地主」「2v2」或「人机对抗」。前两种固定 3 人和 4 人。人机对抗可设 2 至 10 人，开局须有真人和机器人。[锁定势力规则](docs/rules/faction-ban.md#锁定势力)
 
 ### 测试用自由选将
 

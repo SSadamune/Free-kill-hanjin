@@ -13,6 +13,7 @@ local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
+local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local M = {}
 
 M.RULE_SKILL = "#qiao_ascension_rule"
@@ -180,6 +181,7 @@ function M.ascend(room, player, newMain, kingdom, options)
     return false
   end
   if not RoomBans.allows(room, newMain) then return false end
+  if Locked.isHumanVsAI(room) and player:getMark("__heg_init_kingdom") ~= kingdom then return false end
 
   local oldMain = M.actual_main(player)
   local deputy = M.actual_deputy(player)
@@ -284,9 +286,8 @@ function M.flip_lord_for_death(room, victim)
   if victim.kingdom == "unknown" then
     local main = M.actual_main(victim)
     local general = main and Fk.generals[main]
-    if general ~= nil and general.kingdom ~= "wild" then
-      room:setPlayerProperty(victim, "kingdom", general.kingdom)
-    end
+    local kingdom = Locked.isHumanVsAI(room) and victim:getMark("__heg_init_kingdom") or (general and general.kingdom)
+    if Ban.isKnown(kingdom) then room:setPlayerProperty(victim, "kingdom", kingdom) end
   end
 end
 
@@ -411,7 +412,7 @@ function M.on_before_game_over(room, victim)
   if main == nil or not Versions.is_lord(main) then return end
   room:setPlayerMark(victim, M.LORD_DEATH_MARK, 1)
   local inherited, kingdom = M.death_succession(room, victim)
-  if not inherited then M.convert_to_wild(room, victim, kingdom) end
+  if not inherited and not Locked.isHumanVsAI(room) then M.convert_to_wild(room, victim, kingdom) end
 end
 
 function M.reset(room)
@@ -441,7 +442,8 @@ local function turnAscensionCandidates(room, player)
       and not M.population_blocks(room, player, kingdom)
   end)
   local initial = player:getMark("__heg_kingdom")
-  if table.contains(kingdoms, initial) then kingdoms = { initial } end
+  if table.contains(kingdoms, initial) then kingdoms = { initial }
+  elseif Locked.isHumanVsAI(room) then return end
   if #kingdoms == 0 then return end
   return lord, kingdoms
 end

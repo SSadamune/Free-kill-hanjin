@@ -78,7 +78,8 @@ local function canDealLocked(settings, getSetting, config)
   local plan = Versions.planPool(settings.playerNum, names, nil, 0, function() return {} end, getGeneral,
     { candidates = config.candidates, limit = #config.candidates, guestReplacement = guestReplacement })
   plan.kept = table.filter(plan.kept, allowed)
-  return Locked.canDeal(plan, settings.playerNum, getSetting("disableSameConvert"), guestReplacement)
+  return Locked.canDeal(plan, settings.playerNum, getSetting("disableSameConvert"), guestReplacement,
+    getSetting(Locked.ruleKey))
 end
 
 -- Reserve a legal pair for every seat, then fill the remaining offers without duplicates.
@@ -141,6 +142,10 @@ function M.create(base, name)
           Session.consume(room)
           return rejectLockedStart(room, "#QiaoLockedWrongPlayerCount")
         end
+        if Locked.isHumanVsAI(room) and not Locked.hasBothSides(room) then
+          Session.consume(room)
+          return rejectLockedStart(room, "#QiaoLockedMissingHumanOrRobot")
+        end
         return parent.run(self)
       end
     end
@@ -153,7 +158,7 @@ function M.create(base, name)
       -- Retinues are granted by the commander rules, never dealt as normal generals.
       Commander.excludeRetinuesFromPile(room)
       local previous = Session.consume(room)
-      local cap = math.min(room:getSettings("qiao_wild_count") or 4, 12)
+      local cap = Locked.isHumanVsAI(room) and 0 or math.min(room:getSettings("qiao_wild_count") or 4, 12)
       -- BAN-001 input is the host's candidate selection, never the pile.
       local config = resolveSettings(function(key) return room:getSettings(key) end)
       room:setBanner("qiao_candidate_kingdoms", config.candidates)
@@ -276,7 +281,7 @@ function M.create(base, name)
       for _, player in ipairs(room.players) do
         PairHp.apply_start(room, player)
       end
-      if locked and #room.players == 3 then
+      if locked and Locked.isLandlord(room) then
         local first = room.players[1]
         local adjusted = Locked.adjusted(nil, first)
         room:setPlayerProperty(first, "maxHp", adjusted.maxHp)
@@ -286,7 +291,7 @@ function M.create(base, name)
     if locked then
       function logic:attachSkillToPlayers()
         parent.attachSkillToPlayers(self)
-        if #self.room.players == 3 then
+        if Locked.isLandlord(self.room) then
           self.room:handleAddLoseSkills(self.room.players[1], { "m_feiyang", "m_bahu" }, nil, false)
         end
       end
@@ -479,7 +484,7 @@ function M.create(base, name)
       model = Locked.rules, roomSizes = Locked.roomSizes, modeName = name,
       value = function(settings)
         local rule = modeOf(settings)[Locked.ruleKey]
-        return Locked.roomSizes[rule] and rule or Locked.rules[1]
+        return table.contains(Locked.rules, rule) and rule or Locked.rules[1]
       end,
     }
     ruleRow._qml = { url = "packages/qiao/pkg/qiao_mode/qml/LockedGameRuleRow.qml" }
@@ -505,7 +510,8 @@ function M.create(base, name)
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
-    name = name, minPlayer = locked and 3 or base.minPlayer, maxPlayer = locked and 4 or base.maxPlayer,
+    name = name, minPlayer = locked and Locked.minPlayers or base.minPlayer,
+    maxPlayer = locked and Locked.maxPlayers or base.maxPlayer,
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,
     whitelist = whitelist, ui_settings = settings,
     winner_getter = Ascension.get_winner, surrender_func = base.surrenderFunc,

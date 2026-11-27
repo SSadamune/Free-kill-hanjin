@@ -51,7 +51,8 @@ singletons = {
     'Lua': '''
   function tr(label) {
     return ({
-      qiao_locked_landlord: "斗地主", qiao_locked_2v2: "2v2", "Player num": "房间人数",
+      qiao_locked_landlord: "斗地主", qiao_locked_2v2: "2v2", qiao_locked_human_vs_ai: "人机对抗",
+      "Player num": "房间人数",
       qiao_locked_game_rule: "游戏规则", "Enable free assign": "自由选将", "$RoomName": "%1",
     })[label] ?? label;
   }
@@ -67,7 +68,7 @@ singletons = {
       } else {
         group._children = [{
           _qml: { ext: true }, _settingsKey: "qiao_locked_game_rule", _children: [],
-          title: "qiao_locked_game_rule", model: ["qiao_locked_landlord", "qiao_locked_2v2"],
+          title: "qiao_locked_game_rule", model: ["qiao_locked_landlord", "qiao_locked_2v2", "qiao_locked_human_vs_ai"],
           modeName: mode, roomSizes: { qiao_locked_landlord: 3, qiao_locked_2v2: 4 },
           value: cfg._mode.qiao_locked_game_rule ?? "qiao_locked_landlord",
         }];
@@ -75,10 +76,14 @@ singletons = {
       return [group];
     };
     if (code.includes("minPlayer =")) return mode =>
-      mode === "qiao_locked_mode" ? { minPlayer: 3, maxPlayer: 4 } : { minPlayer: 2, maxPlayer: 8 };
-    if (code.includes("mode:feasible")) return (mode, cfg) => mode !== "qiao_locked_mode" ||
-      (cfg.playerNum === (cfg._mode.qiao_locked_game_rule === "qiao_locked_2v2" ? 4 : 3) &&
-       !cfg.qiaoLockedBanScheme?.normalPkg?.qiao);
+      mode === "qiao_locked_mode" ? { minPlayer: 2, maxPlayer: 10 } : { minPlayer: 2, maxPlayer: 8 };
+    if (code.includes("mode:feasible")) return (mode, cfg) => {
+      if (mode !== "qiao_locked_mode") return true;
+      const rule = cfg._mode.qiao_locked_game_rule;
+      const validCount = rule === "qiao_locked_human_vs_ai" ? cfg.playerNum >= 2 && cfg.playerNum <= 10 :
+        cfg.playerNum === (rule === "qiao_locked_2v2" ? 4 : 3);
+      return validCount && !cfg.qiaoLockedBanScheme?.normalPkg?.qiao;
+    };
     if (code.includes("getBoardGame")) return () => "lunarltk";
     if (code.includes(" ~= nil")) return mode => !!mode;
     throw new Error("Unexpected Lua query: " + code);
@@ -179,7 +184,28 @@ ApplicationWindow {
           rule.suffixLoader.item.activated(0);
         } else if (phase === 8) {
           check(!playerCount.enabled && playerCount.value === 3, "switching back should restore capacity 3");
-          console.log("PASS: built-in lobby sends capacities 3 and 4, updates ban feasibility, and restores controls");
+          rule.suffixLoader.item.popup.open();
+        } else if (phase === 9) {
+          const popup = rule.suffixLoader.item.popup;
+          const humanVsAI = find(popup.contentItem, item => item.text === "人机对抗");
+          check(popup.visible && humanVsAI && humanVsAI.visible, "human vs AI should be visible next to old rules");
+          humanVsAI.clicked();
+        } else if (phase === 10) {
+          check(rule.suffixLoader.item.displayText === "人机对抗", "human vs AI choice");
+          check(playerCount.enabled, "human vs AI should enable capacity changes");
+          playerCount.value = 9;
+        } else if (phase === 11) {
+          check(playerCount.value === 9 && createRoom.config.playerNum === 9 && confirm.enabled, "editable capacity above 4");
+          confirm.clicked();
+          check(ClientInstance.lastRequest[0] === "CreateRoom" && ClientInstance.lastRequest[1][1] === 9,
+            "native CreateRoom request should send the chosen human vs AI capacity");
+          check(ClientInstance.lastRequest[1][3]._mode.qiao_locked_game_rule === "qiao_locked_human_vs_ai",
+            "native CreateRoom request should send human vs AI");
+          find(createRoom, item => item.objectName === "nativeSidebar").currentIndex = 3;
+          rule.suffixLoader.item.activated(1);
+        } else if (phase === 12) {
+          check(!playerCount.enabled && playerCount.value === 4, "switching back to 2v2 should lock capacity at 4");
+          console.log("PASS: built-in lobby sends fixed and editable capacities, saves human vs AI, and restores controls");
           Qt.exit(0);
         }
         phase++;
