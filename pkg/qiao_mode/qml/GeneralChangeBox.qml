@@ -81,6 +81,7 @@ GraphicsBox {
         generalName: parent.modelData
         selectable: true
         selected: root.selectedName === generalName
+        chosenInBox: root.selectedName === generalName
         dataModel: {
           const properties = { heg: true, inPosition: root.isDeputy ? -1 : 1 };
           properties.hasCompanion = root.matchesPartner(generalName);
