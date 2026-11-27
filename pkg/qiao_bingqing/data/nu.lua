@@ -48,6 +48,16 @@ M.generals = {
       { id = "qiao__skill_qun029_2", name = "擐甲", text = "当你指定/成为【杀】的目标后，你可以将一个目标/使用者装备区的一张牌置入你装备区，结算后将你装备区同副类别的牌移动给其。" },
     },
   },
+  {
+    id = "qiao_heg__qun139", name = "管亥", title = "盗跖临青",
+    kingdom = "qun", hp = 4, gender = "male",
+    guests = {}, companions = {},
+    commander = { retinue = "qiao_heg__retinue_qingzhou_jingrui", card = "qiao__iron_chain", cardText = "铁索连环", name = "青州精锐" },
+    skills = {
+      { id = "qiao__skill_qun139_1", name = "卸尾", text = "每轮各限一次，你可以一张手牌置于武将牌上（称为“饵”），并视为使用【杀】/【闪】。" },
+      { id = "qiao__skill_qun139_2", name = "诱阙", text = "出牌阶段，你可以用点数最小的“饵”与一名角色拼点：没赢者展示手牌，弃置其中点数大于拼点牌的牌，视为对赢者使用雷【杀】，此牌造成伤害后，你摸一张牌。" },
+    },
+  },
 }
 M.retinues = {
   {

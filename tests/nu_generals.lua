@@ -79,6 +79,20 @@ function T:testLizhiDrawThresholdAndRealDistributionOnDying()
     lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
   end)
 end
+function T:testXieweiPlacesPhysicalBaitAndMovesWithGuanhai()
+  run(function(room, guan, to, ally)
+    general(room, guan, "qun139")
+    local material = card(room, guan, "qiao__jink")
+    local hp = to.hp
+    playSkill(room, guan, id("qun139_1"), { to }, { material.id }, "slash")
+    lu.assertEquals(guan:getPile("qiao_nu_er"), { material.id })
+    lu.assertEquals(to.hp, hp - 1)
+    lu.assertEquals(guan:getMark("qiao_xiewei_slash-round"), 1)
+    lu.assertNotNil(E.exchange(room, { player = guan }, { player = ally }))
+    lu.assertEquals(ally:getPile("qiao_nu_er"), { material.id })
+    lu.assertEquals(#guan:getPile("qiao_nu_er"), 0)
+  end)
+end
 function T:testJinuGivesHandlyCardsAndSurvivesExchange()
   run(function(room, meng, ally)
     general(room, meng, "jin076")
@@ -143,6 +157,24 @@ function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
 end
 
 
+function T:testYouqueTieDiscardsBothHigherHandsWithoutThunderSlash()
+  run(function(room, guan, to)
+    general(room, guan, "qun139")
+    room:throwCard(guan:getCardIds("h"), "test", guan, guan)
+    room:throwCard(to:getCardIds("h"), "test", to, to)
+    local bait = card(room, guan, "qiao__slash", Card.Club, 7)
+    local mine = card(room, guan, "qiao__slash", Card.Spade, 13)
+    local his = card(room, to, "qiao__slash", Card.Heart, 13)
+    local seven = card(room, to, "qiao__slash", Card.Diamond, 7)
+    guan:addToPile("qiao_nu_er", bait, true, "test")
+    FkTest.setNextReplies(to, { FkTest.ReplyChooseCards({ seven.id }) })
+    local hp1, hp2 = guan.hp, to.hp
+    playSkill(room, guan, id("qun139_2"), { to }, { bait.id })
+    for _, c in ipairs({ bait, seven, mine, his }) do lu.assertEquals(room:getCardArea(c.id), Card.DiscardPile) end
+    lu.assertEquals(guan.hp, hp1)
+    lu.assertEquals(to.hp, hp2)
+  end)
+end
 function T:testTijunReplacesExistingWeaponAndChangesOnlyThatPhase()
   run(function(room, li, target)
     general(room, li, "jin067")
