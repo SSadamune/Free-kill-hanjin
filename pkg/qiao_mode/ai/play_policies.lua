@@ -2,6 +2,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Request = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
 local Heg = require "packages.hegemony.util"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 
 local M = {}
 local play = {}
@@ -132,6 +133,13 @@ function play.qiao__skill_wu008_1(ai)
   if reply then return reply end
   ai.handler:updateInteraction("#qiao__skill_wu008_1-discard")
   if Cost.select(ai, 1, 2) then return Request.targets(ai, benefit) end
+end
+
+function play.qiao__skill_qun007_2(ai)
+  local outcome = Damage.luanwu(ai)
+  if Damage.worth(outcome) and (outcome.enemyDying > 0 or outcome.enemies >= outcome.friends + outcome.unknown + 2) then
+    return Request.reply(ai)
+  end
 end
 
 function play.qiao__retinue_skill_qingzhou_jingrui(ai)

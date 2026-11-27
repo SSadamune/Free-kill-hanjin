@@ -154,6 +154,11 @@ local function fixedGroup(ai, card, safe, useful)
   end
 end
 
+function M.groupOutcome(ai, card)
+  local targets = card:getAvailableTargets(ai.player, ai.handler.extra_data)
+  return Damage.group(ai, card, targets)
+end
+
 local function playSelected(ai, card)
   local name = card.name
   if selfBenefit[name] or name == "qiao__analeptic" or card.type == Card.TypeEquip then
@@ -163,8 +168,7 @@ local function playSelected(ai, card)
   elseif removal[name] or enemyPhase[name] then
     return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end)
   elseif enemyGroup[name] then
-    local safe = function(target) return M.safeDamage(ai, card, target) end
-    return fixedGroup(ai, card, safe, safe)
+    if Damage.worth(M.groupOutcome(ai, card)) and ai:okButtonEnabled() then return physicalReply(ai) end
   elseif name == "qiao__god_salvation" then
     local woundedFriend = function(target) return target:isWounded() and ai:isFriend(target) end
     return fixedGroup(ai, card, function(target)

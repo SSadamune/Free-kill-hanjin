@@ -1057,4 +1057,52 @@ function Testqiao_robot_ai:testYingshiKeepsLightningWhenAllySurvivesFavorableCha
   end)
 end
 
+function Testqiao_robot_ai:testGroupAttacksTradeNonlethalAllyCostForMoreEnemies()
+  scenario(function(room, player, enemy, ally, unknown)
+    diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(ally, "hp", 3)
+    room:setPlayerProperty(unknown, "hp", 3)
+    for _, name in ipairs({ "qiao__savage_assault", "qiao__archery_attack" }) do
+      local card = give(room, player, name)
+      lu.assertEquals(reply(player, "PlayCard", {}).card, card.id)
+      room:setPlayerProperty(ally, "hp", 1)
+      lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+      room:setPlayerProperty(ally, "hp", 3)
+      room:throwCard(card.id, "test", player, player)
+    end
+  end)
+end
+
+function Testqiao_robot_ai:testLuanjiUsesTwoCheapCardsAndProtectsAllyDying()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(unknown, "kingdom", "shu")
+    room:setPlayerProperty(ally, "hp", 2)
+    room:setPlayerProperty(weaker, "hp", 2)
+    local skill = "qiao__skill_qun004_1"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    local first = give(room, player, "qiao__lightning")
+    local second = give(room, player, "qiao__lure_tiger")
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card.skill, skill)
+    lu.assertItemsEquals(action.card.subcards, { first.id, second.id })
+    room:setPlayerProperty(ally, "hp", 1)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+  end)
+end
+
+function Testqiao_robot_ai:testLuanwuPrefersKnownEnemyLossWithoutRiskingAlly()
+  scenario(function(room, player, enemy, ally, unknown)
+    diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(ally, "hp", 2)
+    room:setPlayerProperty(ally, "shield", 2)
+    room:setPlayerProperty(unknown, "kingdom", "shu")
+    local skill = "qiao__skill_qun007_2"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    lu.assertEquals(reply(player, "PlayCard", {}).card.skill, skill)
+    room:setPlayerProperty(ally, "hp", 1)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+  end)
+end
+
 return { name = "qiao_robot_ai" }

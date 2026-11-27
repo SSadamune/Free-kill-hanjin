@@ -393,6 +393,8 @@ function M.choice(ai, data)
     if outcome.direct == 0 or Damage.worth(outcome) or (not outcome.propagates and not outcome.unsafe
       and player.hp > 2 and #player:getCardIds("e") > 1) then
       pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
+    else
+      pick = "qiao__drowning_throw"
     end
   end
   if pick and table.contains(choices, pick) and limits[1] == 1 then return { pick } end

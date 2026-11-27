@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 
 local M = {}
 
@@ -47,9 +48,26 @@ local function convert(ai, result, budget, useTarget)
   end
 end
 
+local function luanji(ai)
+  local name = "qiao__skill_qun004_1"
+  if not table.contains(ai:getEnabledSkills(), name) then return end
+  ai:selectSkill(name, true)
+  if Cost.select(ai, 2, 4) then
+    local card = ai.handler:getUsingCard()
+    if card then
+      local outcome = Cards.groupOutcome(ai, card)
+      if Damage.worth(outcome) and outcome.enemies - outcome.friends - outcome.unknown >= 2 then
+        local reply = Requests.reply(ai)
+        if reply ~= "" then return reply end
+      end
+    end
+  end
+  ai:unSelectAll()
+end
+
 function M.play(ai)
   return convert(ai, "dismantlement", 2, true)
-    or convert(ai, "supply_shortage", 2, true) or convert(ai, "slash", 3, true)
+    or convert(ai, "supply_shortage", 2, true) or convert(ai, "slash", 3, true) or luanji(ai)
 end
 
 function M.slash(ai)
