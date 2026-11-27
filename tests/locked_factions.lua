@@ -324,6 +324,23 @@ function Testlocked_factions:testFourPlayerFormationAndSiege()
   end
 end
 
+function Testlocked_factions:testXinjiAppliesOnlyToItsOwnerWithGlobalBattleRoyalOff()
+  local room = startRoom(3, nil, { generalTimeout = 1, qiao_offer_count = 3 })
+  local holder, other = room.players[1], room.players[2]
+  local fixture = __dofile("../../../tests/support/skill_test.lua")
+  FkTest.runInRoom(function()
+    fixture.installDualGenerals(room, holder, {
+      main = "qiao_heg__han023", deputy = "qiao_test__han_2", kingdom = "han",
+    })
+    H.enterBattleRoyalMode(room)
+    lu.assertFalse(BattleRoyal.entered(room))
+    lu.assertTrue(BattleRoyal.inBattleRoyal(room, holder))
+    lu.assertFalse(BattleRoyal.inBattleRoyal(room, other))
+    holder:hideGeneral(false)
+    lu.assertFalse(BattleRoyal.inBattleRoyal(room, holder))
+  end)
+end
+
 function Testlocked_factions:testBattleRoyalRequiresOptIn()
   for _, enabled in ipairs({ false, true }) do
     local settings = { generalTimeout = 1, qiao_offer_count = 3 }

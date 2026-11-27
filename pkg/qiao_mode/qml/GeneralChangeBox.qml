@@ -11,6 +11,8 @@ import LunarLtk.Pages.Popups
 GraphicsBox {
   id: root
 
+  property bool cancelable: true
+  property var actions: []
   required property var candidates
   required property string prompt
   // Keep the recorded request shape. The card reads the room presentation.
@@ -79,6 +81,7 @@ GraphicsBox {
         generalName: parent.modelData
         selectable: true
         selected: root.selectedName === generalName
+        chosenInBox: root.selectedName === generalName
         dataModel: {
           const properties = { heg: true, inPosition: root.isDeputy ? -1 : 1 };
           properties.hasCompanion = root.matchesPartner(generalName);
@@ -112,11 +115,22 @@ GraphicsBox {
     spacing: 8
 
     MetroButton {
+      visible: root.actions.length === 0
       enabled: root.selectedName !== ""
       text: Lua.tr("OK")
       onClicked: Ltk.roomModel.replyToServer({ general: root.selectedName })
     }
+    Repeater {
+      model: root.actions
+      delegate: MetroButton {
+        required property string modelData
+        enabled: root.selectedName !== ""
+        text: Lua.tr(modelData)
+        onClicked: Ltk.roomModel.replyToServer({ general: root.selectedName, action: modelData })
+      }
+    }
     MetroButton {
+      visible: root.cancelable
       text: Lua.tr("Cancel")
       onClicked: Ltk.roomModel.replyToServer("__cancel")
     }

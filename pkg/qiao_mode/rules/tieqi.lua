@@ -1,3 +1,4 @@
+local PrivateMarks = require "packages.qiao.pkg.qiao_mode.rules.private_marks"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Sources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
@@ -59,11 +60,7 @@ local function update(room, player, forcePrivate)
   end
   if forcePrivate or not table.isEqual(player.tag.qiaoTieqiHidden or {}, hidden) then
     player.tag.qiaoTieqiHidden = hidden
-    local owner = player._splayer
-    -- ServerPlayer:doNotify also forwards to spectators following this view.
-    if owner:getState() ~= fk.Player_Robot then
-      owner:doNotify("SetPlayerMark", cbor.encode { player.id, PRIVATE, #hidden > 0 and hidden or 0 })
-    end
+    PrivateMarks.notify(player, PRIVATE, #hidden > 0 and hidden or 0)
   end
 end
 
@@ -87,27 +84,12 @@ function M.invalidates(player, skill)
 end
 
 function M.install(room)
-  local serialize = room.serialize
-  local observing = false
-  function room:serialize(viewer)
-    local snapshot = serialize(self, viewer)
-    if not observing and viewer and next(viewer:getTableMark(M.POSITIONS)) then
-      local _, hidden = affected(self, viewer)
-      local data = snapshot.players[viewer.id]
-      local marks = cbor.decode(data.mark)
-      marks[PRIVATE] = next(hidden) and list(hidden) or nil
-      data.mark = cbor.encode(marks)
+  PrivateMarks.register(room, PRIVATE, function(currentRoom, viewer)
+    if next(viewer:getTableMark(M.POSITIONS)) then
+      local _, hidden = affected(currentRoom, viewer)
+      if next(hidden) then return list(hidden) end
     end
-    return snapshot
-  end
-  -- The core serializes an observed seat as its viewer before setting isObserver.
-  local tellRoomToObserver = room.tellRoomToObserver
-  function room:tellRoomToObserver(observer)
-    observing = true
-    local ok, err = pcall(tellRoomToObserver, self, observer)
-    observing = false
-    if not ok then error(err, 0) end
-  end
+  end)
   local handle = room.handleAddLoseSkills
   function room:handleAddLoseSkills(player, ...)
     local result = handle(self, player, ...)

@@ -45,12 +45,15 @@ local LordShu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_shu"
 local LordQun = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_qun"
 local LordWu = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wu"
 local LordWei = require "packages.qiao.pkg.qiao_generals.data.zhen_shi_lord_wei"
+local Bian = require "packages.qiao.pkg.qiao_generals.data.bian"
+local Quan = require "packages.qiao.pkg.qiao_generals.data.quan"
 
 local sources = {
   { package = zhenshi, data = LordShu },
   { package = zhenshi, data = LordQun },
   { package = zhenshi, data = LordWu },
   { package = zhenshi, data = LordWei },
+  { package = zhenshi, data = Quan },
   { package = zhenshi, data = Qun2 },
   { package = extension, data = Standard },
   { package = zhenshi, data = ZhenShi },
@@ -63,6 +66,7 @@ local sources = {
   { package = zhenshi, data = Qun },
   { package = zhenshi, data = Wu },
   { package = zhenshi, data = Retinues },
+  { package = zhenshi, data = Bian },
 }
 local packagesById, retinuePackages, Data = {}, {}, {
   generals = {},
@@ -125,14 +129,34 @@ for _, id in ipairs({
 }) do
   prefixByGeneral[id] = "qiao_prefix_shi"
 end
--- 变包君主使用独立角标“变”，不并入阵／势前缀。
-prefixByGeneral["qiao_heg__em_wu001"] = "qiao_prefix_bian"
--- 权包君主使用独立角标“权”。
-prefixByGeneral["qiao_heg__em_wei001"] = "qiao_prefix_quan"
+-- 变包普通武将（12 张）与君主使用独立角标“变”，不并入阵／势前缀。
+for _, id in ipairs({
+  "qiao_heg__han023", "qiao_heg__han024", "qiao_heg__wei020", "qiao_heg__wei022",
+  "qiao_heg__shu020", "qiao_heg__shu022", "qiao_heg__wu021", "qiao_heg__wu022",
+  "qiao_heg__qun009", "qiao_heg__qun022a", "qiao_heg__jin018", "qiao_heg__jin020",
+  "qiao_heg__em_wu001",
+}) do
+  prefixByGeneral[id] = "qiao_prefix_bian"
+end
+-- 权包君主及普通武将使用独立角标“权”。
+for _, id in ipairs({
+  "qiao_heg__em_wei001",
+  "qiao_heg__han003", "qiao_heg__han021",
+  "qiao_heg__wei021b", "qiao_heg__wei024",
+  "qiao_heg__shu023", "qiao_heg__shu024",
+  "qiao_heg__wu019", "qiao_heg__wu024",
+  "qiao_heg__qun021", "qiao_heg__qun023",
+  "qiao_heg__jin021", "qiao_heg__jin024",
+}) do
+  prefixByGeneral[id] = "qiao_prefix_quan"
+end
 local prefixByRetinue = {
   ["qiao_heg__retinue_bazhenbing"] = "qiao_prefix_zhen",
   ["qiao_heg__retinue_qingzhou_jingrui"] = "qiao_prefix_shi",
   ["qiao_heg__retinue_lujiang_shangjia"] = "qiao_prefix_shi",
+  ["qiao_heg__retinue_feixiongjun"] = "qiao_prefix_bian",
+  ["qiao_heg__retinue_wudang_feijun"] = "qiao_prefix_quan",
+  ["qiao_heg__retinue_hucheer"] = "qiao_prefix_quan",
 }
 for _, general in ipairs(Data.generals) do
   translations[general.id] = general.displayName or general.name

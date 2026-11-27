@@ -40,4 +40,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包与统领翼从系统。
+已正式接入权包（`qiao_heg__shu023` / `qiao__skill_shu023_1`）及普通翼从【无当飞军】（`qiao_heg__retinue_wudang_feijun` / `qiao__retinue_skill_wudang_feijun`）。实现与专项测试见[王平实现页](../../development/implementation/generals/quan/shu023.md)与[无当飞军实现页](../../development/implementation/generals/quan/retinue-wudang-feijun.md)。

@@ -279,11 +279,55 @@ function A.hasEffectEntry(card, use, effectName)
   return table.find(A.getEntries(card, use), function(e) return e.effect == effectName end) ~= nil
 end
 
+A.BOLU_MARK = "@qiao_bolu_condition"
+
+local BOLU_PREFIX = "qiao_condition_"
+
+--- 读取角色当前挂载的【拨律】应变条件覆写（纯读取，客户端/服务端共用）。
+function A.boluCondition(player)
+  if player == nil then return nil end
+  local raw = player:getMark(A.BOLU_MARK)
+  if type(raw) ~= "string" then return nil end
+  local cond = raw:startsWith(BOLU_PREFIX) and raw:sub(#BOLU_PREFIX + 1) or raw
+  return table.contains(conditions, cond) and cond or nil
+end
+
+--- 返回应用【拨律】覆写后的有效应变条目列表（不修改原牌数据）。
+function A.effectiveEntries(card, use, player)
+  local entries = A.getEntries(card, use)
+  if #entries == 0 then return entries end
+  local override = use and (use.extra_data or {}).qiao_bolu_override or nil
+  if override == nil then
+    override = A.boluCondition(player or (use and use.from))
+  end
+  if override ~= nil and table.contains(conditions, override) then
+    for _, entry in ipairs(entries) do
+      entry.condition = override
+    end
+  end
+  return entries
+end
+
+--- 首次使用应变牌时锁定并消耗【拨律】标记，使同一张牌的全部应变条目共用此次覆写。
+function A.consumeBolu(room, use)
+  if room == nil or use == nil or use.from == nil or not A.isAdaptationCard(use.card, use) then
+    return nil
+  end
+  local data = extra(use)
+  if data.qiao_bolu_override ~= nil then return data.qiao_bolu_override end
+  local override = A.boluCondition(use.from)
+  if override ~= nil then
+    data.qiao_bolu_override = override
+    room:setPlayerMark(use.from, A.BOLU_MARK, 0)
+  end
+  return override
+end
+
 -- Side-effect-free bypass query used by the card's card-skill while the player
 -- is still selecting the card and its target. It only answers "may this use
 -- exceed the limit"; it does not lock, spend a token or resolve any effect.
 function A.ignoreTimesCandidate(room, player, card, use)
-  for _, entry in ipairs(A.getEntries(card, use)) do
+  for _, entry in ipairs(A.effectiveEntries(card, use, player)) do
     if entry.effect == "ignore_times" and A.conditionSatisfied(room, player, entry.condition) then
       return true, entry
     end
@@ -296,11 +340,12 @@ end
 -- create the exemption. A token can enable this entry only when it explicitly
 -- names the entry and is granted before this point.
 function A.lockIgnoreTimes(room, use)
+  A.consumeBolu(room, use)
   local data = extra(use)
   data.qiao_ignore_times_locked = true
   data.qiao_adaptation_locked = data.qiao_adaptation_locked or {}
   local tokens = data.qiao_adaptation_ignores or {}
-  for _, entry in ipairs(A.getEntries(use.card, use)) do
+  for _, entry in ipairs(A.effectiveEntries(use.card, use, use.from)) do
     if entry.effect == "ignore_times" and not data.qiao_adaptation_locked[entry.id] then
       local satisfied = A.conditionSatisfied(room, use.from, entry.condition)
       local ignoredBy
@@ -389,7 +434,8 @@ end
 
 function A.prepare(room, use)
   if states[use] then return states[use].result end
-  local entries = A.getEntries(use.card, use)
+  A.consumeBolu(room, use)
+  local entries = A.effectiveEntries(use.card, use, use.from)
   local timing = Config.adaptation_condition_timing
   assert(timing == "sequential" or timing == "snapshot", "Invalid adaptation condition timing")
   -- Direct rule/API callers may skip PreCardUse. Locking here keeps their

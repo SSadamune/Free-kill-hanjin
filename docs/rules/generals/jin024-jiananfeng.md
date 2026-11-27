@@ -42,4 +42,4 @@
 
 ## 实装与验证
 
-尚未实装。规则已定稿，可接入正式权包并补齐自动化回归。
+已正式接入权包（`qiao_heg__jin024` / `qiao__skill_jin024_1`、`qiao__skill_jin024_2`）。实现与专项测试见[贾南风实现页](../../development/implementation/generals/quan/jin024.md)。
