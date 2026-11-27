@@ -67,6 +67,15 @@ M.generals = {
       { id = "qiao__skill_shu036_1", name = "越险", text = "当你指定或成为【杀】的一个目标后，你可以令此目标角色摸一张牌（若其手牌数小于2/未受伤，你可以将摸牌数改为两张/零张），其只能使用因此摸的牌响应此【杀】。" },
     },
   },
+  {
+    id = "qiao_heg__shu054", name = "张翼", title = "逆命承志、秉心维旅",
+    kingdom = "shu", hp = 4, gender = "male",
+    guests = { "qun" }, companions = { "qiao_heg__shu027" },
+    skills = {
+      { id = "qiao__skill_shu054_1", name = "殿军", text = "回合结束时，你可以执行额外的出牌阶段。每回合限一次，当你需要使用【杀】时，你可以失去1点体力，将一张手牌当【杀】使用。" },
+      { id = "qiao__skill_shu054_2", name = "抗锐", text = "有角色于其回合内首次扣减体力后，你可以选择一项：1.其回复1点体力；2.其本回合下次造成伤害时，此伤害+1且其本回合手牌上限为0。" },
+    },
+  },
 }
 M.retinues = {
   {
