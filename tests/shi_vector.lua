@@ -138,6 +138,25 @@ function T:testSuolingCanGiveSecondBlackCardAndChooseYuanweiAsSlashTarget()
   end)
 end
 
+function T:testBingzhengResolvesOnlyAtDongyunsTurnEnd()
+  run(function(room, dong, other)
+    asGeneral(room, dong, "shu048")
+    other.hp = other:getHandcardNum() + 1
+    local before = dong:getHandcardNum()
+    fixture.withSkillRequests(room, id("shu048_1"), {
+      askToChoosePlayers = function() return { other } end,
+      askToChoice = function() return "draw1" end,
+      askToCards = function() return {} end,
+    }, function()
+      room.logic:trigger(fk.TurnEnd, other, { who = other })
+      lu.assertEquals(other:getHandcardNum(), other.hp - 1)
+      room.logic:trigger(fk.TurnEnd, dong, { who = dong })
+    end)
+    lu.assertEquals(other:getHandcardNum(), other.hp)
+    lu.assertEquals(dong:getHandcardNum(), before + 1)
+  end)
+end
+
 function T:testXianzhuRecoversBeforeRecipientSelectsDamageTarget()
   run(function(room, cai, other, target)
     asGeneral(room, cai, "qun033")
@@ -216,6 +235,28 @@ function T:testQietingUsesTargetKingdomAndActualHandCard()
     lu.assertEquals(user:getMark(mark), 1)
   end)
 end
+
+function T:testSheyanAddsTargetOnlyOnFirstCommonTrick()
+  run(function(room, user, dong, extra)
+    asGeneral(room, dong, "shu048")
+    local queries, before = 0, extra:getHandcardNum()
+    fixture.withSkillRequests(room, id("shu048_2"), {
+      askToChoosePlayers = function(_, _, params)
+        queries = queries + 1
+        lu.assertTrue(table.contains(params.targets, extra))
+        lu.assertFalse(table.contains(params.targets, dong))
+        return { extra }
+      end,
+    }, function()
+      for i = 1, 2 do
+        room:useCard { from = user, tos = { dong }, card = Fk:cloneCard("ex_nihilo") }
+      end
+    end)
+    lu.assertEquals(queries, 1)
+    lu.assertEquals(extra:getHandcardNum(), before + 2)
+  end)
+end
+
 
 function T:testLianzhanUsesTwoLegalTargetsAfterExchange()
   run(function(room, hu, a, b)

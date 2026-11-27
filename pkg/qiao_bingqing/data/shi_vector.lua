@@ -103,5 +103,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__shu048", name = "董允",
+      title = "骨鲠良相", kingdom = "shu",
+      hp = 3, gender = "male",
+      guests = {}, companions = { "qiao_heg__shu018b" },
+      skills = {
+        {
+          id = "qiao__skill_shu048_1", name = "秉正",
+          text = "回合结束时，你可以令一名手牌数不等于体力值的角色摸一张牌或弃置一张手牌，然后若其手牌数等于体力值，你摸一张牌且可以交给其一张牌。",
+        },
+        {
+          id = "qiao__skill_shu048_2", name = "舍宴",
+          text = "当你每回合首次成为普通锦囊牌的目标时，你可以令此牌增加或减少一个目标（至少为1）。",
+        },
+      },
+    },
   },
 }
