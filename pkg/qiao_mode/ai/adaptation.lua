@@ -5,45 +5,110 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 
 local M = {}
 
-local function profitable(ai, use, entry)
-  local card, targets = use.card, use.tos
-  if entry.effect == "execute_both" then
-    if card.name == "qiao__chasing_near" then
-      return #targets > 0 and table.every(targets, function(target)
-        return ai:isEnemy(target) and #target:getCardIds("he") >= 2 and #target:getCardIds("j") == 0
-      end)
-    elseif card.name == "qiao__drowning" then
-      return #targets > 0 and table.every(targets, function(target)
-        return Cards.safeDamage(ai, card, target) and #target:getCardIds("e") > 0
-      end)
-    end
-  elseif entry.effect == "add_target" and card.name ~= "qiao__collateral" then
-    local candidates = ExtraTargets.candidates(ai.room, use, {
-      target_condition = entry.target_condition, excluded_player_id = ai.player.id,
-    })
-    local helpful = function(target) return Cards.scoreTarget(ai, card, target) ~= nil end
-    if use.from.serverplayer:getState() == fk.Player_Robot then
-      return table.find(candidates, helpful) ~= nil
-    end
-    return #candidates > 0 and table.every(candidates, helpful)
-  elseif entry.effect == "discard_target_equip" then
-    return #targets > 0 and table.every(targets, function(target)
-      return ai:isEnemy(target) and #target:getCardIds("e") > 0
+local function damageBenefit(ai, use, target, baseDamage, allowed)
+  if not Cards.safeDamage(ai, use.card, target) then return end
+  local thunder = use.extra_data and use.extra_data.qiao_damage_type == fk.ThunderDamage
+  if target.chained and (thunder or Cards.isElemental(use.card))
+    and not table.every(ai.room:getPresentPlayers(), function(other)
+      return not other.chained or allowed(other)
+    end) then return end
+
+  local resilience = target.hp + target.shield
+  if baseDamage >= resilience then return 1.25 end
+  if baseDamage + 1 >= resilience then return 4.5 end
+  if resilience <= 2 then return 3.25 end
+  return 2.25
+end
+
+local function equipmentBenefit(target, all)
+  local count = #target:getCardIds("e")
+  if count == 0 then return end
+  local defense = #target:getEquipments(Card.SubtypeArmor) > 0 and 0.5 or 0
+  local refund = target:hasSkill("qiao__skill_wu008_2") and 1 or 0
+  return 1.5 + (all and math.min(count, 3) or 1) + defense - refund
+end
+
+local function extraTargetBenefit(ai, use, entry, score)
+  if use.card.name == "qiao__collateral" then return end
+  local candidates = ExtraTargets.candidates(ai.room, use, {
+    target_condition = entry.target_condition, excluded_player_id = ai.player.id,
+  })
+  local actor = use.from.ai
+  if use.from.serverplayer:getState() == fk.Player_Robot and actor and actor.hostileScore then
+    local chosen = Cards.bestCandidate(actor, candidates, function(target)
+      return M.targetScore(actor, use.card, target, "#qiao_adaptation_add_target")
     end)
-  elseif entry.effect == "damage" then
-    return card.is_damage_card and #targets > 0 and table.every(targets, function(target)
-      return Cards.safeDamage(ai, card, target)
-    end)
+    if chosen then return score(chosen) end
+    return
   end
+  -- A human controls the next selection. Price the least favorable option.
+  local lowest
+  for _, target in ipairs(candidates) do
+    local value = score(target)
+    if not value then return end
+    lowest = lowest and math.min(lowest, value) or value
+  end
+  return lowest
+end
+
+local function benefit(ai, use, entry, temporary)
+  local function allowed(target)
+    return ai:isEnemy(target) and (not temporary or use.from.ai:isEnemy(target))
+  end
+  local card, effect = use.card, entry.effect
+  local function score(target)
+    if not allowed(target) or table.contains(use.nullifiedTargets or {}, target) then return end
+    local value
+    if effect == "execute_both" and card.name == "qiao__drowning" then
+      local equipment = equipmentBenefit(target, true)
+      local damage = damageBenefit(ai, use, target, 0, allowed)
+      -- The unassisted target can choose the cheaper consequence. The
+      -- incremental pressure is the more expensive consequence.
+      if equipment and damage then value = math.max(equipment, damage) end
+    elseif effect == "execute_both" and card.name == "qiao__chasing_near" then
+      if #target:getCardIds("he") >= 2 and #target:getCardIds("j") == 0 then
+        value = #target:getCardIds("e") > 0 and 3 or 2.5
+      end
+    elseif effect == "discard_target_equip" then
+      value = equipmentBenefit(target, false)
+    elseif effect == "damage" and card.is_damage_card then
+      value = damageBenefit(ai, use, target, 1 + (use.additionalDamage or 0), allowed)
+    elseif effect == "add_target" and Cards.scoreTarget(ai, card, target) then
+      if card.is_damage_card then
+        value = damageBenefit(ai, use, target, 0, allowed)
+        if value and (card.name == "qiao__unexpectation" or card.name == "qiao__fire_attack"
+          or (card.trueName == "slash" and not target:isKongcheng())) then value = value - 0.75 end
+        if card.name == "qiao__fire_attack" and use.from:isKongcheng() then return end
+      else
+        value = 2.5
+      end
+    end
+    if value then return value + 2 * math.max(0, -0.4 - ai:attitude(target)) end
+  end
+
+  if effect == "add_target" then return extraTargetBenefit(ai, use, entry, score) end
+  local total = 0
+  for _, target in ipairs(use.tos) do
+    local value = score(target)
+    if not value then return end
+    total = total + value
+  end
+  return total
 end
 
 function M.support(ai, extra)
   local use, entry = Rules.supportContext(extra)
-  if not use or not ai:isFriend(use.from) or not profitable(ai, use, entry) then return end
-  -- Keep a reserve after helping. The dashboard already requires a legal
-  -- discard of the same card category for this request.
-  local budget = (ai.player.hp <= 1 or ai.player:getHandcardNum() <= 2) and 1 or 2
-  return Cost.select(ai, 1, budget)
+  if not use then return end
+  local temporary = not ai:isFriend(use.from)
+  if temporary and (ai:attitude(use.from) <= 0 or not use.from.ai or not use.from.ai.hostileScore) then return end
+  local value = benefit(ai, use, entry, temporary)
+  if not value or (temporary and value < 3.5) then return end
+  value = ai:supportScore(use.from, value)
+
+  local lowReserve = ai.player.hp <= 1 or ai.player:getHandcardNum() <= 2
+  local margin = (lowReserve and 1.5 or 0.5) + (temporary and 1.5 or 0)
+  local budget = (lowReserve and 2 or 4) - (temporary and 1 or 0)
+  return Cost.select(ai, 1, budget, function(id) return value > Cost.value(ai, id) + margin end)
 end
 
 function M.targetScore(ai, card, target, prompt)

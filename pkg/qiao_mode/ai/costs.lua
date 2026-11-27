@@ -33,17 +33,22 @@ function M.value(ai, id)
   return 3
 end
 
-function M.select(ai, count, budget, accepts)
-  for _ = 1, count do
-    local best, bestValue
-    for _, id in ipairs(ai:getEnabledCards()) do
-      if not accepts or accepts(id) then
-        local value = M.value(ai, id)
-        if not bestValue or value < bestValue or (value == bestValue and id < best) then
-          best, bestValue = id, value
-        end
+function M.cheapest(ai, accepts)
+  local best, bestValue
+  for _, id in ipairs(ai:getEnabledCards()) do
+    if not accepts or accepts(id) then
+      local value = M.value(ai, id)
+      if not bestValue or value < bestValue or (value == bestValue and id < best) then
+        best, bestValue = id, value
       end
     end
+  end
+  return best, bestValue
+end
+
+function M.select(ai, count, budget, accepts)
+  for _ = 1, count do
+    local best, bestValue = M.cheapest(ai, accepts)
     if not best or (budget and bestValue > budget) then return false end
     if budget then budget = budget - bestValue end
     ai:selectCard(best, true)

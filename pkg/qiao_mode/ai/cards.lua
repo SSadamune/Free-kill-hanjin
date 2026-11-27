@@ -30,6 +30,10 @@ function M.safeDamage(ai, card, target)
   end)
 end
 
+function M.isElemental(card)
+  return elemental[card.name] == true
+end
+
 function M.isHarmful(card)
   local name = card.name
   return damage[name] or removal[name] or enemyPhase[name] or enemyGroup[name] or name == "qiao__collateral"
@@ -88,9 +92,9 @@ local function physicalReply(ai)
   return { card = ai:getSelectedCard().id, targets = table.map(ai:getSelectedTargets(), Util.IdMapper) }
 end
 
-function M.bestTarget(ai, score)
+function M.bestCandidate(ai, candidates, score)
   local best, bestScore
-  for _, target in ipairs(ai:getEnabledTargets()) do
+  for _, target in ipairs(candidates) do
     local value = score(target)
     if value then value = ai:supportScore(target, value) end
     if value and (not bestScore or value > bestScore
@@ -99,6 +103,10 @@ function M.bestTarget(ai, score)
     end
   end
   return best
+end
+
+function M.bestTarget(ai, score)
+  return M.bestCandidate(ai, ai:getEnabledTargets(), score)
 end
 
 -- Let the real request handler enforce target restrictions and feasibility.
@@ -215,7 +223,7 @@ local function priority(ai, card)
   if damage[name] or enemyGroup[name] then return 60 end
 end
 
-function M.play(ai)
+function M.play(ai, cooperativeAction)
   local candidates = {}
   for _, id in ipairs(ai:getEnabledCards()) do
     local card = Fk:getCardById(id)
@@ -227,12 +235,18 @@ function M.play(ai)
     return a.value > b.value
   end)
   for _, candidate in ipairs(candidates) do
+    if cooperativeAction and candidate.value < 90 then
+      local reply = cooperativeAction(ai)
+      if reply then return reply end
+      cooperativeAction = nil
+    end
     local card = candidate.card
     ai:selectCard(card.id, true)
     local reply = not ai:getSelectedSkill() and playSelected(ai, card)
     if reply then return reply end
     ai:selectCard(card.id, false)
   end
+  if cooperativeAction then return cooperativeAction(ai) end
 end
 
 function M.recast(ai)

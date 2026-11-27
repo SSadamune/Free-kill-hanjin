@@ -64,7 +64,8 @@ function Robot:makeReply()
 end
 
 function Robot:handlePlayCard()
-  return Cards.play(self) or Skills.play(self) or ViewAs.play(self) or Cards.recast(self)
+  return Cards.play(self, Skills.cooperativeAlliance) or Skills.play(self) or ViewAs.play(self)
+    or Cards.recast(self) or Skills.fallbackAlliance(self)
 end
 
 function Robot:handleAskForSkillInvoke(data)

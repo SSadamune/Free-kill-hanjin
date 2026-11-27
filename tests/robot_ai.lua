@@ -125,13 +125,14 @@ function Testqiao_robot_ai:testAllianceExchangesOnlyCheapMarkedCardWithTemporary
     local weaker, otherEnemy, lastEnemy = diplomacyTable(room, player, enemy, ally, unknown)
     local peach = give(room, player, "qiao__peach", 3, Card.Diamond)
     local cheap = give(room, player, "qiao__lure_tiger", 10, Card.Diamond)
+    local duel = give(room, player, "qiao__duel")
     room:setCardMark(peach, "@@alliance-public", 1)
     room:setCardMark(cheap, "@@alliance-public", 1)
 
-    -- Merely being an eligible recipient is insufficient on a balanced table.
+    -- With no cooperation, normal actions have priority over the exchange.
     room:setPlayerProperty(otherEnemy, "kingdom", "unknown")
     room:setPlayerProperty(lastEnemy, "kingdom", "unknown")
-    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, duel.id)
     room:setPlayerProperty(otherEnemy, "kingdom", "shu")
     room:setPlayerProperty(lastEnemy, "kingdom", "shu")
 
@@ -142,7 +143,85 @@ function Testqiao_robot_ai:testAllianceExchangesOnlyCheapMarkedCardWithTemporary
     room:handleUseCardReply(player, action)
     lu.assertEquals(room:getCardOwner(cheap.id).id, weaker.id)
     lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+    lu.assertEquals(player:getHandcardNum(), 3)
+  end)
+end
+
+function Testqiao_robot_ai:testAllianceFallsBackToLowValueOnlyWhenAllRecipientsAreEnemies()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, otherEnemy, lastEnemy = diplomacyTable(room, player, enemy, ally, unknown)
+    room:setPlayerProperty(otherEnemy, "kingdom", "unknown")
+    room:setPlayerProperty(lastEnemy, "kingdom", "unknown")
+    local peach = give(room, player, "qiao__peach", 3, Card.Diamond)
+    room:setCardMark(peach, "@@alliance-public", 1)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    local cheap = give(room, player, "qiao__lure_tiger", 10, Card.Diamond)
+    room:setCardMark(cheap, "@@alliance-public", 1)
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card.skill, "qiao__alliance")
+    lu.assertEquals(action.card.subcards, { cheap.id })
+    lu.assertTrue(player.ai:isEnemy(room:getPlayerById(action.targets[1])))
+  end)
+end
+
+function Testqiao_robot_ai:testTemporaryAllyReceivesAidOnlyForHighValueWaterAttack()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    local cheap = give(room, player, "qiao__lure_tiger")
+    local expensive = give(room, player, "qiao__foresight")
+    local gear = give(room, enemy, "qiao__blade")
+    room:moveCardTo(gear, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local card = give(room, weaker, "qiao__drowning")
+    Adaptation.setCardEntries(card, { { condition = "zhuzhan", effect = "execute_both" } })
+
+    local function probe()
+      local use = UseCardData:new { from = weaker, tos = { enemy }, card = card, extra_data = {} }
+      Adaptation.prepare(room, use)
+      Adaptation.resolve(room, use)
+      return Adaptation.hasEffect(use, "execute_both") == true
+    end
+    lu.assertTrue(player.ai:attitude(weaker) > 0)
+    lu.assertFalse(probe()) -- One weapon and a healthy target do not justify this reserve.
+    room:setPlayerProperty(enemy, "hp", 1)
+    room:setPlayerProperty(enemy, "shield", 0)
+    room:setPlayerProperty(enemy, "chained", true)
+    room:setPlayerProperty(ally, "chained", true)
+    lu.assertFalse(probe())
+    lu.assertEquals(room:getCardOwner(cheap.id).id, player.id)
+    room:setPlayerProperty(ally, "chained", false)
+
+    room:useCard { from = weaker, tos = { enemy }, card = card }
+    lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(gear.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardOwner(expensive.id).id, player.id)
+    lu.assertEquals(enemy.hp, 0)
+  end)
+end
+
+function Testqiao_robot_ai:testTemporaryAidForDamageBoostUsesCheapCardAndCommonEnemy()
+  scenario(function(room, player, enemy, ally, unknown)
+    local weaker = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    local cheap = give(room, player, "qiao__slash")
+    local other = give(room, player, "qiao__slash")
+    local peach = give(room, player, "qiao__peach")
+    room:setPlayerProperty(enemy, "hp", 2)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local function probe(target)
+      local card = Fk:cloneCard("qiao__fire__slash")
+      Adaptation.setCardEntries(card, { { condition = "zhuzhan", effect = "damage" } })
+      local use = UseCardData:new { from = weaker, tos = { target }, card = card, extra_data = {} }
+      Adaptation.prepare(room, use)
+      Adaptation.resolve(room, use)
+      return use.additionalDamage or 0
+    end
+    lu.assertEquals(probe(ally), 0)
+    lu.assertEquals(probe(enemy), 1)
     lu.assertEquals(player:getHandcardNum(), 2)
+    lu.assertTrue(room:getCardArea(cheap.id) == Card.DiscardPile or room:getCardArea(other.id) == Card.DiscardPile)
+    lu.assertEquals(room:getCardOwner(peach.id).id, player.id)
+    lu.assertEquals(probe(enemy), 0) -- The remaining Slash and Peach cost too much.
   end)
 end
 

@@ -282,7 +282,14 @@ function M.play(ai)
     local reply = Play.play(ai, name)
     if reply then return reply end
   end
-  return Play.alliance(ai)
+end
+
+function M.cooperativeAlliance(ai)
+  return Play.alliance(ai, true)
+end
+
+function M.fallbackAlliance(ai)
+  return Play.alliance(ai, false)
 end
 
 function M.arrange(ai, data)

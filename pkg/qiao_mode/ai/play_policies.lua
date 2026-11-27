@@ -138,7 +138,7 @@ function play.qiao__retinue_skill_qingzhou_jingrui(ai)
   return Request.targets(ai, function(target) return ai:hostileScore(target, 20 - target.hp) end)
 end
 
-function M.alliance(ai)
+function M.alliance(ai, cooperation)
   local name = "qiao__alliance"
   if not ai.player:isFakeSkill(name) and not ai.player:hasSkill(name) then return end
   local handler = ai.handler
@@ -147,11 +147,16 @@ function M.alliance(ai)
   -- The mode grants the public rule action as a fake skill. The upstream AI
   -- dashboard omits fake buttons, but its native handler can select it directly.
   handler:selectSkill(name, { selected = true })
-  if Cost.select(ai, 1, 2, function(id) return ai.room:getCardArea(id) == Card.PlayerHand end) then
+  local material, cost = Cost.cheapest(ai, function(id) return ai.room:getCardArea(id) == Card.PlayerHand end)
+  if material and cost <= (cooperation and 3 or 1) then
+    ai:selectCard(material, true)
     local reply = Request.targets(ai, function(target)
-      if target:isHandAreaSealed() or not Heg.compareKingdomWith(target, ai.player, true) then return end
+      if not ai:isEnemy(target) or target:isHandAreaSealed()
+        or not Heg.compareKingdomWith(target, ai.player, true) then return end
       local attitude = ai:attitude(target)
-      if attitude > 0 and ai:isEnemy(target) then return attitude end
+      if cooperation and attitude <= 0 then return end
+      local benefit = cooperation and (2.5 + 2.5 * attitude) or 1.25
+      if benefit > cost then return benefit - cost + 10 * attitude end
     end)
     if reply ~= "" then return reply end
   end
