@@ -9,4 +9,4 @@
 | 势包 | [青州精锐](shi/retinue-qingzhou-jingrui.md#qingzhou-jingrui) · [庐江上甲](shi/retinue-lujiang-shangjia.md#lujiang-shangjia) |
 | 变包 | [飞熊军](bian/retinue-feixiongjun.md#feixiongjun) |
 | 权包 | [无当飞军](quan/retinue-wudang-feijun.md#wudang-feijun) · [胡车儿](quan/retinue-hucheer.md#hucheer) |
-| 弩包 | [丹阳青巾](nu/retinue-danyang-qingjin.md#danyang-qingjin) |
+| 弩包 | [丹阳青巾](nu/retinue-danyang-qingjin.md#danyang-qingjin) · [宿卫中军](nu/retinue-suwei-zhongjun.md#suwei-zhongjun) |

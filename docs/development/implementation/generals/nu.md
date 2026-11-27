@@ -10,6 +10,7 @@
 | HAN043 | [杨奉&韩暹](nu/han043.md) | [拔驾](nu/han043.md#han043-1) |
 | HAN055 | [陶谦](nu/han055.md) | [厉治](nu/han055.md#han055-1)、[州忧](nu/han055.md#han055-2)、[丹阳青巾](nu/han055.md#retinue-danyang-qingjin)（统领） |
 | JIN067 | [李秀](nu/jin067.md) | [替军](nu/jin067.md#jin067-1)、[誓众](nu/jin067.md#jin067-2) |
+| JIN076 | [孟观](nu/jin076.md) | [积弩](nu/jin076.md#jin076-1)、[天述](nu/jin076.md#jin076-2)、[宿卫中军](nu/jin076.md#retinue-suwei-zhongjun)（统领） |
 
 ## 统领与翼从
 
@@ -19,4 +20,4 @@
 - [解烦卫](../../../../pkg/qiao_bingqing/skills/retinue_jiefanwei.lua)
 - [陷阵营](../../../../pkg/qiao_bingqing/skills/retinue_xianzhenying.lua)
 - [青州精锐](../../../../pkg/qiao_generals/skills/retinue_skill_qingzhou_jingrui.lua)
-- [宿卫中军](../../../../pkg/qiao_bingqing/skills/retinue_suwei_zhongjun.lua)
+- [宿卫中军](nu/retinue-suwei-zhongjun.md#suwei-zhongjun)

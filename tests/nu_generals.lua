@@ -79,6 +79,20 @@ function T:testLizhiDrawThresholdAndRealDistributionOnDying()
     lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
   end)
 end
+function T:testJinuGivesHandlyCardsAndSurvivesExchange()
+  run(function(room, meng, ally)
+    general(room, meng, "jin076")
+    local stored = card(room, meng, "qiao__jink")
+    fixture.withSkillRequests(room, id("jin076_1"), { askToCards = function() return { stored.id } end }, function()
+      room.logic:trigger(fk.EventPhaseStart, meng, { phase = Player.Finish })
+    end)
+    lu.assertTrue(table.contains(meng:getHandlyIds(true), stored.id))
+    lu.assertEquals(meng:getPile("qiao_nu_jinu"), { stored.id })
+    lu.assertNotNil(E.exchange(room, { player = meng }, { player = ally }))
+    lu.assertTrue(table.contains(ally:getHandlyIds(true), stored.id))
+    lu.assertEquals(ally:getPile("qiao_nu_jinu"), { stored.id })
+  end)
+end
 function T:testShizhongSingleTargetStillDrawsOnce()
   run(function(room, li, target)
     general(room, li, "jin067")
@@ -128,6 +142,30 @@ function T:testTijunReplacesExistingWeaponAndChangesOnlyThatPhase()
     lu.assertTrue(room:getCardOwner(new.id) == target)
     lu.assertEquals(room:getCardArea(new.id), Card.PlayerEquip)
     lu.assertEquals(room:getCardArea(old.id), Card.DiscardPile)
+  end)
+end
+function T:testJinuBlackJinkJudgesAndTianshuDrawsOnSecondColor()
+  run(function(room, meng, to)
+    general(room, meng, "jin076")
+    local jink = card(room, meng, "qiao__jink")
+    fixture.withSkillRequests(room, id("jin076_1"), { askToCards = function() return { jink.id } end }, function()
+      room.logic:trigger(fk.EventPhaseStart, meng, { phase = Player.Finish })
+    end)
+    local function topBlack()
+      local c = room:printCard("qiao__slash", Card.Club, 3)
+      room:moveCards { ids = { c.id }, toArea = Card.DrawPile, drawPilePosition = 1, moveReason = fk.ReasonPut }
+      return c
+    end
+    topBlack()
+    room:judge { who = to, reason = "test" }
+    local nextJudge = topBlack()
+    local n = meng:getHandcardNum()
+    fixture.withSkillRequests(room, id("jin076_2"), { askToSkillInvoke = function() return true end }, function()
+      room:responseCard { from = meng, card = jink }
+    end)
+    lu.assertEquals(room:getCardArea(nextJudge.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+    lu.assertEquals(meng:getHandcardNum(), n + 1)
   end)
 end
 function T:testDanyangCopiesRememberEachTargetIndependently()
@@ -216,6 +254,29 @@ function T:testBajiaLossOnlyPenalizesInsideAPhase()
       lu.assertEquals(yang.hp, inside and hp - 1 or hp)
       lu.assertEquals(yang:hasShownSkill(id("han043_1")), not inside)
     end
+  end)
+end
+
+
+function T:testSuweiJudgesTwiceUsesTwoColorsAgainstDistantCurrentPlayer()
+  run(function(room, p, _, _, current)
+    local name = "qiao__retinue_skill_suwei_zhongjun"
+    grant(p, "suwei_zhongjun")
+    room:throwCard(current:getCardIds("h"), "test", current, current)
+    local hp = current.hp
+    lu.assertFalse(p:inMyAttackRange(current))
+    fixture.withSkillRequests(room, name, { askToSkillInvoke = function() return true end }, function()
+      runStartPhase(room, current, "qiao_test_nu_suwei_turn", function()
+        for _, equip in ipairs({ "qiao__eight_diagram", "qiao__dark_armor" }) do
+          room:useCard { from = p, tos = { p }, card = card(room, p, equip) }
+        end
+        for _, suit in ipairs({ Card.Heart, Card.Club }) do
+          local judge = room:printCard("qiao__jink", suit, 3)
+          room:moveCards { ids = { judge.id }, toArea = Card.DrawPile, drawPilePosition = 1, moveReason = fk.ReasonPut }
+        end
+      end)
+    end)
+    lu.assertEquals(current.hp, hp - 2)
   end)
 end
 
@@ -534,6 +595,10 @@ local function checkJinuSpear(storedFirst)
     lu.assertEquals(room:getCardArea(hand.id), Card.DiscardPile)
   end)
 end
+function T:testJinuSpearWithStoredMaterialFirst() checkJinuSpear(true) end
+function T:testJinuSpearWithStoredMaterialLast() checkJinuSpear(false) end
+
+local jiefanwei = "qiao__retinue_skill_jiefanwei"
 local function healWithRetinue(room, user, target)
   local a, b = card(room, user, "qiao__slash"), card(room, user, "qiao__slash")
   playSkill(room, user, jiefanwei, { target }, { a.id, b.id })

@@ -28,11 +28,25 @@ M.generals = {
       { id = "qiao__skill_jin067_2", name = "誓众", text = "每阶段限一次，你使用【杀】时可以多指定至多X个目标（X为你场上的牌数），若目标角色场上牌数各不相同，你摸等同目标数的牌。" },
     },
   },
+  {
+    id = "qiao_heg__jin076", name = "孟观", title = "中宮翊卫",
+    kingdom = "jin", hp = 4, gender = "male",
+    guests = {}, companions = { "qiao_heg__am_jin039", "qiao_heg__jin039" },
+    commander = { retinue = "qiao_heg__retinue_suwei_zhongjun", card = "qiao__chasing_near", cardText = "逐近弃远", name = "宿卫中军" },
+    skills = {
+      { id = "qiao__skill_jin076_1", name = "积弩", text = "结束阶段，你可以将任意张基本或普通锦囊牌扣置于武将牌上（至多有五张）。你可以如手牌般使用或打出这些牌并判定，若为黑色，此牌不可被抵消。" },
+      { id = "qiao__skill_jin076_2", name = "天述", text = "当一名角色的判定牌生效时，若与本局上次判定结果颜色相同，你可以令其摸一张牌。" },
+    },
+  },
 }
 M.retinues = {
   {
     id = "qiao_heg__retinue_danyang_qingjin", name = "丹阳青巾",
     skill = { id = "qiao__retinue_skill_danyang_qingjin", name = "丹阳青巾", text = "锁定技，每回合每名角色限一次，当你使用牌指定一名拥有丹阳青巾的角色为目标后，你摸一张牌。" },
+  },
+  {
+    id = "qiao_heg__retinue_suwei_zhongjun", name = "宿卫中军",
+    skill = { id = "qiao__retinue_skill_suwei_zhongjun", name = "宿卫中军", text = "其他势力角色回合结束时，你可以判定X次（X为你本回合使用过的牌数），其中每包含一种颜色，你视为对其使用一张【杀】。" },
   },
 }
 return M
