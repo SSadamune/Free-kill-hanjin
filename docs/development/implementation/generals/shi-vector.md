@@ -14,3 +14,4 @@
 | QUN033 | [蔡夫人](shi-vector/qun033.md) | [窃听](shi-vector/qun033.md#qun033-1)、[献州](shi-vector/qun033.md#qun033-2) |
 | QUN079 | [高览](shi-vector/qun079.md) | [袭阵](shi-vector/qun079.md#qun079-1)、[芟敌](shi-vector/qun079.md#qun079-2) |
 | SHU048 | [董允](shi-vector/shu048.md) | [秉正](shi-vector/shu048.md#shu048-1)、[舍宴](shi-vector/shu048.md#shu048-2) |
+| SHU091 | [杨仪](shi-vector/shu091.md) | [度断](shi-vector/shu091.md#shu091-1)、[孤忿](shi-vector/shu091.md#shu091-2) |

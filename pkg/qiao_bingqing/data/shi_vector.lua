@@ -119,5 +119,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__shu091", name = "杨仪",
+      title = "才盈杯杓、高傲的孤鹬", kingdom = "shu",
+      hp = 3, gender = "male",
+      guests = { "wei" }, companions = {},
+      skills = {
+        {
+          id = "qiao__skill_shu091_1", name = "度断",
+          text = "当你需要使用或打出【杀】或【闪】时，你可以令你本回合不能使用和打出此牌名的牌，然后摸两张牌。",
+        },
+        {
+          id = "qiao__skill_shu091_2", name = "孤忿",
+          text = "锁定技，当你不因【桃】而回复体力后，你用一个武将交换与你势力相同的其他角色一个武将；你的方片锦囊牌只能当【酒】使用。",
+        },
+      },
+    },
   },
 }

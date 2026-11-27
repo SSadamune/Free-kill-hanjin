@@ -41,6 +41,38 @@ Testqiao_shi_vector = {
 }
 local T = Testqiao_shi_vector
 
+function T:testDuduanUseAndResponseAreSealedByTrueName()
+  run(function(room, yang)
+    asGeneral(room, yang, "shu091")
+    local n = yang:getHandcardNum()
+    room:handleUseCardReply(yang, FkTest.ReplyUseSkill(id("shu091_1"), {}, {}))
+    lu.assertEquals(yang:getHandcardNum(), n + 2)
+    lu.assertTrue(yang:prohibitUse(Fk:cloneCard("qiao__fire__slash")))
+    lu.assertTrue(yang:prohibitResponse(Fk:cloneCard("qiao__slash")))
+    lu.assertFalse(yang:prohibitUse(Fk:cloneCard("qiao__jink")))
+    fixture.withSkillRequests(room, id("shu091_1"), { askToChoice = function() return "jink" end }, function()
+      room.logic:trigger(fk.AskForCardUse, yang, { pattern = "jink" })
+      room.logic:trigger(fk.AskForCardResponse, yang, { pattern = "jink" })
+    end)
+    lu.assertEquals(yang:getHandcardNum(), n + 4)
+    lu.assertTrue(yang:prohibitResponse(Fk:cloneCard("qiao__jink")))
+  end)
+end
+
+function T:testGufenRestrictionsFollowActualHandCards()
+  run(function(room, yang)
+    asGeneral(room, yang, "shu091")
+    local duel = give(room, yang, "qiao__duel", Card.Diamond)
+    local delay = give(room, yang, "qiao__indulgence", Card.Diamond)
+    local black = give(room, yang, "qiao__duel", Card.Spade)
+    lu.assertTrue(yang:prohibitUse(duel))
+    lu.assertTrue(yang:prohibitUse(delay))
+    lu.assertFalse(yang:prohibitUse(black))
+    local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
+    lu.assertTrue(table.contains(OnlyAs.availableTargets(room, yang, delay.id, "use"), "qiao__analeptic"))
+  end)
+end
+
 function T:testYangdaoGrantsTiedWeaponsButNeverCreatesEquipment()
   run(function(room, p, a, b)
     asGeneral(room, p, "jin037")

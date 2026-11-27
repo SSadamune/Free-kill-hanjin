@@ -114,7 +114,13 @@ end
 ---@param room AbstractRoom
 ---@return boolean
 function M.isServer(room)
-  return room ~= nil and type(room.getTag) == "function"
+  return room ~= nil and Room ~= nil and room:isInstanceOf(Room)
+end
+
+-- 服务端玩家可在非活动房间中被查询；客户端玩家使用当前客户端房间。
+local function playerRoom(player)
+  if player and ServerPlayer and player:isInstanceOf(ServerPlayer) then return player.room end
+  return Fk:currentRoom()
 end
 
 function M.turnSerial(room)
@@ -412,8 +418,9 @@ end
 
 function M.currentMode(player, response)
   if response ~= nil then return response and "response" or "use" end
-  if player ~= nil and M.isServer(player.room) then
-    local request = M.currentRequest(player.room)
+  local room = playerRoom(player)
+  if player ~= nil and M.isServer(room) then
+    local request = M.currentRequest(room)
     if request ~= nil and request.mode ~= nil then return request.mode end
   end
   local clientMode = clientHandlerMode()
@@ -546,7 +553,7 @@ end
 --- 当前玩家可见的有效来源。客户端读 mark，服务端读 tag。
 function M.activeSources(player)
   if player == nil then return {} end
-  local room = player.room
+  local room = playerRoom(player)
   if not M.isServer(room) then return clientSources(player) end
   local sources = room:getTag(M.SOURCE_TAG) or {}
   local ret = {}
@@ -692,7 +699,7 @@ end
 -- 当前请求 pattern。客户端读公开的 Fk.currentResponsePattern；服务端读本房间
 -- 自己的请求栈，避免把客户端请求状态误当成服务端窗口。
 local function currentPattern(player)
-  local room = player and player.room
+  local room = playerRoom(player)
   if room ~= nil and M.isServer(room) then
     local request = M.currentRequest(room)
     return request and request.pattern or nil
