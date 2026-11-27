@@ -5,12 +5,11 @@ local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 
-local collectionSettingHelp = {
-  generalNum = "qiao_collection_general_count_help",
-  generalTimeout = "qiao_collection_general_timeout_help",
-  timeoutAsGeneralTimeout = "qiao_collection_general_timeout_help",
-  luckTime = "qiao_collection_luck_help",
-  enableDeputy = "qiao_collection_deputy_help",
+local unusedGameSettings = {
+  generalNum = true,
+  generalTimeout = true,
+  timeoutAsGeneralTimeout = true,
+  enableDeputy = true,
 }
 
 -- Register after all extensions are installed; qiao may load before hegemony.
@@ -21,39 +20,27 @@ Fk:addPostLoadFunc(function()
   Mode.installRules()
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
   board.client_klass = Client
-  local qiaoBoard = setmetatable({
-    page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
-  }, { __index = board })
-  local function restrictedBoard(helpByKey)
+  local boards = {}
+  for _, name in ipairs(Modes.names) do
     local settings = table.clone(board.ui_settings)
     for _, group in ipairs(settings) do
-      for _, row in ipairs(group._children) do
-        local help = helpByKey[row._settingsKey]
-        if help then
-          row.enabled = false
-          row.subTitle = help
-          -- Ignore the operation timeout when timeoutAsGeneralTimeout was set in another mode.
-          row.value = nil
-        end
-      end
+      if group.title == "Properties" then group._qml = Mode.gamePropertiesQml end
+      -- The stock room summary uses the same descriptors and reads saved values even for disabled rows.
+      group._children = table.filter(group._children, function(row)
+        local key = row._settingsKey
+        return not unusedGameSettings[key]
+          and (key ~= "luckTime" or name == Modes.free)
+          and (key ~= "enableFreeAssign" or name ~= Modes.locked)
+      end)
     end
-    return setmetatable({ ui_settings = settings }, { __index = qiaoBoard })
+    boards[name] = setmetatable({
+      page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
+      ui_settings = settings,
+    }, { __index = board })
   end
-  local collectionBoard = restrictedBoard(collectionSettingHelp)
-  local lockedBoard = restrictedBoard {
-    generalNum = collectionSettingHelp.generalNum,
-    generalTimeout = collectionSettingHelp.generalTimeout,
-    timeoutAsGeneralTimeout = collectionSettingHelp.timeoutAsGeneralTimeout,
-    luckTime = collectionSettingHelp.luckTime,
-    enableDeputy = "qiao_locked_deputy_help",
-    enableFreeAssign = "qiao_locked_assignment_help",
-  }
   local getBoardGame = Fk.getBoardGame
   function Fk:getBoardGame(name)
-    if name == Modes.collection then return collectionBoard end
-    if name == Modes.locked then return lockedBoard end
-    if Modes.isHanjin(name) then return qiaoBoard end
-    return getBoardGame(self, name)
+    return boards[name] or getBoardGame(self, name)
   end
   for _, name in ipairs(Modes.names) do
     local mode = Mode.create(base, name)
@@ -81,10 +68,6 @@ Fk:loadTranslationTable {
   ["help: qiao_late_seat_compensation"] = "选择手气卡后，7 人及以上的对局中，7 号位及之后的玩家各额外获得 1 次手气卡。",
   ["qiao_late_seat_none"] = "无",
   ["qiao_late_seat_luck_card"] = "手气卡",
-  ["qiao_collection_general_count_help"] = "请在「模式设置」中调整每人备选武将数。",
-  ["qiao_collection_general_timeout_help"] = "请在「模式设置」中调整选将时长。",
-  ["qiao_collection_luck_help"] = "7 人及以上对局中，7 号位起各有 1 次开局手气卡。",
-  ["qiao_collection_deputy_help"] = "大合集使用主将和副将。",
   ["qiao_mode"] = "国战平行时空",
   ["qiao_skill_reference_back"] = "后退",
   ["han"] = "汉",
@@ -95,8 +78,6 @@ Fk:loadTranslationTable {
   [":" .. Modes.free] = "可自定义备选势力、允许势力上限及国战附加规则，使用汉晋武将和游戏牌。",
   [Modes.locked] = "锁定势力",
   [":" .. Modes.locked] = "每人从获配势力选主将、副将。斗地主固定三人，地主多两张备选武将牌，增加 1 点体力上限和体力，并获得〖飞扬〗和〖跋扈〗。2v2固定四人，1 号位少一张初始手牌，4 号位多一张。人机对抗允许2至10人，真人和机器人分属不同势力。人数相同或机器人多一名时各一势力，其余情况由人数较多的一方随机均分两个势力。人机对抗免同势力人数上限。三个规则默认关闭鏖战。",
-  ["qiao_locked_deputy_help"] = "锁定势力使用主将和副将。",
-  ["qiao_locked_assignment_help"] = "锁定势力固定关闭自由选将，须从获发的本势力武将牌中选择。",
   ["qiao_faction_ban_enabled"] = "势力禁用规则",
   ["help: qiao_faction_ban_enabled"] = "随机选择四个势力备选，其余势力将被禁用",
   ["qiao_guest_replacement"] = "客将替换规则",

@@ -1,4 +1,4 @@
-"""Verify the stock lobby's rule descriptions, room sizes, and ban-scheme wiring.
+"""Verify the stock lobby's selection controls, room requests, and settings summary.
 
 Run with PySide6 available and the development runtime's freekill-core checkout
 present. The fixture loads unpatched stock QML. Services and the Lua bridge are
@@ -31,6 +31,7 @@ singletons = {
     'Config': '''
   property int preferedPlayerNum: 8
   property int preferredTimeout: 30
+  property int roomTimeout: 29
   property string preferedMode: ""
   property string headerName: ""
   property bool hideScreenName: false
@@ -46,37 +47,61 @@ singletons = {
 ''',
     'Db': '''
   property var data: ({})
-  function getModeSettings(key) { return data[key] ?? {}; }
-  function saveModeSettings(key, cfg) { data[key] = cfg; }
+  function getModeSettings(key) { return JSON.parse(data[key] ?? "{}"); }
+  function saveModeSettings(key, cfg) { data[key] = JSON.stringify(cfg); }
   function sanitizeRoomName(name) { return name; }
 ''',
     'Lua': '''
+  property var client
   function tr(label) {
     const ruleHelp = RULE_HELP;
     return ruleHelp[label] ?? ({
       qiao_locked_landlord: "斗地主", qiao_locked_2v2: "2v2", qiao_locked_human_vs_ai: "人机对抗",
       "Player num": "房间人数",
       qiao_locked_game_rule: "游戏规则", "Enable free assign": "自由选将", "$RoomName": "%1",
-    })[label] ?? label;
+    })[label] ?? (label === undefined ? "" : String(label));
+  }
+  function hasTranslate(label) {
+    return label === "#Enable free assign" ? "自由选将" : null;
+  }
+  function getUIDataOfSettings(mode, cfg, board) {
+    return fn("GetUIDataOfSettings")(mode, cfg, board);
   }
   function fn(code) {
     if (code === "GetUIDataOfSettings") return (mode, cfg, board) => {
-      if (mode !== "qiao_locked_mode") return [];
       const group = { _qml: { name: "PreferenceGroup" }, _needcopy: true, _children: [] };
+      const properties = { _qml: { ext: "GameProperties" }, _needcopy: true, _children: [] };
       if (board) {
-        group._children = [{
+        properties.title = "Properties";
+        if (mode === "qiao_free_mode") properties._children.push({
+          _qml: { name: "SpinRow" }, _settingsKey: "luckTime", _children: [],
+          title: "Luck Card Times", from: 0, to: 999,
+        });
+        if (mode !== "qiao_locked_mode") group._children.push({
           _qml: { name: "SwitchRow" }, _settingsKey: "enableFreeAssign", _children: [],
-          title: "Enable free assign", enabled: false,
-        }];
-      } else {
-        group._children = [{
-          _qml: { ext: true }, _settingsKey: "qiao_locked_game_rule", _children: [],
+          title: "Enable free assign",
+        });
+        return group._children.length ? [properties, group] : [properties];
+      }
+      properties.selectionSettings = true;
+      const locked = mode === "qiao_locked_mode";
+      properties._children = [
+        { _qml: { name: "SpinRow" }, _settingsKey: "qiao_offer_count", _children: [],
+          title: "qiao_offer_count", from: locked ? 2 : 5, to: locked ? 5 : 10, editable: true,
+          value: cfg._mode.qiao_offer_count ?? (locked ? 5 : 7) },
+        { _qml: { name: "SpinRow" }, _settingsKey: "generalTimeout", _children: [],
+          title: "Choose General timeout", from: 10, to: 300, editable: true,
+          value: cfg._mode.generalTimeout ?? 90 },
+      ];
+      if (locked) {
+        group._children.push({
+          _qml: { ext: "LockedGameRuleRow" }, _settingsKey: "qiao_locked_game_rule", _children: [],
           title: "qiao_locked_game_rule", model: ["qiao_locked_landlord", "qiao_locked_2v2", "qiao_locked_human_vs_ai"],
           modeName: mode, roomSizes: { qiao_locked_landlord: 3, qiao_locked_2v2: 4 },
           value: cfg._mode.qiao_locked_game_rule ?? "qiao_locked_landlord",
-        }];
+        });
       }
-      return [group];
+      return [group, properties];
     };
     if (code.includes("minPlayer =")) return mode =>
       mode === "qiao_locked_mode" ? { minPlayer: 2, maxPlayer: 10 } : { minPlayer: 2, maxPlayer: 8 };
@@ -92,7 +117,7 @@ singletons = {
     throw new Error("Unexpected Lua query: " + code);
   }
   function createComponent(spec) {
-    return spec.ext ? Qt.createComponent(Qt.resolvedUrl("../LockedGameRuleRow.qml")) :
+    return spec.ext ? Qt.createComponent(Qt.resolvedUrl("../" + spec.ext + ".qml")) :
       Qt.createComponent("Fk.Widgets", spec.name);
   }
 ''',
@@ -102,12 +127,14 @@ window = '''
 import QtQuick
 import QtQuick.Controls
 import Fk
+import Fk.Pages.Common
 
 ApplicationWindow {
   visible: true
   width: 1050
   height: 700
   Loader { id: lobbyLoader; anchors.fill: parent; source: "Fk/Pages/Lobby/CreateRoom.qml" }
+  Component { id: roomSummary; RoomInfoContainer {} }
   readonly property Item createRoom: lobbyLoader.item
   property int phase: 0
 
@@ -136,6 +163,28 @@ ApplicationWindow {
     check(rule.subTitle === subtitle, "wrong description for " + id);
   }
 
+  function checkSelectionControls(offers, timeout, count, seconds) {
+    const properties = find(createRoom, item => item.objectName === "qiaoGameProperties");
+    const selection = find(properties, item => item.objectName === "qiaoSelectionSettings");
+    check(offers.parent === selection && timeout.parent === selection,
+      "selection controls belong to the game properties section");
+    check(offers.editable && timeout.editable && offers.value === count && timeout.value === seconds,
+      "game properties show editable mode defaults or saved values");
+  }
+
+  function checkRoomSummary(settings, count, seconds) {
+    Lua.client = { settings };
+    const summary = roomSummary.createObject(createRoom, { visible: false, width: 345, height: 500 });
+    summary.viewFalse = true;
+    const times = summary.settings.filter(row => row[0] === "Choose General timeout");
+    check(times.length === 1 && times[0][1] === String(seconds), "room summary should show only the effective timeout");
+    check(summary.settings.some(row => row[0] === "qiao_offer_count" && row[1] === String(count)),
+      "room summary should show the configured offer count");
+    check(!summary.settings.some(row => ["Select generals num", "Luck Card Times", "自由选将"].includes(row[0])),
+      "old settings should stay out of the room summary even when false values are shown");
+    summary.destroy();
+  }
+
   Timer {
     interval: 75
     running: true
@@ -145,13 +194,19 @@ ApplicationWindow {
         const playerCount = find(createRoom, item => item.title === "房间人数");
         const rule = find(createRoom, item => item.title === "游戏规则");
         const freeAssign = find(createRoom, item => item.title === "自由选将");
+        const offers = find(createRoom, item => item.title === "qiao_offer_count");
+        const timeout = find(createRoom, item => item.title === "Choose General timeout");
         const confirm = find(createRoom, item => item.text === "OK");
         if (phase === 0) {
-          Db.saveModeSettings("lunarltk", { enableFreeAssign: true });
+          Db.saveModeSettings("lunarltk", { enableFreeAssign: true, generalNum: 3, generalTimeout: 10, luckTime: 1 });
+          Db.saveModeSettings("lunarltk:qiao_locked_mode", { generalTimeout: 45 });
           switchMode("qiao_locked_mode");
+          find(createRoom, item => item.objectName === "nativeSidebar").currentIndex = 2;
         } else if (phase === 1) {
           check(rule && rule.parent.children[1] === rule, "rule should be the first setting");
-          check(!freeAssign.enabled && !freeAssign.suffixLoader.item.checked, "free assignment should appear off");
+          check(freeAssign === null, "locked mode should not display free assignment");
+          checkSelectionControls(offers, timeout, 5, 45);
+          check(offers.visible && timeout.visible, "the game settings tab should show the relocated controls");
           check(rule.suffixLoader.item.displayText === "斗地主", "default choice");
           checkRuleHelp(rule, "qiao_locked_landlord");
           check(!playerCount.enabled && playerCount.value === 3, "default capacity should be disabled at 3");
@@ -159,6 +214,12 @@ ApplicationWindow {
           confirm.clicked();
           check(ClientInstance.lastRequest[0] === "CreateRoom" && ClientInstance.lastRequest[1][1] === 3,
             "native CreateRoom request should send capacity 3");
+          check(ClientInstance.lastRequest[1][3]._mode.qiao_offer_count === 5 &&
+            ClientInstance.lastRequest[1][3]._mode.generalTimeout === 45,
+            "native request should include both the default and saved selection values");
+          checkRoomSummary(ClientInstance.lastRequest[1][3], 5, 45);
+          offers.suffixLoader.item.value = 4;
+          timeout.suffixLoader.item.value = 55;
           find(createRoom, item => item.objectName === "nativeSidebar").currentIndex = 3;
           rule.suffixLoader.item.popup.open();
         } else if (phase === 2) {
@@ -177,6 +238,11 @@ ApplicationWindow {
             "native CreateRoom request should send capacity 4");
           check(ClientInstance.lastRequest[1][3]._mode.qiao_locked_game_rule === "qiao_locked_2v2",
             "native CreateRoom request should send selected rule");
+          check(ClientInstance.lastRequest[1][3]._mode.qiao_offer_count === 4 &&
+            ClientInstance.lastRequest[1][3]._mode.generalTimeout === 55 &&
+            ClientInstance.lastRequest[1][3]._game.generalTimeout === 10,
+            "editing game properties should send the mode values and preserve the shared profile");
+          checkRoomSummary(ClientInstance.lastRequest[1][3], 4, 55);
           Config.curScheme.normalPkg.qiao = ["qiao_heg__wei001"];
           Config.curSchemeChanged();
         } else if (phase === 4) {
@@ -187,11 +253,18 @@ ApplicationWindow {
           switchMode("qiao_free_mode");
         } else if (phase === 6) {
           check(playerCount.enabled && rule === null, "switching away should release the spinner");
+          check(freeAssign?.enabled && freeAssign.suffixLoader.item.checked,
+            "switching away should restore the saved free assignment setting");
+          checkSelectionControls(offers, timeout, 7, 90);
+          const luck = find(createRoom, item => item.title === "Luck Card Times");
+          check(luck?.parent === offers.parent.parent && luck.value === 1,
+            "free mode should display the effective shared luck setting in game properties");
           playerCount.value = 6;
           check(createRoom.config.playerNum === 6, "the other mode should allow manual capacity");
           switchMode("qiao_locked_mode");
         } else if (phase === 7) {
           check(rule.suffixLoader.item.displayText === "2v2", "saved 2v2 choice should be restored");
+          checkSelectionControls(offers, timeout, 4, 55);
           checkRuleHelp(rule, "qiao_locked_2v2");
           check(!playerCount.enabled && playerCount.value === 4, "saved rule should restore capacity 4");
           rule.suffixLoader.item.activated(0);
@@ -211,9 +284,10 @@ ApplicationWindow {
           playerCount.value = 9;
         } else if (phase === 11) {
           check(playerCount.value === 9 && createRoom.config.playerNum === 9 && confirm.enabled, "editable capacity above 4");
+          createRoom.isChangeRoom = true;
           confirm.clicked();
-          check(ClientInstance.lastRequest[0] === "CreateRoom" && ClientInstance.lastRequest[1][1] === 9,
-            "native CreateRoom request should send the chosen human vs AI capacity");
+          check(ClientInstance.lastRequest[0] === "ChangeRoom" && ClientInstance.lastRequest[1][1] === 9,
+            "native ChangeRoom request should send the chosen human vs AI capacity");
           check(ClientInstance.lastRequest[1][3]._mode.qiao_locked_game_rule === "qiao_locked_human_vs_ai",
             "native CreateRoom request should send human vs AI");
           find(createRoom, item => item.objectName === "nativeSidebar").currentIndex = 3;
@@ -221,7 +295,12 @@ ApplicationWindow {
         } else if (phase === 12) {
           check(!playerCount.enabled && playerCount.value === 4, "switching back to 2v2 should lock capacity at 4");
           checkRuleHelp(rule, "qiao_locked_2v2");
-          console.log("PASS: built-in lobby switches rule descriptions, sends capacities, and restores controls");
+          switchMode("qiao_heg_mode");
+        } else if (phase === 13) {
+          checkSelectionControls(offers, timeout, 7, 90);
+          check(freeAssign?.enabled && find(createRoom, item => item.title === "Luck Card Times") === null,
+            "collection mode should show free assignment and omit shared luck");
+          console.log("PASS: built-in lobby uses editable game properties and sends isolated mode settings");
           Qt.exit(0);
         }
         phase++;
@@ -257,6 +336,23 @@ def main():
             copy_from_stock(folder, f'Fk/Widgets/{name}.qml')
         for name in lobby:
             copy_from_stock(folder, f'Fk/Pages/Lobby/{name}.qml')
+        copy_from_stock(folder, 'Fk/Pages/Common/RoomInfoContainer.qml')
+        write(folder, 'Fk/Pages/Common/qmldir', 'module Fk.Pages.Common\n'
+              'RoomInfoContainer 1.0 RoomInfoContainer.qml\n')
+        write(folder, 'Fk/Components/WaitingRoom/qmldir', 'module Fk.Components.WaitingRoom\n'
+              'WButton 1.0 WButton.qml\n')
+        write(folder, 'Fk/Components/WaitingRoom/WButton.qml', '''import QtQuick
+Item {
+  property alias bg: background
+  property alias border: background.border
+  property alias title: label
+  property alias text: label.text
+  property alias textFont: label.font
+  signal clicked()
+  Rectangle { id: background }
+  Text { id: label }
+}
+''')
 
         write(folder, 'Fk/Widgets/CommonScrollBar.qml', 'import QtQuick.Controls\nScrollBar {}')
         write(folder, 'Fk/Widgets/SideBarSwitcher.qml',
@@ -281,9 +377,11 @@ def main():
                 body = body.replace('RULE_HELP', json.dumps(rule_help, ensure_ascii=False))
             write(folder, f'Fk/{name}.qml', 'pragma Singleton\nimport QtQuick\nQtObject {\n' + body + '\n}\n')
         write(folder, 'LunarLtk/qmldir', 'module LunarLtk\nsingleton Ltk 1.0 Ltk.qml\n')
-        write(folder, 'LunarLtk/Ltk.qml', 'pragma Singleton\nimport QtQuick\nQtObject {}')
+        write(folder, 'LunarLtk/Ltk.qml', 'pragma Singleton\nimport QtQuick\n'
+              'QtObject { function getAllCardPack() { return []; } }')
 
-        write(folder, 'LockedGameRuleRow.qml', (ROOT / 'pkg/qiao_mode/qml/LockedGameRuleRow.qml').read_text(encoding='utf-8'))
+        for name in ('GameProperties.qml', 'LockedGameRuleRow.qml'):
+            write(folder, name, (ROOT / 'pkg/qiao_mode/qml' / name).read_text(encoding='utf-8'))
         write(folder, 'Test.qml', window)
         app = QGuiApplication([])
         engine = QQmlApplicationEngine()

@@ -27,6 +27,8 @@ local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_sele
 local W = require "ui_emu.preferences"
 local M = {}
 
+M.gamePropertiesQml = { url = "packages/qiao/pkg/qiao_mode/qml/GameProperties.qml" }
+
 -- 大小势力/玉玺公共查询：服务器与客户端都只在本模式安装。
 function M.installRules()
   BattleRoyal.install()
@@ -450,12 +452,13 @@ function M.create(base, name)
   table.insert(candidateSettings, checkbox(Guest.settingKey, Guest.settingKey))
   table.insert(settings, W.PreferenceGroup(candidateSettings))
 
-  local ruleSettings = {
-    title = "qiao_rule_settings",
+  local selectionSettings = W.PreferenceGroup {
+    selectionSettings = true,
     W.SpinRow {
       _settingsKey = "qiao_offer_count", title = "qiao_offer_count",
       from = uiMinOffers,
       to = maxOffers,
+      editable = true,
       value = function(settings)
         return offerCount(modeOf(settings).qiao_offer_count, uiMinOffers(settings), maxOffers)
       end,
@@ -463,11 +466,14 @@ function M.create(base, name)
     W.SpinRow {
       _settingsKey = "generalTimeout", title = "Choose General timeout",
       from = 10, to = 300,
+      editable = true,
       value = function(settings)
         return modeOf(settings).generalTimeout or Selection.defaultTimeout
       end,
     },
   }
+  selectionSettings._qml = M.gamePropertiesQml
+  local ruleSettings = { title = "qiao_rule_settings" }
   if not locked then
     table.insert(ruleSettings, W.SpinRow {
       _settingsKey = "qiao_wild_count", title = "qiao_wild_count", from = 0,
@@ -508,6 +514,7 @@ function M.create(base, name)
     })
   end
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
+  table.insert(settings, 2, selectionSettings)
   local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
     name = name, minPlayer = locked and Locked.minPlayers or base.minPlayer,
