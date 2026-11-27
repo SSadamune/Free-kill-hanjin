@@ -5,6 +5,8 @@ local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local Diplomacy = require "packages.qiao.pkg.qiao_mode.ai.diplomacy"
 local Deadline = require "packages.qiao.pkg.qiao_mode.ai.deadline"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -64,9 +66,25 @@ function Robot:makeReply()
   error(reply, 0)
 end
 
+local playStages = { "draw", "setup", "disrupt", "damage", "delayed" }
+
 function Robot:handlePlayCard()
-  return Cards.play(self, Skills.cooperativeAlliance) or Skills.play(self) or ViewAs.play(self)
-    or Cards.recast(self) or Skills.fallbackAlliance(self)
+  if Cost.effectable(self.player, "qiao__skill_han014_1") then
+    local index = Cuipo.useIndex(self.player, self.room.logic:getCurrentEvent())
+    for _, stage in ipairs(playStages) do
+      local reply = Cards.play(self, stage, index) or ViewAs.play(self, stage, index)
+      if reply then return reply end
+    end
+  end
+  for _, stage in ipairs(playStages) do
+    local reply = Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
+    if reply then return reply end
+    if stage == "draw" then
+      reply = Skills.cooperativeAlliance(self)
+      if reply then return reply end
+    end
+  end
+  return Cards.recast(self) or Skills.fallbackAlliance(self)
 end
 
 function Robot:handleAskForSkillInvoke(data)

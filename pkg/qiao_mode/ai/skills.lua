@@ -277,11 +277,11 @@ function M.active(ai, data)
   end
 end
 
-function M.play(ai)
+function M.play(ai, stage)
   local buttons = ai:getEnabledSkills()
   table.sort(buttons)
   for _, name in ipairs(buttons) do
-    local reply = Play.play(ai, name)
+    local reply = Play.play(ai, name, stage)
     if reply then return reply end
   end
 end

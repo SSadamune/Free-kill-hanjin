@@ -197,9 +197,24 @@ function M.yinghun(ai)
   end)
 end
 
-function M.play(ai, name)
+local stages = {
+  qiao__skill_han007_1 = "draw", -- 敏思
+  qiao__skill_wu001_1 = "draw", -- 制衡
+  qiao__skill_wu004_1 = "draw", -- 苦肉与诈降
+  qiao__skill_qun013_2 = "draw", -- 雄异
+  qiao__retinue_skill_lujiang_shangjia = "draw",
+  qiao__skill_wu008_1 = "setup", -- 结姻
+  qiao__skill_wu015a_1 = "setup", -- 直谏
+  qiao__skill_jin013_2 = "disrupt", -- 克清
+  qiao__skill_qun018_1 = "disrupt", -- 祸水
+  qiao__skill_wei012_1 = "damage", -- 强袭
+  qiao__skill_qun007_2 = "damage", -- 乱武
+  qiao__retinue_skill_qingzhou_jingrui = "damage",
+}
+
+function M.play(ai, name, stage)
   local action = play[name]
-  if not action then return end
+  if not action or stages[name] ~= stage then return end
   ai:selectSkill(name, true)
   local reply = action(ai)
   if reply and reply ~= "" then return reply end

@@ -1105,4 +1105,52 @@ function Testqiao_robot_ai:testLuanwuPrefersKnownEnemyLossWithoutRiskingAlly()
   end)
 end
 
+function Testqiao_robot_ai:testPlayOrderCoordinatesDrawDisruptionDamageAndDelay()
+  scenario(function(room, player, enemy)
+    give(room, enemy, "qiao__jink")
+    give(room, enemy, "qiao__slash")
+    local kurou, qixi = "qiao__skill_wu004_1", "qiao__skill_wu002_1"
+    room:handleAddLoseSkills(player, kurou .. "|qiao__skill_wu004_2|" .. qixi, nil, false, true)
+    local delayed = give(room, player, "qiao__indulgence")
+    local attack = give(room, player, "qiao__duel")
+    local material = give(room, player, "qiao__lightning", 4, Card.Spade)
+    local draw = give(room, player, "qiao__foresight")
+
+    lu.assertEquals(reply(player, "PlayCard", {}).card, draw.id)
+    room:throwCard(draw.id, "test", player, player)
+    lu.assertEquals(reply(player, "PlayCard", {}).card.skill, kurou)
+    room:setPlayerProperty(player, "hp", 2)
+    local disruption = reply(player, "PlayCard", {})
+    lu.assertEquals(disruption.card.skill, qixi)
+    lu.assertEquals(disruption.card.subcards, { material.id })
+    room:throwCard(material.id, "test", player, player)
+    lu.assertEquals(reply(player, "PlayCard", {}).card, attack.id)
+    room:throwCard(attack.id, "test", player, player)
+    lu.assertEquals(reply(player, "PlayCard", {}).card, delayed.id)
+  end)
+end
+
+function Testqiao_robot_ai:testPlayOrderTakesConsecutiveCuipoOpportunitiesBeforeDrawCard()
+  scenario(function(room, player, enemy)
+    room:handleAddLoseSkills(player, "qiao__skill_han014_1", nil, false, true)
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    for index = 5, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    local hand = enemy:getCardIds("h")
+    if #hand > 0 then room:throwCard(hand, "test", enemy, enemy) end
+    local draw = give(room, player, "qiao__foresight")
+    local duel = give(room, player, "qiao__duel")
+    local slash = give(room, player, "qiao__slash")
+    enemy.serverplayer:setState(fk.Player_Robot)
+    local attack = reply(player, "PlayCard", {})
+    lu.assertEquals(attack.card, slash.id)
+    room:useCard(room:handleUseCardReply(player, attack))
+    lu.assertEquals(enemy.hp, 2)
+    local followup = reply(player, "PlayCard", {})
+    lu.assertEquals(followup.card, duel.id)
+    room:useCard(room:handleUseCardReply(player, followup))
+    lu.assertEquals(room:getCardArea(draw.id), Card.PlayerHand)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

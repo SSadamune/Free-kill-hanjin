@@ -1,5 +1,6 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 
 local M = {}
 
@@ -220,30 +221,46 @@ local function priority(ai, card)
   if damage[name] or enemyGroup[name] then return 60 end
 end
 
-function M.play(ai, cooperativeAction)
+local function stageOf(card)
+  local name = card.name
+  if name == "qiao__foresight" or name == "qiao__strengthen_state"
+    or name == "qiao__restore_heartland" or name == "qiao__befriend_attacking" then return "draw" end
+  if removal[name] or name == "qiao__collateral" then return "disrupt" end
+  if enemyPhase[name] then return "delayed" end
+  if damage[name] or enemyGroup[name] or name == "qiao__analeptic" then return "damage" end
+  return "setup"
+end
+
+function M.matchesCuipo(ai, card, index)
+  if not index or Cuipo.cardNameLength(card) ~= index then return false end
+  if damage[card.name] or enemyGroup[card.name] or card.type == Card.TypeEquip then return true end
+  -- Self-targeting cards draw and other harmless uses still get their usual
+  -- evaluation below. A no-target card would not emit TargetSpecified.
+  local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
+  return (fixed and table.contains(fixed, ai.player)) or card.name == "qiao__restore_heartland"
+    or (card.name == "qiao__iron_chain" and ai.player.chained)
+end
+
+function M.play(ai, stage, cuipoIndex)
   local candidates = {}
   for _, id in ipairs(ai:getEnabledCards()) do
     local card = Fk:getCardById(id)
     local value = priority(ai, card)
-    if value then table.insert(candidates, { card = card, value = value }) end
+    if value and (not stage or stageOf(card) == stage) and (not cuipoIndex or M.matchesCuipo(ai, card, cuipoIndex)) then
+      table.insert(candidates, { card = card, value = value })
+    end
   end
   table.sort(candidates, function(a, b)
     if a.value == b.value then return a.card.id < b.card.id end
     return a.value > b.value
   end)
   for _, candidate in ipairs(candidates) do
-    if cooperativeAction and candidate.value < 90 then
-      local reply = cooperativeAction(ai)
-      if reply then return reply end
-      cooperativeAction = nil
-    end
     local card = candidate.card
     ai:selectCard(card.id, true)
     local reply = not ai:getSelectedSkill() and playSelected(ai, card)
     if reply then return reply end
     ai:selectCard(card.id, false)
   end
-  if cooperativeAction then return cooperativeAction(ai) end
 end
 
 function M.recast(ai)

@@ -1,4 +1,5 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 
 local M = {}
 
@@ -21,6 +22,11 @@ function M.cardAmount(card, use, source)
   if source and (card.trueName == "slash" or card.trueName == "duel") then
     amount = amount + source:getMark("qiao_wei005_luoyi-turn")
     if not use and card.trueName == "slash" then amount = amount + (source.drank or 0) end
+  end
+  if not use and source and card.is_damage_card and source.room.current == source and source.phase == Player.Play
+    and Cost.effectable(source, "qiao__skill_han014_1")
+    and Cuipo.useIndex(source, source.room.logic:getCurrentEvent()) == Cuipo.cardNameLength(card) then
+    amount = amount + 1
   end
   return amount
 end

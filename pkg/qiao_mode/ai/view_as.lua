@@ -22,7 +22,7 @@ local function targetedReply(ai, card)
   return Requests.targets(ai, score)
 end
 
-local function convert(ai, result, budget, useTarget)
+local function convert(ai, result, budget, useTarget, cuipoIndex)
   local enabled = ai:getEnabledSkills()
   for _, name in ipairs(converters[result]) do
     if table.contains(enabled, name) then
@@ -36,7 +36,7 @@ local function convert(ai, result, budget, useTarget)
         if Cost.value(ai, id) > budget then break end
         ai:selectCard(id, true)
         local card = ai.handler:getUsingCard()
-        if card and card.trueName == result then
+        if card and card.trueName == result and (not cuipoIndex or Cards.matchesCuipo(ai, card, cuipoIndex)) then
           local reply = useTarget and targetedReply(ai, card) or Requests.reply(ai)
           if reply ~= "" then return reply end
         end
@@ -48,13 +48,13 @@ local function convert(ai, result, budget, useTarget)
   end
 end
 
-local function luanji(ai)
+local function luanji(ai, cuipoIndex)
   local name = "qiao__skill_qun004_1"
   if not table.contains(ai:getEnabledSkills(), name) then return end
   ai:selectSkill(name, true)
   if Cost.select(ai, 2, 4) then
     local card = ai.handler:getUsingCard()
-    if card then
+    if card and (not cuipoIndex or Cards.matchesCuipo(ai, card, cuipoIndex)) then
       local outcome = Cards.groupOutcome(ai, card)
       if Damage.worth(outcome) and outcome.enemies - outcome.friends - outcome.unknown >= 2 then
         local reply = Requests.reply(ai)
@@ -65,9 +65,10 @@ local function luanji(ai)
   ai:unSelectAll()
 end
 
-function M.play(ai)
-  return convert(ai, "dismantlement", 2, true)
-    or convert(ai, "supply_shortage", 2, true) or convert(ai, "slash", 3, true) or luanji(ai)
+function M.play(ai, stage, cuipoIndex)
+  if stage == "disrupt" then return convert(ai, "dismantlement", 2, true, cuipoIndex) end
+  if stage == "damage" then return convert(ai, "slash", 3, true, cuipoIndex) or luanji(ai, cuipoIndex) end
+  if stage == "delayed" then return convert(ai, "supply_shortage", 2, true, cuipoIndex) end
 end
 
 function M.slash(ai)
