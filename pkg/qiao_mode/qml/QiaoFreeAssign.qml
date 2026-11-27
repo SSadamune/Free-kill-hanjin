@@ -15,8 +15,6 @@ Item {
 
   required property ChooseGeneralModel dataModel
   required property int index
-  required property bool guestIllustrations
-  required property var displayFactions
   signal finish()
 
   readonly property var packageGroups: {
@@ -157,17 +155,10 @@ Item {
       model: root.generals
       ScrollBar.vertical: ScrollBar {}
 
-      delegate: GeneralCardItem {
-        id: card
+      delegate: QiaoGeneralCard {
         required property string modelData
         autoBack: false
-        dataModel: Ltk.createGeneralCardModel(modelData)
-
-        GuestCardAppearance {
-          card: card
-          enabledInContext: root.guestIllustrations
-          factions: root.displayFactions(card.modelData)
-        }
+        generalName: modelData
 
         onClicked: {
           root.dataModel.changeGeneral(root.index, Ltk.createGeneralCardModel(modelData));

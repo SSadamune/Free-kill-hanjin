@@ -190,11 +190,14 @@ end
 
 function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCards()
   local room = FkTest.room
-  local player, other = room.players[1], room.players[2]
+  local client, other = ClientInstance, nil
+  FkTest.runInClient(function() other = room:getPlayerById(Self.id) end)
+  local player = other:getNextAlive()
   local c = card("qiao__foresight")
   local top1, top2, top3
   local order = {}
   local privateMoves = {}
+  local received = {}
   local handAfter, bottom
   FkTest.runInRoom(function()
     clearAllAreas(room)
@@ -238,15 +241,47 @@ function Testqiao_card_reuse:testForesightViewsAndRearrangesBeforeDrawingBothCar
     -- One real guanxing request: put the first card back on top and the second
     -- on the bottom, then let the card's own draw take the next two cards.
     FkTest.setNextReplies(player, { { { top1 }, { top2 } } })
-    room:useCard(UseCardData:new { from = player, tos = { player }, card = c, extra_data = {} })
+    local mode = room:getSettings("gameMode")
+    local qiaoClient = Fk:getBoardGame(mode).client_klass:new {
+      notifyUI = function(_, command, data)
+        if command ~= "QiaoMoveCards" then return end
+        for _, move in ipairs(data.merged) do
+          for _, id in ipairs(move.ids) do
+            if id == top1 or id == top2 or id == top3 then
+              table.insert(received, { id, move.fromArea, move.toArea, data[tostring(id)] })
+            end
+          end
+        end
+      end,
+    }
+    qiaoClient.settings = { gameMode = mode }
+    -- FkTest's console client remains in testmode. Forward the engine's
+    -- actual third-seat MoveCards payload through the registered Han-Jin client.
+    local notify = client.notifyUI
+    client.notifyUI = function(self, command, data)
+      if command == "MoveCards" then qiaoClient:notifyUI(command, data) end
+      return notify(self, command, data)
+    end
+    local ok, err = pcall(room.useCard, room,
+      UseCardData:new { from = player, tos = { player }, card = c, extra_data = {} })
+    client.notifyUI = notify
     room.askToGuanxing = originalGuanxing
     room.drawCards = originalDraw
     room.notifyMoveCards = originalNotify
+    if not ok then error(err, 0) end
     handAfter = player:getCardIds("h")
     bottom = room.draw_pile[#room.draw_pile]
   end)
   lu.assertEquals(order, { "guanxing", "arranged", "draw" })
   lu.assertEquals(privateMoves, { { true, false }, { true, false }, { true, false }, { true, false } })
+  lu.assertEquals(received, {
+    { top1, Card.DrawPile, Card.Processing, false },
+    { top2, Card.DrawPile, Card.Processing, false },
+    { top1, Card.Processing, Card.DrawPile, false },
+    { top2, Card.Processing, Card.DrawPile, false },
+    { top1, Card.DrawPile, Card.PlayerHand, false },
+    { top3, Card.DrawPile, Card.PlayerHand, false },
+  })
   lu.assertEquals(#handAfter, 2)
   lu.assertTrue(table.contains(handAfter, top1))
   lu.assertTrue(table.contains(handAfter, top3))

@@ -9,18 +9,19 @@ import LunarLtk.Pages
 import LunarLtk.Pages.InfoPopups as Info
 import "GuestIllustration.js" as GuestIllustration
 import "SkillReferenceLinks.js" as SkillLinks
+import "CardMoveVisibility.js" as CardMoveVisibility
 
 Room {
   id: room
   property var mountDistanceLabels: ({})
   property bool guestIllustrations: false
-  property int guestFactionsRevision: 0
-  readonly property var guestCardFactions: {
-    guestFactionsRevision;
-    if (!guestIllustrations) return {};
-    const factions = JSON.parse(Lua.ev("json.encode(ClientInstance:guestCardFactions())") ?? "{}");
-    return Object.fromEntries(Object.entries(factions).map(([name, values]) =>
-      [name, GuestIllustration.roomFactions(values)]));
+  property var guestCardFactions: ({})
+  readonly property alias generalCardPresentation: roomGeneralAppearance
+
+  function refreshGeneralCardPresentation() {
+    guestIllustrations = !!GuestIllustration.enabledInRoom();
+    guestCardFactions = guestIllustrations
+      ? JSON.parse(Lua.ev("json.encode(ClientInstance:guestCardFactions())") ?? "{}") : {};
   }
   property int pileActionRevision: 0
   property int ciRevision: 0
@@ -91,7 +92,7 @@ Room {
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
   Component { id: markTooltips; PortraitMarkTooltips {} }
-  Component { id: referencePane; SkillReferencePane {} }
+  Component { id: referencePane; SkillReferencePane { generalCardPresentation: roomGeneralAppearance } }
   Component { id: stateButton; SkillStatusButton {} }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
   Component {
@@ -141,9 +142,12 @@ Room {
 
   GeneralCardPresentation {
     id: roomGeneralAppearance
+    inRoom: true
     enabledInContext: room.guestIllustrations
     factions: room.guestCardFactions
   }
+
+  onPopupItemChanged: roomGeneralAppearance.watch(popupItem)
 
   function bindOwnHiddenGenerals(item) {
     if (item.dataModel.playerid !== room.dataModel.dashboardId) return;
@@ -203,7 +207,7 @@ Room {
           active: Qt.binding(() => room.visible && room.infoPopup.visible),
           rootText: (catalog, theme) => {
             const groups = Array.from(item.generals, name => ({
-              name, detail: Ltk.getGeneralDetail(name), factions: room.guestCardFactions[name],
+              name, detail: Ltk.getGeneralDetail(name), factions: roomGeneralAppearance.appearanceFor(name).factions,
             }));
             return SkillLinks.generalText(catalog, theme, groups, name => Lua.tr(name), true);
           },
@@ -300,7 +304,6 @@ Room {
   }
 
   function bindPhotoExtras() {
-    guestIllustrations = !!GuestIllustration.enabledInRoom();
     for (let i = 0; i < photoModel.count; ++i) {
       const photo = photoModel.get(i).modelData.photoItem;
       if (!photo) continue;
@@ -312,6 +315,7 @@ Room {
         markTooltips.createObject(marks);
       if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
         stateButton.createObject(marks, {
+          photo,
           states: Qt.binding(() => {
             room.skillStatusRevision;
             photo.general;
@@ -361,17 +365,6 @@ Room {
     function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
   }
 
-  function generalAppearance(name) {
-    for (let i = 0; i < photoModel.count; ++i) {
-      const photo = photoModel.get(i).modelData;
-      if (name === photo.general)
-        return { kingdom: photo.kingdom, skin: photo.skin?.name };
-      if (name === photo.deputyGeneral)
-        return { kingdom: photo.kingdom, skin: photo.deputySkin?.name };
-    }
-    return {};
-  }
-
   function setVirtualPicture(card, name) {
     if (!card || !name) return;
     const picture = Lua.ev(`ClientInstance:virtualCardPicture(${JSON.stringify(name)})`);
@@ -379,11 +372,10 @@ Room {
   }
 
   Component.onCompleted: {
+    refreshGeneralCardPresentation();
     roomGeneralAppearance.watch(room);
-    addCallback("QiaoGuestFactionsChanged", () => {
-      guestIllustrations = !!GuestIllustration.enabledInRoom();
-      ++room.guestFactionsRevision;
-    });
+    addCallback("QiaoMoveCards", (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
+    addCallback("QiaoGuestFactionsChanged", refreshGeneralCardPresentation);
     addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
     addCallback("QiaoPindianStart", () => {
       pindianDisplay.clear();

@@ -58,7 +58,7 @@ M.generals = {
     hp = 4,
     mainHpAdjust = 0,
     deputyHpAdjust = -1,
-    guests = {  },
+    guests = { [==[wei]==] },
     companionText = [==[诸葛亮]==],
     companionNames = { [==[诸葛亮]==] },
     companions = { [==[qiao_heg__shu004]==] },

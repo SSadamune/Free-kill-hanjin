@@ -173,6 +173,16 @@ function generalText(catalog, theme, groups, tr, showSummary) {
       rows.push(escapeText(kingdoms + " " + (title ?? tr(name)) + " " + hp));
     }
     if (detail.headnote) rows.push('<font color="lightslategrey">' + tr(detail.headnote) + "</font>");
+    const general = catalog.skills.get(name);
+    const lord = general?.lord && catalog.skills.get(general.lord);
+    if (lord) {
+      rows.push('<a href="' + escapeText(lord.id) + '" style="color:' + theme.page + ';">'
+        + escapeText(tr("qiao_lord_ascension") + " · " + lord.title) + "</a>");
+    }
+    if (general?.commander) {
+      rows.push("<b>" + render(catalog, "统领能力", name, theme) + "</b> "
+        + render(catalog, general.commander, name, theme));
+    }
     if (detail.companions.length > 0) {
       rows.push('<font color="slategrey"><b>' + escapeText(tr("Companions")) + "</b> "
         + Array.from(detail.companions, value => escapeText(tr(value))).join(" ") + "</font>");

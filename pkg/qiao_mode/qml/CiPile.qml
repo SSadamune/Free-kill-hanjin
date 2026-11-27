@@ -25,6 +25,7 @@ ColumnLayout {
   property string inspectedCi: ""
   readonly property var selectedNames: mode === "give" ? (groups[selectedKingdom] ?? []) : [selectedCi]
   readonly property var actions: actionsByCard[selectedCi] ?? []
+  readonly property var roomScene: Ltk.roomScene
   signal submitted(var choice)
   signal canceled()
 
@@ -145,10 +146,12 @@ ColumnLayout {
       x: 4
       referenceKey: root.inspectedCi
       inlineTips: true
+      generalCardPresentation: root.roomScene?.generalCardPresentation
       rootText: (catalog, theme) => {
         const name = root.inspectedCi;
         if (!name) return "";
-        const groups = [{ name, detail: Ltk.getGeneralDetail(name) }];
+        const factions = root.roomScene?.generalCardPresentation?.appearanceFor(name).factions;
+        const groups = [{ name, detail: Ltk.getGeneralDetail(name), factions }];
         return SkillLinks.generalText(catalog, theme, groups, key => Lua.tr(key), true);
       }
     }

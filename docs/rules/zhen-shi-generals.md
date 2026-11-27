@@ -13,6 +13,17 @@
 | 群 | [于吉（QUN011）](generals/qun011-yuji.md)、[徐荣（QUN081）](generals/qun081-xurong.md) | [董卓（QUN006）](generals/qun006-dongzhuo.md)、[张任（QUN024）](generals/qun024-zhangren.md) |
 | 晋 | [杜预（JIN006）](generals/jin006-duyu.md)、[马隆（JIN023）](generals/jin023-malong.md) | [王浑（JIN017）](generals/jin017-wanghun.md)、[牵弘（JIN022B）](generals/jin022b-qianhong.md) |
 
+### 客将势力
+
+客将势力按紫髯的小乔发布的图鉴上方制图右下角的括号与边框核定。主势力及客将势力的启用条件见[客将规则](guest-factions.md)。
+
+| 分包 | 武将与客将势力 |
+| --- | --- |
+| [阵包图鉴](https://www.bilibili.com/opus/1174504737529135105) | 郭淮（晋）、姜维（魏）、费祎（吴）、于吉（吴）、徐荣（汉） |
+| [势包图鉴](https://www.bilibili.com/opus/1175884418421620738) | 臧霸（群）、马岱（群）、孙策（群、汉）、董卓（汉） |
+
+朱儁（HAN014）的上方制图为客将环境提供插画与珠联璧合差分，右下角仍写 `G.HAN 014`，无额外客将势力。
+
 ## 君主
 
 - 阵：[君刘备 EM(SHU001)](generals/em-shu001-liubei.md)：章武、天钺、激诏及六师率义旗。

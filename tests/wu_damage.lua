@@ -739,7 +739,7 @@ function Testqiao_wu_damage:testDimengSwapsHandsAndGrantsHaoshiUntilTargetTurnEn
     { "qiao__peach", Card.Heart, 11 },
   })
 
-  FkTest.setNextReplies(p(1), { "1" })
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2) }) })
   activate(room, p(1), DIMENG, { p(2), p(3) }, cost)
 
   lu.assertEquals(#p(2):getCardIds(Player.Hand), 3)
@@ -847,12 +847,31 @@ function Testqiao_wu_damage:testDimengClientAllowsZeroDiff()
     room:obtainCard(p(2), hands[2], false, fk.ReasonJustMove)
     room:obtainCard(p(3), hands[3], false, fk.ReasonJustMove)
   end)
-  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(3) }), "1" })
+  local moveCount = 0
+  local notifyMoveCards = room.notifyMoveCards
+  function room:notifyMoveCards(players, moves, eventId)
+    for _, move in ipairs(moves) do
+      if move.skillName == DIMENG and move.moveReason == fk.ReasonExchange then
+        local holder = move.toArea == Card.Processing and move.from or move.to
+        for _, info in ipairs(move.moveInfo) do
+          for _, viewer in ipairs(self.players) do
+            lu.assertEquals(viewer:cardVisible(info.cardId, move), viewer == holder)
+          end
+          moveCount = moveCount + 1
+        end
+      end
+    end
+    return notifyMoveCards(self, players, moves, eventId)
+  end
+  FkTest.setNextReplies(p(1), { FkTest.ReplyChoosePlayer({ p(2), p(3) }) })
   inRoom(function() room:handleUseCardReply(p(1), reply) end)
+  room.notifyMoveCards = notifyMoveCards
   lu.assertEquals(p(1):getCardIds("h"), cost)
   lu.assertItemsEquals(p(2):getCardIds("h"), hands[3])
   lu.assertItemsEquals(p(3):getCardIds("h"), hands[2])
+  lu.assertTrue(p(2):hasSkill(HAOSHI))
   lu.assertTrue(p(3):hasSkill(HAOSHI))
+  lu.assertEquals(moveCount, 2 * (#hands[2] + #hands[3]))
 end
 
 -- 锦帆军：弃置他人牌后按颜色弃牌并摸两张，颜色次数记录 ------------------

@@ -24,7 +24,7 @@ M.generals = {
     hp = 4,
     mainHpAdjust = -1,
     deputyHpAdjust = 0,
-    guests = {  },
+    guests = { [==[jin]==] },
     companionText = [==[—]==],
     companionNames = {  },
     companions = {  },
@@ -59,7 +59,7 @@ M.generals = {
 table.insert(M.generals, {
  number="WEI023", id="qiao_heg__wei023", kingdom="wei", hp=4, halfHp=2,
  name=[==[臧霸]==], title=[==[岱岳独雄、节度青徐]==], gender="male", mainHpAdjust=0, deputyHpAdjust=0,
- guests={}, companions={"qiao_heg__wei004"}, companionsUnresolved={},
+ guests={"qun"}, companions={"qiao_heg__wei004"}, companionsUnresolved={},
  skills={{id="qiao__skill_wei023_1",name=[==[横江]==],text=[==[当你受到1点伤害后，你可以令当前回合角色本回合手牌上限-X（X为其装备区牌数，至少为1）。若如此做，其本回合弃牌阶段结束时，若其此阶段弃置过牌，则你摸一张牌，否则你摸牌至体力上限。]==],related=false,tags={}}},
 })
 M.generalCount=M.generalCount+1

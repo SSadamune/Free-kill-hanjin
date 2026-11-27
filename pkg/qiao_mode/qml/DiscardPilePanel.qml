@@ -38,11 +38,13 @@ Controls.Popup {
     grid.contentY = grid.originY + Math.max(0, Math.min(nextOffset, grid.contentHeight - grid.height));
   }
   objectName: "qiaoDiscardPanel"
-  width: Math.min(720, parent.width - 24)
-  height: Math.min(462, parent.height - 24)
+  readonly property bool compact: parent.width < 560 || parent.height < 440
+  readonly property real portraitScale: compact ? 0.76 : 1
+  width: Math.min(720, parent.width - (compact ? 40 : 24))
+  height: Math.min(462, compact ? Math.floor(parent.height * 0.8) : parent.height - 24)
   x: Math.round((parent.width - width) / 2)
   y: Math.round((parent.height - height) / 2)
-  padding: 12
+  padding: compact ? 8 : 12
   focus: true
   onOpened: refresh()
   onClosed: { search.clear(); onlyLord.checked = false; grid.positionViewAtBeginning(); }
@@ -62,7 +64,7 @@ Controls.Popup {
         text: "弃牌堆  ·  " + panel.cards.length + " 张"
         color: "#fff0d1"
         font.bold: true
-        font.pixelSize: 18
+        font.pixelSize: panel.compact ? 15 : 18
       }
       Controls.Button { text: "关闭"; onClicked: panel.close() }
     }
@@ -77,9 +79,9 @@ Controls.Popup {
         placeholderTextColor: panel.filterInk
         selectionColor: "#a67c48"
         selectedTextColor: "#fff6db"
-        padding: 11
+        padding: panel.compact ? 6 : 11
         background: Rectangle {
-          implicitHeight: 40
+          implicitHeight: panel.compact ? 30 : 40
           radius: 4
           color: "#241d17"
           border.color: panel.filterInk
@@ -121,7 +123,7 @@ Controls.Popup {
       Layout.fillWidth: true
       Layout.fillHeight: true
       clip: true
-      readonly property int columns: Math.max(1, Math.floor(width / 108))
+      readonly property int columns: Math.max(1, Math.floor(width / (108 * panel.portraitScale)))
       readonly property var sections: {
         const recent = panel.filtered.filter(card => card.thisTurn);
         const earlier = panel.filtered.filter(card => !card.thisTurn);
@@ -131,7 +133,7 @@ Controls.Popup {
         return { cards: recent.concat(earlier), divider: recent.length };
       }
       cellWidth: width / columns
-      cellHeight: 142
+      cellHeight: Math.ceil(130 * panel.portraitScale) + 12
       model: sections.cards
       Controls.ScrollBar.vertical: Controls.ScrollBar {}
       delegate: Item {
@@ -177,7 +179,7 @@ Controls.Popup {
           objectName: "discardCardFace"
           anchors.horizontalCenter: slot.horizontalCenter
           y: 6
-          cardScale: Math.min(1, (slot.width - 12) / 93)
+          cardScale: Math.min(panel.portraitScale, (slot.width - 12) / 93)
           enabled: false
           showDetail: false
           glow.color: "#efbd63"

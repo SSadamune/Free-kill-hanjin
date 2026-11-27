@@ -13,6 +13,7 @@ Column {
   required property var rootText
   property bool active: visible
   property bool inlineTips: false
+  property var generalCardPresentation: null
   property string referenceKey
   property color textColor: "#E4D5A0"
   property bool darkBackground: true
@@ -104,7 +105,8 @@ Column {
     return entries.map(entry => {
       if (entry.page === "banner") return Links.entriesText(catalog, theme, [entry]);
       const title = entries.length > 1 && entry.variant ? entry.variant + " " + entry.title : entry.title;
-      const groups = [{ name: entry.id, title, detail: Ltk.getGeneralDetail(entry.id) }];
+      const factions = generalCardPresentation?.appearanceFor(entry.id).factions;
+      const groups = [{ name: entry.id, title, detail: Ltk.getGeneralDetail(entry.id), factions }];
       return Links.generalText(catalog, theme, groups, name => Lua.tr(name), true);
     }).join("<br/><br/>");
   }
