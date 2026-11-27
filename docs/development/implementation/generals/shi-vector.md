@@ -17,3 +17,4 @@
 | SHU091 | [杨仪](shi-vector/shu091.md) | [度断](shi-vector/shu091.md#shu091-1)、[孤忿](shi-vector/shu091.md#shu091-2) |
 | WEI035 | [陈群](shi-vector/wei035.md) | [品第](shi-vector/wei035.md#wei035-1)、[法恩](shi-vector/wei035.md#wei035-2) |
 | WEI044 | [程昱](shi-vector/wei044.md) | [胆戾](shi-vector/wei044.md#wei044-1)、[脱先](shi-vector/wei044.md#wei044-2) |
+| WU027 | [程普](shi-vector/wu027.md) | [铁脊](shi-vector/wu027.md#wu027-1)、[醇义](shi-vector/wu027.md#wu027-2) |

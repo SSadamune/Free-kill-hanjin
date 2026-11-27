@@ -143,6 +143,22 @@ function T:testChumingUsesWineOnRecipientThenGivesSlashAndHandlesNoWeapon()
   end)
 end
 
+function T:testChunyiRecipientConsumesCiAndGetsRealWine()
+  run(function(room, user, chengpu)
+    asGeneral(room, chengpu, "wu027")
+    local chosen = "qiao_heg__shu003"
+    Ci.save(room, user, { chosen })
+    local name = "qiao__chunyi_other&"
+    lu.assertTrue(user:hasSkill(name))
+    local reply = FkTest.ReplyUseSkill(name, { user }, {})
+    reply.interaction_data = chosen
+    room:handleUseCardReply(user, reply)
+    lu.assertEquals(user.drank, 1)
+    lu.assertEquals(#Ci.cards(user), 0)
+    lu.assertTrue(table.contains(Discard.list(room), chosen))
+  end)
+end
+
 function T:testHufenMovesToDeputyAndUsesDependantSkills()
   run(function(room, p)
     asGeneral(room, p, "jin066")
@@ -287,6 +303,25 @@ function T:testXizhenIncludesUnknownButExcludesAllies()
     lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
   end)
 end
+
+function T:testTiejiChainDamageReplenishesEachEmptyFishOnce()
+  run(function(room, pu, target, ally, nextTarget)
+    asGeneral(room, pu, "wu027")
+    local a, b = give(room, pu, "qiao__jink"), give(room, pu, "qiao__jink")
+    for _, to in ipairs({ target, nextTarget }) do to:setChainState(true) end
+    room:setPlayerMark(pu, "@!!yinyangfish", 0)
+    room:setPlayerMark(ally, "@!!yinyangfish", 2)
+    local hp1, hp2 = target.hp, nextTarget.hp
+    fixture.withSkillRequests(room, id("wu027_1"), { askToChoosePlayers = function() return { ally } end }, function()
+      room:handleUseCardReply(pu, FkTest.ReplyUseSkill(id("wu027_1"), { target }, { a.id, b.id }))
+    end)
+    lu.assertEquals(target.hp, hp1 - 1)
+    lu.assertEquals(nextTarget.hp, hp2 - 1)
+    lu.assertEquals(pu:getMark("@!!yinyangfish"), 1)
+    lu.assertEquals(ally:getMark("@!!yinyangfish"), 2)
+  end)
+end
+
 
 function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
   run(function(room, p, other)

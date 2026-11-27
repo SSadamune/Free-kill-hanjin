@@ -167,5 +167,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__wu027", name = "程普",
+      title = "三朝虎首", kingdom = "wu",
+      hp = 4, gender = "male",
+      guests = {}, companions = { "qiao_heg__em_wu010", "qiao_heg__wu010", "qiao_heg__wu005" },
+      skills = {
+        {
+          id = "qiao__skill_wu027_1", name = "铁脊",
+          text = "你可以将两张牌当目标+1的火【杀】使用，然后选择一名与你势力相同的其他角色，若此火【杀】伤害数大于1，则你与其补充阴阳鱼标记，否则其选择是否用一个武将交换此武将。",
+        },
+        {
+          id = "qiao__skill_wu027_2", name = "醇义",
+          text = "与你势力相同的角色可以将国战标记当【酒】使用。",
+        },
+      },
+    },
   },
 }
