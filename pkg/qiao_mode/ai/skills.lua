@@ -3,6 +3,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Command = require "packages.qiao.pkg.qiao_mode.ai.command"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -171,7 +172,7 @@ function M.active(ai, data)
   end
   if key == "#qiao__skill_wei004_1-choose" or key == "#qiao__skill_wei004_1-invoke" then
     return chooseTargets(ai, function(target)
-      return ai:hostileScore(target, target:getHandcardNum())
+      return Removal.handPressure(ai, target)
     end, extra.num)
   end
   if skill == "discard_skill" or skill == "choose_cards_skill" then
@@ -362,22 +363,20 @@ function M.chosen(ai, data)
     end
     return best
   end
-  if not target or type(areas) ~= "string" or not ai:isEnemy(target) then return end
+  if not target or type(areas) ~= "string" then return end
   local fields = (prompt or ""):split(":")
   local key = fields[1]
-  local removal = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__chasing_near-choose-discard"
+  local obtains = key == "#qiao__chasing_near-choose-prey"
+    or (key == "#AskForChooseCard" and fields[4] == "snatch_skill")
+  local removal = obtains or key == "#qiao__chasing_near-choose-discard"
     or key == "#qiao__skill_qun016_1-card"
     or key == "#qiao_ice_damage_skill-discard" or key == "#qiao_adaptation_discard_equip"
-    or (key == "#AskForChooseCard" and (fields[4] == "dismantlement_skill" or fields[4] == "snatch_skill"))
-  if removal and areas:find("e", 1, true) then
-    local best, bestValue
-    for _, id in ipairs(target:getCardIds("e")) do
-      local card = target:getVirtualEquip(id) or Fk:getCardById(id)
-      local value = Board.equipScore(card)
-      if not bestValue or value > bestValue then best, bestValue = id, value end
-    end
-    if best then return best end
+    or (key == "#AskForChooseCard" and fields[4] == "dismantlement_skill")
+  if removal then
+    local id = Removal.pick(ai, target, areas, obtains)
+    if id then return id end
   end
+  if not ai:isEnemy(target) then return end
   if (removal or key == "#qiao__unexpectation-show" or key == "#qiao__skill_wei004_1-take"
       or key == "#qiao__retinue_skill_xiyuanjun-card")
     and areas:find("h", 1, true) and not target:isKongcheng() then

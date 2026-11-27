@@ -2,6 +2,7 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 
 local M = {}
 
@@ -15,8 +16,14 @@ local converters = {
   peach = { longdan, "qiao__skill_qun001_1" },
 }
 
-local function targetedReply(ai, card)
-  local function score(target) return Cards.scoreTarget(ai, card, target) end
+local function targetedReply(ai, card, cost)
+  local function score(target)
+    if card.trueName == "dismantlement" and cost > 2 then
+      local payoff = Removal.effectValue(ai, card, target)
+      if not payoff or payoff < 5 or payoff <= cost + 0.5 then return end
+    end
+    return Cards.scoreTarget(ai, card, target)
+  end
   local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
   if fixed and (#fixed == 0 or not table.every(fixed, function(target) return score(target) ~= nil end)) then return "" end
   local targetLimit = card.trueName == "slash" and ai.player:getMark("qiao_wu012_tianyi_win-turn") > 0 and 2 or 1
@@ -34,11 +41,12 @@ local function convert(ai, result, budget, useTarget, cuipoIndex)
         return va == vb and a < b or va < vb
       end)
       for _, id in ipairs(cards) do
-        if Cost.value(ai, id) > budget then break end
+        local cost = Cost.value(ai, id)
+        if cost > budget then break end
         ai:selectCard(id, true)
         local card = ai.handler:getUsingCard()
         if card and card.trueName == result and (not cuipoIndex or Cards.matchesCuipo(ai, card, cuipoIndex)) then
-          local reply = useTarget and targetedReply(ai, card) or Requests.reply(ai)
+          local reply = useTarget and targetedReply(ai, card, cost) or Requests.reply(ai)
           if reply ~= "" then return reply end
         end
         ai:unSelectAllTargets()
@@ -67,7 +75,7 @@ local function luanji(ai, cuipoIndex)
 end
 
 function M.play(ai, stage, cuipoIndex)
-  if stage == "disrupt" then return convert(ai, "dismantlement", 2, true, cuipoIndex) end
+  if stage == "disrupt" then return convert(ai, "dismantlement", 7, true, cuipoIndex) end
   if stage == "damage" then return convert(ai, "slash", 3, true, cuipoIndex) or luanji(ai, cuipoIndex) end
   if stage == "delayed" then return convert(ai, "supply_shortage", 2, true, cuipoIndex) end
 end

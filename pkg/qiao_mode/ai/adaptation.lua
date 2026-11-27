@@ -3,6 +3,7 @@ local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 
 local M = {}
 
@@ -120,6 +121,7 @@ end
 function M.targetScore(ai, card, target, prompt, use)
   if prompt == "#qiao_adaptation_remove_target" then
     if Cards.isHarmful(card) and not ai:isEnemy(target) then
+      if Removal.isCard(card) and Removal.effectValue(ai, card, target) then return end
       return (ai:isFriend(target) and 30 or 15) - target.hp
     elseif card.name == "qiao__restore_heartland" then
       return ai:hostileScore(target, 1)

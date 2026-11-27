@@ -1499,4 +1499,75 @@ function Testqiao_robot_ai:testChanglingGivesCheapCardsAndKeepsMostValuableCard(
   end)
 end
 
+function Testqiao_robot_ai:testQixiPaysValuableMaterialToRemoveAllyIndulgence()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local skill = "qiao__skill_wu002_1"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    local material = give(room, player, "qiao__nullification", 7, Card.Spade)
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    local indulgence = give(room, ally, "qiao__indulgence")
+    room:moveCardTo(indulgence, Card.PlayerJudge, ally, fk.ReasonPut)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, skill)
+    lu.assertEquals(action.card.subcards, { material.id })
+    lu.assertEquals(action.targets, { ally.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(indulgence.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testDismantlementRemovesLightningWithAnEnemyRetrial()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(enemy, "qiao__skill_wei002_2", nil, false, true)
+    give(room, enemy, "qiao__jink")
+    local dismantle = give(room, player, "qiao__dismantlement")
+    local lightning = give(room, ally, "qiao__lightning")
+    room:moveCardTo(lightning, Card.PlayerJudge, ally, fk.ReasonPut)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card, dismantle.id)
+    lu.assertEquals(action.targets, { ally.id })
+    room:useCard(room:handleUseCardReply(player, action))
+    lu.assertEquals(room:getCardArea(lightning.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testTuxiPrioritizesEnemyLastHandCard()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei004_1", nil, false, true)
+    local other = room.players[5]
+    for i = 2, #room.players do
+      local p = room.players[i]
+      if not p:isKongcheng() then room:throwCard(p:getCardIds("h"), "test", p, p) end
+    end
+    room:setPlayerProperty(other, "kingdom", enemy.kingdom)
+    local last = give(room, enemy, "qiao__jink")
+    for _ = 1, 4 do give(room, other, "qiao__slash") end
+    local draw = { n = 1 }
+    room.logic:trigger(fk.DrawNCards, player, draw)
+    lu.assertEquals(draw.n, 0)
+    lu.assertEquals(room:getCardOwner(last.id).id, player.id)
+    lu.assertEquals(other:getHandcardNum(), 4)
+  end)
+end
+
+function Testqiao_robot_ai:testFactionAndFormationChangeTrickValue()
+  scenario(function(room, player, enemy, ally, unknown)
+    local emperor = give(room, player, "qiao__threaten_emperor")
+    local indulgence = give(room, player, "qiao__indulgence")
+    local fire = give(room, player, "qiao__burning_camps")
+    for i = 4, #room.players do room:setPlayerProperty(room.players[i], "kingdom", "wei") end
+    lu.assertTrue(Heg.isBigKingdomPlayer(player))
+    lu.assertEquals(Cost.value(player.ai, emperor.id), 8.5)
+    lu.assertEquals(Cost.value(player.ai, indulgence.id), 7)
+    lu.assertEquals(Cost.value(player.ai, fire.id), 4.5)
+    room:setPlayerProperty(ally, "kingdom", enemy.kingdom)
+    lu.assertTrue(Cost.value(player.ai, fire.id) > 4.5)
+    room:setPlayerProperty(enemy, "kingdom", player.kingdom)
+    lu.assertEquals(Cost.value(player.ai, fire.id), 1.5)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

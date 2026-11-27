@@ -1,6 +1,7 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local Heg = require "packages.hegemony.util"
 
 local M = {}
 
@@ -37,6 +38,15 @@ local function baseValue(ai, card)
   if card.trueName == "peach" then return 9 end
   if card.trueName == "nullification" then return 7 end
   if card.trueName == "analeptic" then return 5 end
+  if card.trueName == "threaten_emperor" then return Heg.isBigKingdomPlayer(ai.player) and 8.5 or 3 end
+  if card.trueName == "indulgence" then return Heg.isBigKingdomPlayer(ai.player) and 7 or 6 end
+  if card.trueName == "burning_camps" then
+    local nextPlayer = ai.player:getNextAlive()
+    if not ai:isEnemy(nextPlayer) then return 1.5 end
+    local formation = Heg.getFormationRelation(nextPlayer)
+    local enemies = #table.filter(formation, function(player) return ai:isEnemy(player) end)
+    return 4.5 + math.min(2.5, enemies)
+  end
   if card.trueName == "jink" then return copies(ai, card) > 1 and 3 or 6 end
   if card.trueName == "slash" then
     if copies(ai, card) <= 1 then return 4 end

@@ -1,6 +1,7 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 
 local M = {}
 
@@ -8,9 +9,6 @@ local damage = {
   qiao__slash = true, qiao__fire__slash = true, qiao__thunder__slash = true,
   qiao__ice__slash = true, qiao__unexpectation = true, qiao__duel = true,
   qiao__drowning = true, qiao__fire_attack = true,
-}
-local removal = {
-  qiao__dismantlement = true, qiao__snatch = true, qiao__chasing_near = true,
 }
 local enemyPhase = { qiao__indulgence = true, qiao__supply_shortage = true }
 local enemyGroup = {
@@ -31,20 +29,16 @@ end
 
 function M.isHarmful(card)
   local name = card.name
-  return damage[name] or removal[name] or enemyPhase[name] or enemyGroup[name] or name == "qiao__collateral"
+  return damage[name] or Removal.isCard(card) or enemyPhase[name] or enemyGroup[name] or name == "qiao__collateral"
 end
 
 function M.scoreTarget(ai, card, target, use)
   local name = card.name
   if damage[name] or enemyGroup[name] then
     if M.safeDamage(ai, card, target, use) then return ai:hostileScore(target, 20 - target.hp) end
-  elseif removal[name] then
-    if ai:isEnemy(target) and not target:isNude() then
-      local obtains = name == "qiao__snatch"
-        or (name == "qiao__chasing_near" and ai.player:distanceTo(target) == 1)
-      local tactical = (obtains and 8 or 0) + 2 * #target:getCardIds("e") + target:getHandcardNum()
-      return ai:hostileScore(target, tactical)
-    end
+  elseif Removal.isCard(card) then
+    local value = Removal.effectValue(ai, card, target)
+    if value then return ai:isEnemy(target) and ai:hostileScore(target, value) or value end
   elseif enemyPhase[name] then
     return ai:hostileScore(target, target:getHandcardNum())
   elseif name == "qiao__restore_heartland" then
@@ -171,7 +165,7 @@ local function playSelected(ai, card)
     if ai:okButtonEnabled() then return physicalReply(ai) end
   elseif damage[name] then
     return hurt(ai, card)
-  elseif removal[name] or enemyPhase[name] then
+  elseif Removal.isCard(card) or enemyPhase[name] then
     return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end)
   elseif enemyGroup[name] then
     if Damage.worth(M.groupOutcome(ai, card)) and ai:okButtonEnabled() then return physicalReply(ai) end
@@ -222,7 +216,7 @@ local function priority(ai, card)
   if name == "qiao__fire_attack" and fireSuits(ai, card) < 3 then return end
   if name == "qiao__befriend_attacking" then return 80 end
   if name == "qiao__iron_chain" or name == "qiao__god_salvation" then return 75 end
-  if removal[name] or enemyPhase[name] or name == "qiao__collateral" then return 70 end
+  if Removal.isCard(card) or enemyPhase[name] or name == "qiao__collateral" then return 70 end
   if damage[name] or enemyGroup[name] then return 60 end
 end
 
@@ -231,7 +225,7 @@ local function stageOf(card)
   if name == "qiao__foresight" or name == "qiao__strengthen_state"
     or name == "qiao__restore_heartland" or name == "qiao__befriend_attacking" then return "draw" end
   if name == "qiao__god_salvation" or name == "qiao__iron_chain" then return "support" end
-  if removal[name] or name == "qiao__collateral" then return "disrupt" end
+  if Removal.isCard(card) or name == "qiao__collateral" then return "disrupt" end
   if enemyPhase[name] then return "delayed" end
   if damage[name] or enemyGroup[name] or name == "qiao__analeptic" then return "damage" end
   return "setup"

@@ -2,6 +2,7 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local M = {}
@@ -168,9 +169,8 @@ function M.targetScore(ai, key, use)
   end
   if key == "#qiao__skill_qun016_1-target" or key == "#qiao__skill_qun016_1-invoke" then
     return function(target)
-      if not target:isNude() then
-        return ai:hostileScore(target, target:getHandcardNum() + 2 * #target:getCardIds("e"))
-      end
+      local _, payoff = Removal.pick(ai, target, "he", false)
+      if ai:isEnemy(target) and payoff then return ai:hostileScore(target, payoff) end
     end
   end
   if key == "#qiao__skill_jin012_1-targets" and use and use.card then
