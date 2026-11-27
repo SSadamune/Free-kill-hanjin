@@ -1,6 +1,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skillTest = __dofile("../../../tests/support/skill_test.lua")
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 
 Testqiao_robot_ai = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
@@ -1150,6 +1151,49 @@ function Testqiao_robot_ai:testPlayOrderTakesConsecutiveCuipoOpportunitiesBefore
     lu.assertEquals(followup.card, duel.id)
     room:useCard(room:handleUseCardReply(player, followup))
     lu.assertEquals(room:getCardArea(draw.id), Card.PlayerHand)
+  end)
+end
+
+function Testqiao_robot_ai:testCardValueUsesActualAdaptationAndRelevantSkills()
+  scenario(function(room, player)
+    local ai = player.ai
+    local low = give(room, player, "qiao__slash", 4)
+    Adaptation.setCardEntries(low, { { condition = "kongchao", effect = "draw" } })
+    local alone = Cost.value(ai, low.id)
+    local high = give(room, player, "qiao__slash", 13)
+    lu.assertEquals(alone, 6)
+    lu.assertEquals(Cost.value(ai, low.id), 2)
+
+    local armor = give(room, player, "qiao__eight_diagram")
+    local trick = give(room, player, "qiao__indulgence")
+    local equipmentBase, trickBase = Cost.value(ai, armor.id), Cost.value(ai, trick.id)
+    room:handleAddLoseSkills(player, "qiao__skill_wu008_2|qiao__skill_wu015a_2|qiao__skill_shu007_1|qiao__skill_han010_1",
+      nil, false, true)
+    lu.assertEquals(Cost.value(ai, armor.id), equipmentBase + 2.5)
+    lu.assertEquals(Cost.value(ai, trick.id), trickBase + 1.5)
+    lu.assertTrue(Cost.value(ai, high.id) > Cost.value(ai, low.id))
+  end)
+end
+
+function Testqiao_robot_ai:testZhihengUsesOnlyOneEquippedCardForXiaojiAndKeepsCostlyHand()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu001_1|qiao__skill_wu008_2", nil, false, true)
+    local first = give(room, player, "qiao__blade")
+    local second = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(first, Card.PlayerEquip, player, fk.ReasonPut)
+    room:moveCardTo(second, Card.PlayerEquip, player, fk.ReasonPut)
+    local peach = give(room, player, "qiao__peach")
+    local cheap = give(room, player, "qiao__lightning")
+    local answer = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(answer.card.skill, "qiao__skill_wu001_1")
+    lu.assertTrue(table.contains(answer.card.subcards, cheap.id))
+    local equipment = table.filter(answer.card.subcards, function(id) return room:getCardArea(id) == Card.PlayerEquip end)
+    lu.assertEquals(#equipment, 1)
+    room:handleUseCardReply(player, answer)
+    lu.assertEquals(#player:getCardIds("e"), 1)
+    lu.assertEquals(room:getCardArea(peach.id), Card.PlayerHand)
+    lu.assertEquals(player:getHandcardNum(), 4)
   end)
 end
 

@@ -140,7 +140,10 @@ end
 
 function M.respond(ai, pattern)
   local enabled = ai:getEnabledCards(pattern)
-  table.sort(enabled)
+  table.sort(enabled, function(a, b)
+    local va, vb = Cost.value(ai, a), Cost.value(ai, b)
+    return va == vb and a < b or va < vb
+  end)
   for _, id in ipairs(enabled) do
     ai:selectCard(id, true)
     if not ai:getSelectedSkill() and ai:okButtonEnabled() then return physicalReply(ai) end
@@ -247,12 +250,13 @@ function M.play(ai, stage, cuipoIndex)
     local card = Fk:getCardById(id)
     local value = priority(ai, card)
     if value and (not stage or stageOf(card) == stage) and (not cuipoIndex or M.matchesCuipo(ai, card, cuipoIndex)) then
-      table.insert(candidates, { card = card, value = value })
+      table.insert(candidates, { card = card, value = value, keep = Cost.value(ai, id) })
     end
   end
   table.sort(candidates, function(a, b)
-    if a.value == b.value then return a.card.id < b.card.id end
-    return a.value > b.value
+    if a.value ~= b.value then return a.value > b.value end
+    if a.keep ~= b.keep then return a.keep > b.keep end
+    return a.card.id < b.card.id
   end)
   for _, candidate in ipairs(candidates) do
     local card = candidate.card

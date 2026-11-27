@@ -253,7 +253,8 @@ function M.active(ai, data)
     elseif cancelable and extra.skillName ~= "phase_discard" then
       return
     end
-    if Cost.select(ai, extra.min_num or 1, budget) then return Requests.reply(ai) end
+    local select = skill == "discard_skill" and Cost.discard or Cost.select
+    if select(ai, extra.min_num or 1, budget) then return Requests.reply(ai) end
     return ""
   end
   if key == "#qiao__triblade-invoke" then

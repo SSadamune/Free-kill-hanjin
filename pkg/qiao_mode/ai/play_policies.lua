@@ -132,7 +132,7 @@ function play.qiao__skill_wu008_1(ai)
   local reply = tryCardAndTarget(ai, function(id) return ai.room:getCardArea(id) == Card.PlayerHand end, benefit)
   if reply then return reply end
   ai.handler:updateInteraction("#qiao__skill_wu008_1-discard")
-  if Cost.select(ai, 1, 2) then return Request.targets(ai, benefit) end
+  if Cost.discard(ai, 1, 2) then return Request.targets(ai, benefit) end
 end
 
 function play.qiao__skill_qun007_2(ai)
@@ -177,7 +177,7 @@ end
 
 function play.qiao__skill_wu001_1(ai)
   for _ = 1, ai.player.maxHp do
-    if not Cost.select(ai, 1, 2) then break end
+    if not Cost.discard(ai, 1, 2, true) then break end
   end
   return Request.reply(ai)
 end
