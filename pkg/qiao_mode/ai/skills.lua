@@ -65,7 +65,7 @@ function M.invoke(ai, data)
   local name, prompt = data[1], data[2] or ""
   local fields = prompt:split(":")
   local key, player = fields[1], ai.player
-  if free[key] then return true end
+  if free[key] or key == "#qiao__zhoujun-invoke" then return true end
   if hostile[key] then return ai:isEnemy(M.promptTarget(ai, fields, hostile[key])) end
   if key == "#qiao__skill_han019_2-invoke" then
     local target = M.promptTarget(ai, fields, 3)
@@ -171,6 +171,16 @@ function M.active(ai, data)
     end, extra.num)
   end
   if skill == "discard_skill" or skill == "choose_cards_skill" then
+    if skill == "choose_cards_skill" and key == "#askForPindian" and extra.reason == "qiao__skill_wu012_1" then
+      local pindian = parentData(ai, GameEvent.Pindian)
+      if pindian and pindian.from == ai.player then
+        local cards = ai:getEnabledCards()
+        local id = Play.tianyiCard(ai, cards, true) or Play.tianyiCard(ai, cards)
+        if not id then return "" end
+        ai:selectCard(id, true)
+        return Requests.reply(ai)
+      end
+    end
     if key == "#qiao__skill_shu007_2-card" then
       local frame = Selection.currentCost(ai.player)
       local best, bestScore

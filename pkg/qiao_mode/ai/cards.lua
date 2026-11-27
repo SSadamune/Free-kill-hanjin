@@ -126,7 +126,8 @@ local function hurt(ai, card)
     end
     return
   end
-  return selectTargets(ai, score)
+  local extraSlashTarget = card.trueName == "slash" and ai.player:getMark("qiao_wu012_tianyi_win-turn") > 0
+  return selectTargets(ai, score, extraSlashTarget)
 end
 
 function M.playEnemySlash(ai)

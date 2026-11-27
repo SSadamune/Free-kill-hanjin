@@ -3,6 +3,8 @@ local Request = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
 local Heg = require "packages.hegemony.util"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
+local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 
 local M = {}
 local play = {}
@@ -172,6 +174,32 @@ function M.alliance(ai, cooperation)
   handler:selectSkill(name, { selected = false })
 end
 
+function M.tianyiCard(ai, ids, optional)
+  local best, rank, price
+  for _, id in ipairs(ids) do
+    local card = Fk:getCardById(id)
+    local value = Cost.value(ai, id)
+    if (not optional or (card.trueName ~= "slash" and card.number >= 12 and value <= 5))
+      and (not rank or card.number > rank or (card.number == rank
+        and (value < price or (value == price and id < best)))) then
+      best, rank, price = id, card.number, value
+    end
+  end
+  return best
+end
+
+function play.qiao__skill_wu012_1(ai)
+  if not M.tianyiCard(ai, ai.player:getCardIds("h"), true) then return end
+  local near = Slash.plan(ai, { safe = Cards.safeDamage })
+  local far = Slash.plan(ai, { far = true, safe = Cards.safeDamage })
+  if far.normal + far.free < 2 or (far.normal == near.normal and far.free == near.free
+    and near.limit >= near.normal) then return end
+  return Request.targets(ai, function(target)
+    local count = target:getHandcardNum()
+    if count > 0 and count <= 2 then return ai:hostileScore(target, 5 - count) end
+  end)
+end
+
 function play.qiao__retinue_skill_lujiang_shangjia(ai)
   if ai.player:getHandcardNum() < #ai.player:getCardIds("e") then return Request.reply(ai) end
 end
@@ -209,6 +237,7 @@ local stages = {
   qiao__skill_wu015a_1 = "support", -- 直谏
   qiao__skill_jin013_2 = "disrupt", -- 克清
   qiao__skill_qun018_1 = "disrupt", -- 祸水
+  qiao__skill_wu012_1 = "attack_prep", -- 天义
   qiao__skill_wei012_1 = "damage", -- 强袭
   qiao__skill_qun007_2 = "damage", -- 乱武
   qiao__retinue_skill_qingzhou_jingrui = "damage",

@@ -19,7 +19,8 @@ local function targetedReply(ai, card)
   local function score(target) return Cards.scoreTarget(ai, card, target) end
   local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
   if fixed and (#fixed == 0 or not table.every(fixed, function(target) return score(target) ~= nil end)) then return "" end
-  return Requests.targets(ai, score)
+  local targetLimit = card.trueName == "slash" and ai.player:getMark("qiao_wu012_tianyi_win-turn") > 0 and 2 or 1
+  return Requests.targets(ai, score, targetLimit)
 end
 
 local function convert(ai, result, budget, useTarget, cuipoIndex)

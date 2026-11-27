@@ -1366,4 +1366,68 @@ function Testqiao_robot_ai:testDrawProfilePaysAnOrdinaryCardForZhiheng()
   end)
 end
 
+function Testqiao_robot_ai:testSlashValueTracksPaoxiaoCrossbowAndFiniteBonuses()
+  scenario(function(room, player)
+    local slash = give(room, player, "qiao__slash")
+    give(room, player, "qiao__slash")
+    lu.assertEquals(Cost.value(player.ai, slash.id), 2)
+    room:handleAddLoseSkills(player, "qiao__skill_shu003_1", nil, false, true)
+    lu.assertEquals(Cost.value(player.ai, slash.id), 3.5)
+    room:handleAddLoseSkills(player, "-qiao__skill_shu003_1", nil, false, true)
+    local crossbow = give(room, player, "qiao__crossbow")
+    room:moveCardTo(crossbow, Card.PlayerEquip, player, fk.ReasonPut)
+    lu.assertEquals(Cost.value(player.ai, slash.id), 3.5)
+    room:throwCard(crossbow.id, "test", player, player)
+    room:setPlayerMark(player, "qiao_zhoujun_slash", 1)
+    lu.assertEquals(Cost.value(player.ai, slash.id), 3.5)
+    room:setPlayerMark(player, "qiao_zhoujun_slash", 0)
+    lu.assertEquals(Cost.value(player.ai, slash.id), 2)
+  end)
+end
+
+function Testqiao_robot_ai:testTianyiRequiresTwoSlashesAndPaysWithHighNonSlash()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    local skill = "qiao__skill_wu012_1"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    for i = 2, #room.players do
+      local p = room.players[i]
+      if not p:isKongcheng() then room:throwCard(p:getCardIds("h"), "test", p, p) end
+    end
+    give(room, enemy, "qiao__jink", 2)
+    local payment = give(room, player, "qiao__lightning", 13, Card.Club)
+    local slash = give(room, player, "qiao__slash", 4)
+    lu.assertEquals(reply(player, "PlayCard", {}).card, slash.id)
+    local other = give(room, player, "qiao__slash", 13)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, skill)
+    lu.assertEquals(action.targets, { enemy.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(player:getMark("qiao_wu012_tianyi_win-turn"), 1)
+    lu.assertEquals(room:getCardArea(payment.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(other.id), Card.PlayerHand)
+  end)
+end
+
+function Testqiao_robot_ai:testZhoujunRespondsToRealPreparationWithUsefulSlashCapacity()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local seal = give(room, player, "qiao__zhoujun_lingbingyin")
+    room:moveCardTo(seal, Card.PlayerEquip, player, fk.ReasonPut)
+    room:setPlayerProperty(player, "phase", Player.Start)
+    local function prepare()
+      room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Start })
+    end
+    prepare()
+    lu.assertTrue(player:getMark("qiao_zhoujun_draw") > 0)
+    lu.assertTrue(player:getMark("qiao_zhoujun_slash") <= 0)
+    room.logic:trigger(fk.TurnEnd, player, {})
+    for _ = 1, 3 do give(room, player, "qiao__slash") end
+    prepare()
+    lu.assertEquals(player:getMark("qiao_zhoujun_slash"), 2)
+    local slash = Fk:cloneCard("qiao__slash")
+    lu.assertEquals(slash:getSkill(player):getMaxUseTime(player, Player.HistoryPhase, slash), 3)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

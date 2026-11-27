@@ -1,5 +1,6 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
+local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 
 local M = {}
 
@@ -37,7 +38,11 @@ local function baseValue(ai, card)
   if card.trueName == "nullification" then return 7 end
   if card.trueName == "analeptic" then return 5 end
   if card.trueName == "jink" then return copies(ai, card) > 1 and 3 or 6 end
-  if card.trueName == "slash" then return copies(ai, card) > 1 and 2 or 4 end
+  if card.trueName == "slash" then
+    if copies(ai, card) <= 1 then return 4 end
+    local capacity = Slash.cardCapacity(ai, card)
+    return capacity and capacity > 1 and 3.5 or 2
+  end
   if card.type == Card.TypeEquip then
     return ai.player:hasEmptyEquipSlot(card.sub_type) and 4 or 1
   end

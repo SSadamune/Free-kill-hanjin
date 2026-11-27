@@ -9,6 +9,7 @@ local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
+local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -87,7 +88,8 @@ function Robot:handlePlayCard()
     if stage == "cheap_recast" then
       reply = Cards.recast(self, true)
     else
-      reply = Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
+      if stage == "damage" then reply = Skills.play(self, "attack_prep") end
+      reply = reply or Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
     end
     if reply then return reply end
     if stage == "draw" then
@@ -157,6 +159,13 @@ function Robot:handleAskForResponseCard(data)
     return reply
   end
   return SmartAI.handleAskForResponseCard(self, data)
+end
+
+function Robot:handleCustomDialog(data)
+  local component = data.component
+  if component and component.url == "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml" then
+    return Slash.sealOption(self, component.prop, Cards.safeDamage)
+  end
 end
 
 function Robot:handleAskForArrangeCards(data)
