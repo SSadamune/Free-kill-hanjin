@@ -151,5 +151,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__wei044", name = "程昱",
+      title = "泰山捧日", kingdom = "wei",
+      hp = 3, gender = "male",
+      guests = {}, companions = { "qiao_heg__wei013" },
+      skills = {
+        {
+          id = "qiao__skill_wei044_1", name = "胆戾",
+          text = "当你受到伤害后，你可以选择一项：1.摸牌至与来源相同（至多摸五张）；2.移除副将并回复1点体力，然后来源弃置手牌至与你相同。",
+        },
+        {
+          id = "qiao__skill_wei044_2", name = "脱先",
+          text = "每回合限一次，与你势力相同的角色进入濒死时，你可以令另一名与你势力相同的角色选择是否用一个武将交换其一个武将。",
+        },
+      },
+    },
   },
 }

@@ -16,3 +16,4 @@
 | SHU048 | [董允](shi-vector/shu048.md) | [秉正](shi-vector/shu048.md#shu048-1)、[舍宴](shi-vector/shu048.md#shu048-2) |
 | SHU091 | [杨仪](shi-vector/shu091.md) | [度断](shi-vector/shu091.md#shu091-1)、[孤忿](shi-vector/shu091.md#shu091-2) |
 | WEI035 | [陈群](shi-vector/wei035.md) | [品第](shi-vector/wei035.md#wei035-1)、[法恩](shi-vector/wei035.md#wei035-2) |
+| WEI044 | [程昱](shi-vector/wei044.md) | [胆戾](shi-vector/wei044.md#wei044-1)、[脱先](shi-vector/wei044.md#wei044-2) |

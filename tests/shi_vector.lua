@@ -202,6 +202,30 @@ function T:testSuolingCanGiveSecondBlackCardAndChooseYuanweiAsSlashTarget()
   end)
 end
 
+function T:testTuoxianLetsChosenAllyDecideWhichPositionsToExchange()
+  run(function(room, cheng, dying, chooser)
+    asGeneral(room, cheng, "wei044")
+    local main = dying.general
+    local other = chooser.deputyGeneral
+    local decisions = 0
+    fixture.withSkillRequests(room, id("wei044_2"), {
+      askToChoosePlayers = function() return { chooser } end,
+      askToChoice = function(_, who, params)
+        lu.assertTrue(who == chooser)
+        decisions = decisions + 1
+        local key = "qiao_shi_exchange:::" .. other .. ":" .. main
+        lu.assertTrue(table.contains(params.choices, key))
+        return key
+      end,
+    }, function()
+      room.logic:trigger(fk.EnterDying, dying, { who = dying })
+    end)
+    lu.assertEquals(decisions, 1)
+    lu.assertEquals(dying.general, other)
+    lu.assertEquals(chooser.deputyGeneral, main)
+  end)
+end
+
 function T:testBingzhengResolvesOnlyAtDongyunsTurnEnd()
   run(function(room, dong, other)
     asGeneral(room, dong, "shu048")
