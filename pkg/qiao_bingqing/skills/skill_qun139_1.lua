@@ -1,6 +1,7 @@
 local skill = fk.CreateSkill { name = "qiao__skill_qun139_1" }
 local Markers = require "packages.qiao.pkg.qiao_mode.rules.marker_cards"
 local pile = "qiao_nu_er"
+skill.qiao_exchange_marks = { "qiao_xiewei_slash-round", "qiao_xiewei_jink-round" }
 Markers.register(skill.name, pile)
 local function names(p)
   local choices = {}

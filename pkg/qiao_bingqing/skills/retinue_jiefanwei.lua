@@ -1,6 +1,7 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.nu"
 local skill = fk.CreateSkill { name = "qiao__retinue_skill_jiefanwei", tags = { Skill.Limited }, max_game_use_time = math.huge }
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local PhaseUses = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 local AVAILABLE = "qiao_jiefanwei_available"
 local function unused(p)
   return table.filter(R.instancesForSkill(p, skill.name), function(instance) return (instance.uses or 0) == 0 end)
@@ -26,6 +27,9 @@ local function refreshOptions(p, scope)
     local root = sk:getSkeleton()
     if root and sk.name == root.name and sk:isPlayerSkill(p) then
       local used = p:usedSkillTimes(root.name, scope) > 0
+      if scope == Player.HistoryPhase then
+        used = used or PhaseUses.publicUsed(p, root.name) > 0
+      end
       local spent = root.qiaoLimitedUseMark and p:getMark(root.qiaoLimitedUseMark) ~= 0
       if scope == Player.HistoryGame and root.name == skill.name and R.countForSkill(p, skill.name) > 0 then
         used = spentInstance(p) ~= nil
@@ -59,6 +63,10 @@ skill:addEffect("active", {
     if #names == 0 then return end
     local selected = room:askToChoice(p, { choices = names, skill_name = skill.name })
     if not table.contains(names, selected) then return end
+    if scope == Player.HistoryPhase and PhaseUses.restorePhaseUse(to, selected) then
+      to:setSkillUseHistory(selected, PhaseUses.publicUsed(to, selected), scope)
+      return
+    end
     to:clearSkillHistory(selected, scope)
     local spentMark = Fk.skill_skels[selected].qiaoLimitedUseMark
     if scope == Player.HistoryGame and spentMark then room:setPlayerMark(to, spentMark, 0) end

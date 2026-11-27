@@ -8,11 +8,20 @@ skill:addEffect("active", {
     local p, to, first = effect.from, effect.tos[1], effect.cards[1]
     local second = room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name })
     local before = to:inMyAttackRange(p)
+    local parent, eventId = room.logic:getCurrentEvent(), room.logic.current_event_id
     room:moveCards(
       { ids = { first }, from = p, toArea = Card.DiscardPile, moveReason = fk.ReasonDiscard, proposer = p, skillName = skill.name },
       { ids = { second }, from = to, toArea = Card.DiscardPile, moveReason = fk.ReasonDiscard, proposer = p, skillName = skill.name })
-    if not S.present(p) or (Fk:getCardById(first).trueName ~= "jink" and Fk:getCardById(second).trueName ~= "jink"
-      and not (before and not to:inMyAttackRange(p))) then return end
+    if not S.present(p) then return end
+    local discard = parent:searchEvents(GameEvent.MoveCards, 1, function(e)
+      return e.id > eventId and e.parent == parent
+    end)[1]
+    if not discard or discard.interrupted then return end
+    local discardedJink = table.find(discard.data, function(move)
+      return move.skillName == skill.name and move.moveReason == fk.ReasonDiscard and move.toArea == Card.DiscardPile
+        and table.find(move.moveInfo, function(info) return info.beforeCard.trueName == "jink" end)
+    end)
+    if not discardedJink and not (before and not to:inMyAttackRange(p)) then return end
     local available = {}
     room.logic:getEventsOfScope(GameEvent.MoveCards, 1, function(e)
       for _, m in ipairs(e.data) do

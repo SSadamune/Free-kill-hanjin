@@ -1,5 +1,7 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.nu"
 local skill = fk.CreateSkill { name = "qiao__skill_han055_2", tags = { Skill.Compulsory } }
+local recovered = "qiao_zhouyou-turn"
+skill.qiao_exchange_marks = { recovered }
 skill:addEffect(fk.EnterDying, {
   can_trigger = function(self, event, target, p)
     return p == target and p:hasSkill(skill.name) and not p:isNude() and #p.room:getPresentPlayers() > 1
@@ -18,8 +20,8 @@ skill:addEffect(fk.EnterDying, {
       end
     end
     if #moves > 0 then p.room:moveCards(table.unpack(moves)) end
-    if total == 3 and p:getMark("qiao_zhouyou-turn") == 0 then
-      p.room:setPlayerMark(p, "qiao_zhouyou-turn", 1)
+    if total == 3 and p:getMark(recovered) == 0 then
+      p.room:setPlayerMark(p, recovered, 1)
       if not p.dead then p.room:recover { who = p, num = 1, recoverBy = p, skillName = skill.name } end
     end
   end,

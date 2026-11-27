@@ -10,4 +10,6 @@
 
 多份限定技分别记录消耗；给自己回血后复原出牌阶段限一次的技能，给别人回血时复原对方的限定技。 [qiao__retinue_skill_jiefanwei](../../../../../pkg/qiao_bingqing/skills/retinue_jiefanwei.lua)
 
-[统领登记](../../../../../pkg/qiao_bingqing/data/nu.lua) · [原生回归](../../../../../tests/nu_generals.lua#L1002)
+出牌阶段限一次的翼从效果按实例复原。持有两份已用的【青州精锐】时，一次复原使其中一份可再次发动，并同步客户端的公开计数。
+
+[统领登记](../../../../../pkg/qiao_bingqing/data/nu.lua) · [原生回归](../../../../../tests/nu_generals.lua#L567)

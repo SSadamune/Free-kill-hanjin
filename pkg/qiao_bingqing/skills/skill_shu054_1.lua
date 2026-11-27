@@ -1,4 +1,6 @@
 local skill = fk.CreateSkill { name = "qiao__skill_shu054_1" }
+local used = "qiao_dianjun-turn"
+skill.qiao_exchange_marks = { used }
 skill:addEffect("viewas", {
   pattern = "slash", handly_pile = false,
   card_filter = function(self, p, id, selected) return #selected == 0 and table.contains(p:getCardIds("h"), id) end,
@@ -9,11 +11,11 @@ skill:addEffect("viewas", {
     card.skillName = skill.name
     return card
   end,
-  enabled_at_play = function(self, p) return p:getMark("qiao_dianjun-turn") == 0 end,
-  enabled_at_response = function(self, p, response) return not response and p:getMark("qiao_dianjun-turn") == 0 end,
+  enabled_at_play = function(self, p) return p:getMark(used) == 0 end,
+  enabled_at_response = function(self, p, response) return not response and p:getMark(used) == 0 end,
   before_use = function(self, p)
-    if p:getMark("qiao_dianjun-turn") ~= 0 then return skill.name end
-    p.room:setPlayerMark(p, "qiao_dianjun-turn", 1)
+    if p:getMark(used) ~= 0 then return skill.name end
+    p.room:setPlayerMark(p, used, 1)
     p.room:loseHp(p, 1, skill.name)
     if p.dead then return skill.name end
   end,

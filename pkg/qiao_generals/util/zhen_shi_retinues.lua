@@ -15,7 +15,7 @@
 -- 公开数组只含数字，不含实例 id、兵种、位置或来源；暗置生命周期仍由正式
 -- 接入处理，本模块不自行广播暗实例。
 --
--- 同步时机：每次 spend；以及 retinue_instances 的 grant/remove 变更通知
+-- 同步时机：每次消耗或复原；以及 retinue_instances 的 grant/remove 变更通知
 -- （本文件注册监听）。阶段结束由引擎清理 -phase 标记（room.lua:4182-4198）。
 
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
@@ -178,6 +178,21 @@ function M.spend(player, instance, skillName)
   player.room:setTag(M.TAG, reg)
   publishUsed(player, skillName)
   R.recordUse(instance)
+  return true
+end
+
+--- 复原同名技能中一份已发动的翼从实例，只清本阶段次数。
+function M.restorePhaseUse(player, skillName)
+  local instance = table.find(R.instancesForSkill(player, skillName), function(candidate)
+    return M.phaseUsed(player, candidate) > 0
+  end)
+  if not instance then return false end
+
+  local room = player.room
+  local reg = room:getTag(M.TAG)
+  reg[player.id][instance.id] = nil
+  room:setTag(M.TAG, reg)
+  publishUsed(player, skillName)
   return true
 end
 

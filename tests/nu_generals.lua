@@ -3,6 +3,7 @@ local fixture = __dofile("../../../tests/support/skill_test.lua")
 local D = require "packages.qiao.pkg.qiao_bingqing.data.nu"
 local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+local PhaseUses = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
 local E = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local function id(code) return "qiao__skill_" .. code end
 local function run(fn)
@@ -30,13 +31,14 @@ end
 local function grant(p, name, pos)
   return R.grant(p, { general = "qiao_heg__retinue_" .. name, skill = "qiao__retinue_skill_" .. name, position = pos or "main" })
 end
-local function runStartPhase(room, current, name, action, timing)
+local function runTurnWindow(room, current, name, action, timing, phase)
+  phase = phase or Player.Start
   local probe = fk.CreateSkill { name = name }
   local ran = false
   probe:addEffect(timing or fk.EventPhaseStart, {
     global = true,
     can_refresh = function(self, event, target, p)
-      return not ran and p == current and target == current and (timing == fk.TurnEnd or p.phase == Player.Start)
+      return not ran and p == current and target == current and (timing == fk.TurnEnd or p.phase == phase)
     end,
     on_refresh = function()
       ran = true
@@ -46,7 +48,7 @@ local function runStartPhase(room, current, name, action, timing)
   local sk = probe:createSkill()
   Fk.skills[name] = sk
   room:addSkill(sk)
-  GameEvent.Turn:create(TurnData:new(current, "game_rule", { Player.Start })):exec()
+  GameEvent.Turn:create(TurnData:new(current, "game_rule", { phase })):exec()
   lu.assertTrue(ran)
 end
 
@@ -102,6 +104,9 @@ function T:testLizhiDrawThresholdAndRealDistributionOnDying()
     }, function() room.logic:trigger(fk.EnterDying, tao, { who = tao }) end)
     lu.assertEquals(tao.hp, 1)
     lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
+    assert(E.exchange(room, { player = tao }, { player = a }))
+    lu.assertEquals(tao:getMark("qiao_zhouyou-turn"), 0)
+    lu.assertEquals(a:getMark("qiao_zhouyou-turn"), 1)
   end)
 end
 function T:testGongqiChangesRangeAndDiscardsOpponentsCard()
@@ -121,7 +126,7 @@ function T:testGongqiChangesRangeAndDiscardsOpponentsCard()
   end)
 end
 function T:testDianjunPaysHealthAndSealsSecondConversion()
-  run(function(room, zhang, to)
+  run(function(room, zhang, to, ally)
     general(room, zhang, "shu054")
     local material = card(room, zhang, "qiao__jink")
     local hp, victimHp = zhang.hp, to.hp
@@ -132,6 +137,9 @@ function T:testDianjunPaysHealthAndSealsSecondConversion()
     lu.assertEquals(to.hp, victimHp - 1)
     lu.assertEquals(zhang:getMark("qiao_dianjun-turn"), 1)
     lu.assertEquals(room:getCardArea(material.id), Card.DiscardPile)
+    assert(E.exchange(room, { player = zhang }, { player = ally }))
+    lu.assertEquals(zhang:getMark("qiao_dianjun-turn"), 0)
+    lu.assertEquals(ally:getMark("qiao_dianjun-turn"), 1)
   end)
 end
 function T:testKangruiChangesNextDamageAndThenMaxHandBase()
@@ -160,6 +168,9 @@ function T:testXieweiPlacesPhysicalBaitAndMovesWithGuanhai()
     lu.assertNotNil(E.exchange(room, { player = guan }, { player = ally }))
     lu.assertEquals(ally:getPile("qiao_nu_er"), { material.id })
     lu.assertEquals(#guan:getPile("qiao_nu_er"), 0)
+    lu.assertEquals(guan:getMark("qiao_xiewei_slash-round"), 0)
+    lu.assertEquals(ally:getMark("qiao_xiewei_slash-round"), 1)
+    lu.assertEquals(ally:getMark("qiao_xiewei_jink-round"), 0)
   end)
 end
 function T:testJinuGivesHandlyCardsAndSurvivesExchange()
@@ -186,6 +197,42 @@ function T:testShizhongSingleTargetStillDrawsOnce()
     lu.assertEquals(li:getHandcardNum(), n + 1)
   end)
 end
+function T:testShanjiUsesTheCardsActuallyDiscardedAfterWanwei()
+  run(function(room, he, target, bian)
+    general(room, he, "wu048")
+    fixture.installDualGenerals(room, bian, {
+      main = "qiao_heg__wei022", deputy = "qiao_test__wei_2", kingdom = "wei",
+    })
+    room:setPlayerProperty(target, "kingdom", "wei")
+    local name = id("wu048_1")
+    for _, replacementIsJink in ipairs({ false, true }) do
+      local selected = card(room, target, replacementIsJink and "qiao__slash" or "qiao__jink").id
+      local replacement = card(room, bian, replacementIsJink and "qiao__jink" or "qiao__slash").id
+      local cost = card(room, he, "qiao__slash").id
+      runTurnWindow(room, he, "qiao_test_shanji_wanwei_" .. tostring(replacementIsJink), function()
+        local old = card(room, target, "qiao__peach").id
+        room:throwCard(old, "test", target, target)
+        local obtains = 0
+        fixture.withSkillRequests(room, id("wei022_1"), {
+          askToCards = function() return { replacement } end,
+        }, function()
+          fixture.withSkillRequests(room, name, {
+            askToChooseCard = function(_, _, params)
+              if params.target == target then return selected end
+              obtains = obtains + 1
+              return old
+            end,
+          }, function() playSkill(room, he, name, { target }, { cost }) end)
+        end)
+        lu.assertIs(room:getCardOwner(selected), target)
+        lu.assertEquals(room:getCardArea(replacement), Card.DiscardPile)
+        lu.assertEquals(obtains, replacementIsJink and 1 or 0)
+        lu.assertEquals(room:getCardOwner(old) == he, replacementIsJink)
+      end, nil, Player.Play)
+    end
+  end)
+end
+
 function T:testHuajiaCountsTwoDanyangInstancesOnOnePlayerOnce()
   run(function(room, he, other)
     general(room, he, "wu048")
@@ -463,7 +510,7 @@ function T:testDuruiBoostsSlashAgainstOnlyWoundedSurvivor()
         return { from = p, tos = { victim }, card = slash, extraUse = true }
       end,
     }, function()
-      runStartPhase(room, ally, "qiao_test_nu_durui_turn", function()
+      runTurnWindow(room, ally, "qiao_test_nu_durui_turn", function()
         room:damage { from = ally, to = victim, damage = 2 }
       end)
     end)
@@ -517,6 +564,35 @@ function T:testJiefanweiRefreshesGongqiForASecondUse()
   end)
 end
 
+function T:testJiefanweiRestoresOneQingzhouInstanceAndPublishesItsCount()
+  run(function(room, p, target)
+    local jiefan, qingzhou = "qiao__retinue_skill_jiefanwei", "qiao__retinue_skill_qingzhou_jingrui"
+    grant(p, "jiefanwei")
+    grant(p, "qingzhou_jingrui", "main")
+    grant(p, "qingzhou_jingrui", "deputy")
+    for _, player in ipairs(room.players) do room:throwCard(player:getCardIds("h"), "test", player, player) end
+    for _ = 1, 2 do playSkill(room, p, qingzhou, { target }, {}) end
+    lu.assertEquals(PhaseUses.publicUsedList(p, qingzhou), { 1, 1 })
+    lu.assertFalse(Fk.skills[qingzhou]:canUse(p))
+
+    p.hp = p.maxHp - 1
+    fixture.withSkillRequests(room, jiefan, {
+      askToChoice = function(_, _, params)
+        lu.assertTrue(table.contains(params.choices, qingzhou))
+        return qingzhou
+      end,
+    }, function()
+      playSkill(room, p, jiefan, { p }, { card(room, p, "qiao__slash").id, card(room, p, "qiao__slash").id })
+    end)
+    lu.assertEquals(p.hp, p.maxHp)
+    lu.assertEquals(PhaseUses.publicUsedList(p, qingzhou), { 0, 1 })
+    lu.assertTrue(Fk.skills[qingzhou]:canUse(p))
+    playSkill(room, p, qingzhou, { target }, {})
+    lu.assertEquals(PhaseUses.publicUsedList(p, qingzhou), { 1, 1 })
+    lu.assertFalse(Fk.skills[qingzhou]:canUse(p))
+  end)
+end
+
 function T:testBajiaLossOnlyPenalizesInsideAPhase()
   run(function(room, yang, friend, current)
     general(room, yang, "han043")
@@ -535,7 +611,7 @@ function T:testBajiaLossOnlyPenalizesInsideAPhase()
         room:throwCard(armour, "test", yang, yang)
         lu.assertEquals(yang.hp, hp)
       end
-      if inside then runStartPhase(room, current, "qiao_test_nu_bajia_phase", lose) else lose() end
+      if inside then runTurnWindow(room, current, "qiao_test_nu_bajia_phase", lose) else lose() end
       lu.assertEquals(yang.hp, inside and hp - 1 or hp)
       lu.assertEquals(yang:hasShownSkill(id("han043_1")), not inside)
     end
@@ -558,7 +634,7 @@ function T:testSizhenJinkResponseAllowsDistantSlashAtPhaseEnd()
         return { from = p, tos = { far }, card = slash }
       end,
     }, function()
-      runStartPhase(room, current, "qiao_test_nu_sizhen_jink", function()
+      runTurnWindow(room, current, "qiao_test_nu_sizhen_jink", function()
         FkTest.setNextReplies(cao, { { card = jink.id } })
         room:useCard { from = current, tos = { cao }, card = Fk:cloneCard("qiao__slash") }
         lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
@@ -577,7 +653,7 @@ function T:testSuweiJudgesTwiceUsesTwoColorsAgainstDistantCurrentPlayer()
     local hp = current.hp
     lu.assertFalse(p:inMyAttackRange(current))
     fixture.withSkillRequests(room, name, { askToSkillInvoke = function() return true end }, function()
-      runStartPhase(room, current, "qiao_test_nu_suwei_turn", function()
+      runTurnWindow(room, current, "qiao_test_nu_suwei_turn", function()
         for _, equip in ipairs({ "qiao__eight_diagram", "qiao__dark_armor" }) do
           room:useCard { from = p, tos = { p }, card = card(room, p, equip) }
         end
@@ -713,7 +789,7 @@ function T:testBajiaHiddenDeputyMayRevealOnLossAndTakeNewYuBeforePayment()
     yang:hideGeneral(true)
     yang:prelightSkill(bajia, true)
     local hp = yang.hp
-    runStartPhase(room, ally, "qiao_test_bajia_hidden_deputy", function()
+    runTurnWindow(room, ally, "qiao_test_bajia_hidden_deputy", function()
       fixture.withSkillRequests(room, bajia, {
         askToChoosePlayers = function() return { source } end,
         askToChooseCard = function() return armour.id end,
@@ -744,7 +820,7 @@ function T:testBajiaHiddenDeclineOrInvalidityDoesNotSchedulePayment()
       yang:hideGeneral(false)
       yang:prelightSkill(bajia, true)
       if i == 2 then room:invalidateSkill(yang, bajia) end
-      runStartPhase(room, current, "qiao_test_bajia_pass_" .. i, function()
+      runTurnWindow(room, current, "qiao_test_bajia_pass_" .. i, function()
         local asks = withBajiaReveal(room, yang, false, function() room:throwCard(equip, "test", yang, yang) end)
         lu.assertEquals(asks, i == 1 and 1 or 0)
         lu.assertEquals(equip:getMark("@qiao_bajia_yu"), 0)
@@ -770,7 +846,7 @@ function T:testBajiaTwoYuLostInOneMoveOnlyChargeTheirOwner()
     room:moveCardIntoEquip(source, otherYu.id)
     pickYu(room, ally, source, otherYu)
     local hp, allyHp = yang.hp, ally.hp
-    runStartPhase(room, ally, "qiao_test_bajia_batch_loss", function()
+    runTurnWindow(room, ally, "qiao_test_bajia_batch_loss", function()
       room:throwCard({ sword.id, armour.id }, "test", yang, yang)
       lu.assertEquals(#Yu.cards(yang), 0)
       lu.assertEquals(yang.hp, hp)
@@ -795,7 +871,7 @@ function T:testBajiaPhaseOutsideRevealHasNoPaymentInNextPhase()
     yang:hideGeneral(false)
     yang:prelightSkill(bajia, true)
     local hp = yang.hp
-    runStartPhase(room, ally, "qiao_test_bajia_turn_end", function()
+    runTurnWindow(room, ally, "qiao_test_bajia_turn_end", function()
       fixture.withSkillRequests(room, bajia, {
         askToChoosePlayers = function() return { source } end,
         askToChooseCard = function() return armour.id end,
@@ -806,7 +882,7 @@ function T:testBajiaPhaseOutsideRevealHasNoPaymentInNextPhase()
     end, fk.TurnEnd)
     lu.assertEquals(yang.general, Yu.general)
     lu.assertEquals(yang:getTableMark(Yu.mark), { armour.id })
-    runStartPhase(room, ally, "qiao_test_bajia_outside", function() end)
+    runTurnWindow(room, ally, "qiao_test_bajia_outside", function() end)
     lu.assertEquals(yang.hp, hp)
     lu.assertEquals(yang.general, Yu.general)
   end)
