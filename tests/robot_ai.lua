@@ -1254,6 +1254,9 @@ function Testqiao_robot_ai:testJianxiongCanSaveSlashAndEquipmentButAvoidsLethalD
     room:setPlayerProperty(player, "hp", 4)
     room:setPlayerProperty(player, "shield", 0)
     local slash = give(room, player, "qiao__slash")
+    -- Both Jianxiong draws must preserve the original Slash's unique-card value.
+    local draws = { room:printCard("qiao__peach", Card.Heart, 3).id, room:printCard("qiao__peach", Card.Heart, 4).id }
+    room:moveCards { ids = draws, toArea = Card.DrawPile, drawPilePosition = 1, moveReason = fk.ReasonPut }
     local function savage()
       local card = give(room, enemy, "qiao__savage_assault")
       room:useCard { from = enemy, tos = { player }, card = card }
