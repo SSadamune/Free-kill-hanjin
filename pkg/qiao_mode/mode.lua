@@ -505,7 +505,7 @@ function M.create(base, name)
     })
   end
   table.insert(settings, 1, W.PreferenceGroup(ruleSettings))
-  local whitelist = { "qiao_generals", "qiao_cards", "qiao_mode" }
+  local whitelist = { "qiao_generals", "qiao_bingqing", "qiao_cards", "qiao_mode" }
   return fk.CreateGameMode {
     name = name, minPlayer = locked and 3 or base.minPlayer, maxPlayer = locked and 4 or base.maxPlayer,
     main_mode = base.main_mode, rule = Commander.RULE_SKILL, logic = getLogic,

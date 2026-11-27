@@ -1082,6 +1082,8 @@ function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
   end
 
   local room = freshRoom()
+  -- 模拟仅由模式禁用的包，兵情篇现已进入汉晋正式选将池。
+  table.insertIfNeed(room.disabled_packs, "qiao_bingqing")
   setupJin(room)
   local ok
   FkTest.runInRoom(function()
