@@ -9,6 +9,7 @@
 | EM(JIN001) | [君司马炎](nu/em-jin001.md) | [太康](nu/em-jin001.md#em-jin001-1)、[採幸](nu/em-jin001.md#em-jin001-2)、[鼎沸](nu/em-jin001.md#em-jin001-3)、[诸王敕封册与赐](nu/em-jin001.md#em-jin001-banner)（派生／标记） |
 | HAN043 | [杨奉&韩暹](nu/han043.md) | [拔驾](nu/han043.md#han043-1) |
 | HAN055 | [陶谦](nu/han055.md) | [厉治](nu/han055.md#han055-1)、[州忧](nu/han055.md#han055-2)、[丹阳青巾](nu/han055.md#retinue-danyang-qingjin)（统领） |
+| JIN067 | [李秀](nu/jin067.md) | [替军](nu/jin067.md#jin067-1)、[誓众](nu/jin067.md#jin067-2) |
 
 ## 统领与翼从
 

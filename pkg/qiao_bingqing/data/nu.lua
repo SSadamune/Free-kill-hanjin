@@ -19,6 +19,15 @@ M.generals = {
       { id = "qiao__skill_han055_2", name = "州忧", text = "锁定技，当你进入濒死时，你将三张牌交给其他角色（不足则全给），若你本回合首次以此法给出了三张牌，你回复1点体力。" },
     },
   },
+  {
+    id = "qiao_heg__jin067", name = "李秀", title = "婴城自守",
+    kingdom = "jin", hp = 4, gender = "female",
+    guests = {}, companions = {},
+    skills = {
+      { id = "qiao__skill_jin067_1", name = "替军", text = "判定阶段开始前，你可以将场上一张延时锦囊牌移至你判定区，或将一张装备牌置入任意角色装备区。若如此做，此阶段改为出牌阶段。" },
+      { id = "qiao__skill_jin067_2", name = "誓众", text = "每阶段限一次，你使用【杀】时可以多指定至多X个目标（X为你场上的牌数），若目标角色场上牌数各不相同，你摸等同目标数的牌。" },
+    },
+  },
 }
 M.retinues = {
   {

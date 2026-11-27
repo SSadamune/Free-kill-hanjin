@@ -79,6 +79,16 @@ function T:testLizhiDrawThresholdAndRealDistributionOnDying()
     lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
   end)
 end
+function T:testShizhongSingleTargetStillDrawsOnce()
+  run(function(room, li, target)
+    general(room, li, "jin067")
+    local n = li:getHandcardNum()
+    fixture.withSkillRequests(room, id("jin067_2"), { askToSkillInvoke = function() return true end }, function()
+      for _ = 1, 2 do room:useCard { from = li, tos = { target }, card = Fk:cloneCard("qiao__slash") } end
+    end)
+    lu.assertEquals(li:getHandcardNum(), n + 1)
+  end)
+end
 function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
   run(function(room, yang, friend, victim)
     general(room, yang, "han043")
@@ -102,6 +112,24 @@ function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
 end
 
 
+function T:testTijunReplacesExistingWeaponAndChangesOnlyThatPhase()
+  run(function(room, li, target)
+    general(room, li, "jin067")
+    local old = card(room, target, "qiao__spear")
+    local new = card(room, li, "qiao__blade")
+    room:moveCardIntoEquip(target, old.id)
+    local data = { phase = Player.Judge }
+    fixture.withSkillRequests(room, id("jin067_1"), {
+      askToSkillInvoke = function() return true end,
+      askToChooseCard = function() return new.id end,
+      askToChoosePlayers = function() return { target } end,
+    }, function() room.logic:trigger(fk.EventPhaseChanging, li, data) end)
+    lu.assertEquals(data.phase, Player.Play)
+    lu.assertTrue(room:getCardOwner(new.id) == target)
+    lu.assertEquals(room:getCardArea(new.id), Card.PlayerEquip)
+    lu.assertEquals(room:getCardArea(old.id), Card.DiscardPile)
+  end)
+end
 function T:testDanyangCopiesRememberEachTargetIndependently()
   run(function(room, p, ally)
     grant(p, "danyang_qingjin")
@@ -141,6 +169,30 @@ function T:testBajiaLordAssignmentsIncludeSecondGenerationAndWild()
   end)
 end
 
+
+function T:testShizhongAddsTargetAndDrawsForDifferentBoardSizes()
+  run(function(room, li, first, extra)
+    general(room, li, "jin067")
+    local spear = card(room, li, "qiao__spear")
+    room:moveCardIntoEquip(li, spear.id)
+    local axe = card(room, extra, "qiao__axe")
+    room:moveCardIntoEquip(extra, axe.id)
+    local count, hp1, hp2 = li:getHandcardNum(), first.hp, extra.hp
+    for _, to in ipairs({ first, extra }) do room:throwCard(to:getCardIds("h"), "test", to, to) end
+    fixture.withSkillRequests(room, id("jin067_2"), {
+      askToSkillInvoke = function() return true end,
+      askToChoosePlayers = function(_, _, params)
+        lu.assertTrue(table.contains(params.targets, extra))
+        return { extra }
+      end,
+    }, function()
+      room:useCard { from = li, tos = { first }, card = Fk:cloneCard("qiao__slash") }
+    end)
+    lu.assertEquals(first.hp, hp1 - 1)
+    lu.assertEquals(extra.hp, hp2 - 1)
+    lu.assertEquals(li:getHandcardNum(), count + 2)
+  end)
+end
 
 function T:testBajiaLossOnlyPenalizesInsideAPhase()
   run(function(room, yang, friend, current)
@@ -400,6 +452,30 @@ local function equip(room, owner, name)
   return equipment
 end
 
+function T:testTijunCannotReplaceSunsProtectedTreasure()
+  run(function(room, li, sun)
+    general(room, li, "jin067")
+    general(room, sun, "em_wu001")
+    local old = equip(room, sun, "qiao__luminous_pearl")
+    local new = card(room, li, "qiao__bronze_sparrow")
+    local offered = false
+    local phase = { phase = Player.Judge }
+    fixture.withSkillRequests(room, id("jin067_1"), {
+      askToSkillInvoke = function() return true end,
+      askToChooseCard = function() return new.id end,
+      askToChoosePlayers = function(_, _, params)
+        lu.assertFalse(table.contains(params.targets, sun))
+        offered = true
+        return { sun } -- 过期回复也不能强行置入。
+      end,
+    }, function() room.logic:trigger(fk.EventPhaseChanging, li, phase) end)
+    lu.assertTrue(offered)
+    lu.assertEquals(phase.phase, Player.Judge)
+    lu.assertEquals(sun:getEquipments(Card.SubtypeTreasure), { old.id })
+    lu.assertEquals(room:getCardArea(new.id), Card.PlayerHand)
+  end)
+end
+
 local function checkTijunReplacement(block)
   run(function(room, li)
     general(room, li, "jin067")
@@ -430,6 +506,10 @@ local function checkTijunReplacement(block)
     end
   end)
 end
+function T:testTijunCommitsActualReplacement() checkTijunReplacement() end
+function T:testTijunIncomingBlockedKeepsOldEquipment() checkTijunReplacement("incoming") end
+function T:testTijunOutgoingBlockedKeepsIncomingInHand() checkTijunReplacement("outgoing") end
+
 local function checkJinuSpear(storedFirst)
   run(function(room, meng, target)
     general(room, meng, "jin076")
