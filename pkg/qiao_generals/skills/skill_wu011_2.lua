@@ -9,6 +9,17 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
+-- 技能增减时引擎只重算手牌。原地的黑桃装备也要重算，并让客户端同步筛选结果。
+local function refreshEquipment(self, player)
+  for _, id in ipairs(player:getCardIds(Player.Equip)) do
+    if Fk:getCardById(id, true).suit == Card.Spade then
+      player.room:filterCard(id, player)
+    end
+  end
+end
+skill:addAcquireEffect(refreshEquipment)
+skill:addLoseEffect(refreshEquipment)
+
 local function ownedByPlayer(player, id)
   return table.contains(player:getCardIds(Player.Hand), id)
     or table.contains(player:getCardIds(Player.Equip), id)

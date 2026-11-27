@@ -96,6 +96,8 @@
 
 ## 最近验证记录
 
+- **小乔【红颜】装备花色（[#82](https://github.com/SSadamune/Free-kill-hanjin/issues/82)）**。吴区伤害专项 30/30、默认全量 1,505/1,505 通过。先装备后亮将、暗置及再次明置时均核对两端花色。另用原生客户端的选牌请求确认【天香】和法正【恩怨】都能选择原有的黑桃装备，梅花玉玺不能选。[小乔实现记录](implementation/generals/standard/wu011.md#wu011-2)
+
 - **2026-11-27，主桌面头像的势力字（`1708acc5`）**。`python scripts/check_free_assign_ui.py` 离屏核对本人和对手头像、房间开关两态，以及桌面原生角色势力标、简化头像与完整牌面的区别。安装包 1,201 个文件与源码一致。[显示场景](guest-illustrations.md#显示行为)
 
 - **2026-11-27，开局暗将头像残留客将插画（`b77bb582`）**。在干净的 FreeKill v0.5.25 本地机器人房复现并验收。使用两张有客将图的武将牌，暗置后主副将均切换到 `anjiang.jpg`。离屏回归覆盖分别明置、关闭替换和原势力牌面。`python scripts/test.py --file tests/client_query_paths.lua` 3/3，覆盖本人暗将详情与查看权限。安装包 1,201 个文件与源码一致。[头像接线](implementation/guest-factions.md#客将插画)
