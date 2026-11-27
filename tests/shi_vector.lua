@@ -41,6 +41,38 @@ Testqiao_shi_vector = {
 }
 local T = Testqiao_shi_vector
 
+function T:testPindiRecordsActualTypeAndTargetAndChainsOnlyOnce()
+  run(function(room, chen, a, b)
+    asGeneral(room, chen, "wei035")
+    a.hp = a.maxHp - 1
+    local slash, duel = give(room, chen, "qiao__slash"), give(room, chen, "qiao__duel")
+    local beforeA, beforeB = a:getHandcardNum(), b:getHandcardNum()
+    fixture.withSkillRequests(room, id("wei035_1"), { askToChoice = function(_, _, params) return params.choices[1] end }, function()
+      room:handleUseCardReply(chen, FkTest.ReplyUseSkill(id("wei035_1"), { a }, { slash.id }))
+      room:handleUseCardReply(chen, FkTest.ReplyUseSkill(id("wei035_1"), { b }, { duel.id }))
+    end)
+    lu.assertEquals(a:getHandcardNum(), beforeA + 1)
+    lu.assertEquals(b:getHandcardNum(), beforeB + 2)
+    lu.assertTrue(chen.chained)
+    lu.assertEquals(#chen:getTableMark("qiao_pindi_targets-turn"), 2)
+  end)
+end
+
+function T:testFaenChainsAndStacksButNotUnchainsOrDuplicateChain()
+  run(function(room, chen, to)
+    asGeneral(room, chen, "wei035")
+    local n = to:getHandcardNum()
+    fixture.withSkillRequests(room, id("wei035_2"), { askToSkillInvoke = function() return true end }, function()
+      to:setChainState(true)
+      to:setChainState(true)
+      to:setChainState(false)
+      to:turnOver()
+      to:turnOver()
+    end)
+    lu.assertEquals(to:getHandcardNum(), n + 2)
+  end)
+end
+
 function T:testDuduanUseAndResponseAreSealedByTrueName()
   run(function(room, yang)
     asGeneral(room, yang, "shu091")

@@ -135,5 +135,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__wei035", name = "陈群",
+      title = "典重千秋、纪世臣表", kingdom = "wei",
+      hp = 3, gender = "male",
+      guests = { "han", "shu" }, companions = { "qiao_heg__em_wei014", "qiao_heg__wei014" },
+      skills = {
+        {
+          id = "qiao__skill_wei035_1", name = "品第",
+          text = "出牌阶段，或当你受到伤害后，你可以弃置一张本回合未以此法选择过的类别的牌，然后令一名本回合未以此法选择过的其他角色摸或弃置X张牌（X为你本回合发动此技能的次数）。若其已受伤，你横置。",
+        },
+        {
+          id = "qiao__skill_wei035_2", name = "法恩",
+          text = "有角色横置或叠置后，你可以令其摸一张牌。",
+        },
+      },
+    },
   },
 }

@@ -15,3 +15,4 @@
 | QUN079 | [高览](shi-vector/qun079.md) | [袭阵](shi-vector/qun079.md#qun079-1)、[芟敌](shi-vector/qun079.md#qun079-2) |
 | SHU048 | [董允](shi-vector/shu048.md) | [秉正](shi-vector/shu048.md#shu048-1)、[舍宴](shi-vector/shu048.md#shu048-2) |
 | SHU091 | [杨仪](shi-vector/shu091.md) | [度断](shi-vector/shu091.md#shu091-1)、[孤忿](shi-vector/shu091.md#shu091-2) |
+| WEI035 | [陈群](shi-vector/wei035.md) | [品第](shi-vector/wei035.md#wei035-1)、[法恩](shi-vector/wei035.md#wei035-2) |
