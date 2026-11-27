@@ -83,35 +83,26 @@ function Testqiao_bian_wu_qun_jin:testWu021XuanlueAndYongjinThreeDistinctAndDual
   lu.assertFalse(Bian.canMoveEquipTo(lingtong, foe, dual.id), "已有单坐骑的角色不能接收双副类别坐骑")
   lu.assertTrue(Bian.canMoveEquipTo(lingtong, ally, dual.id), "双坐骑栏均空时可接收双副类别坐骑")
 
-  local stepFrom, stepCard, stepTo = 0, 0, 0
+  local stepFrom, stepCard = 0, 0
   xuanlueCount = 0
   skill_test.withSkillRequests(room, "qiao__skill_wu021_1", {
     askToChoosePlayers = function() xuanlueCount = xuanlueCount + 1; return {} end,
   }, function()
     skill_test.withSkillRequests(room, "qiao__skill_wu021_2", {
-      askToChoosePlayers = function(self, who, params)
-        if params.prompt:find("-from", 1, true) then
-          stepFrom = stepFrom + 1
-          if stepFrom == 1 then return { lingtong } end
-          if stepFrom == 2 then
-            -- 第二次移牌时，已移到 ally 的 w1 不能再成为可移动源！
-            lu.assertFalse(table.contains(params.targets, ally), "已移动过的同一张装备牌不能再移")
-            return { lingtong }
-          end
-          return {}
-        else
-          stepTo = stepTo + 1
-          if stepTo == 1 then return { ally } end
-          if stepTo == 2 then
-            lu.assertFalse(table.contains(params.targets, foe), "双坐骑候选接收者应排除已有单坐骑的 foe")
-            return { ally }
-          end
-          return {}
+      askToChooseToMoveCardInBoard = function(_, _, params)
+        stepFrom = stepFrom + 1
+        if stepFrom == 2 then
+          lu.assertTrue(table.contains(params.exclude_ids, w1.id))
+          lu.assertFalse(table.contains(params.froms, ally))
         end
+        if stepFrom > 2 then return {} end
+        return { lingtong, ally }
       end,
-      askToChooseCards = function(self, who, params)
+      askToChooseCards = function(_, _, params)
         stepCard = stepCard + 1
-        return { w1.id }
+        local id = stepCard == 1 and w1.id or dual.id
+        lu.assertTrue(table.contains(params.flag.card_data[1][2], id))
+        return { id }
       end,
     }, function()
       inRoom(function()
@@ -147,12 +138,13 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduAndDiancaiZeroDrawStillChanges(
   -- 调度效果一：准备阶段选择把自己的 eq1 移动到 ally 装备区；同时触发调度效果二令 ally 首次入装备摸 1 张。
   local allyHandBefore = #ally:getCardIds("h")
   skill_test.withSkillRequests(room, "qiao__skill_wu022_1", {
-    askToChoosePlayers = function(self, who, params)
-      if params.prompt == "#qiao__skill_wu022_1-choose" then return { lvfan } end
-      return { ally }
+    askToOptions = function(_, _, params)
+      lu.assertEquals(params.options, { "#qiao__skill_wu022_1-obtain", "#qiao__skill_wu022_1-move" })
+      lu.assertTrue(params.cancelable)
+      return { "#qiao__skill_wu022_1-move" }
     end,
-    askToChooseCard = function() return eq1.id end,
-    askToChoice = function() return "#qiao__skill_wu022_1-move" end,
+    askToChooseToMoveCardInBoard = function() return { lvfan, ally } end,
+    askToChooseCards = function() return { eq1.id } end,
   }, function()
     inRoom(function()
       local turn = GameEvent.Turn:create(TurnData:new(lvfan, "game_rule", {}))
@@ -234,11 +226,11 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociHuaxingFirstThreeSoulsPrivateAn
   -- 首次发动（出牌阶段主动入口）：扣置 3 张「魂」，选选项 2 将副将额外变更为其中 1 张异势力「魂」。
   local pickedSoul
   skill_test.withSkillRequests(room, Bian.ZUOCI_SKILL, {
-    askToChoice = function() return "#qiao__skill_qun009_1-opt-change" end,
     askToCustomDialog = function(self, who, params)
       lu.assertEquals(#params.component.prop.candidates, 3, "首次化形应扣置 3 张魂")
       pickedSoul = params.component.prop.candidates[1]
-      return { general = pickedSoul }
+      lu.assertTrue(table.contains(params.component.prop.actions, "#qiao__skill_qun009_1-opt-change"))
+      return { general = pickedSoul, action = "#qiao__skill_qun009_1-opt-change" }
     end,
   }, function()
     inRoom(function()
@@ -256,11 +248,11 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociHuaxingFirstThreeSoulsPrivateAn
   local removedSoul
   skill_test.withSkillRequests(room, Bian.ZUOCI_SKILL, {
     askToSkillInvoke = function() return true end,
-    askToChoice = function() return "#qiao__skill_qun009_1-opt-remove" end,
     askToCustomDialog = function(self, who, params)
       lu.assertEquals(#params.component.prop.candidates, 3, "原剩 2 魂 + 后续加 1 魂 = 3 魂")
       removedSoul = params.component.prop.candidates[1]
-      return { general = removedSoul }
+      lu.assertTrue(table.contains(params.component.prop.actions, "#qiao__skill_qun009_1-opt-remove"))
+      return { general = removedSoul, action = "#qiao__skill_qun009_1-opt-remove" }
     end,
   }, function()
     inRoom(function()
@@ -294,7 +286,8 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociHuaxingFirstThreeSoulsPrivateAn
     askToSkillInvoke = function() return true end,
     askToChoice = function() choiceAsked = choiceAsked + 1; return "#qiao__skill_qun009_1-opt-change" end,
     askToCustomDialog = function(self, who, params)
-      return { general = params.component.prop.candidates[1] }
+      lu.assertEquals(params.component.prop.actions, { "#qiao__skill_qun009_1-opt-remove" })
+      return { general = params.component.prop.candidates[1], action = "#qiao__skill_qun009_1-opt-change" }
     end,
   }, function()
     inRoom(function()
@@ -637,6 +630,9 @@ function Testqiao_bian_wu_qun_jin:testQun009ZuociHiddenChangeDiscardAndReconnect
     discarded = Discard.list(room)
     countAfter = zuoci:getMark(Bian.ZUOCI_COUNT_MARK)
   end)
+  local mark = assert(Fk.qml_marks["qiao_zuoci_count"])
+  lu.assertEquals(mark.how_to_show(Bian.ZUOCI_COUNT_MARK, 2, Self), "#hidden", "持有者只显示可点开的私密魂标记")
+  lu.assertEquals(mark.how_to_show(Bian.ZUOCI_COUNT_MARK, 2, other), "2", "其他座位可见公开魂数")
   lu.assertEquals(ownCount, 2)
   lu.assertEquals(otherCount, 2)
   lu.assertEquals(ownPrivate, { "qiao_heg__wei004", "qiao_heg__wu003" }, "持有者重连快照应恢复私密魂名单")
@@ -807,7 +803,7 @@ function Testqiao_bian_wu_qun_jin:testWu022DiaoduSkipsProtectedTreasureKeepsOthe
         offeredFlag = params.flag
         return sword.id
       end,
-      askToChoice = function() return "#qiao__skill_wu022_1-obtain" end,
+      askToOptions = function() return { "#qiao__skill_wu022_1-obtain" } end,
     }, function()
       room.logic:trigger(fk.EventPhaseStart, lvfan, PhaseData:new { who = lvfan, phase = Player.Start })
     end)
@@ -937,8 +933,7 @@ function Testqiao_bian_wu_qun_jin:testQun009HuaxingRequiresAnAvailableGeneralBef
     table.insert(room.general_pile, candidate)
     checkButton(true)
     skill_test.withSkillRequests(room, name, {
-      askToChoice = function() return "#qiao__skill_qun009_1-opt-remove" end,
-      askToCustomDialog = function() return { general = candidate } end,
+        askToCustomDialog = function() return { general = candidate, action = "#qiao__skill_qun009_1-opt-remove" } end,
     }, function() room:handleUseCardReply(owner, reply) end)
     lu.assertEquals(owner:usedEffectTimes(name, Player.HistoryPhase), 1)
     lu.assertTrue(Bian.zuociFirstUsed(room, owner))

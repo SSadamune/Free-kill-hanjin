@@ -4,7 +4,6 @@
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Wei = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wei"
 local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
 
@@ -43,38 +42,20 @@ local function executeHuaxing(room, player)
   if canExtraChangeDeputy(room, player) then
     table.insert(choices, OPT_CHANGE)
   end
-  local action = #choices == 1 and choices[1] or Selection.askOption(room, player, {
-    choices = choices,
-    all_choices = { OPT_REMOVE, OPT_CHANGE },
-    skill_name = skill.name,
-    prompt = "#qiao__skill_qun009_1-choice",
-    cancelable = false,
+  local chosen, action = Change.chooseGeneral(room, player, true, souls, {
+    actions = choices, skill_name = skill.name,
+    prompt = "#qiao__skill_qun009_1-choice", cancelable = false,
   })
+  if not chosen or not Bian.removeZuociSoul(room, player, chosen) then return end
   if action == OPT_CHANGE and canExtraChangeDeputy(room, player) then
-    local chosen = Change.chooseGeneral(room, player, true, souls, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun009_1-change",
-      cancelable = false,
+    local ok = Change.changeTo(room, player, true, chosen, {
+      require_general_card = true, from_pile = false, skill_name = skill.name,
     })
-    if chosen ~= nil and Bian.removeZuociSoul(room, player, chosen) then
-      local ok = Change.changeTo(room, player, true, chosen, {
-        require_general_card = true,
-        from_pile = false,
-        skill_name = skill.name,
-      })
-      if not ok then
-        Bian.addZuociSouls(room, player, { chosen }, false)
-      end
-    end
+    if not ok then Bian.addZuociSouls(room, player, { chosen }, false) end
+  elseif action == OPT_REMOVE then
+    Discard.add(room, { chosen })
   else
-    local chosen = Change.chooseGeneral(room, player, true, souls, {
-      skill_name = skill.name,
-      prompt = "#qiao__skill_qun009_1-remove",
-      cancelable = false,
-    })
-    if chosen ~= nil and Bian.removeZuociSoul(room, player, chosen) then
-      Discard.add(room, { chosen })
-    end
+    Bian.addZuociSouls(room, player, { chosen }, false)
   end
 end
 
@@ -142,9 +123,9 @@ Fk:loadTranslationTable {
   [":" .. skill.name] = "当你受到1点伤害后、其他角色脱离濒死时或出牌阶段限一次，你可以将一张（首次发动时改为三张）剩余武将牌扣置于武将牌上，称为“魂”，然后选择一项：1.移去一张“魂”；2.将副将武将牌额外变更为一张“魂”。",
   ["#qiao__skill_qun009_1-prompt"] = "化形：扣置剩余武将牌作为“魂”，并选择移去一张“魂”或将副将额外变更为一张“魂”",
   ["#qiao__skill_qun009_1-invoke"] = "化形：是否发动“化形”扣置“魂”并执行后续选择",
-  ["#qiao__skill_qun009_1-choice"] = "化形：选择一项",
-  [OPT_REMOVE] = "移去一张“魂”",
-  [OPT_CHANGE] = "将副将武将牌额外变更为一张“魂”",
+  ["#qiao__skill_qun009_1-choice"] = "化形：选择一张“魂”，再选择如何使用",
+  [OPT_REMOVE] = "移去",
+  [OPT_CHANGE] = "变更副将",
   ["#qiao__skill_qun009_1-remove"] = "化形：选择一张“魂”移去",
   ["#qiao__skill_qun009_1-change"] = "化形：选择一张“魂”作为新的副将",
 }

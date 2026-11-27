@@ -12,6 +12,8 @@ import "GuestIllustration.js" as GuestIllustration
 GraphicsBox {
   id: root
 
+  property bool cancelable: true
+  property var actions: []
   required property var candidates
   required property string prompt
   required property bool guestIllustrations
@@ -129,11 +131,22 @@ GraphicsBox {
     spacing: 8
 
     MetroButton {
+      visible: root.actions.length === 0
       enabled: root.selectedName !== ""
       text: Lua.tr("OK")
       onClicked: Ltk.roomModel.replyToServer({ general: root.selectedName })
     }
+    Repeater {
+      model: root.actions
+      delegate: MetroButton {
+        required property string modelData
+        enabled: root.selectedName !== ""
+        text: Lua.tr(modelData)
+        onClicked: Ltk.roomModel.replyToServer({ general: root.selectedName, action: modelData })
+      }
+    }
     MetroButton {
+      visible: root.cancelable
       text: Lua.tr("Cancel")
       onClicked: Ltk.roomModel.replyToServer("__cancel")
     }

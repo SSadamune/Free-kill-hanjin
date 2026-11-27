@@ -47,11 +47,16 @@ end
 ---@param room Room
 ---@param flag? "e" | "j"
 ---@return ServerPlayer[] froms, ServerPlayer[] tos
-function M.boardMoveParticipants(room, flag)
+function M.boardMoveParticipants(room, flag, allowed)
   local froms, tos = {}, {}
-  for _, from in ipairs(room.alive_players) do
-    for _, to in ipairs(room.alive_players) do
-      if from ~= to and from:canMoveCardsInBoardTo(to, flag, {}) then
+  local players = allowed and room:getPresentPlayers() or room.alive_players
+  local function canMove(from, to)
+    if not allowed then return from:canMoveCardsInBoardTo(to, flag, {}) end
+    return table.find(from:getCardIds(flag or "ej"), function(id) return allowed(from, to, id) end) ~= nil
+  end
+  for _, from in ipairs(players) do
+    for _, to in ipairs(players) do
+      if from ~= to and canMove(from, to) then
         table.insertIfNeed(froms, from)
         table.insertIfNeed(tos, to)
       end
@@ -68,18 +73,19 @@ end
 ---@param two ServerPlayer
 ---@param flag? "e" | "j"
 ---@return table[] groups
-function M.movableBoardCardGroups(one, two, flag)
+function M.movableBoardCardGroups(one, two, flag, allowed)
+  local canMove = allowed or function(from, to, id) return from:canMoveCardInBoardTo(to, id) end
   local groups = {}
   local function collect(owner, other)
     local ids = {}
     if not flag or flag == "e" then
       for _, id in ipairs(owner:getCardIds(Player.Equip)) do
-        if owner:canMoveCardInBoardTo(other, id) then table.insert(ids, id) end
+        if canMove(owner, other, id) then table.insert(ids, id) end
       end
     end
     if not flag or flag == "j" then
       for _, id in ipairs(owner:getCardIds(Player.Judge)) do
-        if owner:canMoveCardInBoardTo(other, id) then table.insert(ids, id) end
+        if canMove(owner, other, id) then table.insert(ids, id) end
       end
     end
     if #ids > 0 then
@@ -101,21 +107,39 @@ end
 ---@param flag? "e" | "j"
 ---@param prompt? string
 ---@return { card: Card, from: ServerPlayer, to: ServerPlayer }?
-function M.moveCardInBoard(room, player, skillName, flag, prompt)
-  local froms, tos = M.boardMoveParticipants(room, flag)
+function M.moveCardInBoard(room, player, skillName, flag, prompt, options)
+  options = options or {}
+  local allowed = options.allowed
+  local froms, tos = M.boardMoveParticipants(room, flag, allowed)
   if #froms == 0 or #tos == 0 then return nil end
   local targets = room:askToChooseToMoveCardInBoard(player, {
     flag = flag,
     skill_name = skillName,
     prompt = prompt or "#qiao_wei_move_board",
-    cancelable = true,
+    cancelable = options.cancelable ~= false,
+    exclude_ids = options.exclude_ids,
     froms = froms,
     tos = tos,
   })
   if type(targets) ~= "table" or #targets < 2 then return nil end
   local targetOne, targetTwo = targets[1], targets[2]
   -- 选人与选牌之间若状态变化，这一对可能已无可移动牌；此时结束询问。
-  local groups = M.movableBoardCardGroups(targetOne, targetTwo, flag)
+  if not table.contains(froms, targetOne) or not table.contains(tos, targetTwo) or targetOne == targetTwo then return nil end
+  local groups = M.movableBoardCardGroups(targetOne, targetTwo, flag, allowed)
+  -- 双坐骑等限制比引擎的通用空栏判定更严格；该组合无牌可移时，重新列出合法接收者。
+  if allowed and #groups == 0 then
+    local receivers = table.filter(tos, function(to)
+      return table.find(targetOne:getCardIds(flag or "ej"), function(id) return allowed(targetOne, to, id) end) ~= nil
+    end)
+    if #receivers == 0 then return nil end
+    local selected = room:askToChoosePlayers(player, {
+      targets = receivers, min_num = 1, max_num = 1, skill_name = skillName,
+      prompt = prompt, cancelable = options.cancelable ~= false,
+    })
+    targetTwo = selected and selected[1]
+    if not table.contains(receivers, targetTwo) then return nil end
+    groups = M.movableBoardCardGroups(targetOne, targetTwo, flag, allowed)
+  end
   local offered = {}
   for _, group in ipairs(groups) do
     table.insertTable(offered, group[2])
@@ -129,7 +153,7 @@ function M.moveCardInBoard(room, player, skillName, flag, prompt)
     max = 1,
     skill_name = skillName,
     prompt = "#qiao_move_board_pick",
-    cancelable = true,
+    cancelable = options.cancelable ~= false,
   })
   if type(chosen) ~= "table" or #chosen ~= 1 then return nil end
   local id = chosen[1]
@@ -141,7 +165,9 @@ function M.moveCardInBoard(room, player, skillName, flag, prompt)
   local from = room:getCardOwner(id)
   if from == nil then return nil end
   local to = from == targetOne and targetTwo or (from == targetTwo and targetOne or nil)
-  if to == nil or not from:canMoveCardInBoardTo(to, id) then return nil end
+  if to == nil then return nil end
+  local canMove = allowed or function(owner, receiver, cardId) return owner:canMoveCardInBoardTo(receiver, cardId) end
+  if not canMove(from, to, id) then return nil end
 
   -- 与引擎 askToMoveCardInBoard 同源：虚拟装备取虚拟牌，区域、原因、技能来源、
   -- 操作者保持一致。
@@ -157,7 +183,7 @@ function M.moveCardInBoard(room, player, skillName, flag, prompt)
     true,
     player
   )
-  return { card = cardToMove, from = from, to = to }
+  return { card = cardToMove, id = id, from = from, to = to }
 end
 
 Fk:loadTranslationTable {

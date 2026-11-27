@@ -133,6 +133,8 @@ local function chooseCandidate(room, player, isDeputy, shown, options)
       url = "packages/qiao/pkg/qiao_mode/qml/GeneralChangeBox.qml",
       prop = {
         candidates = shown,
+        cancelable = options.cancelable ~= false,
+        actions = options.actions or {},
         prompt = options.prompt or "#qiao_change_general-choose",
         guestIllustrations = guestIllustrations,
         guestFactions = guestFactions,
@@ -143,10 +145,12 @@ local function chooseCandidate(room, player, isDeputy, shown, options)
     },
   })
   if type(reply) == "table" and type(reply.general) == "string" and table.contains(shown, reply.general) then
-    return reply.general
+    if not options.actions or table.contains(options.actions, reply.action) then
+      return reply.general, reply.action
+    end
   end
   if options.cancelable == false then
-    return shown[1]
+    return shown[1], options.actions and options.actions[1]
   end
 end
 
@@ -217,9 +221,27 @@ function M.change(room, player, isDeputy, options)
   if type(options.extra_kingdoms) == "table" and #options.extra_kingdoms > 0 then
     extraPool = M.candidates(room, player, isDeputy, {
       kingdoms = options.extra_kingdoms,
-      exclude = shown,
+      exclude = table.connect(options.exclude or {}, shown),
       require_general_card = options.require_general_card,
     })
+    local need = (options.extra_num or 3) - #extraPool
+    if need > 0 and #shown > 0 then
+      local eligible = M.candidates(room, player, isDeputy, { kingdoms = options.extra_kingdoms,
+        exclude = options.exclude, require_general_card = options.require_general_card })
+      local replacements = table.filter(pool, function(name)
+        return not table.contains(shown, name) and not table.contains(eligible, name)
+      end)
+      for i, name in ipairs(shown) do
+        if need <= 0 or #replacements == 0 then break end
+        if table.contains(eligible, name) then
+          local replacement = room:tableRandomPick(replacements, 1)[1]
+          table.removeOne(replacements, replacement)
+          shown[i] = replacement
+          table.insert(extraPool, name)
+          need = need - 1
+        end
+      end
+    end
     if #extraPool > 0 then
       local extraNum = math.min(options.extra_num or 3, #extraPool)
       for _, name in ipairs(room:tableRandomPick(extraPool, extraNum)) do
@@ -228,7 +250,9 @@ function M.change(room, player, isDeputy, options)
     end
   end
   if #shown == 0 then return false, "no_candidate" end
-  local chosen = chooseCandidate(room, player, isDeputy, shown, options)
+  local display = table.simpleClone(options)
+  display.cancelable = false
+  local chosen = chooseCandidate(room, player, isDeputy, shown, display)
   if chosen == nil then return false, "cancel" end
   if player.dead or player:isRemoved() or positionName(player, isDeputy) ~= oldName then
     return false, "invalid_candidate"
@@ -237,6 +261,7 @@ function M.change(room, player, isDeputy, options)
   if not validNow and type(options.extra_kingdoms) == "table" and #options.extra_kingdoms > 0 then
     validNow = table.contains(M.candidates(room, player, isDeputy, {
       kingdoms = options.extra_kingdoms,
+      exclude = options.exclude,
       require_general_card = options.require_general_card,
     }), chosen)
   end

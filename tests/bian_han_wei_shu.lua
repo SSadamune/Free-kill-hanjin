@@ -209,14 +209,18 @@ function Testqiao_bian_han_wei_shu:testHan024JieyuanAndFenxinExtraPool()
     room:moveCardTo(redEquip, Player.Equip, lingju, fk.ReasonJustMove, "test", nil, true, lingju)
     room:obtainCard(lingju, redHand, false, fk.ReasonJustMove)
     -- 确保将池中有足够的汉/魏武将用于焚心合并候选
-    resetGeneralPool(room, { "qiao_heg__han002", "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei006" },
+    resetGeneralPool(room, { "qiao_heg__han002", "qiao_heg__han004", "qiao_heg__han007", "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei006" },
       { "han", "wei", "wu", "shu" })
   end)
 
   -- 竭缘：弃装备区红牌令造成伤害 +1
   skill_test.withSkillRequests(room, "qiao__skill_han024_1", {
-    askToCards = function() return { redEquip.id } end,
-    askToChoice = function() return "#qiao__skill_han024_1-plus" end,
+    askToCustomDialog = function(_, _, params)
+      local prop = params.component.model.prop
+      lu.assertEquals(prop.cancelChoices, { "Cancel" })
+      lu.assertEquals(#prop.choices, 2)
+      return { cards = { redEquip.id }, choice = "#qiao__skill_han024_1-plus" }
+    end,
   }, function()
     inRoom(function()
       room:damage { from = lingju, to = victim, damage = 1, skillName = "test" }
@@ -229,8 +233,12 @@ function Testqiao_bian_han_wei_shu:testHan024JieyuanAndFenxinExtraPool()
   local ljBefore = lingju.hp
   inRoom(function() victim.hp = 2 end)
   skill_test.withSkillRequests(room, "qiao__skill_han024_1", {
-    askToCards = function() return { redHand.id } end,
-    askToChoice = function() return "#qiao__skill_han024_1-minus" end,
+    askToCustomDialog = function(_, _, params)
+      local prop = params.component.model.prop
+      lu.assertEquals(prop.cancelChoices, { "Cancel" })
+      lu.assertEquals(#prop.choices, 2)
+      return { cards = { redHand.id }, choice = "#qiao__skill_han024_1-minus" }
+    end,
   }, function()
     inRoom(function()
       room:damage { from = victim, to = lingju, damage = 1, skillName = "test" }
@@ -254,7 +262,7 @@ function Testqiao_bian_han_wei_shu:testHan024JieyuanAndFenxinExtraPool()
       room:damage { from = lingju, to = victim, damage = 1, skillName = "test" }
     end)
   end)
-  lu.assertNotNil(offeredCandidates)
+  lu.assertEquals(#offeredCandidates, 6)
   lu.assertTrue(table.contains(offeredCandidates, "qiao_heg__han002"), "常规候选应含同势力武将")
   lu.assertTrue(table.contains(offeredCandidates, "qiao_heg__wei004"), "额外候选应含死者副将牌面势力武将")
   lu.assertEquals(lingju.deputyGeneral, "qiao_heg__wei004", "灵雎应成功变更副将为异势力备选")
@@ -447,6 +455,7 @@ function Testqiao_bian_han_wei_shu:testShu020JiliDynamicAttackRangeAndRespond()
         beforeHand = #smk:getCardIds("h")
         room:useCard { from = smk, tos = { smk }, card = sword }
         room:useCard { from = smk, tos = { foe }, card = slash }
+        lu.assertEquals(smk:getMark("qiao_use_respond_count-turn"), 2)
       end
       turn:exec()
     end)
@@ -470,6 +479,7 @@ function Testqiao_bian_han_wei_shu:testShu020JiliDynamicAttackRangeAndRespond()
       local turn = GameEvent.Turn:create(TurnData:new(foe, "game_rule", {}))
       function turn:main()
         room:responseCard { from = smk, card = jink }
+        lu.assertEquals(smk:getMark("qiao_use_respond_count-turn"), 1)
       end
       turn:exec()
     end)
@@ -579,11 +589,11 @@ function Testqiao_bian_han_wei_shu:testHan023XinjiInvalidationRestoreAndGlobalBa
   lu.assertTrue(O.isForbidden(han, peach), "全局已进入鏖战时即使心疾失效仍受全局鏖战约束")
 end
 
--- 审阅回归（第 7、8 项）：专属野心家焚心额外候选严格按死者副将势力筛选；副将换走自己时来源记在旧副将牌上且取消不耗次。
+-- 审阅回归（第 7、8 项）：专属野心家焚心额外候选严格按死者副将势力筛选；副将换走自己时来源记在旧副将牌上且候选公开后须选择。
 function Testqiao_bian_han_wei_shu:testHan024FenxinWildExtraPoolAndSelfDeputySourceKey()
   local room = FkTest.room
   local holder = p(1)
-  local regularWild, extraWei, originalKey, cancelledOk, changedOk
+  local regularWild, extraWei, originalKey, changedOk
   inRoom(function()
     skill_test.installBlankGenerals(room, { "han", "wei", "wu", "shu" })
     skill_test.installDualGenerals(room, holder, {
@@ -598,23 +608,25 @@ function Testqiao_bian_han_wei_shu:testHan024FenxinWildExtraPoolAndSelfDeputySou
   lu.assertTrue(table.contains(regularWild, "qiao_heg__wu003"), "专属野心家常规变更仍从全可用将池随机取")
   lu.assertEquals(extraWei, { "qiao_heg__wei004" }, "显式限定魏势力的焚心额外池不得混入吴将")
 
-  -- 取消变更不消耗来源次数
-  skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
-    askToCustomDialog = function() return nil end,
-  }, function()
-    inRoom(function()
-      cancelledOk = Change.performSkillChangeDeputy(room, holder, holder, "qiao__skill_han024_2")
-    end)
-  end)
-  lu.assertFalse(cancelledOk)
-  lu.assertNil(room:getTag(originalKey), "取消变更副将不得消耗每局限一次")
+  -- 公开候选前可以拒绝发动，未产生来源记账。
+  lu.assertNil(room:getTag(originalKey))
 
   -- 副将灵雎成功换走自己后，已用记录应落在原副将灵雎对应的来源键
   skill_test.withSkillRequests(room, "qiao__skill_han024_2", {
-    askToCustomDialog = function() return { general = "qiao_heg__han002" } end,
+    askToCustomDialog = function(_, _, params)
+      lu.assertFalse(params.component.prop.cancelable)
+      lu.assertEquals(#params.component.prop.candidates, 6, "常规和额外池重叠时仍给足六张")
+      return "__cancel"
+    end,
   }, function()
     inRoom(function()
-      changedOk = Change.performSkillChangeDeputy(room, holder, holder, "qiao__skill_han024_2")
+      resetGeneralPool(room, { "qiao_heg__wei004", "qiao_heg__wei005", "qiao_heg__wei006",
+        "qiao_heg__wu003", "qiao_heg__han002", "qiao_heg__han007" })
+      local pick = room.tableRandomPick
+      function room:tableRandomPick(list, n) return table.slice(list, 1, n + 1) end
+      changedOk = Change.performSkillChangeDeputy(room, holder, holder, "qiao__skill_han024_2",
+        { extra_kingdoms = { "wei" } })
+      room.tableRandomPick = pick
     end)
   end)
   lu.assertTrue(changedOk)
@@ -957,7 +969,9 @@ function Testqiao_bian_han_wei_shu:testShownJiliAndYuejianUseSharedStatusPanel()
     skill_test.installDualGenerals(room, smk, {
       main = "qiao_heg__shu020", deputy = "qiao_test__shu_2", kingdom = "shu",
     })
-    lu.assertEquals(entry("jili").value, tostring(smk:getAttackRange()))
+    lu.assertEquals(entry("jili").value, "0")
+    room:setPlayerMark(smk, status.jiliCount, 4)
+    lu.assertEquals(entry("jili").value, "4")
     smk:hideGeneral(false)
     lu.assertNil(entry("jili"))
     local mark = "qiao_wei022_yuejian-turn"

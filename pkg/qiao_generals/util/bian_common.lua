@@ -1,5 +1,6 @@
 -- 六势力变包共用辅助：装备空栏/双坐骑校验、限定翼从逐实例计次、左慈「魂」随牌管理。
 -- 客户端可达查询统一使用 Fk:currentRoom() 与公开标记，不访问服务端 room tag 或私有字段。
+local Board = require "packages.qiao.pkg.qiao_generals.util.wei_phases"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Change = require "packages.qiao.pkg.qiao_mode.rules.general_change"
@@ -15,7 +16,14 @@ M.LIMITED_RETINUE_MARK = "qiao_bian_retinue_limited"
 M.ZUOCI_GENERAL = "qiao_heg__qun009"
 M.ZUOCI_SKILL = "qiao__skill_qun009_1"
 M.ZUOCI_TAG = "qiao_zuoci_hun_v1"
-M.ZUOCI_COUNT_MARK = "@qiao_zuoci_hun"
+M.ZUOCI_COUNT_MARK = "@[qiao_zuoci_count]"
+Fk:addQmlMark {
+  name = "qiao_zuoci_count",
+  how_to_show = function(_, count, holder)
+    if holder == Self and not ClientInstance.observing and not ClientInstance.replaying then return "#hidden" end
+    return tostring(count)
+  end,
+}
 M.ZUOCI_PRIVATE_MARK = "@&qiao_zuoci_hun"
 M.ZUOCI_POOL_AVAILABLE = "qiao_zuoci_pool_available"
 
@@ -60,26 +68,10 @@ end
 
 --- 返回在场角色中可参与装备移动的 (froms, tos)，排除 excludedIds 中已操作过的装备与受保护宝物。
 function M.boardEquipParticipants(room, excludedIds, mover)
-  local froms, tos = {}, {}
-  if room == nil then return froms, tos end
-  local excluded = excludedIds or {}
-  local players = room:getPresentPlayers()
-  for _, from in ipairs(players) do
-    local equips = from:getCardIds(Player.Equip)
-    if #equips > 0 then
-      for _, id in ipairs(equips) do
-        if not excluded[id] then
-          for _, to in ipairs(players) do
-            if M.canMoveEquipTo(from, to, id, mover) then
-              table.insertIfNeed(froms, from)
-              table.insertIfNeed(tos, to)
-            end
-          end
-        end
-      end
-    end
-  end
-  return froms, tos
+  if not room then return {}, {} end
+  return Board.boardMoveParticipants(room, "e", function(from, to, id)
+    return not (excludedIds and excludedIds[id]) and M.canMoveEquipTo(from, to, id, mover)
+  end)
 end
 
 --- 两名角色之间当前可移动的装备牌分组（排除 excludedIds），按原持有者座位分组。

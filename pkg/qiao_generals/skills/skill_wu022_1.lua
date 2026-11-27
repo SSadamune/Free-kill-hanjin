@@ -5,6 +5,7 @@ local H = require "packages.hegemony.util"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local Bian = require "packages.qiao.pkg.qiao_generals.util.bian_common"
+local Board = require "packages.qiao.pkg.qiao_generals.util.wei_phases"
 local WuLord = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
 
 local skill = fk.CreateSkill {
@@ -33,6 +34,12 @@ local function sameKingdomWithEquip(room, player)
   end)
 end
 
+local function moveFilter(player)
+  return function(from, to, id)
+    return H.compareKingdomWith(from, player) and Bian.canMoveEquipTo(from, to, id, player)
+  end
+end
+
 -- 效果一：准备阶段获得或移动同势力角色装备区一张牌。
 skill:addEffect(fk.EventPhaseStart, {
   anim_type = "control",
@@ -45,24 +52,32 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = player.room
     local targets = sameKingdomWithEquip(room, player)
     if #targets == 0 then return false end
-    local chosen = room:askToChoosePlayers(player, {
-      targets = targets,
-      min_num = 1,
-      max_num = 1,
-      skill_name = skill.name,
-      prompt = "#qiao__skill_wu022_1-choose",
-      cancelable = true,
+    local choices = { OPT_OBTAIN }
+    local froms = Board.boardMoveParticipants(room, "e", moveFilter(player))
+    if #froms > 0 then table.insert(choices, OPT_MOVE) end
+    local action = Selection.askOption(room, player, {
+      choices = choices, all_choices = { OPT_OBTAIN, OPT_MOVE }, buttons = true,
+      skill_name = skill.name, prompt = "#qiao__skill_wu022_1-action", cancelable = true,
     })
-    if type(chosen) == "table" and #chosen == 1 then
-      event:setCostData(self, { from = chosen[1] })
-      return true
-    end
-    return false
+    if not action then return false end
+    event:setCostData(self, { action = action })
+    return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local from = (event:getCostData(self) or {}).from
-    if not RemovedTargets.isPresent(from) then return end
+    if event:getCostData(self).action == OPT_MOVE then
+      Board.moveCardInBoard(room, player, skill.name, "e", "#qiao__skill_wu022_1-move-pair",
+        { allowed = moveFilter(player), cancelable = false })
+      return
+    end
+    local targets = sameKingdomWithEquip(room, player)
+    if #targets == 0 then return end
+    local chosen = room:askToChoosePlayers(player, {
+      targets = targets, min_num = 1, max_num = 1, skill_name = skill.name,
+      prompt = "#qiao__skill_wu022_1-choose", cancelable = false,
+    })
+    local from = chosen and chosen[1]
+    if not table.contains(targets, from) or not RemovedTargets.isPresent(from) then return end
     local validIds = selectableEquipIds(from, player)
     if #validIds == 0 then return end
     local allEquips = from:getCardIds(Player.Equip)
@@ -75,35 +90,7 @@ skill:addEffect(fk.EventPhaseStart, {
     })
     if cardId == nil or not table.contains(validIds, cardId) then return end
 
-    local moveTos = table.filter(room:getPresentPlayers(), function(p)
-      return Bian.canMoveEquipTo(from, p, cardId, player)
-    end)
-    local action = OPT_OBTAIN
-    if #moveTos > 0 then
-      action = Selection.askOption(room, player, {
-        choices = { OPT_OBTAIN, OPT_MOVE },
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu022_1-action:::" .. Fk:getCardById(cardId):toLogString(),
-        cancelable = false,
-      })
-    end
-    if action == OPT_MOVE then
-      local dests = room:askToChoosePlayers(player, {
-        targets = moveTos,
-        min_num = 1,
-        max_num = 1,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu022_1-to:::" .. Fk:getCardById(cardId):toLogString(),
-        cancelable = false,
-      })
-      local to = dests and dests[1]
-      if to ~= nil and Bian.canMoveEquipTo(from, to, cardId, player) then
-        local cardToMove = from:getVirtualEquip(cardId) or Fk:getCardById(cardId)
-        if cardToMove ~= nil then
-          room:moveCardTo(cardToMove, Player.Equip, to, fk.ReasonPut, skill.name, nil, true, player)
-        end
-      end
-    else
+    if table.contains(selectableEquipIds(from, player), cardId) then
       room:obtainCard(player, cardId, true, fk.ReasonPrey, player, skill.name)
     end
   end,
@@ -164,12 +151,12 @@ skill:addEffect(fk.AfterCardsMove, {
 Fk:loadTranslationTable {
   [skill.name] = "调度",
   [":" .. skill.name] = "准备阶段，你可以获得或移动与你势力相同的角色装备区一张牌。每回合首次有牌置入每名与你势力相同的角色装备区后，其摸一张牌。",
-  ["#qiao__skill_wu022_1-choose"] = "调度：选择一名与你势力相同的角色，获得或移动其装备区一张牌",
+  ["#qiao__skill_wu022_1-choose"] = "调度：选择一名与你势力相同的角色，获得其装备区一张牌",
   ["#qiao__skill_wu022_1-card"] = "调度：选择 %dest 装备区的一张牌",
-  ["#qiao__skill_wu022_1-action"] = "调度：选择获得或移动 %arg",
-  ["#qiao__skill_wu022_1-to"] = "调度：选择接收 %arg 的角色",
-  [OPT_OBTAIN] = "获得此牌",
-  [OPT_MOVE] = "移动此牌",
+  ["#qiao__skill_wu022_1-action"] = "调度：获得或移动同势力角色装备区的一张牌",
+  ["#qiao__skill_wu022_1-move-pair"] = "调度：选择两名角色，移动同势力角色装备区的一张牌",
+  [OPT_OBTAIN] = "获得",
+  [OPT_MOVE] = "移动",
 }
 
 return skill

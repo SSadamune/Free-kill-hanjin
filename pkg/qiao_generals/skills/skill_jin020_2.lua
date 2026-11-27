@@ -50,7 +50,7 @@ skill:addEffect("active", {
 Fk:loadTranslationTable {
   [skill.name] = "拨律",
   [":" .. skill.name] = "出牌阶段限一次，你可以选择一名角色并重铸一张手牌，根据花色修改其使用下张应变牌的应变条件：黑桃~富甲；红桃~残躯；梅花~助战；方片~空巢。",
-  ["#qiao__skill_jin020_2-prompt"] = "拨律：重铸一张手牌，按花色修改一名角色下张应变牌的应变条件",
+  ["#qiao__skill_jin020_2-prompt"] = "拨律：重铸一张手牌，修改一名角色下张应变牌的条件（♠富甲、♥残躯、♣助战、♦空巢）",
 }
 
 return skill

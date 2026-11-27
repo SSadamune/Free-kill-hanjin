@@ -16,6 +16,7 @@ local fuli = table.map(suits, M.fuliSuitMark)
 
 M.hengjiang = "qiao_hengjiang_limit-turn"
 
+M.jiliCount = "qiao_use_respond_count-turn"
 local jiliSkills = { "qiao__skill_shu020_1", "ld__jilis" }
 function M.isJili(skillName) return table.contains(jiliSkills, skillName) end
 
@@ -59,7 +60,7 @@ local entries = {
   { "@@lure_tiger-turn", "@@lure_tiger-turn", "暂时移出游戏。" },
 }
 
-local watched = {}
+local watched = { [M.jiliCount] = true }
 for _, entry in ipairs(entries) do watched[entry[1]] = true end
 for _, mark in ipairs(fuli) do watched[mark] = true end
 
@@ -94,7 +95,7 @@ function M.forPlayer(player)
   for _, name in ipairs(jiliSkills) do
     if Fk.skills[name] and player:hasShownSkill(name) then
       append(states, "jili", name,
-        "本回合使用或打出第 X 张牌时可摸 X 张牌，X 为当前攻击范围。", tostring(player:getAttackRange()))
+        "本回合已使用或打出的牌数。使用或打出第 X 张牌时可摸 X 张，X 为当前攻击范围。", tostring(player:getMark(M.jiliCount)))
       break
     end
   end

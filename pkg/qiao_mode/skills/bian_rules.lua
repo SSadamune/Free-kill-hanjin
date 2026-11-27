@@ -21,6 +21,20 @@ local function inQiao(room)
   return room ~= nil and type(room.getSettings) == "function" and Modes.inRoom(room)
 end
 
+-- 所有座位按同一规则记录，暗置、换将或中途获得蒺藜均能显示完整的回合计数。
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
+for _, event in ipairs({ fk.CardUsing, fk.CardResponding }) do
+  skill:addEffect(event, {
+    can_refresh = function(self, event, target, player, data)
+      return target == player and inQiao(player.room)
+        and player.room.logic:getCurrentEvent():findParent(GameEvent.Turn, true) ~= nil
+    end,
+    on_refresh = function(self, event, target, player, data)
+      player.room:addPlayerMark(player, SkillStatus.jiliCount, 1)
+    end,
+  })
+end
+
 local function isSlash(card)
   return card ~= nil and card.trueName == "slash"
 end
