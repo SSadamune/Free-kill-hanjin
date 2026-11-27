@@ -1,4 +1,5 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 
 local M = {}
 
@@ -69,9 +70,10 @@ end
 function M.value(ai, id)
   local card, player = Fk:getCardById(id), ai.player
   local area = ai.room:getCardArea(id)
-  if area == Card.PlayerEquip then return 6 end
-  local result = baseValue(ai, card)
   local owner = ai.room:getCardOwner(id)
+  local bonus = (not owner or owner == player) and Personality.cardBonus(ai, card) or 0
+  if area == Card.PlayerEquip then return 6 + bonus end
+  local result = baseValue(ai, card) + bonus
   if owner and owner ~= player then return result end
   if card.type == Card.TypeEquip then
     if M.effectable(player, "qiao__skill_wu008_2") then result = result + 1.5 end

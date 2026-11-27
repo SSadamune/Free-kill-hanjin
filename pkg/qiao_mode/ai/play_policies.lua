@@ -13,12 +13,13 @@ local function spareWeapon(ai, id)
 end
 
 function M.minsi(ai)
+  local budget = ai.personality == "draw" and 3.5 or 3
   local points = { [0] = { benefit = 0, cards = {} } }
   local enabled = ai:getEnabledCards()
   table.sort(enabled)
   for _, id in ipairs(enabled) do
     local value, point = Cost.value(ai, id), Minsi.pointOf(id)
-    if value <= 3 and point > 0 and point <= Minsi.TARGET then
+    if value <= budget and point > 0 and point <= Minsi.TARGET then
       for sum = Minsi.TARGET, point, -1 do
         local previous = points[sum - point]
         if previous then
@@ -35,7 +36,7 @@ function M.minsi(ai)
   local best = points[Minsi.TARGET]
   if not best then return "" end
   for _, id in ipairs(best.cards) do
-    if Cost.value(ai, id) > 3 or not table.contains(ai:getEnabledCards(), id) then return "" end
+    if Cost.value(ai, id) > budget or not table.contains(ai:getEnabledCards(), id) then return "" end
     ai:selectCard(id, true)
   end
   return Request.reply(ai)
@@ -176,8 +177,9 @@ function play.qiao__retinue_skill_lujiang_shangjia(ai)
 end
 
 function play.qiao__skill_wu001_1(ai)
+  local budget = ai.personality == "draw" and 3 or 2
   for _ = 1, ai.player.maxHp do
-    if not Cost.discard(ai, 1, 2, true) then break end
+    if not Cost.discard(ai, 1, budget, true) then break end
   end
   return Request.reply(ai)
 end

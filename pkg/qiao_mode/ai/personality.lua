@@ -34,4 +34,19 @@ function M.playOrder(ai)
   return M.standardOrder
 end
 
+function M.cardBonus(ai, card)
+  local profile = ai.personality
+  local name = card.trueName
+  if profile == "aggressive" and card.is_damage_card then return 0.5 end
+  if profile == "conservative" then
+    if name == "peach" or name == "jink" or name == "nullification" then return 1 end
+    if card.sub_type == Card.SubtypeArmor or card.sub_type == Card.SubtypeDefensiveRide then return 0.5 end
+  end
+  if profile == "supportive" and (name == "god_salvation" or name == "iron_chain"
+    or card.name == "qiao__restore_heartland") and M.hasAlly(ai) then return 0.75 end
+  if profile == "draw" and (card.name == "qiao__foresight" or card.name == "qiao__strengthen_state"
+    or card.name == "qiao__restore_heartland" or card.name == "qiao__befriend_attacking") then return 0.75 end
+  return 0
+end
+
 return M

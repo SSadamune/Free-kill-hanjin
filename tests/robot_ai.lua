@@ -1326,4 +1326,44 @@ function Testqiao_robot_ai:testSupportiveAndDrawProfilesChangeThePlayOrder()
   end)
 end
 
+function Testqiao_robot_ai:testPersonalityChangesCardAndTargetValueWithoutChangingSide()
+  scenario(function(room, player, enemy, ally)
+    local ai = player.ai
+    room:setPlayerProperty(enemy, "hp", 2)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local slash = give(room, player, "qiao__slash")
+    local jink = give(room, player, "qiao__jink")
+    local salvation = give(room, player, "qiao__god_salvation")
+    local draw = give(room, player, "qiao__foresight")
+    local hostile, support = ai:hostileScore(enemy, 3), ai:supportScore(ally, 3)
+    local slashValue, jinkValue = Cost.value(ai, slash.id), Cost.value(ai, jink.id)
+    local salvationValue, drawValue = Cost.value(ai, salvation.id), Cost.value(ai, draw.id)
+    ai.personality = "aggressive"
+    lu.assertEquals(Cost.value(ai, slash.id), slashValue + 0.5)
+    lu.assertEquals(ai:hostileScore(enemy, 3), hostile + 1)
+    lu.assertNil(ai:hostileScore(ally, 3))
+    ai.personality = "conservative"
+    lu.assertEquals(Cost.value(ai, jink.id), jinkValue + 1)
+    ai.personality = "supportive"
+    lu.assertEquals(Cost.value(ai, salvation.id), salvationValue + 0.75)
+    lu.assertEquals(ai:supportScore(ally, 3), support + 0.5)
+    lu.assertEquals(ai:supportScore(enemy, 3), 3)
+    ai.personality = "draw"
+    lu.assertEquals(Cost.value(ai, draw.id), drawValue + 0.75)
+  end)
+end
+
+function Testqiao_robot_ai:testDrawProfilePaysAnOrdinaryCardForZhiheng()
+  scenario(function(room, player)
+    local skill = "qiao__skill_wu001_1"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    local duel = give(room, player, "qiao__duel")
+    lu.assertEquals(reply(player, "PlayCard", {}).card, duel.id)
+    player.ai.personality = "draw"
+    local action = reply(player, "PlayCard", {})
+    lu.assertEquals(action.card.skill, skill)
+    lu.assertEquals(action.card.subcards, { duel.id })
+  end)
+end
+
 return { name = "qiao_robot_ai" }

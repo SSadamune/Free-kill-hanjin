@@ -115,6 +115,7 @@ function M.accept(ai, source, amount, defenseCost)
   if remaining == 2 then harm = harm + 2 end
   if remaining == 1 then harm = harm + 4 end
   harm = harm + (battle and 2 or 0) - math.min(peaches, 2)
+  if ai.personality == "conservative" then harm = harm + 1.5 end
   return benefit + math.min(defenseCost * 0.5, 4) > harm
 end
 

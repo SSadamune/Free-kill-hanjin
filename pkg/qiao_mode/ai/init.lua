@@ -40,11 +40,17 @@ function Robot:attitude(target)
 end
 
 function Robot:hostileScore(target, tactical)
-  return Diplomacy.hostileScore(self, target, tactical)
+  local score = Diplomacy.hostileScore(self, target, tactical)
+  if score and self.personality == "aggressive" and target.hp + target.shield <= 2 then
+    return score + 1
+  end
+  return score
 end
 
 function Robot:supportScore(target, tactical)
-  return tactical + (self:isFriend(target) and Diplomacy.humanBonus(self, target) or 0)
+  if not self:isFriend(target) then return tactical end
+  local bonus = self.personality == "supportive" and target ~= self.player and 0.5 or 0
+  return tactical + Diplomacy.humanBonus(self, target) + bonus
 end
 
 function Robot:makeReply()
