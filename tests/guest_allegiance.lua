@@ -84,10 +84,18 @@ function Testqiao_guest_allegiance:testGuestPortraitUsesPublicRoomSetting()
   lu.assertFalse(client:guestIllustrationsEnabled())
   client.settings = { gameMode = "qiao_heg_mode" }
   lu.assertTrue(client:guestIllustrationsEnabled())
-  client.banners.all_kingdoms = { "wu", "qun", "han", "jin" }
+  lu.assertEquals(client:guestCardFactions(), {})
+  client.banners.all_kingdoms = { "shu", "wu", "qun", "han" }
+  lu.assertNil(client:guestCardFactions().qiao_heg__shu001)
+  lu.assertNil(client:guestCardFactions().qiao_heg__wu010)
+  lu.assertNil(client:guestCardFactions().qiao_test__guest_partial)
+  client.banners.all_kingdoms = { "qun", "han", "jin" }
   local factions = client:guestCardFactions()
   lu.assertEquals(factions.qiao_heg__shu001, { "han", "qun", "wei", "wu" })
+  lu.assertEquals(factions.qiao_heg__wu010, { "qun", "han" })
   lu.assertNil(factions.qiao_heg__han001)
+  lu.assertNil(factions.qiao_heg__han014)
+  lu.assertEquals(factions.qiao_test__guest_partial, { "qun" })
   client.settings.qiao_guest_replacement = false
   lu.assertFalse(client:guestIllustrationsEnabled())
   lu.assertEquals(client:guestCardFactions(), {})
@@ -133,7 +141,8 @@ function Testqiao_guest_allegiance:testVirtualCardPictureUsesFormalHanjinId()
 end
 
 function Testqiao_guest_allegiance:testOpeningPortraitsFollowRoomSettingWithoutGuestCandidates()
-  local offers = { "qiao_test__han_1", "qiao_test__han_2" }
+  local zhuJun = "qiao_heg__han014"
+  local offers = { zhuJun, "qiao_test__han_1" }
   for _, enabled in ipairs({ true, false }) do
     local room = create { settings = { qiao_guest_replacement = enabled } }
     FkTest.runInRoom(function()
@@ -141,6 +150,8 @@ function Testqiao_guest_allegiance:testOpeningPortraitsFollowRoomSettingWithoutG
       local extra = component.model.prop.extraData
       lu.assertEquals(extra.guestIllustrations, enabled)
       lu.assertEquals(extra.guests, {})
+      lu.assertNil(extra.guestFactions[zhuJun])
+      lu.assertEquals(Guest.factionsOf(room, zhuJun).source, "original")
       lu.assertEquals(component.url, enabled and Selection.redraw_url or nil)
     end)
     support.clearRoom()
@@ -155,10 +166,59 @@ function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelec
   lu.assertEquals(guests.qiao_heg__wei013, { "han" })
   lu.assertEquals(guests.qiao_heg__qun001, { "wei", "shu", "wu", "han" })
   lu.assertNil(guests.qiao_heg__han003)
-  lu.assertNil(Guest.registeredInPackage("qiao_zhenshi")[name])
+  local catalog = Guest.registeredInPackage("qiao_zhenshi")
+  lu.assertNil(catalog[name])
+  local zhenShiGuests = {}
+  for id, factions in pairs(catalog) do
+    local general = Fk.generals[id]
+    lu.assertEquals(general.package.name, "qiao_zhenshi")
+    if general.prefix == "qiao_prefix_zhen" or general.prefix == "qiao_prefix_shi" then
+      zhenShiGuests[id] = factions
+    end
+  end
+  lu.assertEquals(zhenShiGuests, {
+    qiao_heg__wei032 = { "jin" },
+    qiao_heg__shu012 = { "wei" },
+    qiao_heg__shu018b = { "wu" },
+    qiao_heg__qun011 = { "wu" },
+    qiao_heg__qun081 = { "han" },
+    qiao_heg__wei023 = { "qun" },
+    qiao_heg__shu019 = { "qun" },
+    qiao_heg__wu010 = { "qun", "han" },
+    qiao_heg__qun006 = { "han" },
+  })
   for general, factions in pairs(guests) do
     lu.assertEquals(Fk.generals[general].package.name, pack)
     lu.assertEquals(factions, Guest.guestKingdoms(general))
+  end
+end
+
+function Testqiao_guest_allegiance:testSunCeUsesAllowedGuestFactionWhenWuIsBanned()
+  local sunCe, zhuJun = "qiao_heg__wu010", "qiao_heg__han014"
+  local qun = "qiao_test__qun_1"
+  for _, enabled in ipairs({ true, false }) do
+    local room = create {
+      backend = forcedBackend({ "wu", "qun" }),
+      settings = { qiao_guest_replacement = enabled },
+    }
+    lu.assertEquals(room:getBanner("qiao_banned_kingdoms"), { "wu", "qun" })
+    lu.assertEquals(table.contains(room.disabled_generals, sunCe), not enabled)
+    local entry = room:getTag(Guest.key)[sunCe]
+    if enabled then
+      lu.assertEquals(entry.source, "guest")
+      lu.assertEquals(entry.kingdoms, { "han" })
+      FkTest.runInRoom(function()
+        local offers = { sunCe, zhuJun, qun }
+        local extra = Selection.askData(room, offers).component.model.prop.extraData
+        lu.assertEquals(extra.guestFactions[sunCe], { "qun", "han" })
+        lu.assertEquals(extra.guests, { sunCe })
+        lu.assertEquals(Guest.pairKingdoms(room, sunCe, zhuJun), { "han" })
+        lu.assertEquals(Guest.pairKingdoms(room, sunCe, qun), {})
+      end)
+    else
+      lu.assertNil(entry)
+    end
+    support.clearRoom()
   end
 end
 

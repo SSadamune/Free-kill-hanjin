@@ -1,29 +1,20 @@
 import QtQuick
-import Fk
 import LunarLtk
 import LunarLtk.Components
-import LunarLtk.Components.Photo
 
 GeneralCardItem {
   id: card
   required property string generalName
   property var scene
-  property string preferredSkin: ""
-  readonly property var appearance: scene?.generalAppearance?.(generalName) ?? ({})
-  readonly property string activeSkin: Config.banChangeSkin ? "" : (appearance.skin ?? preferredSkin)
+  readonly property var appearance: Ltk.roomScene?.generalCardPresentation?.appearanceFor(dataModel?.known
+    ? dataModel.name : "")
 
-  dataModel: {
-    const properties = appearance.kingdom ? { kingdom: appearance.kingdom, subkingdom: "" } : {};
-    return Ltk.createGeneralCardModel(generalName, properties);
-  }
+  dataModel: Ltk.createGeneralCardModel(generalName)
 
-  SkinArea {
-    parent: card.cardBg
-    anchors.fill: parent
+  GuestCardAppearance {
+    card: card
+    appearance: card.appearance
+    inRoom: true
     z: 1
-    general: card.generalName
-    skinName: card.activeSkin
-    enabledShown: true
-    visible: card.activeSkin !== ""
   }
 }

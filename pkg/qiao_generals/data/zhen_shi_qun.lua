@@ -5,7 +5,7 @@ return {
  kingdoms={"qun"}, retinues={}, commanders={},
  generals={{
  number="QUN011", id="qiao_heg__qun011", kingdom="qun", hp=3, halfHp=1.5,
- gender="male", mainHpAdjust=0, deputyHpAdjust=0, guests={},
+ gender="male", mainHpAdjust=0, deputyHpAdjust=0, guests={"wu"},
  companions={"qiao_heg__qun010", "qiao_heg__em_qun010"}, companionsUnresolved={},
  name=[==[于吉]==], title=[==[袖里太平、魂绕左右]==],
  skills={{id="qiao__skill_qun011_1",name=[==[千幻]==],text=[==[与你势力相同的角色受到伤害后，你可以将一张牌置于武将牌上（数量至多为体力上限）；与你势力相同的角色成为非装备牌的唯一目标时，你可以移去一张“千幻”牌，取消之。]==],related=false,tags={}}},

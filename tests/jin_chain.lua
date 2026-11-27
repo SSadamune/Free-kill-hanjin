@@ -309,17 +309,21 @@ function Testqiao_jin_chain:testShunliuDiscardsDamagedAndChainedPlayers()
 
   local victimCard = giveHand(room, p(2), { { "qiao__slash", Card.Heart, 2 } })[1]
   local chainedCard = giveHand(room, p(3), { { "qiao__jink", Card.Spade, 4 } })[1]
+  local selfCards = giveHand(room, p(1), {
+    { "qiao__slash", Card.Spade, 7 }, { "qiao__jink", Card.Heart, 7 },
+  })
   inRoom(function()
     -- 受伤者不横置，避免火焰伤害触发铁索传导，单独验证“受伤者 + 当时横置者”。
     p(2):setChainState(false)
     p(3):setChainState(true)
+    p(1):setChainState(true)
   end)
   lu.assertTrue(p(1):hasSkill(SHUNLIU))
 
   -- 羊祜选择受伤者与横置角色各一张牌。askToChooseCard 的请求不是
   -- ReplyChooseCards 的技能牌格式，使用限定本技能的请求覆盖。
   local picks = { [p(2).id] = victimCard, [p(3).id] = chainedCard }
-  FkTest.setNextReplies(p(1), { "1" })
+  FkTest.setNextReplies(p(1), { "1", FkTest.ReplyChooseCards({ selfCards[2] }) })
   skill_test.withSkillRequests(room, SHUNLIU, {
     askToChooseCard = function(self, player, params, original)
       return picks[params.target.id]
@@ -340,6 +344,8 @@ function Testqiao_jin_chain:testShunliuDiscardsDamagedAndChainedPlayers()
   lu.assertTrue(p(3).chained)
   lu.assertEquals(room:getCardArea(victimCard), Card.DiscardPile)
   lu.assertEquals(room:getCardArea(chainedCard), Card.DiscardPile)
+  lu.assertEquals(room:getCardArea(selfCards[2]), Card.DiscardPile)
+  lu.assertEquals(p(1):getCardIds("h"), { selfCards[1] })
 end
 
 -- 克清：建立效果后，目标使用牌时若横置由其自己弃一张；王濬失去技能后效果仍在，

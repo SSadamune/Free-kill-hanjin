@@ -1,7 +1,6 @@
 -- QUN006 董卓 · 崩坏
 --
--- 锁定技：结束阶段，若自己的体力值不为最小（并列最小不触发），选择一至两项：
--- 失去1点体力、减1点体力上限；选择两项时执行一个额外摸牌阶段。
+-- 结束阶段体力值不为最小时，选择减体力上限或失去体力。
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local skill = fk.CreateSkill {
@@ -30,36 +29,31 @@ skill:addEffect(fk.EventPhaseStart, {
       and data ~= nil and data.phase == Player.Finish and notMinimumHp(player)
   end,
   on_cost = function(self, event, target, player, data)
-    local options = { LOSE_HP, LOSE_MAX }
-    local choices, _, sets = Selection.optionSets(options, options, 2)
     local choice = Selection.askOption(player.room, player, {
-      choices = choices,
+      choices = { LOSE_MAX, LOSE_HP },
       skill_name = skill.name,
       prompt = "#qiao__skill_qun006_3-choice",
       cancelable = false,
     })
-    local picked = sets[choice]
-    if picked == nil or #picked == 0 then return false end
-    event:setCostData(self, { picked = picked })
+    if not choice then return false end
+    event:setCostData(self, { choice = choice })
     return true
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local picked = (event:getCostData(self) or {}).picked or {}
-    local loseHp = table.contains(picked, LOSE_HP)
-    local loseMax = table.contains(picked, LOSE_MAX)
-    if loseHp then room:loseHp(player, 1, skill.name) end
-    if loseMax and not player.dead then room:changeMaxHp(player, -1) end
-    if loseHp and loseMax and not player.dead then
-      player:gainAnExtraPhase(Player.Draw, skill.name)
+    local choice = (event:getCostData(self) or {}).choice
+    if choice == LOSE_MAX then
+      room:changeMaxHp(player, -1)
+    elseif choice == LOSE_HP then
+      room:loseHp(player, 1, skill.name)
     end
   end,
 })
 
 Fk:loadTranslationTable {
   ["qiao__skill_qun006_3"] = "崩坏",
-  [":qiao__skill_qun006_3"] = "锁定技，结束阶段，若你的体力值不为最小，你选择一至两项：1.失去1点体力；2.减1点体力上限。若你选择两项，你执行一个额外摸牌阶段。",
-  ["#qiao__skill_qun006_3-choice"] = "崩坏：选择一至两项",
+  [":qiao__skill_qun006_3"] = "锁定技，结束阶段，若你的体力值不为最小，你减1点体力上限或失去1点体力。",
+  ["#qiao__skill_qun006_3-choice"] = "崩坏：选择一项",
   [LOSE_HP] = "失去1点体力",
   [LOSE_MAX] = "减1点体力上限",
 }

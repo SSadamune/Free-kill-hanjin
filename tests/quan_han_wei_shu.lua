@@ -102,10 +102,9 @@ function Testqiao_quan_han_wei_shu:testRegistrationGuestsCompanionsCommandersAnd
     qiao_heg__qun021 = { "han" },
     qiao_heg__qun023 = { "wei" },
   }
+  local catalog = Guest.registeredInPackage("qiao_zhenshi")
   for _, id in ipairs(ordinary) do
-    local want = expectedGuests[id] or {}
-    local got = Guest.guestKingdoms(id)
-    lu.assertEquals(got, want, "guest mismatch for " .. id)
+    lu.assertEquals(catalog[id], expectedGuests[id], "guest mismatch for " .. id)
   end
 
   -- 珠联璧合核对

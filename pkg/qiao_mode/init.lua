@@ -120,6 +120,8 @@ Fk:loadTranslationTable {
   ["#QiaoChooseGenerals"] = "选择主将与副将",
   ["#QiaoChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
   ["qiao_selection_can_ascend"] = "可君主升变",
+  ["qiao_lord_ascension"] = "君主升变",
+  ["$qiao_lord_ascension1"] = "君主升变",
   ["#QiaoLockedWrongPlayerCount"] = "开局取消：房间人数与锁定势力的游戏规则不符。",
   ["#QiaoLockedInsufficientGenerals"] = "开局取消：当前禁将和备选势力无法为两方发足合法的武将牌。",
   ["#QiaoLockedFewerOffers"] = "将池不足，本局每人的基础备选武将牌统一减为 %arg 张。",

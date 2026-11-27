@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import "GuestIllustration.js" as GuestIllustration
 
 Item {
   id: root
   required property Item card
-  required property bool enabledInContext
+  required property var appearance
+  property bool inRoom: false
+  anchors.fill: parent
   readonly property var model: card.dataModel
-  property var factions: []
-  readonly property var visibleFactions: enabledInContext && model?.known ? factions : []
-  readonly property var picture: model?.known
-    ? GuestIllustration.picture(model.name, enabledInContext) : undefined
+  readonly property var visibleFactions: model?.known ? appearance?.guestFactions ?? [] : []
+  readonly property var picture: model?.known ? appearance?.picture : undefined
 
   Binding {
     target: root.card
     property: "cardFrontSource"
-    // The selection box reuses its card item when the general changes.
-    value: root.picture || root.model?.frontSkin || ""
+    when: !!root.picture
+    value: root.picture
   }
   Binding {
     target: root.model
@@ -32,7 +31,13 @@ Item {
   }
   GuestFactionBadges {
     card: root.card
-    factions: root.visibleFactions
-    visible: root.model?.detailed ?? false
+    standalone: root.inRoom && !root.model?.detailed
+    factions: standalone ? root.appearance?.factions ?? [] : root.visibleFactions
+    visible: !!root.model?.known && (root.model.detailed || standalone)
+  }
+  Loader {
+    anchors.fill: parent
+    active: root.inRoom && root.visibleFactions.length > 0
+    sourceComponent: GuestFactionBorder { factions: root.visibleFactions }
   }
 }

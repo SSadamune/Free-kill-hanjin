@@ -109,7 +109,6 @@ function M.register(retinues)
   for _, retinue in ipairs(retinues or {}) do
     addDisplayName(retinue.skill.id, retinue.name)
   end
-  translations[Formation.FEIYING_MARK] = "飞影来源"
   for name in pairs(Flags.flags) do
     local mark = "@!!" .. name
     translations[mark] = Fk:translate(name, "zh_CN")

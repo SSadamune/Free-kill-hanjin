@@ -38,6 +38,10 @@ function Testqiao_translation_completeness:testSkillReferenceCatalog()
   end
   lu.assertEquals(pages["并州狼骑"], "retinue")
   lu.assertEquals(pages["司马师"], "general")
+  local liuBei = table.find(catalog.generals, function(entry) return entry.id == "qiao_heg__shu001" end)
+  local jiangWei = table.find(catalog.generals, function(entry) return entry.id == "qiao_heg__shu012" end)
+  lu.assertEquals(liuBei.lord, "qiao_heg__em_shu001")
+  lu.assertStrContains(jiangWei.commander, "八阵兵")
 end
 
 function Testqiao_translation_completeness:testEmbeddedDescriptionsAreRegisteredForDisplayOnly()
@@ -119,7 +123,6 @@ local PUBLIC_PILES = {
   "@[qiao_keqing]",
   "@[qiao_bingzhou_pairs]",
   "@@qiao_bazhen_viewas",
-  "@@qiao_feiying_sources",
   "@@qiao_feiying_layers",
 }
 

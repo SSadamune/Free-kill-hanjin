@@ -220,6 +220,10 @@ function M.ascend(room, player, newMain, kingdom, options)
     arg2 = newMain,
     arg3 = kingdom,
   }
+  if options.kind == "lord" then
+    room:doAnimate("InvokeUltSkill", { name = "qiao_lord_ascension", player = player.id, deputy = false })
+    room:delay(2000)
+  end
 
   -- 明置主将，但不触发普通 GeneralRevealed；珠联璧合与阴阳鱼在此统一判定，
   -- 避免一次升变和普通明置事件重复发放消耗型标记。

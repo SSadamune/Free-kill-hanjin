@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import Fk
-import LunarLtk.Components as Ltk
+import Fk.Components.Common as Common
+import LunarLtk
+import LunarLtk.Components as Components
+import LunarLtk.Components.Photo as PhotoParts
 import "GuestIllustration.js" as GuestIllustration
 
 QtObject {
@@ -9,26 +12,46 @@ QtObject {
   required property bool enabledInContext
   required property var factions
   property bool onlyRegistered: false
+  property bool inRoom: false
+
+  function appearanceFor(name) {
+    const known = name && name !== "anjiang";
+    if (!known) return { guestFactions: [], factions: [] };
+    const registered = factions?.[name] ?? [];
+    const guestFactions = enabledInContext
+      ? (inRoom ? GuestIllustration.roomFactions(registered) : registered) : [];
+    const picture = GuestIllustration.picture(name,
+      enabledInContext && (!onlyRegistered || guestFactions.length > 0));
+    const printed = inRoom && !guestFactions.length ? Ltk.getGeneralData(name) : null;
+    return { picture, guestFactions, factions: printed
+      ? [printed.kingdom, printed.subkingdom].filter(Boolean) : guestFactions };
+  }
+
   // Core and utility create their delegates dynamically. Attach once at the
   // room's visual roots, including the separate overlay used by info popups.
   function watch(item) {
     if (!(item instanceof Item) || item.objectName === "qiaoAppearanceWatcher") return;
-    if (item instanceof Ltk.GeneralCardItem) {
+    if (item instanceof Components.GeneralCardItem) {
       if (!item.children.some(child => child instanceof GuestCardAppearance))
         fullCard.createObject(item, { card: item });
-    } else if (item instanceof Ltk.CompactGeneralCardItem) {
+    } else if (item instanceof Components.CompactGeneralCardItem) {
       if (item.children.some(child => child.objectName === "qiaoCompactGeneralArtwork")) return;
       const art = item.children.find(child => child instanceof Image && "useSmallPic" in child);
       if (art) compactCard.createObject(item, { card: item, art });
-    } else if (item instanceof Ltk.PhotoBase) {
+    } else if (item instanceof Components.PhotoBase) {
       const layer = item.children.find(child => child.maskSource === item.photoMask)?.source;
-      if (!layer || layer.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
+      if (!layer || item.children.some(child => child.objectName === "qiaoGuestPortrait")) return;
       const portraits = layer.children.filter(child => child instanceof Image);
+      const skins = layer.children.filter(child => child instanceof PhotoParts.SkinMedia);
       if (portraits.length === 2)
-        portraits.forEach((art, index) => portrait.createObject(layer, { photo: item, art, deputy: index === 1 }));
-    } else if (item instanceof Ltk.CardItem) {
+        portraits.forEach((art, index) => portrait.createObject(item,
+          { photo: item, art, skin: skins[index] ?? null, deputy: index === 1 }));
+    } else if (item instanceof Components.CardItem) {
       if (!item.children.some(child => child.objectName === "qiaoGeneralCardArtwork"))
         generalAsCard.createObject(item, { card: item });
+    } else if (inRoom && item instanceof Common.Avatar && item.parent?.parent?.modelData?._general !== undefined) {
+      if (!item.children.some(child => child.objectName === "qiaoCompactGeneralArtwork"))
+        compactCard.createObject(item, { art: item, skillAvatar: true });
     } else if (!(item instanceof Image || item instanceof Text)) {
       if (!item.children.some(child => child.objectName === "qiaoAppearanceWatcher"))
         containerWatcher.createObject(item);
@@ -54,8 +77,8 @@ QtObject {
 
   readonly property Component fullCard: Component {
     GuestCardAppearance {
-      enabledInContext: root.enabledInContext && (!root.onlyRegistered || factions.length > 0)
-      factions: root.factions[card.dataModel?.name] ?? []
+      appearance: root.appearanceFor(card.dataModel?.known ? card.dataModel.name : "")
+      inRoom: root.inRoom
       z: 1
     }
   }
@@ -64,27 +87,35 @@ QtObject {
     Item {
       id: compact
       objectName: "qiaoCompactGeneralArtwork"
-      required property Item card
+      property Item card: null
       required property Image art
-      readonly property var picture: card.dataModel?.known
-        ? GuestIllustration.picture(card.dataModel.name, root.enabledInContext) : undefined
+      property bool skillAvatar: false
+      readonly property string name: skillAvatar ? art.general
+        : (card?.dataModel?.known ? card.dataModel.name : "")
+      readonly property var appearance: root.appearanceFor(name)
       readonly property Binding source: Binding {
         target: compact.art
         property: "source"
-        when: !!compact.picture
-        value: compact.picture
+        when: !!compact.appearance.picture
+        value: compact.appearance.picture
       }
       readonly property Binding crop: Binding {
         target: compact.art
         property: "sourceClipRect"
-        when: !!compact.picture
+        when: !!compact.appearance.picture
         value: Qt.rect(0, 0, 0, 0)
       }
       readonly property Binding fill: Binding {
         target: compact.art
         property: "fillMode"
-        when: !!compact.picture
+        when: !!compact.appearance.picture
         value: Image.PreserveAspectCrop
+      }
+      GuestFactionBadges {
+        visible: root.inRoom
+        standalone: true
+        badgeSize: compact.skillAvatar ? 13 : 17
+        factions: compact.appearance.factions
       }
     }
   }
@@ -95,16 +126,40 @@ QtObject {
       objectName: "qiaoGuestPortrait"
       required property Item photo
       required property Image art
+      property Item skin: null
       required property bool deputy
       readonly property string name: deputy ? photo.deputyGeneral : photo.general
-      readonly property var picture: GuestIllustration.picture(name, root.enabledInContext)
-      // The original image is already part of the masked texture and sits
-      // behind its skin layer. Change only that image's source.
+      readonly property var appearance: root.appearanceFor(name)
+      x: photo.photoMask.x + (deputy ? photo.photoMask.width / 2 : 0)
+      y: photo.photoMask.y
+      z: 1
       Binding {
         target: portraitArtwork.art
         property: "source"
-        when: !!portraitArtwork.picture
-        value: portraitArtwork.picture
+        // Qt 6.10 can leave the previous guest image in the native Image
+        // when a conditional override is released after concealing a general.
+        value: {
+          const name = portraitArtwork.name;
+          if (!name) return "";
+          if (name === "anjiang") return SkinBank.getGeneralPicture(name);
+          const usesDualArt = portraitArtwork.deputy || !!portraitArtwork.photo.deputyGeneral;
+          return portraitArtwork.appearance.picture
+            ?? (usesDualArt ? SkinBank.getGeneralExtraPic(name, "dual/") : undefined)
+            ?? SkinBank.getGeneralPicture(name);
+        }
+      }
+      Binding {
+        target: portraitArtwork.skin
+        property: "visible"
+        when: root.inRoom && portraitArtwork.skin !== null
+        value: false
+      }
+      GuestFactionBadges {
+        // The battlefield Photo already shows the character's native faction.
+        visible: root.inRoom && !(portraitArtwork.photo instanceof Components.Photo)
+        standalone: true
+        badgeSize: portraitArtwork.photo.deputyGeneral ? 15 : 19
+        factions: portraitArtwork.appearance.factions
       }
     }
   }
@@ -115,13 +170,21 @@ QtObject {
       objectName: "qiaoGeneralCardArtwork"
       required property Item card
       readonly property string graphic: card.dataModel?.picName ?? ""
-      readonly property var picture: card.dataModel?.known && graphic.startsWith("general:")
-        ? GuestIllustration.picture(graphic.slice(8), root.enabledInContext) : undefined
+      readonly property var appearance: root.appearanceFor(
+        card.dataModel?.known && graphic.startsWith("general:") ? graphic.slice(8) : "")
       Binding {
         target: illustration.card
         property: "cardFrontSource"
-        when: !!illustration.picture
-        value: illustration.picture
+        when: !!illustration.appearance.picture
+        value: illustration.appearance.picture
+      }
+      GuestFactionBadges {
+        // Poker-style cards use the left corner for suit and rank.
+        x: illustration.card.width - 38 * (illustration.card.cardScale ?? 1)
+        visible: root.inRoom
+        standalone: true
+        badgeSize: 14 * (illustration.card.cardScale ?? 1)
+        factions: illustration.appearance.factions
       }
     }
   }

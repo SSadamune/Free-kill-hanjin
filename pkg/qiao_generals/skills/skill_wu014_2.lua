@@ -110,35 +110,26 @@ skill:addEffect("active", {
     if a.dead or b.dead then return end
 
     local eligible = {}
-    if #a:getCardIds(Player.Hand) <= beforeA then table.insert(eligible, a) end
-    if #b:getCardIds(Player.Hand) <= beforeB then table.insert(eligible, b) end
+    if a:getHandcardNum() <= beforeA and not a:hasSkill(HAOSHI) then table.insert(eligible, a) end
+    if b:getHandcardNum() <= beforeB and not b:hasSkill(HAOSHI) then table.insert(eligible, b) end
     if #eligible == 0 then return end
 
-    local grantTo = eligible[1]
-    if #eligible > 1 then
-      local chosen = room:askToChoosePlayers(player, {
-        targets = eligible,
-        min_num = 1,
-        max_num = 1,
-        skill_name = skill.name,
-        prompt = "#qiao__skill_wu014_2-target",
-        cancelable = false,
-      })
-      grantTo = chosen and chosen[1]
-    end
-    if grantTo == nil or grantTo.dead or grantTo:isRemoved() then return end
-    if grantTo:hasSkill(HAOSHI) then return end
-
-    if not room:askToSkillInvoke(player, {
+    local chosen = room:askToChoosePlayers(player, {
+      targets = eligible,
+      min_num = 1,
+      max_num = #eligible,
       skill_name = skill.name,
-      prompt = "#qiao__skill_wu014_2-grant::" .. grantTo.id,
-    }) then
-      return
+      prompt = "#qiao__skill_wu014_2-target",
+      cancelable = true,
+    })
+    for _, grantTo in ipairs(chosen or {}) do
+      if table.contains(eligible, grantTo) and grantTo:isAlive() and not grantTo:isRemoved()
+        and not grantTo:hasSkill(HAOSHI) then
+        ensureExpiry(room)
+        room:handleAddLoseSkills(grantTo, HAOSHI, skill.name, false, true)
+        room:addPlayerMark(grantTo, GRANT_MARK, 1)
+      end
     end
-
-    ensureExpiry(room)
-    room:handleAddLoseSkills(grantTo, HAOSHI, skill.name, false, true)
-    room:addPlayerMark(grantTo, GRANT_MARK, 1)
   end,
 })
 
@@ -150,8 +141,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_wu014_2"] = "缔盟",
   [":qiao__skill_wu014_2"] = "出牌阶段限一次，你可以选择两名其他角色并弃置等同其手牌数差的牌，令其交换手牌，你可以对其中手牌未增加的角色纵横“好施”。",
   ["#qiao__skill_wu014_2-prompt"] = "缔盟：选择两名其他角色及等同于其手牌数之差的弃牌",
-  ["#qiao__skill_wu014_2-target"] = "缔盟：选择一名手牌未增加的角色",
-  ["#qiao__skill_wu014_2-grant"] = "缔盟：你可以令 %dest 纵横“好施”直到其下个回合结束",
+  ["#qiao__skill_wu014_2-target"] = "缔盟：你可以对手牌未增加的角色纵横“好施”",
 }
 
 return skill

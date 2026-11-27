@@ -2,6 +2,8 @@
 -- 出牌阶段限一次；本回合所有发动（包括额外发动）不能重复选择同一角色。
 -- 目标实际弃足三张且类别各异时，由目标选择摸一张或复原三陈。
 local U = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
+local DRAW = "qiao__skill_jin006_1-draw"
+local RESTORE = "qiao__skill_jin006_1-restore"
 
 local skill = fk.CreateSkill {
   name = U.CHEN_SKILL,
@@ -82,14 +84,14 @@ skill:addEffect("active", {
     end
 
     local choice = room:askToChoice(target, {
-      choices = { "draw", "restore" },
+      choices = { DRAW, RESTORE },
       skill_name = skill.name,
       prompt = "#qiao__skill_jin006_1-choice",
       cancelable = false,
     })
-    if choice == "draw" then
+    if choice == DRAW then
       if not target.dead then target:drawCards(1, skill.name) end
-    elseif choice == "restore" then
+    elseif choice == RESTORE then
       U.restoreSanChen(player)
     end
   end,
@@ -100,8 +102,8 @@ Fk:loadTranslationTable {
   ["#qiao__skill_jin006_1-prompt"] = "三陈：令一名本回合尚未选择过的角色摸三张牌并弃三张牌",
   ["#qiao__skill_jin006_1-discard"] = "三陈：弃置三张牌",
   ["#qiao__skill_jin006_1-choice"] = "三陈：弃置牌类别各异，选择摸一张牌或复原三陈",
-  ["draw"] = "摸一张牌",
-  ["restore"] = "复原三陈",
+  [DRAW] = "摸一张牌",
+  [RESTORE] = "复原〖三陈〗",
 }
 
 return skill

@@ -4,7 +4,12 @@ import QtQuick
 Canvas {
   id: border
 
-  required property var colors
+  required property var factions
+  readonly property var factionColors: ({
+    wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
+    qun: "#92959a", han: "#aa832e", jin: "#845ba8"
+  })
+  readonly property var colors: factions.map(faction => factionColors[faction] ?? "#888888")
   readonly property int strokeWidth: 2
   readonly property var segments: {
     const w = width - strokeWidth;

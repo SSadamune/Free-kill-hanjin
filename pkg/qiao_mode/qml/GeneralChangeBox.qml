@@ -7,13 +7,13 @@ import Fk.Components.Common
 import LunarLtk
 import LunarLtk.Components
 import LunarLtk.Pages.Popups
-import "GuestIllustration.js" as GuestIllustration
 
 GraphicsBox {
   id: root
 
   required property var candidates
   required property string prompt
+  // Keep the recorded request shape. The card reads the room presentation.
   required property bool guestIllustrations
   required property var guestFactions
   required property var commanderDetails
@@ -24,18 +24,10 @@ GraphicsBox {
   property string previewName: ""
   readonly property int columns: Math.min(candidates.length, 7,
     Math.max(1, Math.floor(((parent?.width ?? 740) - 44) / 104)))
-  readonly property var factionColors: ({
-    wei: "#477cbd", shu: "#c34f37", wu: "#448b50",
-    qun: "#92959a", han: "#aa832e", jin: "#845ba8"
-  })
 
   title.text: Ltk.processPrompt(prompt)
   width: Math.max(300, columns * 104 + 44)
   height: grid.height + 104
-
-  function factionsFor(name) {
-    return GuestIllustration.roomFactions(guestFactions[name]);
-  }
 
   function matchesPartner(name) {
     return partner !== "" && Ltk.isCompanionWith(name, partner);
@@ -44,7 +36,8 @@ GraphicsBox {
   function descriptionFor(name) {
     if (!name) return "";
     const detail = Ltk.getGeneralDetail(name);
-    let text = "<b>" + Lua.tr(name) + "</b>";
+    const factions = Ltk.roomScene?.generalCardPresentation?.appearanceFor(name).factions ?? [detail.kingdom];
+    let text = "<b>" + factions.map(faction => Lua.tr(faction)).join("／") + " " + Lua.tr(name) + "</b>";
     if (detail.headnote) text += "<br/>" + Lua.tr(detail.headnote);
     if (detail.companions.length > 0) {
       text += "<br/><b>" + Lua.tr("Companions") + "</b>　"
@@ -86,20 +79,10 @@ GraphicsBox {
         generalName: parent.modelData
         selectable: true
         selected: root.selectedName === generalName
-        readonly property var factions: root.factionsFor(generalName)
         dataModel: {
           const properties = { heg: true, inPosition: root.isDeputy ? -1 : 1 };
           properties.hasCompanion = root.matchesPartner(generalName);
           return Ltk.createGeneralCardModel(generalName, properties);
-        }
-        GuestCardAppearance {
-          card: card
-          enabledInContext: root.guestIllustrations
-          factions: card.factions
-        }
-        GuestFactionBorder {
-          anchors.fill: parent
-          colors: card.factions.map(faction => root.factionColors[faction] ?? "#888888")
         }
 
         HoverHandler {

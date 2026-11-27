@@ -3,6 +3,8 @@
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
 local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
 local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
+local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
+local ZhenShiJin = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
 local M = {}
 Fk:loadTranslationTable {
   ["qiao_skill_status"] = "状态",
@@ -44,6 +46,9 @@ local entries = {
   { "@[qiao_kannan_damage]-turn", "qiao__skill_han017_1", "本回合下一张【杀】的伤害增加所示数值。", function(value) return "+" .. value end },
   { "qiao__skill_wei006_1_granted", "qiao__skill_wei006_1", "因【轻辎】获得【神速】，直到你的回合结束。" },
   { "qiao_wu_dimeng_granted", "qiao__skill_wu014_2", "因【缔盟】获得【好施】，直到你的下个回合结束。" },
+  { Formation.FEIYING_LAYERS_MARK, Formation.FEIYING_SKILL, "其他角色计算与你的距离增加所示数值。", function(value) return "+" .. value end },
+  { ZhenShiJin.RANGE, "qiao__skill_jin022b_1", "本回合攻击范围增加所示数值。", function(value) return "+" .. value end },
+  { "@@qiao_duanchang", "qiao__skill_qun012_2", "场上的武将牌因【断肠】失去了技能。" },
   { "qiao_wei024_extra_draw", "qiao__skill_wei024_1", "本回合摸牌阶段多摸所示数量的牌。", function(value) return "+" .. value end },
   { Quan.YUJUE_DRAW_MARK, "qiao__skill_han003_1", "本回合下次造成伤害后摸两张牌。", function(value)
     return value > 1 and ("×" .. value) or ""
