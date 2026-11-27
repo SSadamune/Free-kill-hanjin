@@ -10,6 +10,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -173,9 +174,10 @@ function Robot:handleAskForArrangeCards(data)
 end
 
 function Robot:handleAskForPoxi(data)
-  if data.type == "AskForCardsChosen" and data.extra_data and data.extra_data.prompt == "#qiao_move_board_pick" then
-    return Board.chooseCard(self, data.data)
-  end
+  if data.type ~= "AskForCardsChosen" or not data.extra_data then return end
+  local prompt = data.extra_data.prompt
+  if prompt == "#qiao_move_board_pick" then return Board.chooseCard(self, data.data) end
+  if prompt == "#qiao__skill_wu006_1-judge_card" then return Removal.chooseJudge(self, data.data) end
 end
 
 function Robot:handleAskForCardChosen(data)

@@ -22,7 +22,16 @@ local function enemyRetrial(ai)
   end)
 end
 
-function M.pick(ai, target, areas, obtains)
+function M.judgeValue(ai, owner, card)
+  local name = card.trueName
+  local ally = ai:isFriend(owner)
+  if ally and (name == "indulgence" or name == "supply_shortage") then
+    return name == "indulgence" and 8 or 7
+  end
+  if name == "lightning" and (ally or ai:isEnemy(owner)) and enemyRetrial(ai) then return 7.5 end
+end
+
+function M.pick(ai, target, areas, obtains, refundSpade)
   local friend, enemy = ai:isFriend(target), ai:isEnemy(target)
   if not friend and not enemy then return end
   local best, value
@@ -30,7 +39,7 @@ function M.pick(ai, target, areas, obtains)
     if score and (not best or score > value or (score == value and id < best)) then best, value = id, score end
   end
   if enemy and areas:find("h", 1, true) and not target:isKongcheng() then
-    offer(-1, (obtains and 2 or 0) + 3 + 1.5 / target:getHandcardNum())
+    offer(-1, (obtains and 2 or 0) + 3 + 1.5 / target:getHandcardNum() - (refundSpade and 0.5 or 0))
   end
   if enemy and areas:find("e", 1, true) then
     for _, id in ipairs(target:getCardIds("e")) do
@@ -40,6 +49,7 @@ function M.pick(ai, target, areas, obtains)
           or card.sub_type == Card.SubtypeDefensiveRide and 5.5
           or card.sub_type == Card.SubtypeWeapon and 4.5 or 3.5
         if Cost.effectable(target, "qiao__skill_wu008_2") then score = score - 1.5 end
+        if refundSpade and card.suit == Card.Spade then score = score - 3 end
         offer(id, score + (obtains and 2 or 0))
       end
     end
@@ -47,17 +57,22 @@ function M.pick(ai, target, areas, obtains)
   if areas:find("j", 1, true) then
     for _, id in ipairs(target:getCardIds("j")) do
       local card = target:getVirtualEquip(id) or Fk:getCardById(id)
-      local name = card.trueName
-      if obtains or not target:prohibitDiscard(id) then
-        if friend and (name == "indulgence" or name == "supply_shortage") then
-          offer(id, name == "indulgence" and 8 or 7)
-        elseif name == "lightning" and enemyRetrial(ai) then
-          offer(id, 7.5)
-        end
-      end
+      if obtains or not target:prohibitDiscard(id) then offer(id, M.judgeValue(ai, target, card)) end
     end
   end
   return best, value
+end
+
+function M.chooseJudge(ai, groups)
+  local best, value
+  for _, group in ipairs(groups) do
+    for _, id in ipairs(group[2]) do
+      local owner = ai.room:getCardOwner(id)
+      local score = owner and M.judgeValue(ai, owner, owner:getVirtualEquip(id) or Fk:getCardById(id))
+      if score and (not value or score > value) then best, value = id, score end
+    end
+  end
+  return best and { best } or {}
 end
 
 function M.effectValue(ai, card, target)

@@ -386,6 +386,7 @@ function M.chosen(ai, data)
   local fields = (prompt or ""):split(":")
   local key = fields[1]
   if key == "#qiao__skill_qun008_2-ask" then return Removal.pick(ai, target, "e", false) end
+  if key == "#qiao__skill_qun001_2-card" then return Removal.pick(ai, target, areas, false, true) end
   local obtains = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__skill_wei002_1-choose"
     or (key == "#AskForChooseCard" and fields[4] == "snatch_skill")
   local removal = obtains or key == "#qiao__chasing_near-choose-discard"

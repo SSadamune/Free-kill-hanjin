@@ -1624,4 +1624,58 @@ function Testqiao_robot_ai:testLujiangSpendsOnlyCheapNonSlashWhenAnotherAttackIs
   end)
 end
 
+function Testqiao_robot_ai:testGuoseClearsTheValuableJudgmentFromLegalCandidates()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local skill = "qiao__skill_wu006_1"
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    local cost = give(room, player, "qiao__lightning", 5, Card.Diamond)
+    local indulgence = give(room, ally, "qiao__indulgence")
+    local lightning = give(room, ally, "qiao__lightning")
+    room:moveCardTo(indulgence, Card.PlayerJudge, ally, fk.ReasonPut)
+    room:moveCardTo(lightning, Card.PlayerJudge, ally, fk.ReasonPut)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, skill)
+    lu.assertEquals(action.card.subcards, { cost.id })
+    lu.assertEquals(action.targets, { ally.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(indulgence.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(lightning.id), Card.PlayerJudge)
+  end)
+end
+
+function Testqiao_robot_ai:testPearlUsesTheSameReplacementStrategyAsZhiheng()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local pearl = give(room, player, "qiao__luminous_pearl")
+    room:moveCardTo(pearl, Card.PlayerEquip, player, fk.ReasonPut)
+    local cheap = give(room, player, "qiao__lightning")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__luminous_pearl_skill")
+    lu.assertEquals(action.card.subcards, { cheap.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(pearl.id), Card.PlayerEquip)
+  end)
+end
+
+function Testqiao_robot_ai:testChuliPrefersVisibleArmorAndDoesNotSelectAnAlly()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_qun001_2", nil, false, true)
+    for index = 4, #room.players do room:setPlayerProperty(room.players[index], "kingdom", "unknown") end
+    local allyCard = give(room, ally, "qiao__jink")
+    local cost = give(room, player, "qiao__lightning")
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__skill_qun001_2")
+    lu.assertEquals(action.targets, { enemy.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(armor.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(allyCard.id), Card.PlayerHand)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

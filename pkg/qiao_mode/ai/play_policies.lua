@@ -5,6 +5,7 @@ local Heg = require "packages.hegemony.util"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 
 local M = {}
 local play = {}
@@ -146,6 +147,30 @@ function play.qiao__skill_wu008_1(ai)
   if Cost.discard(ai, 1, 2) then return Request.targets(ai, benefit) end
 end
 
+function play.qiao__skill_qun001_2(ai)
+  if not Cost.discard(ai, 1, 2.5) then return end
+  return Request.targets(ai, function(target)
+    local _, payoff = Removal.pick(ai, target, "he", false, true)
+    if ai:isEnemy(target) and payoff and payoff >= 3 then return ai:hostileScore(target, payoff) end
+  end, 3)
+end
+
+function play.qiao__skill_wu006_1(ai, stage)
+  local removes = stage == "disrupt"
+  ai.handler:updateInteraction(removes and "qiao__skill_wu006_1-discard" or "qiao__skill_wu006_1-use")
+  local id, cost = Cost.cheapest(ai)
+  if not id or cost > (removes and 7 or 3) then return end
+  ai:selectCard(id, true)
+  return Request.targets(ai, function(target)
+    if removes then
+      local _, payoff = Removal.pick(ai, target, "j", false)
+      if payoff and payoff + 2 > cost then return payoff end
+    else
+      return ai:hostileScore(target, target:getHandcardNum())
+    end
+  end)
+end
+
 function play.qiao__skill_qun007_2(ai)
   local outcome = Damage.luanwu(ai)
   if Damage.worth(outcome) and (outcome.enemyDying > 0 or outcome.enemies >= outcome.friends + outcome.unknown + 2) then
@@ -238,6 +263,8 @@ function play.qiao__skill_wu001_1(ai)
   return Request.reply(ai)
 end
 
+play.qiao__luminous_pearl_skill = play.qiao__skill_wu001_1
+
 function M.yinghun(ai)
   local count = ai.player:getLostHp()
   if count < 2 then return "" end
@@ -256,6 +283,9 @@ end
 local stages = {
   qiao__skill_han007_1 = "draw", -- 敏思
   qiao__skill_wu001_1 = "draw", -- 制衡
+  qiao__luminous_pearl_skill = "draw",
+  qiao__skill_qun001_2 = "disrupt", -- 除疠
+  qiao__skill_wu006_1 = { disrupt = true, delayed = true }, -- 国色
   qiao__skill_wu004_1 = "draw", -- 苦肉与诈降
   qiao__skill_qun013_2 = "draw", -- 雄异
   qiao__retinue_skill_lujiang_shangjia = { draw = true, attack_prep = true },
