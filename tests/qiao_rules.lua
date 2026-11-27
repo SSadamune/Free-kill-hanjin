@@ -3,6 +3,7 @@ local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
+local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 Testqiao_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
 
 function Testqiao_rules:testModeAndRealSelection()
@@ -224,6 +225,14 @@ function Testqiao_rules:testCollectionAndFreeModeSettingsAreDistinct()
     return item._settingsKey
   end), { "qiao_candidate_han", "qiao_candidate_jin" })
   lu.assertNil(collection.qiao_wolves)
+  lu.assertEquals(Fk:translate("qiao_heg_mode"), "汉晋大合集")
+  lu.assertEquals(Fk:translate("qiao_free_mode"), "平行时空")
+  lu.assertEquals(Fk:translate("qiao_locked_mode"), "锁定势力国战")
+  lu.assertTrue(collection[Ascension.lordSetting].value)
+  lu.assertEquals(Fk:translate(collection[Ascension.lordSetting].subTitle), "启用君主升变规则")
+  lu.assertEquals(free[Ascension.lordSetting].value, Ascension.lordByBanScheme)
+  lu.assertEquals(free[Ascension.lordSetting].model,
+    { Ascension.lordEnabled, Ascension.lordDisabled, Ascension.lordByBanScheme })
   lu.assertNil(collection.qiao_late_seat_compensation)
   lu.assertNil(collection.qiao_kingdom_limit)
   lu.assertFalse(collection.qiao_faction_ban_enabled.value)
@@ -280,6 +289,7 @@ function Testqiao_rules:testHanjinGameSettingsExcludeUnusedRoomSummaryRows()
     lu.assertNotNil(game.enableObserverViewCard, mode)
     lu.assertNotNil(modeSettings.qiao_offer_count, mode)
     lu.assertEquals(modeSettings.generalTimeout.value, 45, mode)
+    lu.assertEquals(modeSettings[Ascension.lordSetting] ~= nil, mode ~= "qiao_locked_mode", mode)
   end
   local upstream = rows("new_heg_mode", true)
   lu.assertNotNil(upstream.generalNum)
@@ -310,6 +320,7 @@ function Testqiao_rules:testRoomSummaryOmitsSettingsThatCannotApply()
     room.capacity = 4
     local summary = rows(room.settings)
     lu.assertNil(summary.qiao_wild_count)
+    lu.assertNil(summary[Ascension.lordSetting])
     lu.assertNil(summary.qiao_late_seat_compensation)
     lu.assertNil(summary.watchNextDeputy)
     lu.assertTrue(summary.revealAllOnStart)
@@ -319,6 +330,7 @@ function Testqiao_rules:testRoomSummaryOmitsSettingsThatCannotApply()
     room.capacity = 5
     summary = rows(room.settings)
     lu.assertTrue(summary.qiao_wild_count)
+    lu.assertTrue(summary[Ascension.lordSetting])
     lu.assertNil(summary.qiao_late_seat_compensation)
 
     room.capacity = 7

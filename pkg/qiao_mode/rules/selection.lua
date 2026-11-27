@@ -5,11 +5,11 @@
 -- per-room pairing map as extra data, so a guest candidate is filtered by its
 -- actual this-game factions instead of the engine's global general definition.
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
+local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Ban = require "packages.qiao.pkg.qiao_mode.rules.faction_ban"
 local Discard = require "packages.qiao.pkg.qiao_mode.rules.general_discard"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
-local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local M = {}
@@ -196,8 +196,7 @@ end
 
 local function ascensionHints(room, names, freeAssign)
   local allowed = room:getBanner("all_kingdoms") or {}
-  local allowsLord = FaqRules.allows_lord_ascension(room)
-  local hints = {}
+  local hints, loyaltyHints = {}, {}
   local function add(name, general)
     if general.kingdom == "wild" then
       for _, loyalty in ipairs(Versions.loyalty_versions(name)) do
@@ -210,12 +209,16 @@ local function ascensionHints(room, names, freeAssign)
               return M.canPair(room, name, deputy) and #Guest.pairKingdoms(room, loyalty, deputy, allowed) > 0
             end)
           end
-          if possible then hints[name] = true; return end
+          if possible then
+            hints[name] = true
+            loyaltyHints[name] = true
+            return
+          end
         end
       end
-    elseif allowsLord then
+    else
       local lord = Versions.lord_version(name)
-      if RoomBans.allows(room, lord) and table.find(Versions.lord_kingdoms(lord), function(kingdom)
+      if Ascension.allows_lord_ascension(room, lord) and table.find(Versions.lord_kingdoms(lord), function(kingdom)
         return table.contains(allowed, kingdom)
       end) then hints[name] = true end
     end
@@ -227,7 +230,7 @@ local function ascensionHints(room, names, freeAssign)
   else
     for _, name in ipairs(names) do add(name, Fk.generals[name]) end
   end
-  return hints
+  return hints, loyaltyHints
 end
 
 ---Dialog data for the final pair selection.
@@ -239,7 +242,7 @@ function M.askData(room, offers, guests, kingdom, seat)
   local names, pairing = M.pairing(room, offers, kingdom)
   local freeAssign = M.freeAssign(room)
   local guestIllustrations = Guest.replacementEnabled(room)
-  local ascensions = ascensionHints(room, names, freeAssign)
+  local ascensions, loyaltyAscensions = ascensionHints(room, names, freeAssign)
   local prompt = M.prompt(room)
   if kingdom then
     local key = "#QiaoChooseLockedKingdom"
@@ -275,7 +278,8 @@ function M.askData(room, offers, guests, kingdom, seat)
           convertDisabled = room:getSettings("disableSameConvert") or false,
           ruleType = M.rule,
           extraData = { pairing = pairing, wild = wild, guests = guests, guestFactions = guestFactions,
-            ascensions = ascensions, locked = kingdom ~= nil, freeAssign = freeAssign, guestIllustrations = guestIllustrations,
+            ascensions = ascensions, loyaltyAscensions = loyaltyAscensions, locked = kingdom ~= nil,
+            freeAssign = freeAssign, guestIllustrations = guestIllustrations,
             offers = table.simpleClone(offers) },
         },
       },

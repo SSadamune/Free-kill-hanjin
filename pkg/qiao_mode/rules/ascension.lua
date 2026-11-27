@@ -25,6 +25,10 @@ M.WILD_ASCENDED_MARK = "qiao_wild_ascended"
 M.COMPANION_MARK = "qiao_ascension_companion"
 M.YINYANG_MARK = "qiao_ascension_yinyang"
 M.LORD_DEATH_MARK = "qiao_lord_death_done"
+M.lordSetting = "qiao_lord_ascension_policy"
+M.lordEnabled = "qiao_lord_ascension_enabled"
+M.lordDisabled = "qiao_lord_ascension_disabled"
+M.lordByBanScheme = "qiao_lord_ascension_by_bans"
 
 local function isUnknown(kingdom)
   return kingdom == nil or kingdom == "" or kingdom == "unknown"
@@ -55,8 +59,20 @@ function M.max_kingdom_players(room)
   return FaqRules.max_kingdom_players(room)
 end
 
-function M.allows_lord_ascension(room)
-  return FaqRules.allows_lord_ascension(room)
+function M.lord_policy(mode, value)
+  if mode == Modes.collection then
+    return value == false and M.lordDisabled or M.lordEnabled
+  end
+  if mode == Modes.free and (value == M.lordEnabled or value == M.lordDisabled) then
+    return value
+  end
+  return M.lordByBanScheme
+end
+
+function M.allows_lord_ascension(room, name)
+  if not FaqRules.allows_lord_ascension(room) or not Versions.is_lord(name) then return false end
+  local policy = M.lord_policy(room:getSettings("gameMode"), room:getSettings(M.lordSetting))
+  return policy == M.lordEnabled or (policy == M.lordByBanScheme and RoomBans.allows(room, name))
 end
 
 --- 势力人数预演。包含其他存活角色与已死亡的同势力角色；君主在场不豁免。
@@ -109,13 +125,12 @@ end
 --- 死亡继位候选人：主将（明置或暗置）能升变为死者所属势力的君主，
 --- 且不会因加入后超员而转为野心家。四人及以下局不可升变君主。
 function M.lord_candidate(room, player, deadKingdom)
-  if not M.allows_lord_ascension(room) then return nil end
   if player == nil or player.dead or player:isRemoved() then return nil end
   local main = M.actual_main(player)
   if main == nil then return nil end
   if player.general ~= "anjiang" and Versions.is_lord(main) then return nil end
   local lord = Versions.lord_version(main)
-  if not RoomBans.allows(room, lord) or not Versions.lord_is_for(lord, deadKingdom) then return nil end
+  if not M.allows_lord_ascension(room, lord) or not Versions.lord_is_for(lord, deadKingdom) then return nil end
   if player.kingdom == "wild" then return nil end
   if not isUnknown(player.kingdom) and player.kingdom ~= deadKingdom then return nil end
   if player.general == "anjiang" and player:prohibitReveal() then return nil end
@@ -173,14 +188,17 @@ function M.ascend(room, player, newMain, kingdom, options)
   assert(not isUnknown(kingdom) and kingdom ~= "wild", "Ascension needs a regular kingdom")
   local newGeneral = Fk.generals[newMain]
   assert(newGeneral ~= nil, "Unknown ascension general: " .. tostring(newMain))
-  assert(options.kind ~= "lord" or Versions.is_lord(newMain), "Lord ascension needs a lord version")
+  local becomesLord = Versions.is_lord(newMain)
+  assert((options.kind ~= "lord" and options.kind ~= "succession") or becomesLord,
+    "Lord ascension needs a lord version")
   assert(options.kind ~= "loyalty" or Versions.is_loyalty(newMain),
     "Loyalty ascension needs a loyalty version")
   -- 防御性复核：提供选项前各入口已过滤；询问期间到提交前若目标被禁或人数不符则不执行。
-  if (options.kind == "lord" or options.kind == "succession") and not M.allows_lord_ascension(room) then
+  if becomesLord then
+    if not M.allows_lord_ascension(room, newMain) then return false end
+  elseif not RoomBans.allows(room, newMain) then
     return false
   end
-  if not RoomBans.allows(room, newMain) then return false end
   if Locked.isHumanVsAI(room) and player:getMark("__heg_init_kingdom") ~= kingdom then return false end
 
   local oldMain = M.actual_main(player)
@@ -429,12 +447,11 @@ function M.reset(room)
 end
 
 local function turnAscensionCandidates(room, player)
-  if not M.allows_lord_ascension(room) then return end
   if player.dead or not M.is_first_turn(player) or player.general ~= "anjiang" then return end
   local main = M.actual_main(player)
   if main == nil or Fk.generals[main] == nil or Fk.generals[main].kingdom == "wild" then return end
   local lord = Versions.lord_version(main)
-  if player:prohibitReveal() or not RoomBans.allows(room, lord) then return end
+  if player:prohibitReveal() or not M.allows_lord_ascension(room, lord) then return end
   local allowed = room:getBanner("all_kingdoms") or {}
   local kingdoms = table.filter(Versions.lord_kingdoms(lord), function(kingdom)
     return table.contains(allowed, kingdom)

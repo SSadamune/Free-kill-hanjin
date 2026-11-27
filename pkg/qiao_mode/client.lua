@@ -14,6 +14,7 @@ local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
@@ -373,6 +374,7 @@ local function installRoomSummary()
     if not capacity then return groups end
 
     local hidden = {
+      [Ascension.lordSetting] = capacity < FaqRules.MIN_LORD_PLAYERS,
       qiao_wild_count = capacity < Versions.MIN_WILD_PLAYERS,
       [FaqRules.seatLuckSetting] = capacity < FaqRules.BONUS_LUCK_MIN_PLAYERS,
       watchNextDeputy = room:getSettings("revealAllOnStart") == true,

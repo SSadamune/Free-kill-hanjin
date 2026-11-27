@@ -475,6 +475,27 @@ function M.create(base, name)
   selectionSettings._qml = M.gamePropertiesQml
   local ruleSettings = { title = "qiao_rule_settings" }
   if not locked then
+    local function lordPolicy(settings)
+      return Ascension.lord_policy(name, modeOf(settings)[Ascension.lordSetting])
+    end
+    local function lordHelp(settings)
+      return "help: " .. lordPolicy(settings)
+    end
+    if collection then
+      table.insert(ruleSettings, W.SwitchRow {
+        _settingsKey = Ascension.lordSetting, title = "qiao_lord_ascension",
+        subTitle = lordHelp,
+        value = function(settings) return lordPolicy(settings) == Ascension.lordEnabled end,
+      })
+    else
+      local row = W.ComboRow {
+        _settingsKey = Ascension.lordSetting, title = "qiao_lord_ascension",
+        model = { Ascension.lordEnabled, Ascension.lordDisabled, Ascension.lordByBanScheme },
+        value = lordPolicy,
+      }
+      row._qml = { url = "packages/qiao/pkg/qiao_mode/qml/ModeChoiceRow.qml" }
+      table.insert(ruleSettings, row)
+    end
     table.insert(ruleSettings, W.SpinRow {
       _settingsKey = "qiao_wild_count", title = "qiao_wild_count", from = 0,
       to = 12,

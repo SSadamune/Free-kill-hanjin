@@ -100,6 +100,16 @@ singletons = {
           modeName: mode, roomSizes: { qiao_locked_landlord: 3, qiao_locked_2v2: 4 },
           value: cfg._mode.qiao_locked_game_rule ?? "qiao_locked_landlord",
         });
+      } else {
+        const key = "qiao_lord_ascension_policy";
+        const policies = ["qiao_lord_ascension_enabled", "qiao_lord_ascension_disabled", "qiao_lord_ascension_by_bans"];
+        const free = mode === "qiao_free_mode";
+        const value = cfg._mode[key] ?? (free ? policies[2] : true);
+        const row = { _qml: free ? { ext: "ModeChoiceRow" } : { name: "SwitchRow" }, _settingsKey: key,
+          _children: [], title: "qiao_lord_ascension", value };
+        if (free) row.model = policies;
+        else row.subTitle = "help: " + policies[value ? 0 : 1];
+        group._children.push(row);
       }
       return [group, properties];
     };
@@ -196,6 +206,7 @@ ApplicationWindow {
         const freeAssign = find(createRoom, item => item.title === "自由选将");
         const offers = find(createRoom, item => item.title === "qiao_offer_count");
         const timeout = find(createRoom, item => item.title === "Choose General timeout");
+        const ascension = find(createRoom, item => item.title === "君主升变");
         const confirm = find(createRoom, item => item.text === "OK");
         if (phase === 0) {
           Db.saveModeSettings("lunarltk", { enableFreeAssign: true, generalNum: 3, generalTimeout: 10, luckTime: 1 });
@@ -205,6 +216,7 @@ ApplicationWindow {
         } else if (phase === 1) {
           check(rule && rule.parent.children[1] === rule, "rule should be the first setting");
           check(freeAssign === null, "locked mode should not display free assignment");
+          check(ascension === null, "locked mode should not display an ascension setting");
           checkSelectionControls(offers, timeout, 5, 45);
           check(offers.visible && timeout.visible, "the game settings tab should show the relocated controls");
           check(rule.suffixLoader.item.displayText === "斗地主", "default choice");
@@ -256,6 +268,15 @@ ApplicationWindow {
           check(freeAssign?.enabled && freeAssign.suffixLoader.item.checked,
             "switching away should restore the saved free assignment setting");
           checkSelectionControls(offers, timeout, 7, 90);
+          const choices = ascension.suffixLoader.item;
+          check(choices.displayText === "自由选择" && ascension.subTitle === "能否君主升变取决于「禁将方案」的设置",
+            "free mode should default to using the ban scheme");
+          choices.activated(0);
+          check(choices.displayText === "开启" && ascension.subTitle === "启用君主升变规则",
+            "free mode should describe enabling ascension");
+          choices.activated(1);
+          check(choices.displayText === "禁用" && ascension.subTitle === "禁用君主升变规则",
+            "free mode should describe disabling ascension");
           const luck = find(createRoom, item => item.title === "Luck Card Times");
           check(luck?.parent === offers.parent.parent && luck.value === 1,
             "free mode should display the effective shared luck setting in game properties");
@@ -300,6 +321,14 @@ ApplicationWindow {
           checkSelectionControls(offers, timeout, 7, 90);
           check(freeAssign?.enabled && find(createRoom, item => item.title === "Luck Card Times") === null,
             "collection mode should show free assignment and omit shared luck");
+          check(ascension.checked && ascension.subTitle === "启用君主升变规则",
+            "collection mode should default to enabling ascension");
+          check(Db.getModeSettings("lunarltk:qiao_heg_mode").qiao_lord_ascension_policy === true,
+            "the default switch state should be persisted for the room summary");
+          ascension.clicked();
+          check(!ascension.checked && ascension.subTitle === "禁用君主升变规则" &&
+            Db.getModeSettings("lunarltk:qiao_heg_mode").qiao_lord_ascension_policy === false,
+            "collection mode should save and describe disabling ascension");
           console.log("PASS: built-in lobby uses editable game properties and sends isolated mode settings");
           Qt.exit(0);
         }
@@ -326,7 +355,7 @@ def copy_from_stock(folder, path):
 def main():
     translations = (ROOT / 'pkg/qiao_mode/init.lua').read_text(encoding='utf-8')
     rule_help = dict(re.findall(
-        r'\["(help: qiao_locked_(?:game_rule|landlord|2v2|human_vs_ai))"\] = "([^"]+)"',
+        r'\["((?:help: )?qiao_lord_ascension(?:_\w+)?|help: qiao_locked_(?:game_rule|landlord|2v2|human_vs_ai))"\] = "([^"]+)"',
         translations,
     ))
     qInstallMessageHandler(lambda _level, _context, message: print(message, flush=True))
@@ -380,7 +409,7 @@ Item {
         write(folder, 'LunarLtk/Ltk.qml', 'pragma Singleton\nimport QtQuick\n'
               'QtObject { function getAllCardPack() { return []; } }')
 
-        for name in ('GameProperties.qml', 'LockedGameRuleRow.qml'):
+        for name in ('GameProperties.qml', 'LockedGameRuleRow.qml', 'ModeChoiceRow.qml'):
             write(folder, name, (ROOT / 'pkg/qiao_mode/qml' / name).read_text(encoding='utf-8'))
         write(folder, 'Test.qml', window)
         app = QGuiApplication([])
