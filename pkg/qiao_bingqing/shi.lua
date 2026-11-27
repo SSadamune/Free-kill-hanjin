@@ -1,6 +1,7 @@
 local H = require "packages.hegemony.util"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
-local M = {}
+local Interaction = require "packages.qiao.pkg.qiao_bingqing.interaction"
+local M = { give = Interaction.give }
 
 M.present = require("packages.qiao.pkg.qiao_mode.rules.removed_targets").isPresent
 
@@ -9,17 +10,7 @@ function M.allies(p, other)
 end
 
 function M.pick(room, chooser, targets, skill, optional, max)
-  if #targets == 0 then return {} end
-  return room:askToChoosePlayers(chooser, {
-    targets = targets, min_num = 1, max_num = math.min(max or 1, #targets),
-    skill_name = skill, cancelable = optional == true,
-  })
-end
-
-function M.give(room, from, to, cards, skill)
-  if M.present(from) and M.present(to) and from ~= to and #cards > 0 then
-    room:moveCardTo(cards, Card.PlayerHand, to, fk.ReasonGive, skill, nil, false, from)
-  end
+  return Interaction.choosePlayers(room, chooser, targets, skill, max, optional)
 end
 
 -- 只生成公共交换接口此刻允许的组合，保留选中时的牌名供最终防陈旧校验。

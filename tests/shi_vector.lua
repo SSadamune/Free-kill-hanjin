@@ -627,4 +627,38 @@ function T:testChumingUsesCollateralSecondaryTargetRules()
   end)
 end
 
+function T:testCombinedRevealDispatchesHufenAndMifurenOnce()
+  run(function(room, player)
+    fixture.installBlankGenerals(room, { "han", "wei" })
+    fixture.installDualGenerals(room, player, {
+      main = "qiao_heg__jin066", deputy = "qiao_heg__shu021", kingdom = "han",
+    })
+    player:hideGeneral(false)
+    player:hideGeneral(true)
+    local before = player:getHandcardNum()
+    local invoked = 0
+    local probe = fk.CreateSkill { name = "qiao_test_shi_combined_reveal" }
+    probe:addEffect(fk.EventPhaseStart, {
+      global = true,
+      can_refresh = function(self, event, target, p)
+        return target == player and p == player and p.phase == Player.Start
+      end,
+      on_refresh = function() player:revealGenerals() end,
+    })
+    local callback = probe:createSkill()
+    Fk.skills[probe.name] = callback
+    room:addSkill(callback)
+    fixture.withSkillRequests(room, id("jin066_1"), {
+      askToSkillInvoke = function()
+        invoked = invoked + 1
+        return true
+      end,
+    }, function()
+      GameEvent.Turn:create(TurnData:new(player, "game_rule", { Player.Start })):exec()
+    end)
+    lu.assertEquals(invoked, 1)
+    lu.assertEquals(player:getHandcardNum(), before + 3)
+  end)
+end
+
 return { name = "qiao_shi_vector" }

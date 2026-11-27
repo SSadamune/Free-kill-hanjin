@@ -1,4 +1,5 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.shi"
+local VirtualEquip = require "packages.qiao.pkg.qiao_bingqing.virtual_equipment"
 local H = require "packages.hegemony.util"
 local skill = fk.CreateSkill { name = "qiao__skill_jin037_1", tags = { Skill.Compulsory } }
 local mark = "qiao_yangdao_grants"
@@ -20,47 +21,15 @@ skill:addEffect("atkrange", {
     if p:hasShownSkill(skill.name) then local range = weapons(p); return range end
   end,
 })
--- 装备区和【养刀】可以先后提供相同的武器技。只记录【养刀】实际授予的技能。
-local function physicalSkills(p)
-  local names = {}
-  for _, id in ipairs(p:getEquipments(Card.SubtypeWeapon)) do
-    local card = p:getVirtualEquip(id) or Fk:getCardById(id)
-    for _, sk in ipairs(card:getEquipSkills(p)) do table.insertIfNeed(names, sk.name) end
-  end
-  return names
-end
-
 local function sync(p)
-  local previous, wanted = p:getTableMark(mark), {}
+  local supplied = {}
   if p:hasShownSkill(skill.name, true) then
     local _, cards = weapons(p)
-    for _, card in ipairs(cards) do
-      for _, sk in ipairs(card:getEquipSkills(p)) do
-        if table.contains(previous, sk.name) or not p:hasSkill(sk, true, true) then
-          table.insertIfNeed(wanted, sk.name)
-        end
-      end
-    end
+    supplied = VirtualEquip.skillNames(cards, p)
   end
-  local removed, added = {}, {}
-  for _, name in ipairs(previous) do
-    if not table.contains(wanted, name) then table.insert(removed, "-" .. name) end
-  end
-  for _, name in ipairs(wanted) do
-    if not p:hasSkill(name, true, true) then table.insert(added, name) end
-  end
-  if #removed > 0 or #added > 0 then
-    p.room:setPlayerMark(p, mark, #wanted > 0 and wanted or 0)
-    p.room:handleAddLoseSkills(p, removed, skill.name, false, true)
-    p.room:handleAddLoseSkills(p, added, skill.name, false, true)
-    -- 同名实体武器安装时，引擎会跳过已有的技能。撤销虚拟来源后补回实体来源。
-    if #removed > 0 then
-      local physical = table.filter(physicalSkills(p), function(name)
-        return table.contains(removed, "-" .. name) and not p:hasSkill(name, true, true)
-      end)
-      p.room:handleAddLoseSkills(p, physical, nil, false, true)
-    end
-  end
+  VirtualEquip.syncSkills(p, skill.name, mark, supplied, function(player)
+    return player:getEquipments(Card.SubtypeWeapon)
+  end)
 end
 
 skill:addEffect("invalidity", {
