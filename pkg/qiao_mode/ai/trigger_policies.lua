@@ -1,5 +1,6 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local M = {}
@@ -71,7 +72,7 @@ function M.invoke(ai, original, fields)
     if not ai:isEnemy(to) or damage.chain then return false end
     local required = to.hp + to.shield
     return damage.damage < required and damage.damage * 2 >= required
-      and (damage.damageType == fk.NormalDamage or not to.chained)
+      and Damage.worth(Damage.assess(ai, to, damage.damage * 2, damage.damageType))
   end
   if key == "#qiao__skill_jin009_1-invoke" then
     local suit = tonumber(fields[2])
@@ -145,9 +146,10 @@ function M.targetScore(ai, key, use)
     end
   end
   if key == "#qiao__skill_qun010_1-target" then
-    local thunder = Fk:cloneCard("qiao__thunder__slash")
     return function(target)
-      return Cards.scoreTarget(ai, thunder, target)
+      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, 2, fk.ThunderDamage)) then
+        return ai:hostileScore(target, 20 - target.hp)
+      end
     end
   end
   if enemyDamageTargets[key] then
@@ -158,7 +160,7 @@ function M.targetScore(ai, key, use)
   if key == "#qiao__skill_han008_2-target" or key == "#qiao__skill_han008_2-invoke" then
     local aim = currentData(ai)
     return function(target)
-      if aim and aim.card and Cards.safeDamage(ai, aim.card, target) then
+      if aim and aim.card and Cards.safeDamage(ai, aim.card, target, aim.use) then
         return ai:hostileScore(target, 20 - target.hp)
       end
     end

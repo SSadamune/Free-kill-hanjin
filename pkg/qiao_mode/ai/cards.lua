@@ -1,4 +1,5 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 
 local M = {}
 
@@ -6,10 +7,6 @@ local damage = {
   qiao__slash = true, qiao__fire__slash = true, qiao__thunder__slash = true,
   qiao__ice__slash = true, qiao__unexpectation = true, qiao__duel = true,
   qiao__drowning = true, qiao__fire_attack = true,
-}
-local elemental = {
-  qiao__fire__slash = true, qiao__thunder__slash = true, qiao__ice__slash = true,
-  qiao__fire_attack = true, qiao__drowning = true, qiao__burning_camps = true,
 }
 local removal = {
   qiao__dismantlement = true, qiao__snatch = true, qiao__chasing_near = true,
@@ -20,18 +17,14 @@ local enemyGroup = {
 }
 local selfBenefit = { qiao__foresight = 100, qiao__strengthen_state = 100, qiao__peach = 95 }
 
-function M.safeDamage(ai, card, target)
+function M.safeDamage(ai, card, target, use, source)
   if not ai:isEnemy(target) then return false end
-  if not elemental[card.name] or not target.chained then return true end
-  -- Chain propagation can hit everyone still chained. Unknown players are
-  -- insufficient evidence for taking that risk.
-  return table.every(ai.room:getPresentPlayers(), function(other)
-    return not other.chained or ai:isEnemy(other)
-  end)
-end
-
-function M.isElemental(card)
-  return elemental[card.name] == true
+  local nature = Damage.cardNature(card, use)
+  if not target.chained or not Fk:canChain(nature) then return true end
+  source = source or ai.player
+  local amount = Damage.cardAmount(card, use, source)
+  local ignoreTargetArmor = not use and card.trueName == "slash" and Cost.effectable(source, "#qinggang_sword_skill")
+  return Damage.worth(Damage.assess(ai, target, amount, nature, { ignoreTargetArmor = ignoreTargetArmor }))
 end
 
 function M.isHarmful(card)
@@ -39,10 +32,10 @@ function M.isHarmful(card)
   return damage[name] or removal[name] or enemyPhase[name] or enemyGroup[name] or name == "qiao__collateral"
 end
 
-function M.scoreTarget(ai, card, target)
+function M.scoreTarget(ai, card, target, use)
   local name = card.name
   if damage[name] or enemyGroup[name] then
-    if M.safeDamage(ai, card, target) then return ai:hostileScore(target, 20 - target.hp) end
+    if M.safeDamage(ai, card, target, use) then return ai:hostileScore(target, 20 - target.hp) end
   elseif removal[name] then
     if ai:isEnemy(target) and not target:isNude() then
       local obtains = name == "qiao__snatch"

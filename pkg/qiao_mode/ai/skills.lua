@@ -1,5 +1,6 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -96,8 +97,10 @@ function M.invoke(ai, data)
   if key == "#qiao_ice_damage_skill-invoke" then
     local target = M.promptTarget(ai, fields, 3)
     local damage = parentData(ai, GameEvent.Damage)
-    return ai:isEnemy(target) and target.hp >= 3 and #target:getCardIds("e") >= 2
-      and damage ~= nil and damage.damage == 1
+    if not ai:isEnemy(target) or target.hp < 3 or #target:getCardIds("e") < 2
+      or not damage or damage.damage ~= 1 then return false end
+    local outcome = Damage.assess(ai, target, damage.damage, damage.damageType, { alreadyChained = damage.chain })
+    return not (outcome.propagates and Damage.worth(outcome))
   end
   if key == "#qiao__skill_jin015_1-invoke" then
     return table.find(player:getCardIds("h"), function(id)
@@ -136,11 +139,13 @@ function M.active(ai, data)
     local byCard = extra.targetsByCard or {}
     if not Cost.select(ai, 1, ai.player.hp <= 1 and 4 or 2, function(id)
       return table.find(byCard[tostring(id)] or {}, function(targetId)
-        return Cards.safeDamage(ai, card, ai.room:getPlayerById(targetId))
+        return Cards.safeDamage(ai, card, ai.room:getPlayerById(targetId), frame.data.use)
       end) ~= nil
     end) then return "" end
     return chooseTargets(ai, function(target)
-      if Cards.safeDamage(ai, card, target) then return ai:hostileScore(target, 20 - target.hp) end
+      if Cards.safeDamage(ai, card, target, frame.data.use) then
+        return ai:hostileScore(target, 20 - target.hp)
+      end
     end)
   end
   if skill == "choose_players_skill" then
@@ -156,7 +161,7 @@ function M.active(ai, data)
     local use = parentData(ai, GameEvent.UseCard)
     if not use then return "" end
     return chooseTargets(ai, function(target)
-      return Adaptation.targetScore(ai, use.card, target, key)
+      return Adaptation.targetScore(ai, use.card, target, key, use)
     end)
   end
   if key == "#qiao__skill_wei004_1-choose" or key == "#qiao__skill_wei004_1-invoke" then
@@ -191,7 +196,7 @@ function M.active(ai, data)
       local target = M.promptTarget(ai, fields, 3)
       local effect = parentData(ai, GameEvent.CardEffect)
       local damage = 1 + (effect and effect.additionalDamage or 0)
-      if not ai:isEnemy(target) or (effect and not Cards.safeDamage(ai, effect.card, target))
+      if not ai:isEnemy(target) or (effect and not Cards.safeDamage(ai, effect.card, target, effect))
         or (target.hp > damage and damage < 2) then return "" end
       budget = 4
     elseif key == "#qiao__skill_han012_1-recast" or key == "#qiao__taigong_tactics-recast" then
@@ -234,10 +239,7 @@ function M.active(ai, data)
       local damage = frame and frame.data
       if not damage or damage.chain or not ai:isFriend(damage.from) or not ai:isEnemy(damage.to)
         or damage.damage ~= damage.to.hp + damage.to.shield - 1 then return "" end
-      if damage.damageType ~= fk.NormalDamage and damage.to.chained
-        and table.find(ai.room:getPresentPlayers(), function(target)
-          return target.chained and not ai:isEnemy(target)
-        end) then return "" end
+      if not Damage.worth(Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType)) then return "" end
       budget = 2
     elseif key == "#qiao__skill_wei001_1-discard" then
       local damage = parentData(ai, GameEvent.Damage)
@@ -246,7 +248,7 @@ function M.active(ai, data)
       budget = card:getEffectiveId() and Cost.value(ai, card:getEffectiveId()) - 1 or 2
     elseif key == "#fire_attack-discard" then
       local target = M.promptTarget(ai, fields, 2)
-      if not Cards.safeDamage(ai, Fk:cloneCard("qiao__fire_attack"), target) then return "" end
+      if not Cards.safeDamage(ai, Fk:cloneCard("qiao__fire_attack"), target, Damage.effect(ai, target)) then return "" end
       budget = target.hp <= 1 and 3 or 2
     elseif cancelable and extra.skillName ~= "phase_discard" then
       return
@@ -383,9 +385,15 @@ function M.choice(ai, data)
     end)
     pick = (ai.player.hp <= 2 or cheap) and discard or damage
     if not table.contains(choices, pick) then pick = choices[1] end
-  elseif skillName == "qiao__drowning" and ai.player.hp > 2 and #ai.player:getCardIds("e") > 1
-    and not ai.player.chained then
-    pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
+  elseif skillName == "qiao__drowning" then
+    local player = ai.player
+    local effect = Damage.effect(ai, player)
+    local card = effect and effect.card or Fk:cloneCard("qiao__drowning")
+    local outcome = Damage.assess(ai, player, Damage.cardAmount(card, effect), Damage.cardNature(card, effect))
+    if outcome.direct == 0 or Damage.worth(outcome) or (not outcome.propagates and not outcome.unsafe
+      and player.hp > 2 and #player:getCardIds("e") > 1) then
+      pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
+    end
   end
   if pick and table.contains(choices, pick) and limits[1] == 1 then return { pick } end
 end

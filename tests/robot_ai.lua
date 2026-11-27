@@ -957,4 +957,104 @@ function Testqiao_robot_ai:testChuitongChoosesEnemyArmorAtDyingEvent()
   end)
 end
 
+local function chainPlayers(room, players, chained)
+  for _, target in ipairs(players) do room:setPlayerProperty(target, "chained", chained) end
+end
+
+function Testqiao_robot_ai:testMixedChainCanAttackButNeverRisksAllyDying()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, second, third = diplomacyTable(room, player, enemy, ally, unknown)
+    local chained = { enemy, second, third, ally }
+    chainPlayers(room, chained, true)
+    for _, target in ipairs(chained) do room:setPlayerProperty(target, "shield", 0) end
+    local card = give(room, player, "qiao__thunder__slash")
+
+    lu.assertEquals(reply(player, "PlayCard", {}), "__cancel")
+    room:setPlayerProperty(ally, "shield", 1)
+    local answer = reply(player, "PlayCard", {})
+    lu.assertEquals(answer.card, card.id)
+    lu.assertEquals(answer.targets, { enemy.id })
+    room:useCard(room:handleUseCardReply(player, answer))
+    lu.assertEquals(ally.hp, 1)
+    lu.assertEquals(ally.shield, 0)
+    for _, target in ipairs({ enemy, second, third }) do lu.assertEquals(target.hp, 3) end
+  end)
+end
+
+function Testqiao_robot_ai:testRobotCanKeepJinkForFavorableChainButDodgesLethalFire()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, second, third = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(second, "shield", 0)
+    room:setPlayerProperty(third, "shield", 0)
+    local jink = give(room, player, "qiao__jink")
+    local function slash(extra)
+      chainPlayers(room, { player, second, third }, true)
+      local fire = give(room, enemy, "qiao__fire__slash")
+      room:useCard { from = enemy, tos = { player }, card = fire, additionalDamage = extra }
+    end
+
+    slash(0)
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(second.hp, 3)
+    lu.assertEquals(third.hp, 3)
+    lu.assertEquals(room:getCardOwner(jink.id).id, player.id)
+
+    slash(2)
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(second.hp, 3)
+    lu.assertEquals(third.hp, 3)
+    lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testRobotChoosesDrowningDamageOnlyForAdvantageousChain()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, second, third = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(second, "shield", 0)
+    room:setPlayerProperty(third, "shield", 0)
+    local gear = give(room, player, "qiao__blade")
+    room:moveCardTo(gear, Card.PlayerEquip, player, fk.ReasonPut)
+    local function drown()
+      local card = give(room, enemy, "qiao__drowning", 5, Card.Heart)
+      room:useCard { from = enemy, tos = { player }, card = card }
+    end
+
+    chainPlayers(room, { player, second, third }, true)
+    drown()
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(second.hp, 3)
+    lu.assertEquals(third.hp, 3)
+    lu.assertEquals(room:getCardArea(gear.id), Card.PlayerEquip)
+
+    chainPlayers(room, { player, second }, true)
+    drown()
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(second.hp, 3)
+    lu.assertEquals(room:getCardArea(gear.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testYingshiKeepsLightningWhenAllySurvivesFavorableChain()
+  scenario(function(room, player, enemy, ally, unknown)
+    local _, second, third = diplomacyTable(room, player, enemy, ally, unknown)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei002_2", nil, false, true)
+    room:setPlayerProperty(ally, "hp", 4)
+    chainPlayers(room, { enemy, second, third, ally }, true)
+    local cost = give(room, player, "qiao__lightning", 10, Card.Heart)
+    local function lightning()
+      room:moveCardTo(room:printCard("qiao__slash", Card.Spade, 5), Card.DrawPile)
+      room:judge { who = ally, reason = "lightning_skill", pattern = ".|2~9|spade" }
+    end
+
+    lightning()
+    lu.assertEquals(room:getCardOwner(cost.id).id, player.id)
+    room:setPlayerProperty(ally, "hp", 3)
+    lightning()
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+  end)
+end
+
 return { name = "qiao_robot_ai" }
