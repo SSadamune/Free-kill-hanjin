@@ -86,5 +86,22 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__qun079", name = "高览",
+      title = "攘诟之柱、名门的峦柱", kingdom = "qun",
+      hp = 4, gender = "male",
+      guests = { "wei" }, companions = {},
+      guestCompanions = { "qiao_heg__wei009" },
+      skills = {
+        {
+          id = "qiao__skill_qun079_1", name = "袭阵",
+          text = "出牌阶段开始时，你可以弃置一张牌并令所有其他势力角色各选择一项：1.本回合不能使用或打出牌；2.你弃置其一张牌。",
+        },
+        {
+          id = "qiao__skill_qun079_2", name = "芟敌",
+          text = "结束阶段，你可以选择一个势力之中两名本回合受到过伤害的角色，交换其各一个武将。",
+        },
+      },
+    },
   },
 }

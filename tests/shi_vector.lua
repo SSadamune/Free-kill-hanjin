@@ -161,6 +161,26 @@ function T:testXianzhuRecoversBeforeRecipientSelectsDamageTarget()
   end)
 end
 
+function T:testXizhenIncludesUnknownButExcludesAllies()
+  run(function(room, gao, unknown, ally, enemy)
+    asGeneral(room, gao, "qun079")
+    room:setPlayerProperty(unknown, "kingdom", "unknown")
+    room:setPlayerProperty(enemy, "kingdom", "wei")
+    local cost = give(room, gao, "qiao__jink")
+    fixture.withSkillRequests(room, id("qun079_1"), {
+      askToDiscard = function() return { cost.id } end,
+      askToChoice = function() return "qiao_xizhen_ban" end,
+    }, function()
+      room.logic:trigger(fk.EventPhaseStart, gao, { phase = Player.Play })
+    end)
+    local jink = Fk:cloneCard("qiao__jink")
+    lu.assertTrue(unknown:prohibitResponse(jink))
+    lu.assertTrue(enemy:prohibitUse(jink))
+    lu.assertFalse(ally:prohibitResponse(jink))
+    lu.assertEquals(room:getCardArea(cost.id), Card.DiscardPile)
+  end)
+end
+
 function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
   run(function(room, p, other)
     asGeneral(room, p, "jin037")

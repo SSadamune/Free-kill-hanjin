@@ -12,3 +12,4 @@
 | JIN037 | [成济&成倅](shi-vector/jin037.md) | [养刀](shi-vector/jin037.md#jin037-1)、[畜鸣](shi-vector/jin037.md#jin037-2) |
 | JIN066 | [胡奋](shi-vector/jin066.md) | [威惠](shi-vector/jin066.md#jin066-1)、[练战](shi-vector/jin066.md#jin066-2)、[转征](shi-vector/jin066.md#jin066-3) |
 | QUN033 | [蔡夫人](shi-vector/qun033.md) | [窃听](shi-vector/qun033.md#qun033-1)、[献州](shi-vector/qun033.md#qun033-2) |
+| QUN079 | [高览](shi-vector/qun079.md) | [袭阵](shi-vector/qun079.md#qun079-1)、[芟敌](shi-vector/qun079.md#qun079-2) |
