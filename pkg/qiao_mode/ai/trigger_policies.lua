@@ -3,6 +3,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local Chain = require "packages.qiao.pkg.qiao_generals.util.jin_chain"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local M = {}
@@ -114,6 +115,18 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__skill_wei018_1-target" or key == "#qiao__skill_wei018_1-invoke" then
+    return function(target)
+      local _, score = Removal.pick(ai, target, "hej", false)
+      if score then return ai:isEnemy(target) and ai:hostileScore(target, score) or score end
+    end
+  end
+  if key == "#qiao__skill_han009_1-target" or key == "#qiao__skill_han009_1-invoke" then
+    return function(target)
+      local _, score = Removal.pick(ai, target, "he", false)
+      return ai:hostileScore(target, score or 0)
+    end
+  end
   if key == "#qiao__skill_wu013_2-target" or key == "#qiao__skill_wu013_2-invoke" then
     local trade = Cost.zhaxiangTrade(ai.player)
     return function(target)
@@ -178,6 +191,21 @@ function M.targetScore(ai, key, use)
       if M.protects(ai, use, target) then return 20 - target.hp end
     end, true
   end
+end
+
+function M.shunliuWorth(ai)
+  local damage = currentData(ai)
+  if not damage or not ai:isEnemy(damage.to) then return false end
+  local targets = Chain.chainedAlivePlayers(ai.room)
+  table.insertIfNeed(targets, damage.to)
+  local worthwhile = false
+  for _, target in ipairs(targets) do
+    if not target:isNude() then
+      if not ai:isEnemy(target) then return false end
+      worthwhile = worthwhile or Removal.pick(ai, target, "he", false) ~= nil
+    end
+  end
+  return worthwhile
 end
 
 function M.ciweiBudget(ai)

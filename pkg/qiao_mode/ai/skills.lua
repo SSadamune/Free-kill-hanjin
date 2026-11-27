@@ -68,6 +68,13 @@ function M.invoke(ai, data)
   local fields = prompt:split(":")
   local key, player = fields[1], ai.player
   if free[key] or key == "#qiao__zhoujun-invoke" then return true end
+  if key == "#qiao__skill_jin005_2-invoke" then return Triggers.shunliuWorth(ai) end
+  if key == "#qiao__skill_qun008_2-invoke" then
+    local frame = Selection.currentCost(player)
+    local aim = frame and frame.data
+    return aim ~= nil and aim.card ~= nil and Cards.safeDamage(ai, aim.card, aim.to, aim.use)
+      and Removal.pick(ai, aim.to, "e", false) ~= nil
+  end
   if hostile[key] then return ai:isEnemy(M.promptTarget(ai, fields, hostile[key])) end
   if key == "#qiao__skill_han019_2-invoke" then
     local target = M.promptTarget(ai, fields, 3)
@@ -124,6 +131,7 @@ function M.active(ai, data)
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
   if skill == "#qiao__skill_han007_1_aux" then return Play.minsi(ai) end
+  if key == "#qiao__skill_wei018_1-place" then return Play.huyuan(ai) end
   if skill == "#command_skill" and key == "#command6-select" then
     return Command.keep(ai) and Requests.reply(ai) or ""
   end
@@ -208,6 +216,12 @@ function M.active(ai, data)
         local name = Fk:getCardById(id).trueName
         return name ~= "slash" and name ~= "duel"
       end) and Requests.reply(ai) or ""
+    elseif key == "#qiao__retinue_skill_lujiang_shangjia-discard" then
+      local isNotSlash = function(id) return Fk:getCardById(id).trueName ~= "slash" end
+      local count = extra.min_num or 1
+      if #table.filter(ai:getEnabledCards(), isNotSlash) >= count and Cost.select(ai, count, nil, isNotSlash) then
+        return Requests.reply(ai)
+      end
     elseif key == "#axe-invoke" then
       local target = M.promptTarget(ai, fields, 3)
       local effect = parentData(ai, GameEvent.CardEffect)
@@ -363,13 +377,21 @@ function M.chosen(ai, data)
     end
     return best
   end
-  if not target or type(areas) ~= "string" then return end
+  if not target then return end
+  if prompt == "#qiao__skill_wei018_1-card" and target == ai.player and type(areas) == "table" then
+    local id = Removal.pick(ai, target, "j", false)
+    if id and table.find(areas.card_data or {}, function(group) return table.contains(group[2], id) end) then return id end
+  end
+  if type(areas) ~= "string" then return end
   local fields = (prompt or ""):split(":")
   local key = fields[1]
-  local obtains = key == "#qiao__chasing_near-choose-prey"
+  if key == "#qiao__skill_qun008_2-ask" then return Removal.pick(ai, target, "e", false) end
+  local obtains = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__skill_wei002_1-choose"
     or (key == "#AskForChooseCard" and fields[4] == "snatch_skill")
   local removal = obtains or key == "#qiao__chasing_near-choose-discard"
-    or key == "#qiao__skill_qun016_1-card"
+    or key == "#qiao__skill_qun016_1-card" or key == "#qiao__skill_wei003_1-discard"
+    or key == "#qiao__skill_wei018_1-card" or key == "#qiao__skill_han009_1-discard"
+    or key == "#qiao__skill_han009_1-counter" or key == "#qiao__skill_jin005_2-discard"
     or key == "#qiao_ice_damage_skill-discard" or key == "#qiao_adaptation_discard_equip"
     or (key == "#AskForChooseCard" and fields[4] == "dismantlement_skill")
   if removal then
@@ -387,7 +409,13 @@ end
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local pick = Triggers.choice(ai, choices, (prompt or ""):split(":"))
-  if skillName == "do_command" then
+  if prompt == "#qiao__skill_han009_1-options" then
+    local use = parentData(ai, GameEvent.UseCard)
+    local to = use and #use.tos == 1 and use.tos[1]
+    local _, value
+    if to then _, value = Removal.pick(ai, to, "he", false) end
+    pick = value and value >= 5 and "#qiao__skill_han009_1-discard" or "#qiao__skill_han009_1-draw"
+  elseif skillName == "do_command" then
     pick = Command.choice(ai, choices)
   elseif skillName == "trigger" then
     pick = choices[1]

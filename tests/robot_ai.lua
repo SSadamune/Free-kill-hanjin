@@ -1570,4 +1570,58 @@ function Testqiao_robot_ai:testFactionAndFormationChangeTrickValue()
   end)
 end
 
+function Testqiao_robot_ai:testHuyuanClearsAllyJudgmentWhenEquipmentEnters()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    local skill = "qiao__skill_wei018_1"
+    local delayed = give(room, ally, "qiao__supply_shortage")
+    room:moveCardTo(delayed, Card.PlayerJudge, ally, fk.ReasonPut)
+    room:handleAddLoseSkills(player, skill, nil, false, true)
+    local gear = give(room, enemy, "qiao__blade")
+    room:moveCardTo(gear, Card.PlayerEquip, enemy, fk.ReasonPut)
+    lu.assertEquals(room:getCardArea(delayed.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testMenghanPrefersPublicEquipmentAndBlocksResponse()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    enemy.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    room:handleAddLoseSkills(player, "qiao__skill_qun008_2", nil, false, true)
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local jink = give(room, enemy, "qiao__jink")
+    local attack = give(room, player, "qiao__slash")
+    room:useCard { from = player, tos = { enemy }, card = attack }
+    lu.assertEquals(room:getCardArea(armor.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(jink.id), Card.PlayerHand)
+    lu.assertEquals(enemy.hp, 3)
+  end)
+end
+
+function Testqiao_robot_ai:testLujiangSpendsOnlyCheapNonSlashWhenAnotherAttackIsUseful()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local skill = "qiao__retinue_skill_lujiang_shangjia"
+    local instances = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
+    instances.grant(player, { general = "qiao_heg__retinue_lujiang_shangjia", skill = skill, origin = "granted" })
+    local weapon = give(room, player, "qiao__blade")
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(weapon, Card.PlayerEquip, player, fk.ReasonPut)
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    local slash = give(room, player, "qiao__slash")
+    give(room, player, "qiao__slash")
+    lu.assertTrue(type(reply(player, "PlayCard", {}).card) == "number")
+    local cheap = give(room, player, "qiao__lightning")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, skill)
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(cheap.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(slash.id), Card.PlayerHand)
+    lu.assertEquals(player:getMark("qiao_lujiang_shangjia_slash_bonus-phase"), 1)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

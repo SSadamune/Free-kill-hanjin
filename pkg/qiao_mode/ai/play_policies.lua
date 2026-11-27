@@ -110,6 +110,14 @@ local function tryCardAndTarget(ai, qualifies, score)
   end
 end
 
+function M.huyuan(ai)
+  return tryCardAndTarget(ai, function(id)
+    return ai.room:getCardArea(id) == Card.PlayerHand and Fk:getCardById(id).type == Card.TypeEquip
+  end, function(target)
+    if ai:isFriend(target) then return 20 - target.hp end
+  end) or ""
+end
+
 function play.qiao__skill_wu015a_1(ai)
   local player = ai.player
   return tryCardAndTarget(ai, function(id)
@@ -200,8 +208,26 @@ function play.qiao__skill_wu012_1(ai)
   end)
 end
 
-function play.qiao__retinue_skill_lujiang_shangjia(ai)
-  if ai.player:getHandcardNum() < #ai.player:getCardIds("e") then return Request.reply(ai) end
+function play.qiao__retinue_skill_lujiang_shangjia(ai, stage)
+  local hand, equips = ai.player:getCardIds("h"), #ai.player:getCardIds("e")
+  if stage == "draw" then
+    if #hand < equips then return Request.reply(ai) end
+    return
+  end
+  local need = #hand - equips
+  if need < 1 or need > 2 then return end
+  local plan = Slash.plan(ai, { safe = Cards.safeDamage })
+  if plan.normal <= plan.limit then return end
+  local cheap = {}
+  for _, id in ipairs(hand) do
+    if Fk:getCardById(id).trueName ~= "slash" and not ai.player:prohibitDiscard(id) then
+      local value = Cost.value(ai, id)
+      if value <= 2 then table.insert(cheap, value) end
+    end
+  end
+  if #cheap < need then return end
+  table.sort(cheap)
+  if cheap[1] + (need == 2 and cheap[2] or 0) <= 3 then return Request.reply(ai) end
 end
 
 function play.qiao__skill_wu001_1(ai)
@@ -232,7 +258,7 @@ local stages = {
   qiao__skill_wu001_1 = "draw", -- 制衡
   qiao__skill_wu004_1 = "draw", -- 苦肉与诈降
   qiao__skill_qun013_2 = "draw", -- 雄异
-  qiao__retinue_skill_lujiang_shangjia = "draw",
+  qiao__retinue_skill_lujiang_shangjia = { draw = true, attack_prep = true },
   qiao__skill_wu008_1 = "support", -- 结姻
   qiao__skill_wu015a_1 = "support", -- 直谏
   qiao__skill_jin013_2 = "disrupt", -- 克清
@@ -245,9 +271,10 @@ local stages = {
 
 function M.play(ai, name, stage)
   local action = play[name]
-  if not action or stages[name] ~= stage then return end
+  local assigned = stages[name]
+  if not action or (assigned ~= stage and (type(assigned) ~= "table" or not assigned[stage])) then return end
   ai:selectSkill(name, true)
-  local reply = action(ai)
+  local reply = action(ai, stage)
   if reply and reply ~= "" then return reply end
   ai:unSelectAll()
 end
