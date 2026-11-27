@@ -611,7 +611,7 @@ function QiaoClient:notifyUI(command, data)
     uiCommand = "QiaoMoveCards"
   end
   BaseClient.notifyUI(self, uiCommand, data)
-  if (command == "AddSkill" or command == "LoseSkill") and data[2] == "ld__jilis" and isQiaoMode() then
+  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.isJili(data[2]) and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if command == "ChangeSelf" and isQiaoMode() then

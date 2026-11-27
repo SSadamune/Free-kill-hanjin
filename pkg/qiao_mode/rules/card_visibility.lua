@@ -26,4 +26,9 @@ V.zhaoran = V.atLocation(function(viewer, owner, area)
   return area == Card.PlayerHand and owner and owner:getMark(V.ZHAORAN_OPEN) > 0
 end)
 
+V.WUDU_OPEN = "@qiao_jin018_wudu"
+V.wudu = V.atLocation(function(viewer, owner, area)
+  return area == Card.PlayerHand and owner and owner:getMark(V.WUDU_OPEN) > 0
+end)
+
 return V

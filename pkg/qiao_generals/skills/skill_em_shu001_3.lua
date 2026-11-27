@@ -10,6 +10,7 @@ skill.qiaoImplemented = true
 local USED = "qiao__skill_em_shu001_3-used"
 local ZHANGWU = "qiao__skill_em_shu001_1"
 local RENDE = "qiao__skill_shu001_1"
+skill.qiao_limited_used_marks = { USED }
 
 skill:addEffect(fk.EnterDying, {
   can_trigger = function(self, event, target, player, data)

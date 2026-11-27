@@ -166,7 +166,17 @@ function Testqiao_guest_allegiance:testGuestCatalogUsesRegisteredGeneralsInSelec
   lu.assertEquals(guests.qiao_heg__wei013, { "han" })
   lu.assertEquals(guests.qiao_heg__qun001, { "wei", "shu", "wu", "han" })
   lu.assertNil(guests.qiao_heg__han003)
-  lu.assertEquals(Guest.registeredInPackage("qiao_zhenshi"), {
+  local catalog = Guest.registeredInPackage("qiao_zhenshi")
+  lu.assertNil(catalog[name])
+  local zhenShiGuests = {}
+  for id, factions in pairs(catalog) do
+    local general = Fk.generals[id]
+    lu.assertEquals(general.package.name, "qiao_zhenshi")
+    if general.prefix == "qiao_prefix_zhen" or general.prefix == "qiao_prefix_shi" then
+      zhenShiGuests[id] = factions
+    end
+  end
+  lu.assertEquals(zhenShiGuests, {
     qiao_heg__wei032 = { "jin" },
     qiao_heg__shu012 = { "wei" },
     qiao_heg__shu018b = { "wu" },
