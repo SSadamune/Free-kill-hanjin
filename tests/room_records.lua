@@ -57,6 +57,8 @@ function Testqiao_room_records:testDiscardDistinguishesBothClubFourSlashes()
     local marks = {}
     for _, row in ipairs(Client.discardCardsForDisplay(ClientInstance)) do
       if table.contains(ids, row.id) then
+        -- A card dealt at game start may already have its display mark.
+        for _, mark in ipairs(Ltk:getCardData(row.id).mark) do marks[mark.k] = mark.v end
         for _, mark in ipairs(row.markFallbacks) do marks[mark.k] = mark.v end
       end
     end

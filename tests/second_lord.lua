@@ -2,6 +2,8 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local V = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.selection"
+local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local H = require "packages.hegemony.util"
 
 local G = content.generals
@@ -17,7 +19,7 @@ local function create(options)
   local settings = { qiao_wild_count = 0 }
   for key, value in pairs(options.settings or {}) do settings[key] = value end
   return support.createRoom {
-    mode = "qiao_heg_mode", realSelection = true, backend = backend,
+    mode = options.mode or Modes.collection, realSelection = true, backend = backend,
     settings = settings,
   }
 end
@@ -39,9 +41,9 @@ local function setup()
 end
 
 --- Replace the setup room with one whose host settings were passed to Room:new.
-local function freshRoom(settings)
+local function freshRoom(settings, mode)
   support.clearRoom()
-  return preparePlayers(create { settings = settings })
+  return preparePlayers(create { settings = settings, mode = mode })
 end
 
 Testsecond_lord = { setup = setup, tearDown = support.clearRoom }
@@ -1016,7 +1018,7 @@ function Testsecond_lord:testAscensionGrantsYinyangWhenOldPairWasEven()
   lu.assertEquals(p:getMark("@!!yinyangfish"), 1, "旧组合偶数、新组合奇数，升变应补发阴阳鱼")
 end
 function Testsecond_lord:testFirstTurnBannedLordTargetIsNotOffered()
-  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  freshRoom({ disabledGenerals = { G.wei_monarch.name } }, Modes.free)
   local p = player(1)
   FkTest.runInRoom(function()
     hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
@@ -1041,7 +1043,7 @@ function Testsecond_lord:testBanningNormalVersionDoesNotBlockLordAscension()
 end
 
 function Testsecond_lord:testBannedPackBlocksLordAscension()
-  freshRoom { disabledPack = { content.pack.name } }
+  freshRoom({ disabledPack = { content.pack.name } }, Modes.free)
   local p = player(1)
   FkTest.runInRoom(function()
     hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
@@ -1060,7 +1062,7 @@ function Testsecond_lord:testWhitelistedTargetInBannedPackStillAscends()
   for _, general in pairs(G) do
     if not keep[general.name] then table.insert(disabled, general.name) end
   end
-  freshRoom { disabledGenerals = disabled }
+  freshRoom({ disabledGenerals = disabled }, Modes.free)
   local p = player(1)
   FkTest.runInRoom(function()
     hidden(p, G.wei_normal.name, G.wei_deputy.name, "wei")
@@ -1081,7 +1083,8 @@ function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
     end)
   end
 
-  local room = freshRoom()
+  local room = freshRoom(nil, Modes.free)
+  -- 模拟仅由模式禁用的包，兵情篇现已进入汉晋正式选将池。
   table.insertIfNeed(room.disabled_packs, "qiao_bingqing")
   setupJin(room)
   local ok
@@ -1096,7 +1099,7 @@ function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
   lu.assertFalse(table.contains(raw.disabledPack or {}, "qiao_bingqing"),
     "The mode-level disable must not be present in the host settings")
 
-  room = freshRoom { disabledPack = { "qiao_bingqing" } }
+  room = freshRoom({ disabledPack = { "qiao_bingqing" } }, Modes.free)
   setupJin(room)
   FkTest.runInRoom(function()
     ok = A.ascend(room, room.players[1], "qiao_heg__em_jin001", "jin", { kind = "lord" })
@@ -1106,7 +1109,7 @@ function Testsecond_lord:testModeDisabledPackAllowsAscensionButHostBanBlocksIt()
 end
 
 function Testsecond_lord:testSuccessionSkipsBannedTargetAndAsksNextCandidate()
-  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  freshRoom({ disabledGenerals = { G.wei_monarch.name } }, Modes.free)
   local lord, first, second = player(1), player(2), player(3)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
@@ -1126,7 +1129,7 @@ function Testsecond_lord:testSuccessionSkipsBannedTargetAndAsksNextCandidate()
 end
 
 function Testsecond_lord:testSuccessionWithoutAllowedTargetKeepsWildFallback()
-  freshRoom { disabledGenerals = { G.wei_monarch.name } }
+  freshRoom({ disabledGenerals = { G.wei_monarch.name } }, Modes.free)
   local lord, candidate = player(1), player(2)
   FkTest.runInRoom(function()
     revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
@@ -1141,6 +1144,47 @@ function Testsecond_lord:testSuccessionWithoutAllowedTargetKeepsWildFallback()
   lu.assertEquals(candidate.general, "anjiang")
   lu.assertEquals(candidate:getMark("__heg_kingdom"), "wild")
   lu.assertFalse(A.has_lord(room(), "wei"))
+end
+
+function Testsecond_lord:testLordPolicyControlsHintsAndActualFirstTurnAscension()
+  local normal, deputy, lord = "qiao_heg__wu001", "qiao_heg__wu002", "qiao_heg__em_wu001"
+  for _, case in ipairs {
+    { Modes.collection, true, true, true },
+    { Modes.collection, false, false, false },
+    { Modes.free, A.lordEnabled, true, true },
+    { Modes.free, A.lordDisabled, false, false },
+    { Modes.free, A.lordByBanScheme, true, false },
+  } do
+    local mode, setting, banned, allowed = table.unpack(case)
+    freshRoom({ _mode = { [A.lordSetting] = setting }, disabledGenerals = banned and { lord } or {} }, mode)
+    local p = player(1)
+    FkTest.runInRoom(function()
+      room():setBanner("all_kingdoms", { "wei", "shu", "wu", "qun" })
+      hidden(p, normal, deputy, "wu")
+      local data = Selection.askData(room(), { normal, deputy }).component.model.prop.extraData
+      lu.assertEquals(data.ascensions[normal] == true, allowed)
+      if not allowed then lu.assertFalse(A.ascend(room(), p, lord, "wu", { kind = "lord" })) end
+    end)
+    local prompts = captureAscensionPrompts()
+    triggerTurnStart(p, allowed and A.ASCEND_ACCEPT or "Cancel")
+    lu.assertEquals(#prompts.convert, allowed and 1 or 0)
+    lu.assertEquals(p.general, allowed and lord or "anjiang")
+  end
+end
+
+function Testsecond_lord:testEnabledLordPolicyAllowsBannedTargetToInherit()
+  freshRoom({ disabledGenerals = { G.wei_monarch2.name }, _mode = { [A.lordSetting] = true } }, Modes.collection)
+  local lord, candidate = player(1), player(2)
+  FkTest.runInRoom(function()
+    revealed(lord, G.wei_monarch.name, G.wei_deputy.name, "wei")
+    hidden(candidate, G.wei_normal2.name, "qiao_test__qun_1", "wei")
+    room():setCurrent(candidate)
+  end)
+  local prompts = captureAscensionPrompts()
+  FkTest.setNextReplies(candidate, { { A.ASCEND_ACCEPT } })
+  FkTest.runInRoom(function() room():killPlayer { who = lord } end)
+  lu.assertEquals(prompts.succession, { candidate.seat })
+  lu.assertEquals(candidate.general, G.wei_monarch2.name)
 end
 
 return { name = "second_lord" }

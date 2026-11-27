@@ -5,12 +5,11 @@ local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
 
-local collectionSettingHelp = {
-  generalNum = "qiao_collection_general_count_help",
-  generalTimeout = "qiao_collection_general_timeout_help",
-  timeoutAsGeneralTimeout = "qiao_collection_general_timeout_help",
-  luckTime = "qiao_collection_luck_help",
-  enableDeputy = "qiao_collection_deputy_help",
+local unusedGameSettings = {
+  generalNum = true,
+  generalTimeout = true,
+  timeoutAsGeneralTimeout = true,
+  enableDeputy = true,
 }
 
 -- Register after all extensions are installed; qiao may load before hegemony.
@@ -21,39 +20,27 @@ Fk:addPostLoadFunc(function()
   Mode.installRules()
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
   board.client_klass = Client
-  local qiaoBoard = setmetatable({
-    page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
-  }, { __index = board })
-  local function restrictedBoard(helpByKey)
+  local boards = {}
+  for _, name in ipairs(Modes.names) do
     local settings = table.clone(board.ui_settings)
     for _, group in ipairs(settings) do
-      for _, row in ipairs(group._children) do
-        local help = helpByKey[row._settingsKey]
-        if help then
-          row.enabled = false
-          row.subTitle = help
-          -- Ignore the operation timeout when timeoutAsGeneralTimeout was set in another mode.
-          row.value = nil
-        end
-      end
+      if group.title == "Properties" then group._qml = Mode.gamePropertiesQml end
+      -- The stock room summary uses the same descriptors and reads saved values even for disabled rows.
+      group._children = table.filter(group._children, function(row)
+        local key = row._settingsKey
+        return not unusedGameSettings[key]
+          and (key ~= "luckTime" or name == Modes.free)
+          and (key ~= "enableFreeAssign" or name ~= Modes.locked)
+      end)
     end
-    return setmetatable({ ui_settings = settings }, { __index = qiaoBoard })
+    boards[name] = setmetatable({
+      page = { url = "packages/qiao/pkg/qiao_mode/qml/QiaoRoom.qml" },
+      ui_settings = settings,
+    }, { __index = board })
   end
-  local collectionBoard = restrictedBoard(collectionSettingHelp)
-  local lockedBoard = restrictedBoard {
-    generalNum = collectionSettingHelp.generalNum,
-    generalTimeout = collectionSettingHelp.generalTimeout,
-    timeoutAsGeneralTimeout = collectionSettingHelp.timeoutAsGeneralTimeout,
-    luckTime = collectionSettingHelp.luckTime,
-    enableDeputy = "qiao_locked_deputy_help",
-    enableFreeAssign = "qiao_locked_assignment_help",
-  }
   local getBoardGame = Fk.getBoardGame
   function Fk:getBoardGame(name)
-    if name == Modes.collection then return collectionBoard end
-    if name == Modes.locked then return lockedBoard end
-    if Modes.isHanjin(name) then return qiaoBoard end
-    return getBoardGame(self, name)
+    return boards[name] or getBoardGame(self, name)
   end
   for _, name in ipairs(Modes.names) do
     local mode = Mode.create(base, name)
@@ -69,31 +56,28 @@ Fk:loadTranslationTable {
   ["qiao_wolves"] = "群狼环鼎",
   ["help: qiao_wolves"] = "开启历史事件与奇珍规则。",
   ["qiao_locked_game_rule"] = "游戏规则",
-  ["help: qiao_locked_game_rule"] = "房间人数随规则固定。当前禁将方案须能为双方发足合法的备选武将牌。",
   ["qiao_locked_landlord"] = "斗地主",
+  ["help: qiao_locked_landlord"] = "固定三人，一名地主对两名农民，地主多两张备选武将牌。",
   ["qiao_locked_2v2"] = "2v2",
+  ["help: qiao_locked_2v2"] = "四人分两方，座次随机，首位少一张初始手牌，末位多一张。",
+  ["qiao_locked_human_vs_ai"] = "人机对抗",
+  ["help: qiao_locked_human_vs_ai"] = "二至十人，真人与机器人分属不同势力，按人数分为两方或三方。",
   ["qiao_locked_battle_royal"] = "鏖战规则",
   ["help: qiao_locked_battle_royal"] = "开启后按国战人数和势力条件进入鏖战。",
   ["qiao_late_seat_compensation"] = "后置位补偿",
   ["help: qiao_late_seat_compensation"] = "选择手气卡后，7 人及以上的对局中，7 号位及之后的玩家各额外获得 1 次手气卡。",
   ["qiao_late_seat_none"] = "无",
   ["qiao_late_seat_luck_card"] = "手气卡",
-  ["qiao_collection_general_count_help"] = "请在「模式设置」中调整每人备选武将数。",
-  ["qiao_collection_general_timeout_help"] = "请在「模式设置」中调整选将时长。",
-  ["qiao_collection_luck_help"] = "7 人及以上对局中，7 号位起各有 1 次开局手气卡。",
-  ["qiao_collection_deputy_help"] = "大合集使用主将和副将。",
   ["qiao_mode"] = "国战平行时空",
   ["qiao_skill_reference_back"] = "后退",
   ["han"] = "汉",
   ["jin"] = "晋",
-  [Modes.collection] = "大合集",
+  [Modes.collection] = "汉晋大合集",
   [":" .. Modes.collection] = "魏、蜀、吴、群固定纳入备选势力。可设置是否纳入汉、晋，以及是否禁用势力和启用客将替换规则。",
-  [Modes.free] = "自由模式",
+  [Modes.free] = "平行时空",
   [":" .. Modes.free] = "可自定义备选势力、允许势力上限及国战附加规则，使用汉晋武将和游戏牌。",
-  [Modes.locked] = "锁定势力",
-  [":" .. Modes.locked] = "开局随机分配两个势力，每人从指定势力选主将和副将。三人局为斗地主，1 号位多两张备选武将牌，增加 1 点体力上限和体力，并获得〖飞扬〗和〖跋扈〗。四人局为随机座次的二对二，1 号位少一张初始手牌，4 号位多一张。默认关闭鏖战。",
-  ["qiao_locked_deputy_help"] = "锁定势力使用主将和副将。",
-  ["qiao_locked_assignment_help"] = "锁定势力固定关闭自由选将，须从获发的本势力武将牌中选择。",
+  [Modes.locked] = "锁定势力国战",
+  [":" .. Modes.locked] = "每人从获配势力选主将、副将。斗地主固定三人，地主多两张备选武将牌，增加 1 点体力上限和体力，并获得〖飞扬〗和〖跋扈〗。2v2固定四人，1 号位少一张初始手牌，4 号位多一张。人机对抗允许2至10人，真人和机器人分属不同势力。人数相同或机器人多一名时各一势力，其余情况由人数较多的一方随机均分两个势力。人机对抗免同势力人数上限。三个规则默认关闭鏖战。",
   ["qiao_faction_ban_enabled"] = "势力禁用规则",
   ["help: qiao_faction_ban_enabled"] = "随机选择四个势力备选，其余势力将被禁用",
   ["qiao_guest_replacement"] = "客将替换规则",
@@ -120,9 +104,17 @@ Fk:loadTranslationTable {
   ["#QiaoChooseGenerals"] = "选择主将与副将",
   ["#QiaoChooseGeneralsBans"] = "选择主将与副将　本局禁用势力：%arg",
   ["qiao_selection_can_ascend"] = "可君主升变",
+  ["qiao_selection_can_pledge_loyalty"] = "可效忠升变",
   ["qiao_lord_ascension"] = "君主升变",
+  ["qiao_lord_ascension_enabled"] = "开启",
+  ["qiao_lord_ascension_disabled"] = "禁用",
+  ["qiao_lord_ascension_by_bans"] = "自由选择",
+  ["help: qiao_lord_ascension_enabled"] = "启用君主升变规则",
+  ["help: qiao_lord_ascension_disabled"] = "禁用君主升变规则",
+  ["help: qiao_lord_ascension_by_bans"] = "能否君主升变取决于「禁将方案」的设置",
   ["$qiao_lord_ascension1"] = "君主升变",
-  ["#QiaoLockedWrongPlayerCount"] = "开局取消：房间人数与锁定势力的游戏规则不符。",
+  ["#QiaoLockedWrongPlayerCount"] = "开局取消：房间人数与锁定势力国战的游戏规则不符。",
+  ["#QiaoLockedMissingHumanOrRobot"] = "开局取消：人机对抗须至少有一名真人和一名机器人。",
   ["#QiaoLockedInsufficientGenerals"] = "开局取消：当前禁将和备选势力无法为两方发足合法的武将牌。",
   ["#QiaoLockedFewerOffers"] = "将池不足，本局每人的基础备选武将牌统一减为 %arg 张。",
   ["#QiaoChooseLockedKingdom"] = "你是%arg2，势力为%arg，请选择主将与副将",

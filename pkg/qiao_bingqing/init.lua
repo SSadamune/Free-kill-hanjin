@@ -9,8 +9,9 @@ package.game_modes_whitelist = Modes.names
 
 local Jin = require "packages.qiao.pkg.qiao_bingqing.data.bingqing_lord_jin"
 local Han = require "packages.qiao.pkg.qiao_bingqing.data.bingqing_lord_han"
+local Shi = require "packages.qiao.pkg.qiao_bingqing.data.shi_vector"
 local Nu = require "packages.qiao.pkg.qiao_bingqing.data.nu"
-local Sources = { Jin, Han, Nu }
+local Sources = { Jin, Han, Shi, Nu }
 package:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_bingqing/skills")
 for _, data in ipairs(Sources) do
   assert(type(data) == "table" and type(data.generals) == "table",
@@ -43,13 +44,14 @@ end
 Fk:loadTranslationTable(translations)
 
 for _, data in ipairs(Sources) do
+  local prefix = (data == Han or data == Shi) and "qiao_prefix_shi_vec" or "qiao_prefix_nu"
   for _, general in ipairs(data.generals) do
     assert(general.gender == "female" or general.gender == "male",
       "Missing gender metadata for " .. general.id)
     local generalObj = General:new(package, general.id, general.kingdom, general.hp, nil,
       general.gender == "female" and General.Female or General.Male)
     generalObj.trueName = general.name
-    generalObj.prefix = general.id == "qiao_heg__em_han001" and "qiao_prefix_shi_vec" or "qiao_prefix_nu"
+    generalObj.prefix = prefix
     generalObj.mainMaxHpAdjustedValue = general.mainHpAdjust or 0
     generalObj.deputyMaxHpAdjustedValue = general.deputyHpAdjust or 0
     generalObj:addCompanions(general.companions or {})
@@ -61,6 +63,26 @@ for _, data in ipairs(Sources) do
 end
 
 Fk:addPostLoadFunc(function()
+  -- 客将珠联随本局替换状态判定。引擎只查询调用方的关系函数，两端均需登记。
+  for _, entry in ipairs(Shi.generals) do
+    local owner = Fk.generals[entry.id]
+    for _, id in ipairs(entry.guestCompanions or {}) do
+      local partner = assert(Fk.generals[id])
+      local function paired(a, b)
+        if not ((a == owner and b == partner) or (a == partner and b == owner)) then return false end
+        local room = Fk:currentRoom()
+        if not room or not room.getBanner or not Guest.replacementEnabled(room) then return false end
+        local allowed = room:getBanner("all_kingdoms")
+        if type(allowed) ~= "table" or #allowed == 0 then return false end
+        local first = Guest.resolve(owner.name, allowed, true)
+        local second = Guest.resolve(partner.name, allowed, true)
+        return first and second and (first.guest or second.guest) or false
+      end
+      owner:addCompanionRule(paired)
+      partner:addCompanionRule(paired)
+    end
+  end
+
   local commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
   local sources = require "packages.qiao.pkg.qiao_generals.util.retinue_instance_sources"
   for _, r in ipairs(Nu.retinues) do
@@ -75,6 +97,7 @@ Fk:addPostLoadFunc(function()
         source_text = c.name .. " | " .. c.cardText, retinues = { c.retinue }, limited = false })
     end
   end
+
   local yang, xu = Fk.generals.qiao_heg__han043, Fk.generals.qiao_heg__wei010
   local function guestPair(a, b)
     if not ((a == yang and b == xu) or (a == xu and b == yang)) then return false end
@@ -87,6 +110,7 @@ Fk:addPostLoadFunc(function()
   end
   yang:addCompanionRule(guestPair)
   xu:addCompanionRule(guestPair)
+
   for _, data in ipairs(Sources) do
     for _, version in ipairs(data.versions or {}) do Versions.register(version) end
   end

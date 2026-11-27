@@ -577,25 +577,30 @@ function Testqiao_guest_allegiance:testOpeningAscensionHintsFollowTheRoomAndOffe
   for _, scenario in ipairs({
     { guestReplacement = false, lordBanned = false },
     { guestReplacement = true, lordBanned = false },
+    { guestReplacement = false, lordBanned = true, mode = "qiao_free_mode", lordUnavailable = true },
     { guestReplacement = false, lordBanned = true },
+    { guestReplacement = false, lordPolicy = false, lordUnavailable = true },
   }) do
     local disabled = table.simpleClone(otherWild)
     if scenario.lordBanned then table.insert(disabled, lord) end
-    local room = create { settings = {
+    local room = create { mode = scenario.mode, settings = {
       qiao_guest_replacement = scenario.guestReplacement,
       qiao_wild_count = 1,
       disabledGenerals = disabled,
+      _mode = { qiao_lord_ascension_policy = scenario.lordPolicy },
     } }
     FkTest.runInRoom(function()
       lu.assertTrue(Fk:canUseGeneral(wild))
       local component = Selection.askData(room, { normal, wild, deputy, unrelated }).component
-      local hints = component.model.prop.extraData.ascensions
-      if scenario.lordBanned then
+      local extra = component.model.prop.extraData
+      local hints = extra.ascensions
+      if scenario.lordUnavailable then
         lu.assertNil(hints[normal])
       else
         lu.assertTrue(hints[normal])
       end
       lu.assertTrue(hints[wild])
+      lu.assertTrue(extra.loyaltyAscensions[wild])
       lu.assertNil(hints[deputy])
       lu.assertEquals(component.url, scenario.guestReplacement and Selection.redraw_url or Selection.ascension_url)
       local noPartner = Selection.askData(room, { wild, unrelated }).component.model.prop.extraData.ascensions

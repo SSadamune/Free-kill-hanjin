@@ -14,27 +14,12 @@ skill.qiaoImplemented = true
 local W = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 local SHELIE = "qiao__skill_wu003_3"
 
-local function conditions(player)
-  local suits, types = {}, {}
-  for _, record in ipairs(W.usedThisTurn(player)) do
-    if record.suit == Card.Spade or record.suit == Card.Heart
-      or record.suit == Card.Club or record.suit == Card.Diamond then
-      suits[record.suit] = true
-    end
-    types[record.type] = true
-  end
-  local suitCount, typeCount = 0, 0
-  for _ in pairs(suits) do suitCount = suitCount + 1 end
-  for _ in pairs(types) do typeCount = typeCount + 1 end
-  return suitCount >= 4, typeCount >= 3
-end
-
 skill:addEffect(fk.EventPhaseStart, {
   anim_type = "control",
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) then return false end
     if data.phase ~= Player.Finish then return false end
-    local suits, types = conditions(player)
+    local suits, types = W.mouduanConditions(player)
     return suits or types
   end,
   on_cost = function(self, event, target, player)
@@ -49,7 +34,7 @@ skill:addEffect(fk.EventPhaseStart, {
     W.moveCardInBoard(room, player, skill.name)
     if player.dead then return end
 
-    local suits, types = conditions(player)
+    local suits, types = W.mouduanConditions(player)
     if suits and types and not player:hasSkill(SHELIE) then
       room:handleAddLoseSkills(player, SHELIE, nil, true, false)
     end

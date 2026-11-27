@@ -9,6 +9,7 @@ local skill = fk.CreateSkill {
   name = "qiao__retinue_skill_quaxiaojiang",
 }
 skill.qiaoImplemented = true
+local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
 local USED_MARK = "qiao_quaxiao_used-turn"
 
@@ -103,5 +104,16 @@ Fk:loadTranslationTable {
   [":qiao__retinue_skill_quaxiaojiang"] = "每回合限一次，当你使用牌后，若此牌目标与你本回合上一张使用牌的目标不完全相同，你可以对这两张牌的重合目标各造成1点伤害。",
   ["#qiao__retinue_skill_quaxiaojiang-invoke"] = "曲阿小将：你可以对这两张牌的重合目标各造成1点伤害",
 }
+
+skill:addAI(Fk.Ltk.AI.newInvokeStrategy {
+  think = function(self, ai)
+    local frame = Selection.currentCost(ai.player)
+    if not frame or not frame.event:isInstanceOf(fk.CardUseFinished) then return false end
+    local prev = previousUse(ai.player, frame.data)
+    if not prev then return false end
+    local targets = overlapTargets(ai.room, targetIds(prev), targetIds(frame.data))
+    return #targets > 0 and table.every(targets, function(target) return ai:isEnemy(target) end)
+  end,
+})
 
 return skill

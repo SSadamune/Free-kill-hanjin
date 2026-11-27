@@ -11,8 +11,8 @@ function Testqiao_smoke:testExtensionLoaded()
   local names = {
     qiao = "平行时空国战",
     qiao_mode = "国战平行时空",
-    qiao_heg_mode = "大合集",
-    qiao_rule_settings = "平行时空规则",
+    qiao_heg_mode = "汉晋大合集",
+    qiao_rule_settings = "国战模式规则",
     qiao_generals = "标准包",
     qiao_zhenshi = "君临天下",
     qiao_buchen = "君临天下·不臣篇",
@@ -69,7 +69,7 @@ function Testqiao_smoke:testEmptyGeneralPacks()
   lu.assertEquals(bingqing.type, Package.GeneralPack)
   lu.assertEquals(bingqing.extensionName, "qiao")
   lu.assertTrue(table.contains(bingqing.game_modes_whitelist, "qiao_heg_mode"))
-  lu.assertEquals(#ClientUtil:getGenerals("qiao_bingqing"), 19)
+  lu.assertEquals(#ClientUtil:getGenerals("qiao_bingqing"), 31)
   lu.assertEquals(#bingqing.cards, 0)
 end
 
