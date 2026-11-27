@@ -307,6 +307,7 @@ function M.create(base, name)
       FaqRules.installServer(self.room)
       Ascension.installTurnReveal()
       require("packages.qiao.pkg.qiao_generals.util.mifuren_reveal").install(self.room)
+      require("packages.qiao.pkg.qiao_bingqing.hufen").reveal.install(self.room)
       SkillPrelight.installServer()
       -- 普通出牌请求的主动技次数声明在 useSkill 前统一校验；只安装到本房间。
       ActiveSkillLimits.installServer(self.room)

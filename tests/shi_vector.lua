@@ -79,6 +79,19 @@ function T:testChumingUsesWineOnRecipientThenGivesSlashAndHandlesNoWeapon()
   end)
 end
 
+function T:testHufenMovesToDeputyAndUsesDependantSkills()
+  run(function(room, p)
+    asGeneral(room, p, "jin066")
+    lu.assertTrue(p:hasShownSkill(id("jin066_1")))
+    local exchanged = E.exchange(room, { player = p }, { player = p, isDeputy = true })
+    lu.assertNotNil(exchanged)
+    lu.assertEquals(p.deputyGeneral, "qiao_heg__jin066")
+    lu.assertTrue(p:hasShownSkill(id("jin066_2")))
+    lu.assertFalse(p:hasShownSkill(id("jin066_1")))
+    lu.assertEquals(p:getAttackRange(), 2)
+  end)
+end
+
 function T:testJingchuRemovesUntilTwoRemainAndOnlyThenDrawsAndGives()
   run(function(room, tian, remaining, a, b)
     asGeneral(room, tian, "han047")
@@ -142,6 +155,29 @@ function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
     lu.assertTrue(p:hasSkill(weaponSkill))
     room:throwCard(spear, "test", p, p)
     lu.assertFalse(p:hasSkill(weaponSkill))
+  end)
+end
+
+
+function T:testLianzhanUsesTwoLegalTargetsAfterExchange()
+  run(function(room, hu, a, b)
+    asGeneral(room, hu, "jin066")
+    local ha, hb = a.hp, b.hp
+    local n = 0
+    fixture.withSkillRequests(room, id("jin066_2"), {
+      askToUseVirtualCard = function(_, who, params)
+        n = n + 1
+        lu.assertTrue(who == hu)
+        local card = Fk:cloneCard("qiao__slash")
+        card.skillName = params.skill_name
+        return { from = who, card = card, tos = { a, b } }
+      end,
+    }, function()
+      E.exchange(room, { player = hu }, { player = hu, isDeputy = true })
+    end)
+    lu.assertEquals(n, 1)
+    lu.assertEquals(a.hp, ha - 1)
+    lu.assertEquals(b.hp, hb - 1)
   end)
 end
 

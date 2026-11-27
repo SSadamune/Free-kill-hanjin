@@ -10,3 +10,4 @@
 | HAN047 | [田畴](shi-vector/han047.md) | [锋引](shi-vector/han047.md#han047-1)、[径出](shi-vector/han047.md#han047-2) |
 | HAN051 | [袁隗](shi-vector/han051.md) | [唆令](shi-vector/han051.md#han051-1)、[趋奉](shi-vector/han051.md#han051-2) |
 | JIN037 | [成济&成倅](shi-vector/jin037.md) | [养刀](shi-vector/jin037.md#jin037-1)、[畜鸣](shi-vector/jin037.md#jin037-2) |
+| JIN066 | [胡奋](shi-vector/jin066.md) | [威惠](shi-vector/jin066.md#jin066-1)、[练战](shi-vector/jin066.md#jin066-2)、[转征](shi-vector/jin066.md#jin066-3) |

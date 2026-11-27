@@ -50,5 +50,25 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__jin066", name = "胡奋",
+      title = "制凶硜北", kingdom = "jin",
+      hp = 4, gender = "male",
+      guests = {}, companions = {},
+      skills = {
+        {
+          id = "qiao__skill_jin066_1", name = "威惠",
+          text = "主将技，你的手牌上限+1；此武将牌被明置或交换后，你可以摸一张牌。",
+        },
+        {
+          id = "qiao__skill_jin066_2", name = "练战",
+          text = "副将技，你的攻击范围+1；此武将牌被明置或交换后，你可以视为使用一张目标+1的【杀】。",
+        },
+        {
+          id = "qiao__skill_jin066_3", name = "转征",
+          text = "结束阶段，你可以交换主副将，或令一名与你势力相同的其他角色选择是否与你交换副将。",
+        },
+      },
+    },
   },
 }
