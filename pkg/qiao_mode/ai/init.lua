@@ -3,6 +3,7 @@ local Skills = require "packages.qiao.pkg.qiao_mode.ai.skills"
 local ViewAs = require "packages.qiao.pkg.qiao_mode.ai.view_as"
 local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local Diplomacy = require "packages.qiao.pkg.qiao_mode.ai.diplomacy"
+local Deadline = require "packages.qiao.pkg.qiao_mode.ai.deadline"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -39,6 +40,27 @@ end
 
 function Robot:supportScore(target, tactical)
   return tactical + (self:isFriend(target) and Diplomacy.humanBonus(self, target) or 0)
+end
+
+function Robot:makeReply()
+  local room = self.room
+  local handler, currentSelf = room.current_request_handler, Self
+  local skill = self.command == "AskForUseActiveSkill" and Fk.skills[self.data[1]]
+  local extra = skill and skill._extra_data
+  local ok, reply, timedOut = Deadline.run(SmartAI.makeReply, self)
+  if ok and not timedOut then return reply end
+
+  -- A deadline can unwind the native request setup before its cleanup.
+  self.handler = nil
+  self.mem = nil
+  room.current_request_handler = handler
+  Self = currentSelf
+  if skill then skill._extra_data = extra end
+  if timedOut then
+    fk.qWarning(string.format("HanJin AI skipped %s for seat %d after 10 seconds", self.command, self.player.seat))
+    return "__cancel"
+  end
+  error(reply, 0)
 end
 
 function Robot:handlePlayCard()

@@ -215,6 +215,37 @@ function Testqiao_robot_ai:testWildPlayersShareAGroupOnlyWithPublicCountry()
   end)
 end
 
+function Testqiao_robot_ai:testDecisionDeadlineCancelsStuckReplyAndNextRequestWorks()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local card = give(room, player, "qiao__foresight")
+    local ai = player.ai
+    local previousHook, previousMask, previousCount = debug.gethook()
+    local originalHandler = room.current_request_handler
+    ai.handlePlayCard = function() while true do end end
+
+    local req = Request:new(player, "PlayCard")
+    req.timeout = 1
+    local started = os.getms()
+    local answer = req:getResult(player)
+    local elapsed = os.getms() - started
+    ai.handlePlayCard = nil
+
+    lu.assertEquals(answer, "")
+    lu.assertTrue(elapsed >= 10000000 and elapsed < 30000000, tostring(elapsed))
+    lu.assertNil(ai.handler)
+    lu.assertTrue(room.current_request_handler == originalHandler)
+    local hook, mask, count = debug.gethook()
+    lu.assertTrue(hook == previousHook)
+    lu.assertEquals(mask, previousMask)
+    lu.assertEquals(count, previousCount)
+    lu.assertEquals(room:getCardOwner(card.id).id, player.id)
+
+    local nextRequest = Request:new(player, "PlayCard")
+    lu.assertEquals(nextRequest:getResult(player).card, card.id)
+  end)
+end
+
 function Testqiao_robot_ai:testForesightThroughPlayCard()
   scenario(function(room, player)
     local card = give(room, player, "qiao__foresight")
