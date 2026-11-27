@@ -62,6 +62,23 @@ Testqiao_nu_generals = {
   tearDown = rooms.clearRoom,
 }
 local T = Testqiao_nu_generals
+function T:testLizhiDrawThresholdAndRealDistributionOnDying()
+  run(function(room, tao, a, b)
+    general(room, tao, "han055")
+    local n, hp = a:getHandcardNum(), a.hp
+    room.logic:trigger(fk.EventPhaseStart, a, { phase = Player.Finish })
+    lu.assertEquals(a.hp, hp - 1)
+    lu.assertEquals(a:getHandcardNum(), n + 2)
+    for i = 1, 3 do card(room, tao, "qiao__slash") end
+    local ids = tao:getCardIds("h")
+    tao.hp = 0
+    fixture.withSkillRequests(room, id("han055_2"), {
+      askToYiji = function() return { [a.id] = { ids[1], ids[2] }, [b.id] = { ids[3] } } end,
+    }, function() room.logic:trigger(fk.EnterDying, tao, { who = tao }) end)
+    lu.assertEquals(tao.hp, 1)
+    lu.assertTrue(room:getCardOwner(ids[1]) == a and room:getCardOwner(ids[3]) == b)
+  end)
+end
 function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
   run(function(room, yang, friend, victim)
     general(room, yang, "han043")
@@ -84,6 +101,26 @@ function T:testYangfengUsesLordFactionAndSharesWeaponWithoutMovingIt()
   end)
 end
 
+
+function T:testDanyangCopiesRememberEachTargetIndependently()
+  run(function(room, p, ally)
+    grant(p, "danyang_qingjin")
+    grant(p, "danyang_qingjin", "deputy")
+    grant(ally, "danyang_qingjin")
+    local before = p:getHandcardNum()
+    local function use()
+      room:useCard { from = p, tos = { ally }, card = Fk:cloneCard("qiao__peach"), extraUse = true }
+    end
+    ally.hp = 1
+    use()
+    lu.assertEquals(p:getHandcardNum(), before + 2)
+    use()
+    lu.assertEquals(p:getHandcardNum(), before + 2)
+    grant(p, "danyang_qingjin")
+    use()
+    lu.assertEquals(p:getHandcardNum(), before + 3)
+  end)
+end
 
 function T:testBajiaLordAssignmentsIncludeSecondGenerationAndWild()
   run(function(room, p)
