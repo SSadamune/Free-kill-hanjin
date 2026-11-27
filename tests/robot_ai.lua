@@ -1850,4 +1850,74 @@ function Testqiao_robot_ai:testThreatenEmperorWaitsForALegalPaymentAndForOtherPl
   end)
 end
 
+function Testqiao_robot_ai:testFiveElementsFanChoosesFireAgainstVine()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    local fan = give(room, player, "qiao__five_elements_fan")
+    room:moveCardTo(fan, Card.PlayerEquip, player, fk.ReasonPut)
+    local armor = give(room, enemy, "qiao__vine")
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local material = give(room, player, "qiao__thunder__slash")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__five_elements_fan_skill")
+    lu.assertEquals(action.card.subcards, { material.id })
+    lu.assertEquals(action.interaction_data, "qiao__fire__slash")
+    lu.assertEquals(action.targets, { enemy.id })
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    enemy.serverplayer:setState(fk.Player_Robot)
+    local hand = enemy:getCardIds("h")
+    if #hand > 0 then room:throwCard(hand, "test", enemy, enemy) end
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(enemy.hp, 2)
+  end)
+end
+
+function Testqiao_robot_ai:testBreastplateCanBePlacedInAWeakenedAllysEmptySlot()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(ally, "hp", 1)
+    local armor = give(room, player, "qiao__eight_diagram")
+    room:moveCardTo(armor, Card.PlayerEquip, player, fk.ReasonPut)
+    local mirror = give(room, player, "qiao__breastplate")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card, mirror.id)
+    lu.assertEquals(action.special_skill, "qiao__breastplate_place")
+    lu.assertEquals(action.targets, { ally.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardOwner(mirror.id).id, ally.id)
+    lu.assertEquals(room:getCardArea(mirror.id), Card.PlayerEquip)
+  end)
+end
+
+function Testqiao_robot_ai:testGuzhengReturnsLowValueAndKeepsRemainingCards()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu015a_2", nil, false, true)
+    local cheap = give(room, enemy, "qiao__lightning")
+    local good = give(room, enemy, "qiao__peach")
+    local defense = give(room, enemy, "qiao__jink")
+    room:throwCard({ good.id, cheap.id, defense.id }, "test", enemy, enemy)
+    lu.assertEquals(room:getCardOwner(cheap.id).id, enemy.id)
+    lu.assertEquals(room:getCardOwner(good.id).id, player.id)
+    lu.assertEquals(room:getCardOwner(defense.id).id, player.id)
+  end)
+end
+
+function Testqiao_robot_ai:testJibingPrefersSafeOrLargeDrawBonuses()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(room.players[5], "kingdom", ally.kingdom)
+    room:handleAddLoseSkills(player, "qiao__skill_han018_1", nil, false, true)
+    local function drawCount(hp)
+      room:setPlayerProperty(player, "hp", hp)
+      local draw = { n = 2 }
+      room.logic:trigger(fk.DrawNCards, player, draw)
+      return draw.n
+    end
+    lu.assertEquals(drawCount(1), 2)
+    lu.assertEquals(drawCount(3), 5)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

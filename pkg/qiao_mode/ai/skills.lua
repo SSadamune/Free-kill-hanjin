@@ -190,6 +190,39 @@ function M.active(ai, data)
       if ai:isFriend(target) and not target:isHandAreaSealed() then return 1 / (1 + target:getHandcardNum()) end
     end)
   end
+  if key == "#qiao__skill_qun081_1-invoke" then
+    local use = parentData(ai, GameEvent.UseCard)
+    if not use or not use.card then return "" end
+    local nature = Damage.cardNature(use.card, use)
+    local amount = Damage.cardAmount(use.card, use, ai.player) + 1
+    local function score(target)
+      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, amount, nature,
+        { source = ai.player, card = use.card })) then return ai:hostileScore(target, 20 - target.hp) end
+    end
+    local id, value
+    for _, material in ipairs(ai:getEnabledCards()) do
+      local owner = ai.room:getCardOwner(material)
+      if owner and table.contains((extra.targetsByCard or {})[tostring(material)] or {}, owner.id) and score(owner) then
+        local payoff = Board.equipScore(owner:getVirtualEquip(material) or Fk:getCardById(material))
+        if not value or payoff > value or (payoff == value and material < id) then id, value = material, payoff end
+      end
+    end
+    if not id then return "" end
+    ai:selectCard(id, true)
+    return chooseTargets(ai, score)
+  end
+  if key == "#qiao__halberd-ask" then
+    local use = parentData(ai, GameEvent.UseCard)
+    if not use or not use.card then return "" end
+    local function likelyHit(target)
+      return Cards.safeDamage(ai, use.card, target, use) and target:isKongcheng()
+        and #target:getEquipments(Card.SubtypeArmor) == 0
+    end
+    if not table.every(use.tos, likelyHit) then return "" end
+    return chooseTargets(ai, function(target)
+      if likelyHit(target) then return ai:hostileScore(target, 20 - target.hp) end
+    end, #extra.targets)
+  end
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
   end
@@ -217,7 +250,8 @@ function M.active(ai, data)
     end)
   end
   if skill == "choose_players_skill" then
-    local use = (key == "#qiao__skill_jin012_1-targets" or key == "#qiao__skill_wu016_1-extra")
+    local use = (key == "#qiao__skill_jin012_1-targets" or key == "#qiao__skill_wu016_1-extra"
+      or key == "#qiao__skill_qun002_2-extra")
       and parentData(ai, GameEvent.UseCard)
     local score, extend = Triggers.targetScore(ai, key, use)
     if score then return chooseTargets(ai, score, extend and extra.num or 1) end
@@ -273,6 +307,24 @@ function M.active(ai, data)
       end) and Requests.reply(ai) or ""
     elseif key == "#qiao__skill_han001_1-discard" then
       budget = 4
+    elseif key == "#qiao__skill_qun005_1-discard" then
+      if not ai.player:canSkip(Player.Play) then return "" end
+      local hand = ai.player:getCardIds("h")
+      local duel = Fk:cloneCard("qiao__duel")
+      local material = function(id)
+        local cost = Fk:getCardById(id)
+        return cost.color ~= Card.NoColor and table.find(hand, function(other)
+          local card = Fk:getCardById(other)
+          if card.color == Card.NoColor or card.color == cost.color or card.trueName == "duel"
+            or Cost.value(ai, other) > 3 then return false end
+          local converted = duel:clone()
+          converted:addSubcard(other)
+          return table.find(converted:getAvailableTargets(ai.player), function(target)
+            return ai:isEnemy(target) and target:isKongcheng()
+          end) ~= nil
+        end) ~= nil
+      end
+      return Cost.select(ai, 1, 2, material) and Requests.reply(ai) or ""
     elseif key == "#qiao__skill_jin007_2-give" then
       if not ai:isFriend(M.promptTarget(ai, fields, 3)) or ai.player:isHandAreaSealed() then return "" end
       budget = 5
@@ -447,6 +499,16 @@ end
 function M.chosen(ai, data)
   local target, areas, prompt = table.unpack(data)
   if type(target) == "number" then target = ai.room:getPlayerById(target) end
+  if prompt == "#qiao__skill_wu015a_2-give" and type(areas) == "table" then
+    local best, value
+    for _, group in ipairs(areas.card_data or {}) do
+      for _, id in ipairs(group[2]) do
+        local score = Cost.value(ai, id)
+        if not value or score < value or (score == value and id < best) then best, value = id, score end
+      end
+    end
+    return best
+  end
   if prompt == "#qiao__skill_jin001_1-choose" and ai:isEnemy(target) and type(areas) == "table" then
     local best, bestScore
     for _, group in ipairs(areas.card_data) do
@@ -469,8 +531,10 @@ function M.chosen(ai, data)
   if key == "#qiao__skill_qun008_2-ask" then return Removal.pick(ai, target, "e", false) end
   if key == "#qiao__skill_qun001_2-card" then return Removal.pick(ai, target, areas, false, true) end
   local obtains = key == "#qiao__chasing_near-choose-prey" or key == "#qiao__skill_wei002_1-choose"
+    or key == "#qiao__skill_jin011_1-hand"
     or (key == "#AskForChooseCard" and fields[4] == "snatch_skill")
   local removal = obtains or key == "#qiao__chasing_near-choose-discard"
+    or key == "#qiao__skill_jin011_1-equip"
     or key == "#qiao__skill_qun016_1-card" or key == "#qiao__skill_wei003_1-discard" or key == "#qiao__skill_shu012_1-discard"
     or key == "#qiao__skill_wei018_1-card" or key == "#qiao__skill_han009_1-discard"
     or key == "#qiao__skill_han009_1-counter" or key == "#qiao__skill_jin005_2-discard"

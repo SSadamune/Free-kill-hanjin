@@ -118,6 +118,17 @@ function M.invoke(ai, original, fields)
     local score = M.targetScore(ai, key)
     return table.find(ai.room:getOtherPlayers(player, false), function(target) return score(target) ~= nil end) ~= nil
   end
+  if key == "#qiao__skill_han018_1-invoke" then
+    local count = tonumber(fields[4])
+    if not count or count < 1 or player:isHandAreaSealed() then return false end
+    local dealt = 0
+    for _, event in ipairs(ai.room.logic:getActualDamageEvents(math.huge, function(damage)
+      return damage.data.from == player
+    end, Player.HistoryTurn)) do
+      dealt = dealt + event.data.damage
+    end
+    return dealt >= count or Cost.zhaxiangTrade(player) or (player.hp >= 3 and count >= 3)
+  end
 end
 
 local allyDrawTargets = {
@@ -131,6 +142,7 @@ local allyMultiTargets = {
 local enemyDamageTargets = {
   ["#qiao__skill_shu005_2-target"] = true, -- 突阵
   ["#qiao__skill_shu005_2-invoke"] = true,
+  ["#qiao__skill_jin011_1-damage"] = true,
 }
 
 function M.protects(ai, use, player)
@@ -139,6 +151,46 @@ function M.protects(ai, use, player)
 end
 
 function M.targetScore(ai, key, use)
+  if key == "#qiao__skill_han011_2-target" or key == "#qiao__skill_han011_2-invoke" then
+    -- The death skill already restricts the candidates to its owner's faction.
+    return function(target)
+      if not target:isHandAreaSealed() then return 1 / (1 + target:getHandcardNum()) end
+    end
+  end
+  if key == "#qiao__skill_qun002_2-extra" then
+    return function(target)
+      if use and use.card and ai:isFriend(use.from) and target:isKongcheng()
+        and Cards.safeDamage(ai, use.card, target, use) then
+        return ai:hostileScore(target, 20 - target.hp)
+      end
+    end, true
+  end
+  if key == "#qiao__skill_jin008_1-owner" or key == "#qiao__skill_jin008_1-invoke"
+    or key == "#qiao__skill_wu015a_2-owner" or key == "#qiao__skill_wu015a_2-invoke" then
+    local yishi = key:startsWith("#qiao__skill_jin008_1")
+    local moves = currentData(ai)
+    return function(target)
+      if not moves or (yishi and not ai:isFriend(target)) then return end
+      local values = {}
+      for _, move in ipairs(moves) do
+        if (yishi and move.proposer or not yishi and move.from) == target
+          and move.toArea == Card.DiscardPile and move.moveReason == fk.ReasonDiscard then
+          for _, info in ipairs(move.moveInfo or {}) do
+            if ai.room:getCardArea(info.cardId) == Card.DiscardPile then
+              table.insert(values, Cost.value(ai, info.cardId))
+            end
+          end
+        end
+      end
+      table.sort(values)
+      if ai:isFriend(target) and not target:isHandAreaSealed() and #values > 0 then return values[#values] end
+      if not ai.player:isHandAreaSealed() and #values > 1 then
+        local gain = 0
+        for index = #values, math.max(2, #values - (yishi and 0 or 2)), -1 do gain = gain + values[index] end
+        if target == ai.player or target:isHandAreaSealed() or gain > values[1] + 1 then return gain end
+      end
+    end
+  end
   if key == "#qiao__skill_han016_1-target" or key == "#qiao__skill_han016_1-invoke" then
     local slash = Fk:cloneCard("qiao__slash")
     return function(target) return Cards.scoreTarget(ai, slash, target) end
@@ -325,7 +377,18 @@ end
 
 function M.choice(ai, choices, fields)
   local key, player = fields[1], ai.player
-  if key == "#qiao__skill_jin006_1-choice" then
+  if key == "#qiao__skill_han011_2-choice" then
+    local total = 0
+    for _, id in ipairs(player:getCardIds("he")) do total = total + Cost.value(ai, id) end
+    return total > 9 and "qiao__skill_han011_2-cards" or "qiao__skill_han011_2-draw"
+  elseif key == "#qiao__skill_jin011_1-branch" then
+    local equipment = "qiao__skill_jin011_1-equip"
+    local hand = "qiao__skill_jin011_1-hand"
+    if not table.contains(choices, hand) then return equipment end
+    if not table.contains(choices, equipment) then return hand end
+    if ai.player:getHandcardNum() >= 3 or not Cost.effectable(player, "qiao__skill_wu008_2") then return hand end
+    return equipment
+  elseif key == "#qiao__skill_jin006_1-choice" then
     if ai.room.current == player and Cost.effectable(player, "qiao__skill_jin006_2")
       and table.find(player:getCardIds("h"), function(id) return Cost.value(ai, id) <= 3 end)
       and table.find(Fk:cloneCard("qiao__unexpectation"):getAvailableTargets(player), function(target)

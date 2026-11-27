@@ -252,6 +252,23 @@ function play.qiao__skill_shu010_1_recast(ai)
   if Cost.select(ai, 1, 2) then return Request.reply(ai) end
 end
 
+function play.qiao__skill_jin011_1(ai)
+  if not Cost.discard(ai, 1, 2) then return end
+  return Request.targets(ai, function(target)
+    local _, value = Removal.pick(ai, target, "he", true)
+    if value and ai:isEnemy(target) then return ai:hostileScore(target, value) end
+  end)
+end
+
+function play.qiao__skill_em_qun010_3(ai)
+  if not ai.player:hasEmptyEquipSlot(Card.SubtypeArmor) then return end
+  local peace = table.find(ai.room.discard_pile, function(id) return Fk:getCardById(id).name == "qiao__peace_spell" end)
+  if not peace then return end
+  if table.find(ai.player:getCardIds("he"), function(id)
+    return Fk:getCardById(id).color == Card.Red and not ai.player:prohibitDiscard(id) and Cost.value(ai, id) <= 2
+  end) then return Request.reply(ai) end
+end
+
 function M.alliance(ai, cooperation)
   local name = "qiao__alliance"
   if not ai.player:isFakeSkill(name) and not ai.player:hasSkill(name) then return end
@@ -373,6 +390,8 @@ local stages = {
   qiao__skill_jin006_1 = "draw", -- 三陈
   qiao__skill_jin016_2 = "last", -- 风物
   qiao__skill_shu010_1_recast = "recast",
+  qiao__skill_jin011_1 = "disrupt", -- 果毅
+  qiao__skill_em_qun010_3 = "setup", -- 问道
 }
 
 function M.play(ai, name, stage)

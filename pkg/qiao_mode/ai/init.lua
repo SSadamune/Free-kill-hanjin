@@ -89,8 +89,9 @@ function Robot:handlePlayCard()
     if stage == "cheap_recast" then
       reply = Cards.recast(self, true)
     else
-      if stage == "damage" then reply = Skills.play(self, "attack_prep") end
-      reply = reply or Cards.play(self, stage) or Skills.play(self, stage) or ViewAs.play(self, stage)
+      if stage == "damage" then reply = Skills.play(self, "attack_prep") or ViewAs.fiveElements(self) end
+      reply = reply or Cards.play(self, stage) or (stage == "support" and Cards.placeBreastplate(self))
+        or Skills.play(self, stage) or ViewAs.play(self, stage)
     end
     if reply then return reply end
     if stage == "draw" then
@@ -127,7 +128,7 @@ function Robot:handleAskForUseCard(data)
   if data[1] == "qiao__skill_jin004_2" and data[3] == "#qiao__skill_jin004_2-use" then
     return Cards.retaliate(self, Skills.retaliationTarget(self))
   end
-  if data[2] == "slash" then return Cards.playEnemySlash(self) or ViewAs.slash(self) end
+  if data[2] == "slash" then return ViewAs.fiveElements(self) or Cards.playEnemySlash(self) or ViewAs.slash(self) end
   if data[2] == "jink" then
     local reply = ViewAs.response(self, "jink")
     local effect = Damage.effect(self, self.player)
@@ -170,6 +171,14 @@ function Robot:handleCustomDialog(data)
   if component and component.url == "packages/qiao/pkg/qiao_mode/qml/ZhoujunValueBox.qml" then
     return Slash.sealOption(self, component.prop, Cards.safeDamage)
   end
+  if component and component.url == "packages/qiao/pkg/qiao_mode/qml/GuzhengGainBox.qml" then
+    local cards = table.simpleClone(component.prop.cards)
+    table.sort(cards, function(a, b)
+      local va, vb = Cost.value(self, a), Cost.value(self, b)
+      return va == vb and a < b or va > vb
+    end)
+    return table.slice(cards, 1, component.prop.maxGain + 1)
+  end
 end
 
 function Robot:handleAskForArrangeCards(data)
@@ -181,6 +190,17 @@ function Robot:handleAskForPoxi(data)
   local prompt = data.extra_data.prompt
   if prompt == "#qiao_move_board_pick" then return Board.chooseCard(self, data.data) end
   if prompt == "#qiao__skill_wu006_1-judge_card" then return Removal.chooseJudge(self, data.data) end
+  if prompt == "#qiao__skill_jin008_1-give" or prompt == "#qiao__skill_jin008_1-gain" then
+    local best, value
+    local direction = prompt:endsWith("-gain") and 1 or -1
+    for _, group in ipairs(data.data or {}) do
+      for _, id in ipairs(group[2]) do
+        local score = direction * Cost.value(self, id)
+        if not value or score > value or (score == value and id < best) then best, value = id, score end
+      end
+    end
+    if best then return { best } end
+  end
 end
 
 function Robot:handleAskForCardChosen(data)

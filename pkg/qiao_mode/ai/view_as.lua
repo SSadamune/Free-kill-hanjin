@@ -83,6 +83,41 @@ local function luanji(ai, cuipoIndex)
   ai:unSelectAll()
 end
 
+function M.fiveElements(ai)
+  local skill = "qiao__five_elements_fan_skill"
+  if not table.contains(ai:getEnabledSkills(), skill) then return end
+  ai:selectSkill(skill, true)
+  for _, name in ipairs({ "qiao__fire__slash", "qiao__thunder__slash", "qiao__ice__slash" }) do
+    ai.handler:updateInteraction(name)
+    local enabled = ai:getEnabledCards()
+    table.sort(enabled)
+    for _, id in ipairs(enabled) do
+      ai:selectCard(id, true)
+      local card, original = ai.handler:getUsingCard(), Fk:getCardById(id)
+      if card then
+        local previous = original:getAvailableTargets(ai.player, ai.handler.extra_data)
+        local function outcome(slash, target)
+          return Damage.assess(ai, target, Damage.cardAmount(slash, nil, ai.player), Damage.cardNature(slash),
+            { source = ai.player, card = slash })
+        end
+        local reply = Requests.targets(ai, function(target)
+          if not ai:isEnemy(target) then return end
+          local converted = outcome(card, target)
+          local old = table.contains(previous, target) and outcome(original, target)
+          if Damage.worth(converted) and (not old or not Damage.worth(old)
+            or Damage.value(converted) >= Damage.value(old) + 2) then
+            return ai:hostileScore(target, Damage.value(converted))
+          end
+        end)
+        if reply ~= "" then return reply end
+      end
+      ai:unSelectAllTargets()
+      ai:selectCard(id, false)
+    end
+  end
+  ai:unSelectAll()
+end
+
 function M.play(ai, stage, cuipoIndex)
   if stage == "disrupt" then return convert(ai, "dismantlement", 7, true, cuipoIndex) end
   if stage == "damage" then

@@ -323,4 +323,24 @@ function M.threatenEmperor(ai)
   end
 end
 
+function M.placeBreastplate(ai)
+  local name = "qiao__breastplate_place"
+  if ai.player:hasEmptyEquipSlot(Card.SubtypeArmor) then return end
+  for _, id in ipairs(ai:getEnabledCards()) do
+    local card = Fk:getCardById(id)
+    if table.contains(card.special_skills or {}, name) and ai.room:getCardArea(id) == Card.PlayerHand then
+      ai:selectCard(id, true)
+      ai.handler:selectSpecialUse(name)
+      local reply = selectTargets(ai, function(target)
+        if ai:isFriend(target) and target ~= ai.player and target.hp <= 2 then return 3 - target.hp end
+      end)
+      if reply then
+        reply.special_skill = name
+        return reply
+      end
+      ai:selectCard(id, false)
+    end
+  end
+end
+
 return M
