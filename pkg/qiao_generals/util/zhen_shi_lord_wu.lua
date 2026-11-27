@@ -19,6 +19,10 @@ function M.isProtectedTreasure(owner, proposer, id)
   return card and card.sub_type == Card.SubtypeTreasure
 end
 
+function M.isPubliclyProtectedTreasure(owner, proposer, id)
+  return M.isProtectedTreasure(owner, proposer, id) and owner:hasShownSkill(M.JUBAO)
+end
+
 -- 准备阶段临时授技：来源只记本次授予，到期只撤销这一份。
 M.SOURCE = "qiao__skill_em_wu001_flag_source"
 M.RULE = "qiao__skill_em_wu001_rule"

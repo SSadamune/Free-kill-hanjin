@@ -138,6 +138,29 @@ function T:testSuolingCanGiveSecondBlackCardAndChooseYuanweiAsSlashTarget()
   end)
 end
 
+function T:testXianzhuRecoversBeforeRecipientSelectsDamageTarget()
+  run(function(room, cai, other, target)
+    asGeneral(room, cai, "qun033")
+    local spear = room:printCard("qiao__spear", Card.Spade, 12)
+    room:moveCardTo(spear, Card.PlayerEquip, cai, fk.ReasonPut)
+    cai.hp = cai.maxHp - 1
+    local hp = target.hp
+    fixture.withSkillRequests(room, id("qun033_2"), {
+      askToChoosePlayers = function(_, chooser, params)
+        lu.assertTrue(chooser == other)
+        lu.assertEquals(cai.hp, cai.maxHp)
+        lu.assertTrue(table.contains(params.targets, target))
+        return { target }
+      end,
+    }, function()
+      room:handleUseCardReply(cai, FkTest.ReplyUseSkill(id("qun033_2"), { other }, {}))
+    end)
+    lu.assertTrue(room:getCardOwner(spear.id) == other)
+    lu.assertEquals(room:getCardArea(spear.id), Card.PlayerHand)
+    lu.assertEquals(target.hp, hp - 1)
+  end)
+end
+
 function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
   run(function(room, p, other)
     asGeneral(room, p, "jin037")
@@ -158,6 +181,21 @@ function T:testYangdaoInvalidationAndPhysicalWeaponTakeover()
   end)
 end
 
+
+function T:testQietingUsesTargetKingdomAndActualHandCard()
+  run(function(room, user, to, cai)
+    asGeneral(room, cai, "qun033")
+    local mark = "qiao_qieting_foreign-turn"
+    room:setPlayerProperty(to, "kingdom", "unknown")
+    rooms.playCard(room, user, give(room, user, "qiao__slash"), { to })
+    lu.assertEquals(user:getMark(mark), 0)
+    room:setPlayerProperty(to, "kingdom", "wei")
+    room:useCard { from = user, tos = { to }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(user:getMark(mark), 0)
+    rooms.playCard(room, user, give(room, user, "qiao__slash"), { to })
+    lu.assertEquals(user:getMark(mark), 1)
+  end)
+end
 
 function T:testLianzhanUsesTwoLegalTargetsAfterExchange()
   run(function(room, hu, a, b)
@@ -206,6 +244,27 @@ function T:testSuolingSecondOptionUsesTwoConvertedSlashesOnRecipient()
   end)
 end
 
+
+function T:testQietingOnlyDrawsWhenTheOnlyEquipmentIsProtected()
+  run(function(room, sun, cai)
+    asGeneral(room, sun, "em_wu001")
+    asGeneral(room, cai, "qun033")
+    local treasure = give(room, sun, "qiao__bronze_sparrow")
+    room:moveCardIntoEquip(sun, treasure.id)
+    local before = cai:getHandcardNum()
+    local invoke = room.askToSkillInvoke
+    room.askToSkillInvoke = function(self, who, params, ...)
+      if who == cai and params.skill_name:find(id("qun033_1"), 1, true) then return true end
+      return invoke(self, who, params, ...)
+    end
+    fixture.withSkillRequests(room, id("qun033_1"), {
+      askToChoice = function() error("受保护的宝物不应出现移动选项") end,
+    }, function() room.logic:trigger(fk.EventPhaseStart, sun, { phase = Player.Finish }) end)
+    room.askToSkillInvoke = invoke
+    lu.assertEquals(cai:getHandcardNum(), before + 1)
+    lu.assertIs(room:getCardOwner(treasure.id), sun)
+  end)
+end
 
 local function checkSuolingFocus(suit)
   run(function(room, yuan, receiver, target)

@@ -70,5 +70,21 @@ return {
         },
       },
     },
+    {
+      id = "qiao_heg__qun033", name = "蔡夫人",
+      title = "梅谢未霜、襄江的蒲苇", kingdom = "qun",
+      hp = 3, gender = "female",
+      guests = { "wei" }, companions = { "qiao_heg__qun_han030" },
+      skills = {
+        {
+          id = "qiao__skill_qun033_1", name = "窃听",
+          text = "其他角色的结束阶段，若其本回合未对与其势力不同的角色使用过手牌，你可以摸一张牌，或将其装备区的一张牌移动给你。",
+        },
+        {
+          id = "qiao__skill_qun033_2", name = "献州",
+          text = "限定技，出牌阶段，你可以将装备区的所有牌交给一名其他角色，回复等量体力，其对攻击范围内至多等量名角色各造成1点伤害。",
+        },
+      },
+    },
   },
 }
