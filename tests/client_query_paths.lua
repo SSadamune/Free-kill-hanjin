@@ -59,7 +59,7 @@ Testqiao_client_query_paths = {
   end,
 }
 
-function Testqiao_client_query_paths:testOnlyOwnDoubleHiddenGeneralFrontsAreAvailable()
+function Testqiao_client_query_paths:testOnlyOwnHiddenGeneralFrontsAreAvailableInEitherPosition()
   client_room.run(room(), function(players)
     local client = QiaoClient:new(ClientInstance.client)
     client.players = players
@@ -88,9 +88,56 @@ function Testqiao_client_query_paths:testOnlyOwnDoubleHiddenGeneralFrontsAreAvai
       lu.assertFalse(client:ownHiddenGenerals(me.id))
       client.replaying = false
       me.general = "qiao_heg__jin001"
+      lu.assertEquals(client:ownHiddenGenerals(me.id), { false, "qiao_heg__jin002" })
+      me.general, me.deputyGeneral = "anjiang", "qiao_heg__jin002"
+      lu.assertEquals(client:ownHiddenGenerals(me.id), { "qiao_heg__jin001", false })
+      me.general = "qiao_heg__jin001"
       lu.assertFalse(client:ownHiddenGenerals(me.id))
     end)
     Self = saved
+    if not ok then error(err, 0) end
+  end)
+end
+
+function Testqiao_client_query_paths:testPlayerDetailIncludesOwnHiddenSkillsAndFiltersOtherViews()
+  client_room.run(room(), function(players)
+    local client = QiaoClient:new(ClientInstance.client)
+    client.players = players
+    function client:notifyUI() end
+    local me, other = players[1], players[2]
+    for _, player in ipairs({ me, other }) do
+      player.player_skills, player.derivative_skills = {}, {}
+      player._fake_skills, player._manually_fake_skills = {}, {}
+    end
+    local ownHidden = "qiao__skill_wei005_1"
+    local acquired = "qiao__skill_wei004_1"
+    local otherHidden = "qiao__skill_wei002_1"
+    local public = "qiao__skill_wei001_1"
+    local function names(player)
+      return table.map(client:playerDetailSkills(player.id), function(entry) return entry.orig_name end)
+    end
+    local savedSelf, savedClient, savedRoom = Self, ClientInstance, RoomInstance
+    Self, ClientInstance, RoomInstance = me, client, nil
+    local ok, err = pcall(function()
+      client:addSkill({ me.id, ownHidden, true })
+      -- Rejoin can leave private passive skills only in the fake-skill list.
+      table.removeOne(me.player_skills, Fk.skills[ownHidden])
+      client:addSkill({ me.id, acquired })
+      client:addSkill({ other.id, public })
+      client:addSkill({ other.id, public, true })
+      client:addSkill({ other.id, otherHidden, true })
+      lu.assertItemsEquals(names(me), { acquired, ownHidden })
+      lu.assertEquals(names(other), { public })
+      client.observing = true
+      lu.assertEquals(names(me), { acquired })
+      client.observing = false
+      client:loseSkill({ other.id, public, true })
+      lu.assertEquals(names(other), { public })
+      client:loseSkill({ me.id, ownHidden, true })
+      client:loseSkill({ me.id, acquired })
+      lu.assertEquals(names(me), {})
+    end)
+    Self, ClientInstance, RoomInstance = savedSelf, savedClient, savedRoom
     if not ok then error(err, 0) end
   end)
 end

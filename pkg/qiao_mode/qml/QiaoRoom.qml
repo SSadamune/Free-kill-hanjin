@@ -27,6 +27,7 @@ Room {
   property int pileActionRevision: 0
   property int ciRevision: 0
   property int ownHiddenGeneralsRevision: 0
+  property int playerDetailSkillsRevision: 0
   property int skillStatusRevision: 0
   property int discardCount: 0
   property bool showSeats: false
@@ -270,7 +271,7 @@ Room {
         room.ownHiddenGeneralsRevision;
         const id = player.playerid;
         if (Config.observing || Config.replaying || id !== Cpp.self.id
-            || player.general !== "anjiang" || player.deputyGeneral !== "anjiang") return [];
+            || (player.general !== "anjiang" && player.deputyGeneral !== "anjiang")) return [];
         return JSON.parse(Lua.ev(`json.encode(ClientInstance:ownHiddenGenerals(${id}))`)) || [];
       }
     }
@@ -290,9 +291,11 @@ Room {
         SkillLinks.replaceText(referencePane, viewport, text, {
           active: Qt.binding(() => room.visible && room.infoPopup.visible && tabs.currentIndex === 0),
           rootText: (catalog, theme) => {
+            room.playerDetailSkillsRevision;
             const id = item.dataModel.playerid;
-            if (id === 0 || id === undefined) return "";
-            return SkillLinks.playerText(catalog, theme, Ltk.getPlayerSkills(id), name => Lua.tr(name),
+            if (id === 0 || id === -1 || id === undefined) return "";
+            const skills = JSON.parse(Lua.ev(`json.encode(ClientInstance:playerDetailSkills(${id}))`) ?? "[]");
+            return SkillLinks.playerText(catalog, theme, Array.from(skills), name => Lua.tr(name),
               name => Lua.evaluate(`Fk:getDescription(${JSON.stringify(name)})`));
           },
         });
@@ -476,6 +479,7 @@ Room {
     addCallback("QiaoSingleChoice", room.showSingleChoice);
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
+    addCallback("QiaoPlayerDetailSkillsChanged", () => { ++room.playerDetailSkillsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {

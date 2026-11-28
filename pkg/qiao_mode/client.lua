@@ -11,6 +11,7 @@ local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
@@ -263,13 +264,75 @@ local QiaoClient = BaseClient:subclass("QiaoClient")
 
 local hiddenGeneralMarks = { __heg_general = true, __heg_deputy = true }
 
+local function canViewOwnHidden(client, playerId)
+  return not client.observing and not client.replaying and Self and Self.id == playerId
+end
+
 function QiaoClient:ownHiddenGenerals(playerId)
-  if self.observing or self.replaying or not Self or Self.id ~= playerId
-    or Self.general ~= "anjiang" or Self.deputyGeneral ~= "anjiang" then return false end
-  local main = Self:getMark("__heg_general")
-  local deputy = Self:getMark("__heg_deputy")
-  if not Fk.generals[main] or not Fk.generals[deputy] then return false end
-  return { main, deputy }
+  if not canViewOwnHidden(self, playerId) then return false end
+  local main = Self.general == "anjiang" and Self:getMark("__heg_general")
+  local deputy = Self.deputyGeneral == "anjiang" and Self:getMark("__heg_deputy")
+  main = Fk.generals[main] and main or false
+  deputy = Fk.generals[deputy] and deputy or false
+  return (main or deputy) and { main, deputy } or false
+end
+
+function QiaoClient:playerDetailSkills(playerId)
+  local player = self:getPlayerById(playerId)
+  if not player then return {} end
+  local own = canViewOwnHidden(self, playerId)
+  local public = player.qiaoPublicDetailSkills or Util.DummyTable
+  local skills = LtkUI:getPlayerSkills(playerId)
+  if not own then
+    skills = table.filter(skills, function(entry)
+      local skill = Fk.skills[entry.orig_name]
+      return not player:isFakeSkill(skill) or public[skill.name] == true
+    end)
+  end
+
+  local listed = {}
+  for _, entry in ipairs(skills) do listed[entry.orig_name] = true end
+  local function append(skill)
+    local skel = skill:getSkeleton()
+    if not skill.visible or not skel or listed[skel.name] then return end
+    listed[skel.name] = true
+    table.insert(skills, {
+      orig_name = skel.name,
+      name = Fk:getSkillName(skel.name, nil, player, true),
+      description = Fk:getDescription(skill.name, nil, player),
+      related_skills = skel.related_skills or {},
+    })
+  end
+  -- The engine removes the merged row when its fake source is withdrawn.
+  for name in pairs(public) do
+    local skill = Fk.skills[name]
+    if skill and (player == Self or not (skill.attached_equip or name:endsWith("&"))) then append(skill) end
+  end
+  if own then
+    for _, skill in ipairs(player._manually_fake_skills or {}) do
+      if player:isFakeSkill(skill) and SkillSources.isGeneralSkill(skill, player) then append(skill) end
+    end
+  end
+  return skills
+end
+
+-- Observer clients can receive a second, private skill notification. Record
+-- the public source separately because the native client merges both lists.
+function QiaoClient:addSkill(data)
+  if not data[3] then
+    local player = self:getPlayerById(data[1])
+    player.qiaoPublicDetailSkills = player.qiaoPublicDetailSkills or {}
+    player.qiaoPublicDetailSkills[data[2]] = true
+  end
+  BaseClient.addSkill(self, data)
+end
+
+function QiaoClient:loseSkill(data)
+  if not data[3] then
+    local player = self:getPlayerById(data[1])
+    if player.qiaoPublicDetailSkills then player.qiaoPublicDetailSkills[data[2]] = nil end
+  end
+  BaseClient.loseSkill(self, data)
 end
 
 function QiaoClient:handleSetPlayerMark(data)
@@ -284,6 +347,10 @@ end
 
 function QiaoClient:sendDataToUI(data)
   BaseClient.sendDataToUI(self, data)
+  for _, player in ipairs(self.players) do
+    player.qiaoPublicDetailSkills = {}
+    for _, skill in ipairs(player.player_skills) do player.qiaoPublicDetailSkills[skill.name] = true end
+  end
   self:notifyUI("QiaoSkillStatusChanged", {})
   self:notifyUI("QiaoGuestFactionsChanged", {})
   self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
@@ -673,12 +740,14 @@ function QiaoClient:notifyUI(command, data)
     -- Existing MarkArea entries can be updated in place without marksChanged.
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
-  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.watchesSkill(data[2]) and isQiaoMode() then
-    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
+  if (command == "AddSkill" or command == "LoseSkill") and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoPlayerDetailSkillsChanged", {})
+    if SkillStatus.watchesSkill(data[2]) then BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {}) end
   end
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
     BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})
+    BaseClient.notifyUI(self, "QiaoPlayerDetailSkillsChanged", {})
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
