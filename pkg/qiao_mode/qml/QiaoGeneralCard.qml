@@ -15,6 +15,5 @@ GeneralCardItem {
     card: card
     appearance: card.appearance
     inRoom: true
-    z: 1
   }
 }

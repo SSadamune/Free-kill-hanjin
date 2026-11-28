@@ -288,6 +288,7 @@ function QiaoClient:sendDataToUI(data)
   self:notifyUI("QiaoGuestFactionsChanged", {})
   self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
   self:notifyUI("QiaoDiscardChanged", {})
+  self:notifyUI("QiaoSelectionFinished", {})
 end
 
 function QiaoClient:skillStates(playerId)
@@ -438,6 +439,14 @@ function QiaoClient:handleSetBanner(data)
   if data[1] == "qiao_discard_before_turn" then
     self:notifyUI("QiaoDiscardChanged", {})
   end
+  if data[1] == "qiao_selection_finished" or data[1] == "RoundCount" then
+    self:notifyUI("QiaoSelectionFinished", {})
+  end
+end
+
+function QiaoClient:showSelectionSeats()
+  return self.settings ~= nil and (self:getSettings("gameMode") == Modes.locked
+    or self:getBanner("qiao_selection_finished") == true or (self:getBanner("RoundCount") or 0) > 0)
 end
 
 function QiaoClient:guestIllustrationsEnabled()

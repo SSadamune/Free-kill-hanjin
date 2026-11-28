@@ -28,6 +28,11 @@ Room {
   property int ownHiddenGeneralsRevision: 0
   property int skillStatusRevision: 0
   property int discardCount: 0
+  property bool showSeats: false
+
+  function refreshSeatVisibility() {
+    showSeats = !!Lua.ev("ClientInstance:showSelectionSeats()");
+  }
 
   readonly property string supportButtonLabel: {
     const fields = (dataModel.prompt ?? "").split(":");
@@ -142,7 +147,7 @@ Room {
         return photo.progressBar.y + photo.progressBar.height + 2;
       }
       z: 5
-      visible: photo.playerid !== 0 && photo.playerid !== -1 && numeral !== "" && inFocus
+      visible: room.showSeats && photo.playerid !== 0 && photo.playerid !== -1 && numeral !== "" && inFocus
       color: "#fff2ce"
       font.family: Config.libianName
       font.pixelSize: 15
@@ -152,7 +157,7 @@ Room {
       Binding {
         target: seat.normalSeat
         property: "visible"
-        when: seat.normalSeat !== null && seat.visible
+        when: seat.normalSeat !== null && (!room.showSeats || seat.visible)
         value: false
       }
     }
@@ -390,10 +395,12 @@ Room {
   }
 
   Component.onCompleted: {
+    refreshSeatVisibility();
     refreshGeneralCardPresentation();
     roomGeneralAppearance.watch(room);
     addCallback("QiaoMoveCards", (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
     addCallback("QiaoGuestFactionsChanged", refreshGeneralCardPresentation);
+    addCallback("QiaoSelectionFinished", refreshSeatVisibility);
     addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
     addCallback("QiaoPindianStart", () => {
       pindianDisplay.clear();

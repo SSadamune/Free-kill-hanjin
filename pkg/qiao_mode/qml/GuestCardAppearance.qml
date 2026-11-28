@@ -14,8 +14,7 @@ Item {
   Binding {
     target: root.card
     property: "cardFrontSource"
-    when: !!root.picture
-    value: root.picture
+    value: root.picture ?? root.model?.frontSkin ?? ""
   }
   Binding {
     target: root.model
