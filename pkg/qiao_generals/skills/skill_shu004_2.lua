@@ -6,6 +6,11 @@ skill.qiaoImplemented = true
 
 local KONG = "@@qiao__skill_shu004_2_kong"
 
+function skill.protectsFrom(player, card)
+  return player:getMark(KONG) > 0 and card ~= nil
+    and (card.trueName == "slash" or card.trueName == "duel")
+end
+
 Fk:loadTranslationTable {
   ["qiao__skill_shu004_2"] = "空城",
   [KONG] = "空城",

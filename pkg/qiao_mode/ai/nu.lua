@@ -1,6 +1,7 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
@@ -175,18 +176,17 @@ local function virtualSlash(ai, name, extra)
   slash.skillName = name
   local fixed = slash:getFixedTargets(ai.player, extra)
   if fixed and (#fixed == 0 or not table.every(fixed, function(to) return Cards.safeDamage(ai, slash, to) end)) then return "" end
-  local priority
+  local use
   if name == "qiao__skill_wei061_1" then
     local damaged = {}
     for _, event in ipairs(Nu.damageHistory(ai.player)) do
       local to = event.data.to
-      if Nu.present(to) then table.insertIfNeed(damaged, to) end
+      if Nu.present(to) then table.insertIfNeed(damaged, to.id) end
     end
-    if #damaged == 1 then priority = damaged[1] end
+    use = { from = ai.player, additionalDamage = ai.player.drank, extra_data = { qiao_durui = damaged } }
   end
   return Requests.targets(ai, function(to)
-    local value = Cards.scoreTarget(ai, slash, to)
-    if value then return value + (to == priority and 5 or 0) end
+    return Cards.scoreTarget(ai, slash, to, use)
   end, name == "qiao__skill_jin066_2" and 2 or 1)
 end
 
@@ -263,9 +263,10 @@ function M.active(ai, skill, key, fields, extra)
     local before = Damage.assess(ai, damage.to, damage.damage, damage.damageType, options)
     local aftermath = Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType, options)
     local lethal = aftermath.enemyDying > before.enemyDying
-    if Damage.worth(aftermath) and aftermath.balance >= before.balance
+    local gain = Damage.value(aftermath) - before.balance
+    if Damage.worth(aftermath) and gain > 0
       and (lethal or aftermath.direct > before.direct and before.enemyDying == 0)
-      and Cost.discard(ai, 1, lethal and 5 or 3) then return Requests.reply(ai) end
+      and Cost.discard(ai, 1, gain) then return Requests.reply(ai) end
     return ""
   end
   if key == "#askForPindian" and extra.reason == youque then
@@ -326,7 +327,7 @@ function M.choice(ai, name, choices)
   if name == "qiao__skill_shu054_2" then
     local frame = Requests.context(ai, name)
     local to = frame and frame.target
-    if ai:isFriend(to) and table.contains(choices, "recover") then return "recover" end
+    if ai:isFriend(to) and table.contains(choices, "recover") and Health.recovery(ai, to, 1) > 0 then return "recover" end
     if to == ai.player and to.phase == Player.Play and to:getHandcardNum() <= 1 then
       local plan = Slash.plan(ai, { safe = Cards.safeDamage })
       if plan.free + math.min(plan.normal, plan.limit) > 0 then return "qiao_kangrui_damage" end
@@ -452,12 +453,15 @@ end
 
 function play.qiao__retinue_skill_jiefanwei(ai)
   local skill = Fk.skill_skels[jiefanwei]
-  if not Cost.discard(ai, 2, 6) then return "" end
+  local budget = Health.recoveryUnit(ai) + 3
+  local paid, cost = Cost.discard(ai, 2, budget)
+  if not paid then return "" end
   return Requests.targets(ai, function(to)
     if not ai:isFriend(to) then return end
     local scope = to == ai.player and Player.HistoryPhase or Player.HistoryGame
     local refresh = skill and #skill.qiaoRefreshOptions(to, scope) > 0
-    if refresh or to.hp <= 2 then return 5 - to.hp + (refresh and 3 or 0) end
+    local value = Health.recovery(ai, to, 1) + (refresh and 3 or 0)
+    if (refresh or to.hp <= 2) and value > 0 and value >= cost then return value + 0.25 * math.max(0, 5 - to.hp) end
   end)
 end
 
@@ -475,13 +479,8 @@ function play.qiao__skill_em_jin001_consume(ai, stage)
   return ""
 end
 
-local stages = {
-  [youque] = "last", [gongqi] = "attack_prep", [chiyuan] = "draw", [shanji] = "disrupt",
-  [jiefanwei] = "support",
-}
-
 function M.play(ai, name, stage)
-  if stages[name] ~= stage and (name ~= Ci.CONSUME or (stage ~= "last" and stage ~= "draw")) then return end
+  if not play[name] then return end
   ai:selectSkill(name, true)
   local reply = play[name](ai, stage)
   if reply ~= "" then return reply end

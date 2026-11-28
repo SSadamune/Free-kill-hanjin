@@ -1,4 +1,5 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 
 local M = {}
 
@@ -64,7 +65,7 @@ function M.sealOption(ai, prop, safe)
     local useful = math.min(plan.normal, limit)
     local overflow = math.max(0,
       player:getHandcardNum() + drawn * (base.draw + option.draw) - useful - plan.free - base.hand - option.hand)
-    local score = 3 * drawn * option.draw + 4.5 * (useful - before) + baseOverflow - overflow
+    local score = 3 * drawn * option.draw + Health.damage(ai, 0.75) * (useful - before) + baseOverflow - overflow
     if base.slash > 0 and base.slash + option.slash == 0 and limit ~= math.huge then score = score - 1.5 end
     if score > best then chosen, best = option, score end
   end

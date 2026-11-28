@@ -3,6 +3,8 @@ local Request = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
 local Heg = require "packages.hegemony.util"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
+local AttackSkills = require "packages.qiao.pkg.qiao_mode.ai.attack_skills"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
@@ -59,10 +61,23 @@ function play.qiao__skill_wei012_1(ai)
   local combo = Cost.zhaxiangTrade(player)
   if not weapon and player.hp < 3 then return end
   ai.handler:updateInteraction((weapon and not combo) and "#qiao__skill_wei012_1-discard" or "#qiao__skill_wei012_1-hp")
+  local cost = weapon and not combo and Cost.value(ai, weapon) or Health.damage(ai, 1) - (combo and 9 or 0)
   return Request.targets(ai, function(target)
-    if combo or target.hp + target.shield == 1 then return ai:hostileScore(target, 20 - target.hp) end
+    local value = Damage.enemyValue(ai, target, 1, fk.NormalDamage, { source = player })
+    if value and value > cost then return ai:hostileScore(target, value - cost) end
   end)
 end
+
+local function attackPindian(ai, name)
+  local cards = ai.player:getCardIds("h")
+  return Request.targets(ai, function(target)
+    local _, value = AttackSkills.pindianCard(ai, name, target, cards)
+    if value and value > 0 then return ai:hostileScore(target, value) end
+  end)
+end
+
+function play.qiao__skill_wei013_1(ai) return attackPindian(ai, AttackSkills.driveTiger) end
+function play.qiao__skill_han013_1(ai) return attackPindian(ai, AttackSkills.fenyue) end
 
 function play.qiao__skill_qun013_2(ai)
   local allies = #table.filter(ai.room:getPresentPlayers(), function(target)
@@ -137,7 +152,8 @@ function play.qiao__skill_wu008_1(ai)
   local function benefit(target)
     if ai:isFriend(target) and target.hp ~= player.hp then
       local lower = player.hp < target.hp and player or target
-      if lower:isWounded() then return 20 - lower.hp end
+      local value = Health.recovery(ai, lower, 1)
+      if value > 0 then return value + 0.25 * math.max(0, 5 - lower.hp) end
     end
   end
   ai.handler:updateInteraction("#qiao__skill_wu008_1-place")
@@ -186,11 +202,11 @@ function play.qiao__skill_shu001_1(ai)
   local player = ai.player
   if player:getMark("qiao__skill_shu001_1-given-phase") >= 2 then return end
   local peach, slash = Fk:cloneCard("qiao__peach"), Fk:cloneCard("qiao__slash")
-  local heal = player:isWounded() and player:canUseTo(peach, player)
-  if not heal and not table.find(slash:getAvailableTargets(player, { bypass_times = true }), function(target)
+  local heal = player:canUseTo(peach, player) and Health.recovery(ai, player, 1) or 0
+  if heal == 0 and not table.find(slash:getAvailableTargets(player, { bypass_times = true }), function(target)
     return Cards.safeDamage(ai, slash, target)
   end) then return end
-  if not Cost.select(ai, 2, heal and 5 or 4) then return end
+  if not Cost.select(ai, 2, math.max(heal, Health.damage(ai, 2 / 3))) then return end
   return Request.targets(ai, function(target)
     if ai:isFriend(target) and not target:isHandAreaSealed() then return 4 / (1 + target:getHandcardNum()) end
   end)
@@ -375,38 +391,9 @@ function M.yinghun(ai)
   end)
 end
 
-local stages = {
-  qiao__skill_han007_1 = "draw", -- 敏思
-  qiao__skill_wu001_1 = "draw", -- 制衡
-  qiao__luminous_pearl_skill = "draw",
-  qiao__skill_qun001_2 = "disrupt", -- 除疠
-  qiao__skill_wu006_1 = { disrupt = true, delayed = true }, -- 国色
-  qiao__skill_wu004_1 = "draw", -- 苦肉与诈降
-  qiao__skill_qun013_2 = "draw", -- 雄异
-  qiao__retinue_skill_lujiang_shangjia = { draw = true, attack_prep = true },
-  qiao__skill_wu008_1 = "support", -- 结姻
-  qiao__skill_wu015a_1 = "support", -- 直谏
-  qiao__skill_jin013_2 = "disrupt", -- 克清
-  qiao__skill_qun018_1 = "disrupt", -- 祸水
-  qiao__skill_wu012_1 = "attack_prep", -- 天义
-  qiao__skill_wei012_1 = "damage", -- 强袭
-  qiao__skill_qun007_2 = "damage", -- 乱武
-  qiao__retinue_skill_qingzhou_jingrui = "damage",
-  qiao__skill_shu001_1 = "support", -- 仁德
-  qiao__skill_shu012_1 = "disrupt", -- 挑衅
-  qiao__skill_qun003_1 = "damage", -- 离间
-  qiao__skill_jin006_1 = "draw", -- 三陈
-  qiao__skill_jin016_2 = "last", -- 风物
-  qiao__skill_shu010_1_recast = "recast",
-  qiao__skill_jin011_1 = "disrupt", -- 果毅
-  qiao__skill_em_qun010_3 = "setup", -- 问道
-  qiao__skill_qun021_1 = "disrupt", -- 庸肆
-}
-
 function M.play(ai, name, stage)
   local action = play[name]
-  local assigned = stages[name]
-  if not action or (assigned ~= stage and (type(assigned) ~= "table" or not assigned[stage])) then return end
+  if not action then return end
   ai:selectSkill(name, true)
   local reply = action(ai, stage)
   if reply and reply ~= "" then return reply end

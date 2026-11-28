@@ -8,6 +8,17 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
+function skill.damageCandidates(player, source)
+  local candidates, maxHp = {}, player.hp
+  for _, other in ipairs(player.room:getPresentPlayers()) do
+    if H.compareKingdomWith(other, source) and other.hp >= maxHp then
+      if other.hp > maxHp then candidates, maxHp = {}, other.hp end
+      table.insert(candidates, other)
+    end
+  end
+  return candidates
+end
+
 skill:addEffect(fk.Damaged, {
   anim_type = "masochism",
   can_trigger = function(self, event, target, player, data)
@@ -42,20 +53,7 @@ skill:addEffect(fk.Damaged, {
     room:obtainCard(source, cards, false, fk.ReasonGive, player, skill.name)
 
     if not RemovedTargets.isPresent(player) or source == nil then return end
-    local sameKingdom = table.filter(room:getPresentPlayers(), function(p)
-      return H.compareKingdomWith(p, source)
-    end)
-    if #sameKingdom == 0 then return end
-
-    local maxHp
-    for _, p in ipairs(sameKingdom) do
-      if maxHp == nil or p.hp > maxHp then maxHp = p.hp end
-    end
-    if maxHp == nil or maxHp < player.hp then return end
-
-    local candidates = table.filter(sameKingdom, function(p)
-      return p.hp == maxHp
-    end)
+    local candidates = skill.damageCandidates(player, source)
     if #candidates == 0 then return end
 
     local dest = candidates[1]

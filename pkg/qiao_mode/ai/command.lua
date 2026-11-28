@@ -1,5 +1,6 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Heg = require "packages.hegemony.util"
 local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
@@ -88,8 +89,9 @@ local function executionCost(ai, data)
     return transferCost(ai, from)
   elseif data.command == "command3" then
     if player.hp <= 1 then return math.huge end
-    if Cost.zhaxiangTrade(player) then return -3 end
-    return player.hp == 2 and 7 or 4.5
+    local cost = Health.harm(ai, player, 0, 1)
+    if Cost.zhaxiangTrade(player) then return cost - 9 end
+    return cost + (player.hp == 2 and 2.5 or 0)
   elseif data.command == "command4" then
     return defenseLockCost(ai)
   elseif data.command == "command5" then
@@ -132,14 +134,14 @@ local function refusalCost(ai, data)
   local context = Junling.context(ai.room, data)
   if name == buyi then
     local target = context and context.recoveryTarget
-    if not target or not target:isAlive() or not target:isWounded()
-      or target:getMark("@@command5_effect-turn") > 0 then return 0 end
-    return (target.hp <= 1 and 5 or 3) * sourceWeight(ai, target)
+    local recovery = Health.recovery(ai, target, 1)
+    if recovery == 0 then return 0 end
+    return recovery * sourceWeight(ai, target)
   elseif name == zhuizhu then
     local damage = context and context.damage
     if not damage then return end
     if ai:isFriend(data.from) and damage.damage > player.shield then return 25 end
-    return math.min(10, 3 * damage.damage)
+    return Health.harm(ai, player, damage.damage)
   end
 end
 
@@ -148,7 +150,8 @@ function M.choice(ai, choices)
   if not data or not supported(data.skillName) or not table.contains(data.tos, ai.player)
     or not table.contains(choices, data.command) or not table.contains(choices, "Cancel") then return end
   local refusal = refusalCost(ai, data)
-  if refusal ~= nil then return executionCost(ai, data) < refusal and data.command or "Cancel" end
+  if refusal == nil then return end
+  return executionCost(ai, data) < refusal and data.command or "Cancel"
 end
 
 local function damageTargetScore(ai, actor, target)

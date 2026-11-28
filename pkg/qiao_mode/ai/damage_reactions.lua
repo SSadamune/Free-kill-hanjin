@@ -2,6 +2,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Heg = require "packages.hegemony.util"
 local Diplomacy = require "packages.qiao.pkg.qiao_mode.ai.diplomacy"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 
 local M = {}
 
@@ -60,6 +61,11 @@ function M.benefit(ai, player, source, amount)
       if canDraw(other) and Heg.compareKingdomWith(player, other) then result = result + 2 end
     end
   end
+  if Cost.effectable(player, "qiao__skill_wei014_2") and table.find(ai.room:getPresentPlayers(), function(other)
+    if other == player then return false end
+    if ally(ai, player, other) then return not other.faceup and canDraw(other) end
+    return enemy(ai, player, other) and other.faceup and #other:getCardIds("e") + other:getHandcardNum() <= 1
+  end) then result = result + 3 end
   if source and source ~= player and source:isAlive() and not source:isRemoved() then
     if enemy(ai, player, source) then
       if not source:isNude() and canDraw(player) and Cost.effectable(player, "qiao__skill_wei002_1") then
@@ -97,13 +103,13 @@ function M.equipmentLoss(ai)
   return math.max(0, loss)
 end
 
-function M.accept(ai, source, amount, defenseCost)
+function M.accept(ai, source, amount, defenseCost, hpLoss)
   local player = ai.player
-  local lostHp = math.max(0, amount - player.shield)
+  local lostHp = math.max(0, amount - player.shield) + (hpLoss or 0)
   local remaining = player.hp - lostHp
   if defenseCost == nil or remaining < 1 or lostHp > 1 then return false end
 
-  local battle = BattleRoyal.entered(ai.room)
+  local battle = BattleRoyal.inBattleRoyal(ai.room, player)
   local peaches = 0
   if not battle then
     for _, id in ipairs(player:getCardIds("h")) do
@@ -114,12 +120,12 @@ function M.accept(ai, source, amount, defenseCost)
   if remaining == 1 and peaches == 0 then return false end
   local benefit = M.benefit(ai, player, source, amount)
   if benefit <= 0 then return false end
-  local harm = lostHp == 0 and 2 or 4.75
+  local harm = Health.harm(ai, player, amount, hpLoss)
   if remaining == 2 then harm = harm + 2 end
   if remaining == 1 then harm = harm + 4 end
-  harm = harm + (battle and 2 or 0) - math.min(peaches, 2)
+  harm = harm - math.min(peaches, 2)
   if ai.personality == "conservative" then harm = harm + 1.5 end
-  return benefit + math.min(defenseCost * 0.5, 4) > harm
+  return benefit + math.min(defenseCost * 0.75, Health.pointsPerHp) >= harm
 end
 
 return M

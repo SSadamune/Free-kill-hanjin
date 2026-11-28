@@ -396,8 +396,8 @@ function M.consumeEdict(ai)
 end
 
 play[Edict.BANNER] = function(ai)
-  local holder = Edict.availableHolder(ai.room)
-  if not ai:isFriend(holder) then return "" end
+  local holder = Edict.availableHolder(ai.room, ai.player)
+  if not holder or not ai:isFriend(holder) then return "" end
   local suits = Edict.pileSuits(holder:getPile(Edict.PILE))
   if #suits == 4 or #Edict.trickNames(ai.room) == 0 then return "" end
   while true do
@@ -479,15 +479,8 @@ play["qiao__chuming_other&"] = function(ai)
   end)
 end
 
-local stages = {
-  qiao__skill_wei035_1 = "disrupt", qiao__skill_han051_1 = "disrupt",
-  qiao__skill_qun033_2 = "support", qiao__skill_shu091_1 = "last",
-  ["qiao__chuming_other&"] = "disrupt",
-  [Edict.BANNER] = "last",
-}
-
-function M.play(ai, name, stage)
-  if stages[name] ~= stage then return end
+function M.play(ai, name)
+  if not play[name] then return end
   ai:selectSkill(name, true)
   local reply = play[name](ai)
   if reply ~= "" then return reply end

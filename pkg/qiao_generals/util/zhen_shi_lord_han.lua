@@ -39,12 +39,15 @@ function M.holder(room)
   return nil
 end
 
---- 入口可用的持有者：在场（未被移出游戏）的诏书持有者。
---- 与唯一性查询分开：暂离期间诏书仍归其所有，但其入口不向同势力角色开放。
-function M.availableHolder(room)
-  local holder = M.holder(room)
-  if holder ~= nil and not holder:isRemoved() then return holder end
-  return nil
+--- 从操作者的视角定位诏书。若有多份，持有者只操作自己的诏书，
+--- 其余角色通过技能入口定位座次列表中首份可用的同势力诏书。
+function M.availableHolder(room, player)
+  if not room or not player or player.dead or player:isRemoved() then return end
+  if player:getMark(M.MARK) == 1 then return player end
+  return table.find(room.alive_players, function(holder)
+    return not holder.dead and not holder:isRemoved() and holder:getMark(M.MARK) == 1
+      and M.isSameKingdom(holder, player)
+  end)
 end
 
 local function addSkill(room, player, name, source)
@@ -63,19 +66,17 @@ end
 --- 四花色消费入口。来源为君刘协时沿用初平作为技能来源，其余持有者按顶层技能。
 function M.sync(room)
   if room == nil then return end
-  local holder = M.availableHolder(room)
-  local source = holder ~= nil and holder:hasSkill(M.JIANPING) and M.JIANPING or nil
   for _, p in ipairs(room.players) do
-    local eligible = holder ~= nil and p:isAlive() and not p:isRemoved()
-      and M.isSameKingdom(holder, p)
-    if eligible then
+    local holder = M.availableHolder(room, p)
+    if holder then
+      local source = holder:hasSkill(M.JIANPING) and M.JIANPING or nil
       if not p:hasSkill(M.BANNER) then addSkill(room, p, M.BANNER, source) end
-      if p == holder and not p:hasSkill(M.CONSUME) then
-        addSkill(room, p, M.CONSUME, source)
-      end
-    else
-      if p:hasSkill(M.BANNER) then removeSkill(room, p, M.BANNER) end
-      if p:hasSkill(M.CONSUME) then removeSkill(room, p, M.CONSUME) end
+      if p == holder and not p:hasSkill(M.CONSUME) then addSkill(room, p, M.CONSUME, source) end
+    elseif p:hasSkill(M.BANNER) then
+      removeSkill(room, p, M.BANNER)
+    end
+    if p ~= holder and p:hasSkill(M.CONSUME) then
+      removeSkill(room, p, M.CONSUME)
     end
   end
 end
@@ -96,6 +97,21 @@ end
 
 function M.count(lord)
   return lord and #lord:getPile(M.PILE) or 0
+end
+
+function M.maxPlacementCards(player)
+  return H.isSmallKingdomPlayer(player) and 2 or 1
+end
+
+function M.validPlacement(player, cards)
+  if #cards == 0 or #cards > M.maxPlacementCards(player) then return false end
+  local hand = player:getCardIds(Player.Hand)
+  local seen = {}
+  for _, id in ipairs(cards) do
+    if seen[id] or not table.contains(hand, id) then return false end
+    seen[id] = true
+  end
+  return true
 end
 
 function M.pileSuits(ids)

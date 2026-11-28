@@ -10,6 +10,7 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 
 local USED_MARK = "qiao_quaxiao_used-turn"
 
@@ -112,7 +113,15 @@ skill:addAI(Fk.Ltk.AI.newInvokeStrategy {
     local prev = previousUse(ai.player, frame.data)
     if not prev then return false end
     local targets = overlapTargets(ai.room, targetIds(prev), targetIds(frame.data))
-    return #targets > 0 and table.every(targets, function(target) return ai:isEnemy(target) end)
+    local total = 0
+    for _, target in ipairs(targets) do
+      if not target:isRemoved() then
+        local outcome = Damage.assess(ai, target, 1, fk.NormalDamage, { source = ai.player })
+        if outcome.unsafe then return false end
+        total = total + Damage.value(outcome)
+      end
+    end
+    return total > 0
   end,
 })
 

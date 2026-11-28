@@ -2,6 +2,8 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local WuProtection = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
+local Zouyu = require "packages.qiao.pkg.qiao_cards.skills.zouyu_fan"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 
 local M = {}
 
@@ -34,6 +36,23 @@ function M.cardAmount(card, use, source)
   return amount
 end
 
+function M.targetBonus(room, use, target)
+  if not use then return 0 end
+  local bonus = 0
+  local lieyong = use.qiao__skill_shu008_1_damage
+  if lieyong and lieyong[target.id] then bonus = bonus + 1 end
+  if use.qiao_qun081_1_target == target and not use.qiao_qun081_1_done then bonus = bonus + 1 end
+  local previous = use.extra_data and use.extra_data.qiao_durui
+  if previous and table.contains(previous, target.id) then
+    local alive = table.filter(previous, function(id)
+      local player = room:getPlayerById(id)
+      return player and player:isAlive() and not player:isRemoved()
+    end)
+    if #alive == 1 then bonus = bonus + 1 end
+  end
+  return bonus
+end
+
 local function modifiedAmount(hits, player, amount, nature, options)
   if amount <= 0 then return 0 end
   local ignoreArmor = options and options.ignoreTargetArmor
@@ -55,9 +74,7 @@ local function summarize(ai, hits, partner)
   local result = { friends = 0, enemies = 0, unknown = 0, enemyDying = 0, unsafe = false, balance = 0 }
   for player, hit in pairs(hits) do
     if hit.damage > 0 or hit.hpLoss > 0 then
-      local lostHp = math.max(0, hit.damage - player.shield) + hit.hpLoss
-      local dying = lostHp >= player.hp
-      local harm = 4 + 3 * math.max(0, lostHp - 1) + (dying and 2 or 0)
+      local harm, dying = Health.harm(ai, player, hit.damage, hit.hpLoss)
       local reaction = not dying and Reactions.benefit(ai, player, hit.source, hit.damage) or 0
       if ai:isFriend(player) or (partner and partner:isFriend(player)) then
         result.friends = result.friends + 1
@@ -107,6 +124,26 @@ local function spread(hits, chained, origin, amount, nature, options)
   return propagates
 end
 
+local function damageFollowups(ai, source, hits)
+  local kuanggu = source and Cost.effectable(source, "qiao__skill_shu009_1")
+  local triggers = 0
+  for target, hit in pairs(hits) do
+    if hit.damage > 0 then
+      if Zouyu.hasPendingLoss(target) and hit.damage < target.hp + target.shield then
+        hit.hpLoss = hit.hpLoss + 1
+      end
+      if kuanggu and source:distanceTo(target) <= 1 then triggers = triggers + 1 end
+    end
+  end
+  if triggers == 0 then return 0 end
+  local recoveries = Health.canRecover(source) and math.min(source:getLostHp(), triggers) or 0
+  local draws = not source:isHandAreaSealed() and triggers - recoveries or 0
+  local value = Health.recovery(ai, source, recoveries) + 3 * draws
+  if ai:isFriend(source) then return value end
+  if ai:isEnemy(source) then return -value end
+  return 0
+end
+
 -- Forecast only the current damage and its first propagation. Equipment and
 -- active modifiers are public. Optional prevention and rescue are uncertain.
 function M.assess(ai, target, amount, nature, options)
@@ -118,8 +155,11 @@ function M.assess(ai, target, amount, nature, options)
   if not options.alreadyChained and target.chained and Fk:canChain(nature) then
     propagates = spread(hits, chainedPlayers(ai.room), target, direct, nature, options)
   end
+  local followupValue = damageFollowups(ai, options.source, hits)
   local result = summarize(ai, hits, options.partner)
+  result.balance = result.balance + followupValue
   result.direct, result.propagates = direct, propagates
+  result.directHpLoss = hits[target].hpLoss
   return result
 end
 
@@ -147,7 +187,10 @@ function M.group(ai, card, targets)
       if chained then spread(hits, chained, target, direct, nature, options) end
     end
   end
-  return summarize(ai, hits)
+  local followupValue = damageFollowups(ai, source, hits)
+  local result = summarize(ai, hits)
+  result.balance = result.balance + followupValue
+  return result
 end
 
 function M.luanwu(ai)
@@ -185,11 +228,13 @@ function M.worth(result)
 end
 
 function M.value(result)
-  if result.direct <= 0 then return 0 end
-  local difference = result.enemies - result.friends - result.unknown
-  local points = 2 * result.direct * math.max(1, math.abs(difference))
-  if M.worth(result) then return math.min(points, result.balance) + 3 * result.enemyDying end
-  return -points - (result.unsafe and 100 or 0)
+  return result.balance - (result.unsafe and 100 or 0)
+end
+
+function M.enemyValue(ai, target, amount, nature, options)
+  if not ai:isEnemy(target) then return end
+  local result = M.assess(ai, target, amount, nature, options)
+  if M.worth(result) then return M.value(result) end
 end
 
 function M.effect(ai, target)
@@ -218,7 +263,7 @@ function M.acceptIncoming(ai, effect, cost)
   local outcome, source = M.incoming(ai, effect)
   if outcome.direct == 0 or M.worth(outcome) then return true, outcome end
   if outcome.unsafe or outcome.propagates then return false, outcome end
-  return Reactions.accept(ai, source, outcome.direct, cost), outcome
+  return Reactions.accept(ai, source, outcome.direct, cost, outcome.directHpLoss), outcome
 end
 
 return M

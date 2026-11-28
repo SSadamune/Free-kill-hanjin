@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import Fk
 import Fk.Components.Common
+import Fk.Widgets as W
 import LunarLtk
 import LunarLtk.Components as LtkComponents
 import LunarLtk.Components.Photo as PhotoElements
@@ -114,11 +115,94 @@ Room {
     return cards === false ? null : Array.from(cards);
   }
 
+  function edictCardsForDisplay(holderId) {
+    room.skillStatusRevision;
+    const cards = JSON.parse(Lua.ev(`json.encode(ClientInstance:edictCardsForDisplay(${holderId}))`));
+    return cards === false ? [] : Array.from(cards);
+  }
+
+  function edictMarkCount(photo) {
+    room.skillStatusRevision;
+    return photo.dead || photo.playerid === 0 || photo.playerid === -1 ? false
+      : Lua.ev(`ClientInstance:edictCountForDisplay(${photo.playerid})`);
+  }
+
+  function edictPanelState(holderId) {
+    room.pileActionRevision;
+    return JSON.parse(Lua.ev(`json.encode(ClientInstance:edictPanelState(${holderId}))`) ?? "{}");
+  }
+
+  function viewEdict(holderId) {
+    if (edictPopup.visible && edictPopup.selecting) {
+      if (edictPopup.holderId === holderId) return;
+      Lua.updateRequestUI("QiaoEdict", edictPopup.holderId, "cancel", {});
+    }
+    if (edictPanelState(holderId).canOpen) {
+      Lua.updateRequestUI("QiaoEdict", holderId, "open", {});
+    } else {
+      showEdictPanel(holderId, false);
+    }
+  }
+
+  function showEdictPanel(holderId, selecting) {
+    edictPopup.holderId = holderId;
+    edictPopup.selecting = selecting;
+    edictPopup.setSourceComponent(edictPile, {
+      holderId,
+      ids: Qt.binding(() => room.edictCardsForDisplay(holderId)),
+      actions: Qt.binding(() => selecting ? room.edictPanelState(holderId) : ({})),
+    });
+    edictPopup.open();
+  }
+
+  W.PopupItem {
+    id: edictPopup
+    parent: Controls.Overlay.overlay
+    property int holderId
+    property bool selecting: false
+    // Size and position the popup in window coordinates, above the countdown and hand.
+    readonly property real bottomLimit: (room.dashboard.y - 24) * Config.winScale
+    width: Math.min(parent.width - 16 * Config.winScale, Math.max(420 * Config.winScale, parent.width * 0.6))
+    height: Math.max(0, Math.min(parent.height * 0.56, bottomLimit - 36 * Config.winScale))
+    x: (parent.width - width) / 2
+    y: (bottomLimit - height) / 2 + 16 * Config.winScale
+    focus: true
+    closePolicy: selecting ? Controls.Popup.CloseOnEscape
+      : Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
+    background: Rectangle {
+      color: "#CC2E2C27"
+      radius: 5
+      border.color: "#A6967A"
+      border.width: 1
+    }
+    onAboutToShow: room.closeInfoPopup()
+    onAboutToHide: {
+      if (selecting) Lua.updateRequestUI("QiaoEdict", holderId, "cancel", {});
+    }
+  }
+
+  Connections {
+    target: room.infoPopup
+    function onAboutToShow() { edictPopup.close(); }
+  }
+  Binding {
+    target: room.okButton.parent
+    property: "visible"
+    when: edictPopup.visible && edictPopup.selecting
+    value: false
+  }
+
   Component { id: ciMark; CiMarkButton {} }
   Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
   Component { id: markTooltips; PortraitMarkTooltips {} }
   Component { id: referencePane; SkillReferencePane { generalCardPresentation: roomGeneralAppearance } }
-  Component { id: edictPile; EdictPile { name: "qiao__skill_em_han001_banner" } }
+  Component { id: edictMark; EdictMarkButton {} }
+  Component {
+    id: edictPile
+    EdictPile {
+      onRequested: action => Lua.updateRequestUI("QiaoEdict", holderId, action, {})
+    }
+  }
   Component {
     id: statusLabels
     PortraitStatusLabels {
@@ -181,7 +265,7 @@ Room {
         const cards = Qt.binding(() => photo.playerid === holderId
           ? panel.managedStates.find(state => state.id === entry.id)?.cards ?? [] : []);
         if (entry.action === "edict") {
-          room.showInfoPopup(edictPile, { holderId, ids: cards });
+          room.viewEdict(holderId);
         } else if (entry.action === "pojun") {
           room.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "ViewPile"), {
             name: "qiao__skill_wu020_2", ids: cards,
@@ -322,6 +406,8 @@ Room {
 
   function refreshPileActions() {
     ++pileActionRevision;
+    if (edictPopup.visible && edictPopup.selecting && !edictPanelState(edictPopup.holderId).selecting)
+      edictPopup.close();
   }
 
   function refreshPrelightButtons() {
@@ -440,6 +526,12 @@ Room {
         markTooltips.createObject(marks);
       if (photo.markArea && !photo.children.some(child => child.objectName === "qiaoPortraitStatusLabels"))
         statusLabels.createObject(photo, { photo });
+      if (marks && !marks.children.some(child => child.objectName === "qiaoEdictMark")) {
+        const button = edictMark.createObject(marks, {
+          count: Qt.binding(() => room.edictMarkCount(photo)),
+        });
+        button.clicked.connect(() => room.viewEdict(photo.playerid));
+      }
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {
           cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
@@ -478,6 +570,7 @@ Room {
 
   Connections {
     target: room.dataModel
+    function onDeActivated() { Qt.callLater(room.refreshPileActions); }
     function onCardsMoved() {
       ++room.skillStatusRevision;
       Qt.callLater(room.bindPhotoExtras);
@@ -515,6 +608,7 @@ Room {
     addCallback("QiaoPlayerDetailSkillsChanged", () => { ++room.playerDetailSkillsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
+    addCallback("QiaoOpenEdict", (_, data) => room.showEdictPanel(data[0], true));
     addCallback("QiaoInitialPrelight", (_, data) => {
       const duration = Number(data[0]);
       if (duration > 0) {

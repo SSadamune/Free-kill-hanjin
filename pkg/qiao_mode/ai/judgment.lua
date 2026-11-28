@@ -1,4 +1,5 @@
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
@@ -16,12 +17,20 @@ end
 local function leijiValue(ai, source, target, suit)
   local amount = suit == Card.Spade and 2 or suit == Card.Club and 1 or 0
   local score = Damage.value(Damage.assess(ai, target, amount, fk.ThunderDamage, { source = source }))
-  if suit == Card.Club and source:isWounded() then
-    -- At one HP, keep the healing if the extra damage ties its value.
-    local healing = source.hp <= 1 and 5 or source.hp == 2 and 4 or 3
+  if suit == Card.Club then
+    local healing = Health.recovery(ai, source, 1)
     score = score + (ai:isFriend(source) and healing or -healing)
   end
   return score
+end
+
+function M.leijiTarget(ai, target)
+  if not ai:isEnemy(target) then return end
+  local spade = Cost.effectable(target, "qiao__skill_wu011_2") and 0
+    or leijiValue(ai, ai.player, target, Card.Spade)
+  local club = leijiValue(ai, ai.player, target, Card.Club)
+  local payoff = (spade + club) / 4
+  if payoff > 0 then return ai:hostileScore(target, payoff) end
 end
 
 local function value(ai, data, suit, number)

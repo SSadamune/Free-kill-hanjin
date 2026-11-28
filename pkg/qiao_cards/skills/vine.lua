@@ -26,7 +26,7 @@ local ELEMENTAL_SLASHES = {
   ["ice__slash"] = true,
 }
 
-local function isNullifiedCard(card)
+function skill.nullifiesCard(card)
   if card.trueName == "savage_assault" or card.trueName == "archery_attack" then
     return true
   end
@@ -37,7 +37,7 @@ skill:addEffect(fk.PreCardEffect, {
   mute = true,
   can_trigger = function(self, event, target, player, data)
     return data.to == player and player:hasSkill(skill.name)
-      and data.card ~= nil and isNullifiedCard(data.card)
+      and data.card ~= nil and skill.nullifiesCard(data.card)
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room

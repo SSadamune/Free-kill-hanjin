@@ -1,18 +1,15 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local SkillEffects = require "packages.qiao.pkg.qiao_mode.ai.skill_effects"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
+local BattleRoyal = require "packages.qiao.pkg.qiao_mode.rules.battle_royal"
 local Heg = require "packages.hegemony.util"
 
 local M = {}
 
-local pindianSkills = {
-  "qiao__skill_han008_1", "qiao__skill_han010_1", "qiao__skill_han013_1", "qiao__skill_han017_1",
-  "qiao__skill_han017_2", "qiao__skill_jin008_2", "qiao__skill_qun015_1", "qiao__skill_shu015_2",
-  "qiao__skill_wei013_1", "qiao__skill_wu010_2", "qiao__skill_wu012_1", "qiao__skill_wu012_2",
-}
-
 local adaptationPoints = {
-  draw = 2, damage = 2, execute_both = 2, thunder_damage = 2,
+  draw = 2, execute_both = 2,
   discard_target_equip = 2, disresponsive = 1, add_target = 1,
   remove_target = 1, obtain_response_card = 1, ignore_times = 1,
 }
@@ -34,10 +31,29 @@ local function copies(ai, card)
   end)
 end
 
+local function slashValue(ai, card, count)
+  if count <= 1 then return 4 end
+  local capacity = Slash.cardCapacity(ai, card)
+  return capacity and capacity > 1 and 3.5 or 2
+end
+
+local function jinkValue(ai, count)
+  return Health.baseUnit(ai) * (count > 1 and 0.5 or 1)
+end
+
 local function baseValue(ai, card)
-  if card.trueName == "peach" then return 9 end
+  if card.trueName == "peach" then
+    if not BattleRoyal.inBattleRoyal(ai.room, ai.player) then return Health.recoveryUnit(ai) end
+    local slash, jink = Fk:cloneCard("qiao__slash"), Fk:cloneCard("qiao__jink")
+    local attack = Health.damage(ai, slashValue(ai, slash, copies(ai, slash) + 1) / Health.pointsPerHp)
+    local defense = jinkValue(ai, copies(ai, jink) + 1) + Personality.cardBonus(ai, jink)
+    return math.max(attack, defense)
+  end
+  if card.trueName == "god_salvation" then return Health.recoveryUnit(ai) * 0.5 end
   if card.trueName == "nullification" then return 7 end
-  if card.trueName == "analeptic" then return 5 end
+  if card.trueName == "analeptic" then
+    return math.max(Health.damage(ai, 1), Health.recoveryUnit(ai)) * 5 / 6
+  end
   if card.trueName == "threaten_emperor" then return Heg.isBigKingdomPlayer(ai.player) and 8.5 or 3 end
   if card.trueName == "indulgence" then return Heg.isBigKingdomPlayer(ai.player) and 7 or 6 end
   if card.trueName == "burning_camps" then
@@ -47,12 +63,8 @@ local function baseValue(ai, card)
     local enemies = #table.filter(formation, function(player) return ai:isEnemy(player) end)
     return 4.5 + math.min(2.5, enemies)
   end
-  if card.trueName == "jink" then return copies(ai, card) > 1 and 3 or 6 end
-  if card.trueName == "slash" then
-    if copies(ai, card) <= 1 then return 4 end
-    local capacity = Slash.cardCapacity(ai, card)
-    return capacity and capacity > 1 and 3.5 or 2
-  end
+  if card.trueName == "jink" then return jinkValue(ai, copies(ai, card)) end
+  if card.trueName == "slash" then return slashValue(ai, card, copies(ai, card)) end
   if card.type == Card.TypeEquip then
     return ai.player:hasEmptyEquipSlot(card.sub_type) and 4 or 1
   end
@@ -77,7 +89,12 @@ local function adaptationBonus(ai, card)
     else
       satisfied = Adaptation.conditionSatisfied(room, player, condition)
     end
-    if satisfied then bonus = bonus + (adaptationPoints[entry.effect] or 0) end
+    if satisfied then
+      local effect = entry.effect
+      local points = (effect == "damage" or effect == "thunder_damage") and Health.damage(ai, 1 / 3)
+        or adaptationPoints[effect] or 0
+      bonus = bonus + points
+    end
   end
   return math.min(bonus, 3)
 end
@@ -88,7 +105,9 @@ function M.value(ai, id)
   local owner = ai.room:getCardOwner(id)
   local bonus = (not owner or owner == player) and Personality.cardBonus(ai, card) or 0
   if area == Card.PlayerEquip then return 6 + bonus end
-  local result = baseValue(ai, card) + bonus
+  local result = baseValue(ai, card)
+  if card.is_damage_card then result = Health.damage(ai, result / Health.pointsPerHp) end
+  result = result + bonus
   if owner and owner ~= player then return result end
   if card.type == Card.TypeEquip then
     if M.effectable(player, "qiao__skill_wu008_2") then result = result + 1.5 end
@@ -97,7 +116,7 @@ function M.value(ai, id)
     and M.effectable(player, "qiao__skill_shu007_1") then
     result = result + 1.5
   end
-  if card.number >= 9 and table.find(pindianSkills, function(skill) return M.effectable(player, skill) end) then
+  if card.number >= 9 and table.find(SkillEffects.pindian, function(skill) return M.effectable(player, skill) end) then
     result = result + 0.25 * (card.number - 8)
   end
   if owner == player and area == Card.PlayerHand then result = result + adaptationBonus(ai, card) end
@@ -133,6 +152,7 @@ function M.discard(ai, count, budget, replacement)
   local player, room = ai.player, ai.room
   local function equipped(id) return room:getCardArea(id) == Card.PlayerEquip end
   local active = M.effectable(player, "qiao__skill_wu008_2") and not player:isHandAreaSealed()
+  local total = 0
   for _ = 1, count do
     local best, price
     local limit = budget
@@ -157,9 +177,10 @@ function M.discard(ai, count, budget, replacement)
     end
     if not best or (limit and price > limit) then return false end
     if budget then budget = budget - price end
+    total = total + price
     ai:selectCard(best, true)
   end
-  return true
+  return true, total
 end
 
 return M

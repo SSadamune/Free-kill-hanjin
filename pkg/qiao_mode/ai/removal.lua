@@ -1,4 +1,5 @@
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
+local SkillEffects = require "packages.qiao.pkg.qiao_mode.ai.skill_effects"
 
 local M = {}
 
@@ -15,10 +16,14 @@ end
 
 local function enemyRetrial(ai)
   return table.find(ai.room:getPresentPlayers(), function(player)
-    return ai:isEnemy(player)
-      and ((not player:isKongcheng() and Cost.effectable(player, "qiao__skill_wei002_2"))
-        or (Cost.effectable(player, "qiao__skill_qun010_2") and (not player:isKongcheng()
-          or table.find(player:getCardIds("e"), function(id) return Fk:getCardById(id).color == Card.Black end))))
+    if not ai:isEnemy(player) then return false end
+    for name, material in pairs(SkillEffects.retrial) do
+      if Cost.effectable(player, name) and (not player:isKongcheng() or (material == "black_hand_or_equip"
+        and table.find(player:getCardIds("e"), function(id) return Fk:getCardById(id).color == Card.Black end))) then
+        return true
+      end
+    end
+    return false
   end)
 end
 

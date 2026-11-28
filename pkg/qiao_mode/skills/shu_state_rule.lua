@@ -1,5 +1,6 @@
 -- 观星、空城与放权已经建立的持续结算，不依赖原技能是否仍在。
 local skill = fk.CreateSkill { name = "qiao__shu_state_rule" }
+local Kongcheng = require "packages.qiao.pkg.qiao_generals.skills.skill_shu004_2"
 
 local KONG = "@@qiao__skill_shu004_2_kong"
 local GUANX = "qiao__skill_shu004_1_finish-turn"
@@ -9,8 +10,7 @@ local FQ = "qiao__skill_shu013_2_turn-turn"
 skill:addEffect(fk.TargetConfirmed, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    return target == player and player:getMark(KONG) > 0 and data.card ~= nil
-      and (data.card.trueName == "slash" or data.card.trueName == "duel")
+    return target == player and Kongcheng.protectsFrom(player, data.card)
   end,
   on_refresh = function(self, event, target, player, data)
     data:setNullified(player)

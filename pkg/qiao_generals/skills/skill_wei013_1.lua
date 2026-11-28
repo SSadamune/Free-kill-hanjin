@@ -56,6 +56,7 @@ skill:addEffect("active", {
           prompt = "#qiao__skill_wei013_1-damage",
           skill_name = skill.name,
           cancelable = false,
+          extra_data = { source = target.id },
         })
         local victim = chosen and chosen[1]
         if victim ~= nil and target:isAlive() and victim:isAlive() then

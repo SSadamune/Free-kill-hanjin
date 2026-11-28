@@ -12,6 +12,10 @@ local ARMED = "qiao_zouyu_armed"
 local USED = "qiao_zouyu_used_turn"
 local DELAY_SKILL = "qiao__zouyu_fan_delay"
 
+function skill.hasPendingLoss(player)
+  return player:getMark(PENDING) > 0
+end
+
 local delaySkill
 local function ensureDelaySkill(room)
   if delaySkill == nil then
@@ -20,7 +24,7 @@ local function ensureDelaySkill(room)
       global = true,
       is_delay_effect = true,
       can_trigger = function(self, event, target, player, data)
-        return target ~= nil and target == player and target:getMark(PENDING) > 0
+        return target ~= nil and target == player and skill.hasPendingLoss(target)
       end,
       on_cost = Util.TrueFunc,
       on_use = function(self, event, target, player, data)
@@ -83,11 +87,13 @@ local function requestedName(data)
   if pattern:matchExp("jink|0|nosuit|none") then return "jink" end
 end
 
-local function canProvide(self, player, data, response)
-  if player == nil or player.dead or not player:hasSkill(skill.name) then return false end
-  if player.room.current == player then return false end
-  if player:getMark(USED) > 0 then return false end
-  if player:usedSkillTimes(skill.name, Player.HistoryTurn) > 0 then return false end
+function skill.isAvailable(player)
+  return player and not player.dead and player:hasSkill(skill.name) and player.room.current ~= player
+    and player:getMark(USED) <= 0 and player:usedSkillTimes(skill.name, Player.HistoryTurn) == 0
+end
+
+local function canProvide(player, data, response)
+  if not skill.isAvailable(player) then return false end
   local name = requestedName(data)
   if name == nil then return false end
   local card = Fk:cloneCard(name)
@@ -150,14 +156,14 @@ skill:addEffect(fk.CardUseFinished, promoteEffect)
 skill:addEffect(fk.CardRespondFinished, promoteEffect)
 skill:addEffect(fk.AskForCardUse, {
   can_trigger = function(self, event, target, player, data)
-    return target == player and canProvide(self, player, data, false)
+    return target == player and canProvide(player, data, false)
   end,
   on_use = provide,
 })
 
 skill:addEffect(fk.AskForCardResponse, {
   can_trigger = function(self, event, target, player, data)
-    return target == player and canProvide(self, player, data, true)
+    return target == player and canProvide(player, data, true)
   end,
   on_use = provide,
 })

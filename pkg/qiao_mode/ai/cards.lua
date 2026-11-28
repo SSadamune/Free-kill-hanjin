@@ -2,6 +2,9 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
+local Kongcheng = require "packages.qiao.pkg.qiao_generals.skills.skill_shu004_2"
 
 local M = {}
 
@@ -16,15 +19,27 @@ local enemyGroup = {
 }
 local selfBenefit = { qiao__foresight = 100, qiao__strengthen_state = 100, qiao__peach = 95 }
 
+function M.damageOutcome(ai, card, target, use, source, bonus)
+  if not ai:isEnemy(target) or Kongcheng.protectsFrom(target, card) then return end
+  source = source or (use and use.from) or ai.player
+  if SlashDefense.vineBlocks(source, card, target, use) then return end
+  local amount = Damage.cardAmount(card, use, source) + Damage.targetBonus(ai.room, use, target) + (bonus or 0)
+  return Damage.assess(ai, target, amount, Damage.cardNature(card, use), {
+    ignoreTargetArmor = SlashDefense.ignoresArmor(source, card, use), source = source, card = card,
+  })
+end
+
+function M.attackValue(ai, card, target, use, source, bonus)
+  source = source or (use and use.from) or ai.player
+  local result = M.damageOutcome(ai, card, target, use, source, bonus)
+  if result and Damage.worth(result) then
+    return Damage.value(result) * SlashDefense.hitChance(source, card, target, use)
+  end
+end
+
 function M.safeDamage(ai, card, target, use, source)
-  if not ai:isEnemy(target) then return false end
-  local nature = Damage.cardNature(card, use)
-  if not target.chained or not Fk:canChain(nature) then return true end
-  source = source or ai.player
-  local amount = Damage.cardAmount(card, use, source)
-  local ignoreTargetArmor = not use and card.trueName == "slash" and Cost.effectable(source, "#qinggang_sword_skill")
-  return Damage.worth(Damage.assess(ai, target, amount, nature,
-    { ignoreTargetArmor = ignoreTargetArmor, source = source, card = card }))
+  local result = M.damageOutcome(ai, card, target, use, source)
+  return result ~= nil and Damage.worth(result)
 end
 
 function M.isHarmful(card)
@@ -35,7 +50,12 @@ end
 function M.scoreTarget(ai, card, target, use)
   local name = card.name
   if damage[name] or enemyGroup[name] then
-    if M.safeDamage(ai, card, target, use) then return ai:hostileScore(target, 20 - target.hp) end
+    local result = M.damageOutcome(ai, card, target, use)
+    if result and Damage.worth(result) then
+      local source = (use and use.from) or ai.player
+      local score = Damage.value(result) + 0.25 * math.max(0, 5 - target.hp)
+      return ai:hostileScore(target, score * SlashDefense.hitChance(source, card, target, use))
+    end
   elseif Removal.isCard(card) then
     local value = Removal.effectValue(ai, card, target)
     if value then return ai:isEnemy(target) and ai:hostileScore(target, value) or value end
@@ -48,11 +68,14 @@ function M.scoreTarget(ai, card, target, use)
   end
 end
 
-local function hasSlashTarget(ai)
+local function analepticWorth(ai, analeptic)
+  local price = Cost.value(ai, analeptic.id)
   return table.find(ai:getEnabledCards("slash"), function(id)
     local card = Fk:getCardById(id)
     return table.find(card:getAvailableTargets(ai.player, ai.handler.extra_data), function(target)
-      return M.safeDamage(ai, card, target)
+      local before = M.attackValue(ai, card, target) or 0
+      local after = M.attackValue(ai, card, target, nil, nil, 1)
+      return after and after - before >= price
     end) ~= nil
   end) ~= nil
 end
@@ -188,9 +211,9 @@ local function playSelected(ai, card)
   elseif enemyGroup[name] then
     if Damage.worth(M.groupOutcome(ai, card)) and ai:okButtonEnabled() then return physicalReply(ai) end
   elseif name == "qiao__god_salvation" then
-    local woundedFriend = function(target) return target:isWounded() and ai:isFriend(target) end
+    local woundedFriend = function(target) return Health.canRecover(target) and ai:isFriend(target) end
     return fixedGroup(ai, card, function(target)
-      return not target:isWounded() or ai:isFriend(target)
+      return not Health.canRecover(target) or ai:isFriend(target)
     end, woundedFriend)
   elseif name == "qiao__restore_heartland" or name == "qiao__iron_chain" then
     return selectTargets(ai, function(target) return M.scoreTarget(ai, card, target) end, true)
@@ -210,8 +233,10 @@ local function playSelected(ai, card)
       end)
       if not holder then break end
       ai:selectTarget(holder, true)
+      local slash = Fk:cloneCard("qiao__slash")
       local reply = selectTargets(ai, function(target)
-        return ai:hostileScore(target, 20 - target.hp)
+        local value = M.attackValue(ai, slash, target, nil, holder)
+        if value then return ai:hostileScore(target, value) end
       end)
       if reply then return reply end
       ai:selectTarget(holder, false)
@@ -222,7 +247,7 @@ end
 
 function M.priority(ai, card)
   if selfBenefit[card.name] then
-    if card.name == "qiao__peach" and not ai.player:isWounded() then return end
+    if card.name == "qiao__peach" and not Health.canRecover(ai.player) then return end
     return selfBenefit[card.name]
   end
   if card.type == Card.TypeEquip and card.name:startsWith("qiao__") and emptySlot(ai.player, card) then
@@ -230,7 +255,7 @@ function M.priority(ai, card)
   end
   local name = card.name
   if name == "qiao__restore_heartland" then return 90 end
-  if name == "qiao__analeptic" and ai.command == "PlayCard" and hasSlashTarget(ai) then return 65 end
+  if name == "qiao__analeptic" and ai.command == "PlayCard" and analepticWorth(ai, card) then return 65 end
   if name == "qiao__fire_attack" and fireSuits(ai, card) < 3 then return end
   if name == "qiao__befriend_attacking" then return 80 end
   if name == "qiao__iron_chain" or name == "qiao__god_salvation" then return 75 end

@@ -1,8 +1,11 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local Judgment = require "packages.qiao.pkg.qiao_mode.ai.judgment"
 local Chain = require "packages.qiao.pkg.qiao_generals.util.jin_chain"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 
@@ -31,24 +34,29 @@ function M.xingtuMaterial(ai, id)
 end
 
 function M.xingtuTarget(ai, target)
-  if ai:isFriend(target) and target.hp <= 1 and target:isWounded() then
+  if ai:isFriend(target) and target.hp <= 1 and Health.canRecover(target) then
     local peach = Fk:cloneCard("qiao__peach")
-    if not ai.player:prohibitUse(peach) and not ai.player:isProhibited(target, peach) then return 10 - target.hp end
+    if not ai.player:prohibitUse(peach) and not ai.player:isProhibited(target, peach) then
+      return Health.recovery(ai, target, 1)
+    end
   end
 end
 
-function M.luoyiWorth(ai)
+function M.luoyiValue(ai)
   local player = ai.player
-  if not player:canSkip(Player.Play) then return false end
-  return table.find(player:getCardIds("h"), function(id)
+  if not player:canSkip(Player.Play) or player:getMark("qiao_wei005_luoyi-turn") > 0 then return 0 end
+  local best = 0
+  for _, id in ipairs(player:getCardIds("h")) do
     local card = Fk:getCardById(id)
-    if card.trueName ~= "slash" and card.trueName ~= "duel" then return false end
-    return table.find(card:getAvailableTargets(player), function(target)
-      return target.hp + target.shield == 2 and target:isKongcheng()
-        and Cards.safeDamage(ai, card, target)
-        and (card.trueName == "duel" or #target:getEquipments(Card.SubtypeArmor) == 0)
-    end) ~= nil
-  end) ~= nil
+    if card.trueName == "slash" or card.trueName == "duel" then
+      for _, target in ipairs(card:getAvailableTargets(player)) do
+        local before = Cards.attackValue(ai, card, target) or 0
+        local after = Cards.attackValue(ai, card, target, nil, nil, 1) or 0
+        best = math.max(best, after - before)
+      end
+    end
+  end
+  return best
 end
 
 function M.invoke(ai, original, fields)
@@ -218,9 +226,7 @@ function M.targetScore(ai, key, use)
   end
   if key == "#qiao__skill_wu016_1-extra" then
     return function(target)
-      if use and use.card and Cards.safeDamage(ai, use.card, target, use) then
-        return ai:hostileScore(target, 20 - target.hp)
-      end
+      if use and use.card then return Cards.scoreTarget(ai, use.card, target, use) end
     end
   end
   if key == "#qiao__skill_wei018_1-target" or key == "#qiao__skill_wei018_1-invoke" then
@@ -269,15 +275,18 @@ function M.targetScore(ai, key, use)
     end
   end
   if key == "#qiao__skill_qun010_1-target" then
+    return function(target) return Judgment.leijiTarget(ai, target) end
+  end
+  if key == "#qiao__skill_qun023_2-target" then
     return function(target)
-      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, 2, fk.ThunderDamage, { source = ai.player })) then
-        return ai:hostileScore(target, 20 - target.hp)
-      end
+      return Damage.enemyValue(ai, target, 1, fk.NormalDamage, { source = ai.player })
     end
   end
   if enemyDamageTargets[key] then
     return function(target)
-      return ai:hostileScore(target, 20 - target.hp)
+      if not ai:isEnemy(target) then return end
+      local outcome = Damage.assess(ai, target, 1, fk.NormalDamage, { source = ai.player })
+      if Damage.worth(outcome) then return ai:hostileScore(target, Damage.value(outcome)) end
     end
   end
   if key == "#qiao__skill_han008_2-target" or key == "#qiao__skill_han008_2-invoke" then
@@ -309,20 +318,37 @@ function M.shangshiMaterial(ai, target, id)
     and not ai.player:isProhibited(target, card)
 end
 
+function M.axeBudget(ai, effect)
+  local target, source, card = effect.to, effect.from, effect.card
+  if not ai:isEnemy(target) or SlashDefense.vineBlocks(source, card, target, effect) then return end
+  local amount = Damage.cardAmount(card, effect)
+  local event = ai.room.logic:getCurrentEvent()
+  local use = event and event:findParent(GameEvent.UseCard, true)
+  if use and use.data.card == card then amount = amount + Damage.targetBonus(ai.room, use.data, target) end
+  local forecast = Damage.assess(ai, target, amount, Damage.cardNature(card, effect), {
+    source = source, card = card,
+    ignoreTargetArmor = SlashDefense.ignoresArmor(source, card, effect),
+  })
+  if not Damage.worth(forecast) then return end
+  return Damage.value(forecast)
+end
+
 function M.slashChoice(ai, fields, use)
   local target = playerAt(ai, fields, 2)
   if fields[1] == "#qiao__skill_shu008_1-choice" then
     local noResponse = "#qiao__skill_shu008_1-disresponsive"
     if not use or not use.card or not ai:isEnemy(target) then return noResponse end
-    local nature = Damage.cardNature(use.card, use)
-    local amount = Damage.cardAmount(use.card, use, ai.player)
-    local boosted = Damage.assess(ai, target, amount + 1, nature, { source = ai.player, card = use.card })
-    if target:isKongcheng() and Damage.worth(boosted) then return "#qiao__skill_shu008_1-damage" end
+    local original = Cards.damageOutcome(ai, use.card, target, use)
+    local boosted = Cards.damageOutcome(ai, use.card, target, use, nil, 1)
+    local chance = SlashDefense.hitChance(ai.player, use.card, target, use, "qiao__skill_shu008_1")
+    if original and boosted and Damage.worth(boosted) and Damage.value(boosted) * chance > Damage.value(original) then
+      return "#qiao__skill_shu008_1-damage"
+    end
     return noResponse
   end
   local nullify = "#qiao__skill_shu013_1-nullify"
-  if not use or not use.card or not Cards.safeDamage(ai, use.card, target, use) then return nullify end
-  local budget = target.hp + target.shield <= Damage.cardAmount(use.card, use, ai.player) and 4 or 2
+  local budget = use and use.card and Cards.attackValue(ai, use.card, target, use)
+  if not budget then return nullify end
   if table.find(ai.player:getCardIds("he"), function(id)
     return Fk:getCardById(id).type == Card.TypeBasic and not ai.player:prohibitDiscard(id)
       and Cost.value(ai, id) <= budget
@@ -442,21 +468,30 @@ function M.choice(ai, choices, fields)
     end
   elseif key == "#qiao__skill_shu009_1-choice" then
     local recovery = "#qiao__skill_shu009_1-recover"
-    return table.contains(choices, recovery) and recovery or "#qiao__skill_shu009_1-draw"
+    if table.contains(choices, recovery) and Health.recovery(ai, player, 1) > 0 then return recovery end
+    return "#qiao__skill_shu009_1-draw"
   elseif key == "#qiao__skill_shu016_1-choice" then
     local target = playerAt(ai, fields, 2)
-    if target and target.hp <= 2 and target:isWounded() then return "#qiao__skill_shu016_1-recover" end
+    if ai:isFriend(target) then
+      local healing = Health.recovery(ai, target, 1)
+      local draw = (player:isHandAreaSealed() and 0 or 3) + (target:isHandAreaSealed() and 0 or 3)
+      if healing > 0 and (healing > draw or (healing == draw and target.hp <= 2)) then
+        return "#qiao__skill_shu016_1-recover"
+      end
+    end
     return "#qiao__skill_shu016_1-draw"
   elseif key == "#qiao__skill_shu014_2-choice" then
     local recover = table.find(choices, function(choice) return choice:startsWith("#qiao__skill_shu014_2-recover:") end)
     local owner = recover and playerAt(ai, recover:split(":"), 2)
-    if owner and ai:isFriend(owner) and owner.hp <= 2 then return recover end
+    if ai:isFriend(owner) and Health.recovery(ai, owner, 1) > (player:isHandAreaSealed() and 0 or 3) then return recover end
     return "#qiao__skill_shu014_2-draw"
   elseif key == "#qiao__skill_jin014_1-choice" then
     local hand = player:getCardIds("h")
-    if player.hp == 1 and player:isWounded() and #hand >= 2 and #hand <= 3
-      and table.every(hand, function(id) return Cost.value(ai, id) <= 2 end) then
-      return "qiao__skill_jin014_1-recover"
+    if player.hp == 1 and #hand >= 2 and #hand <= 3 then
+      local cost = 0
+      for _, id in ipairs(hand) do cost = cost + Cost.value(ai, id) end
+      local healing = Health.recovery(ai, player, 1)
+      if healing > cost + (player:isHandAreaSealed() and 0 or 3) then return "qiao__skill_jin014_1-recover" end
     end
     return "qiao__skill_jin014_1-draw"
   end
