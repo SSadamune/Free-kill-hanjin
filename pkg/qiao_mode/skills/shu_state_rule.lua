@@ -46,18 +46,14 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
 })
 
--- 放权/铁骑回合末收束。
+-- 观星结束阶段若被跳过，在本回合结束清理待结算的标记。
 skill:addEffect(fk.TurnEnd, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    return target == player
+    return target == player and player:getMark(GUANX) > 0
   end,
   on_refresh = function(self, event, target, player, data)
-    local room = player.room
-    -- 观星结束阶段若被跳过，也要在本回合结束清理，不能带到下一回合。
-    room:setPlayerMark(player, GUANX, 0)
-
-
+    player.room:setPlayerMark(player, GUANX, 0)
   end,
 })
 

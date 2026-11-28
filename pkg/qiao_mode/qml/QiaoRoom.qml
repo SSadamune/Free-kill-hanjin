@@ -5,6 +5,7 @@ import Fk
 import Fk.Components.Common
 import LunarLtk
 import LunarLtk.Components as LtkComponents
+import LunarLtk.Components.Photo as PhotoElements
 import LunarLtk.Pages
 import LunarLtk.Pages.InfoPopups as Info
 import "GuestIllustration.js" as GuestIllustration
@@ -26,6 +27,7 @@ Room {
   property int pileActionRevision: 0
   property int ciRevision: 0
   property int ownHiddenGeneralsRevision: 0
+  property int playerDetailSkillsRevision: 0
   property int skillStatusRevision: 0
   property int discardCount: 0
   property bool showSeats: false
@@ -118,58 +120,78 @@ Room {
   Component { id: referencePane; SkillReferencePane { generalCardPresentation: roomGeneralAppearance } }
   Component { id: edictPile; EdictPile { name: "qiao__skill_em_han001_banner" } }
   Component {
-    id: edictMark
-    Controls.AbstractButton {
-      id: marker
-      objectName: "qiaoEdictButton"
-      required property int holderId
-      readonly property var cards: {
-        room.skillStatusRevision;
-        const value = JSON.parse(Lua.ev(`json.encode(ClientInstance:edictCardsForDisplay(${holderId}))`) ?? "false");
-        return value === false ? null : Array.from(value);
-      }
-      visible: cards !== null
-      implicitWidth: 21
-      implicitHeight: 21
-      padding: 0
-      hoverEnabled: true
-      Accessible.name: Lua.tr("qiao__skill_em_han001_banner")
-      Controls.ToolTip.visible: marker.visible && marker.hovered
-      Controls.ToolTip.text: marker.Accessible.name
-      contentItem: Image {
-        source: SkinBank.getMarkPic("qiao_edict")
-        fillMode: Image.PreserveAspectFit
-      }
-      onClicked: room.showInfoPopup(edictPile, {
-        holderId, ids: Qt.binding(() => marker.cards ?? []),
-      })
-    }
-  }
-  Component {
-    id: statusRow
-    Row {
-      id: row
-      objectName: "qiaoStatusRow"
+    id: statusLabels
+    PortraitStatusLabels {
+      id: panel
       required property Item photo
-      readonly property var states: {
+      readonly property var managedStates: {
         room.skillStatusRevision;
+        room.playerDetailSkillsRevision;
         photo.general;
         photo.deputyGeneral;
-        if (photo.dead || !photo.playerid) return [];
+        photo.dataModel.hp;
+        photo.dataModel.maxHp;
+        if (photo.dead || photo.playerid === 0 || photo.playerid === -1) return [];
         return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
       }
-      spacing: 4
-      visible: states.length > 0
-      SkillStatusButton {
-        photo: row.photo
-        allStates: row.states
-        states: row.states.filter(state => !state.individual)
+      readonly property Item targetTip: photo.children.find(child => child instanceof PhotoElements.TargetTip) ?? null
+
+      x: photo.markArea.x
+      width: photo.markArea.width
+      anchors.bottom: photo.areasSealed.top
+      visible: photo.markArea.visible && states.length > 0
+      interactive: photo.markArea.enabled
+      states: {
+        room.skillStatusRevision;
+        if (photo.dead) return [];
+        const managed = new Set(managedStates.map(entry => entry.id));
+        const plain = value => String(value ?? "").replace(/<[^>]*>/g, "").trim();
+        const entries = managedStates.slice();
+        for (const mark of photo.dataModel.marks) {
+          // Hegemony also sends the viewer a legacy text mark for their own seat.
+          if (!mark || mark.origName === "@seat" || managed.has(mark.origName)) continue;
+          const descriptionKey = ":" + mark.origName;
+          const description = Lua.tr(descriptionKey);
+          const count = mark.origName.startsWith("@@") ? photo.dataModel.luaPlayer.getMark(mark.origName) : 1;
+          const entry = {
+            id: mark.origName, title: plain(mark.name), value: plain(mark.value),
+            description: mark.desc || (description === descriptionKey ? "" : description),
+            qml: mark.qml,
+          };
+          const repeats = Number.isFinite(count) ? Math.max(1, Math.floor(count)) : 1;
+          for (let i = 0; i < repeats; ++i) entries.push(entry);
+        }
+        return entries;
       }
-      Repeater {
-        model: row.states.filter(state => state.individual)
-        delegate: SkillStatusButton {
-          required property var modelData
-          states: [modelData]
+
+      Binding {
+        target: panel.photo.markArea
+        property: "markModel"
+        value: []
+      }
+      Binding {
+        target: panel.targetTip
+        property: "z"
+        when: panel.targetTip !== null && panel.visible
+        value: 1
+      }
+
+      onActivated: entry => {
+        const holderId = photo.playerid;
+        const cards = Qt.binding(() => photo.playerid === holderId
+          ? panel.managedStates.find(state => state.id === entry.id)?.cards ?? [] : []);
+        if (entry.action === "edict") {
+          room.showInfoPopup(edictPile, { holderId, ids: cards });
+        } else if (entry.action === "pojun") {
+          room.showInfoPopup(Qt.createComponent("LunarLtk.Pages.InfoPopups", "ViewPile"), {
+            name: "qiao__skill_wu020_2", ids: cards,
+            additional_prop: { selectable: true, known: true },
+          });
+        } else if (entry.qml) {
+          const spec = entry.qml;
+          const props = Object.assign({}, spec.prop);
+          if (spec.model) props.dataModel = Lua.createQmlObject(spec.model);
+          room.showInfoPopup(Lua.createComponent(spec), props);
         }
       }
     }
@@ -252,7 +274,7 @@ Room {
         room.ownHiddenGeneralsRevision;
         const id = player.playerid;
         if (Config.observing || Config.replaying || id !== Cpp.self.id
-            || player.general !== "anjiang" || player.deputyGeneral !== "anjiang") return [];
+            || (player.general !== "anjiang" && player.deputyGeneral !== "anjiang")) return [];
         return JSON.parse(Lua.ev(`json.encode(ClientInstance:ownHiddenGenerals(${id}))`)) || [];
       }
     }
@@ -272,9 +294,11 @@ Room {
         SkillLinks.replaceText(referencePane, viewport, text, {
           active: Qt.binding(() => room.visible && room.infoPopup.visible && tabs.currentIndex === 0),
           rootText: (catalog, theme) => {
+            room.playerDetailSkillsRevision;
             const id = item.dataModel.playerid;
-            if (id === 0 || id === undefined) return "";
-            return SkillLinks.playerText(catalog, theme, Ltk.getPlayerSkills(id), name => Lua.tr(name),
+            if (id === 0 || id === -1 || id === undefined) return "";
+            const skills = JSON.parse(Lua.ev(`json.encode(ClientInstance:playerDetailSkills(${id}))`) ?? "[]");
+            return SkillLinks.playerText(catalog, theme, Array.from(skills), name => Lua.tr(name),
               name => Lua.evaluate(`Fk:getDescription(${JSON.stringify(name)})`));
           },
         });
@@ -382,6 +406,27 @@ Room {
     id: mountRow
     DualMountRow {}
   }
+  Component {
+    id: equipSlotLabel
+    EquipSlotLabel {}
+  }
+
+  // 原生 SetCardMark 更新手牌和处理区。装备槽有自己的 CardModel。
+  function setCardMark(sender, data) {
+    dataModel.setCardMark(sender, data);
+    const [id, mark, value] = data;
+    if (mark !== "@qiao_bajia_yu") return;
+    for (let i = 0; i < photoModel.count; ++i) {
+      const slots = photoModel.get(i).modelData.photoItem?.areasSealed?.items ?? [];
+      for (const slot of slots) {
+        const card = slot.equips.find(equip => equip.cardId === id);
+        if (card) {
+          Ltk.setMark(card.marks, mark, value);
+          return;
+        }
+      }
+    }
+  }
 
   function bindPhotoExtras() {
     for (let i = 0; i < photoModel.count; ++i) {
@@ -393,10 +438,8 @@ Room {
       const marks = photo?.picMarkArea;
       if (marks && !marks.children.some(child => child.objectName === "qiaoPortraitMarkTooltips"))
         markTooltips.createObject(marks);
-      if (marks && !marks.children.some(child => child.objectName === "qiaoStatusRow")) {
-        statusRow.createObject(marks, { photo });
-        edictMark.createObject(marks, { holderId: Qt.binding(() => photo.playerid) });
-      }
+      if (photo.markArea && !photo.children.some(child => child.objectName === "qiaoPortraitStatusLabels"))
+        statusLabels.createObject(photo, { photo });
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {
           cards: Qt.binding(() => room.ciCardsForDisplay(photo.playerid)),
@@ -410,6 +453,12 @@ Room {
         continue;
       const defensive = area.items[area.subtypes.indexOf("defensive_ride")];
       const offensive = area.items[area.subtypes.indexOf("offensive_ride")];
+      for (const slot of area.items) {
+        if (slot !== defensive && slot !== offensive &&
+            !slot.children.some(child => child.objectName === "qiaoEquipSlotLabel")) {
+          equipSlotLabel.createObject(slot, { slot });
+        }
+      }
       if (defensive && offensive) {
         mountRow.createObject(area, {
           defensiveItem: defensive,
@@ -434,7 +483,10 @@ Room {
       Qt.callLater(room.bindPhotoExtras);
       Qt.callLater(room.refreshDiscard);
     }
-    function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
+    function onSeatChanged() {
+      ++room.skillStatusRevision;
+      Qt.callLater(room.bindPhotoExtras);
+    }
   }
 
   function setVirtualPicture(card, name) {
@@ -460,6 +512,7 @@ Room {
     addCallback("QiaoSingleChoice", room.showSingleChoice);
     addCallback("QiaoCiChanged", () => { ++room.ciRevision; });
     addCallback("QiaoOwnHiddenGeneralsChanged", () => { ++room.ownHiddenGeneralsRevision; });
+    addCallback("QiaoPlayerDetailSkillsChanged", () => { ++room.playerDetailSkillsRevision; });
     addCallback("QiaoRefreshPrelightButtons", room.refreshPrelightButtons);
     addCallback("QiaoPileActionChanged", () => Qt.callLater(room.refreshPileActions));
     addCallback("QiaoInitialPrelight", (_, data) => {
@@ -469,6 +522,7 @@ Room {
         openingAnimation.restart();
       }
     });
+    addCallback(Command.SetCardMark, room.setCardMark);
     addCallback(Command.ShowVirtualCard, (sender, data) => {
       const previous = new Set(tablePile.cards);
       showVirtualCard(sender, data);

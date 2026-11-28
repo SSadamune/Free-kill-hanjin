@@ -5,6 +5,7 @@
 -- 转化结果是一张以实体牌为子卡的新虚拟牌。客户端只读取服务端同步的玩家
 -- mark，不读取服务端 room tag；服务端在 before_use 与 PreCardUse/Respond
 -- 时重新核对来源、底牌、目标和当前请求模式。
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local M = {}
 -- card_use_targets 是并行任务的可选模块。本文件必须能在没有它时独立加载；
 -- 有该模块时只使用其静态注册的受信 hook，不把任意 use.extra_data 提升为可信。
@@ -96,6 +97,7 @@ function M.define(key, spec)
     view_zones = spec.view_zones or { "hand", "handly" },
     ignore_mark = spec.ignore_mark,
     skill = spec.skill,
+    prohibit_label = spec.prohibit_label,
     card_num = spec.card_num or 1,
   }
   assert(#def.conversions > 0, "Only-as definition needs at least one conversion: " .. key)
@@ -322,7 +324,7 @@ function M.refresh(room)
   for _, player in ipairs(room.players) do
     local list = byHolder[player.id] or {}
     table.sort(list, function(a, b) return a.uid < b.uid end)
-    room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, #list > 0 and list or 0)
   end
 end
 
@@ -333,7 +335,7 @@ function M.reset(room)
   room:setTag(M.AUTH_TAG, nil)
   room:setTag(M.TURN_TAG, 0)
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.SOURCE_MARK, 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, 0)
   end
 end
 
@@ -812,16 +814,24 @@ end
 
 --- 直接使用/打出的禁止判定。所有合法牌区都受限制，不按手牌区或
 --- skillNames 判断；转化牌（虚拟牌）不受“原实体牌禁用”限制。
-function M.isForbidden(player, card)
-  if player == nil or card == nil or card:isVirtual() then return false end
+local function forbiddingSource(player, card)
+  if player == nil or card == nil or card:isVirtual() then return end
   for _, source in ipairs(M.activeSources(player)) do
-    if M.matches(source, card) then
-      if M.cardInZones(player, card.id, source.direct_zones) then
-        return true
-      end
+    if M.matches(source, card) and M.cardInZones(player, card.id, source.direct_zones) then
+      return source
     end
   end
-  return false
+end
+
+function M.isForbidden(player, card)
+  return forbiddingSource(player, card) ~= nil
+end
+
+function M.prohibitionLabel(player, card)
+  local source = forbiddingSource(player, card)
+  if source then
+    return Fk:translate(defOf(source.def).prohibit_label or source.skill or M.PROHIBIT_SKILL)
+  end
 end
 
 -- 服务端复核 ---------------------------------------------------------------
@@ -1243,6 +1253,7 @@ end
 -- 来源定义 -----------------------------------------------------------------
 
 M.define("battle_royal", {
+  prohibit_label = "qiao_battle_royal&",
   match = { names = { "peach" } },
   conversions = {
     { name = "qiao__slash", modes = { "use", "response" }, order = 1 },
@@ -1255,6 +1266,7 @@ M.define("battle_royal", {
 
 -- 供后续正式突袭使用的定义：来源通过 cards 限定为“本回合获得的牌”。
 M.define("tuxi", {
+  prohibit_label = "qiao__skill_wei004_1",
   conversions = {
     { name = "qiao__slash", modes = { "use", "response" }, order = 1 },
   },
@@ -1264,6 +1276,7 @@ M.define("tuxi", {
 
 -- 供后续正式双刃使用的定义：手牌中的【杀】只能当【借刀杀人】使用。
 M.define("shuangren", {
+  prohibit_label = "qiao__skill_qun015_1",
   match = { names = { "slash" }, types = { Card.TypeBasic } },
   conversions = {
     { name = "qiao__collateral", modes = { "use" }, order = 1 },

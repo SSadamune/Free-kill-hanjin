@@ -14,6 +14,7 @@ local PairHp = require "packages.qiao.pkg.qiao_mode.rules.pair_hp"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local Locked = require "packages.qiao.pkg.qiao_mode.rules.locked_factions"
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local M = {}
 
 M.RULE_SKILL = "#qiao_ascension_rule"
@@ -436,13 +437,10 @@ end
 function M.reset(room)
   if room == nil then return end
   room:setTag("qiao_ascension", nil)
+  local marks = { M.TURNS_MARK, M.WILD_ASCENDED_MARK, M.COMPANION_MARK, M.YINYANG_MARK, M.LORD_DEATH_MARK }
   for _, player in ipairs(room.players) do
     player.tag.qiao_departed_kingdom = nil
-    room:setPlayerMark(player, M.TURNS_MARK, 0)
-    room:setPlayerMark(player, M.WILD_ASCENDED_MARK, 0)
-    room:setPlayerMark(player, M.COMPANION_MARK, 0)
-    room:setPlayerMark(player, M.YINYANG_MARK, 0)
-    room:setPlayerMark(player, M.LORD_DEATH_MARK, 0)
+    for _, mark in ipairs(marks) do PublicState.setPlayerMark(room, player, mark, 0) end
   end
 end
 

@@ -5,6 +5,7 @@
 --   python scripts/test.py --file tests/wei_damage.lua --timeout 120
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 
 local JIANXIONG = "qiao__skill_wei001_1"
 local LANGGU = "qiao__skill_wei002_1"
@@ -212,6 +213,27 @@ function Testqiao_wei_damage:testLuoyiBonusSurvivesSkillLoss()
     room:useCard { from = p(1), tos = { p(2) }, card = Fk:getCardById(slash) }
   end)
   lu.assertEquals(p(2).hp, hp2 - 2)
+end
+
+function Testqiao_wei_damage:testLuoyiDisplaysEachActivation()
+  local room = FkTest.room
+  local player = p(1)
+  local ids = setHand(room, player, {
+    { "qiao__peach", Card.Heart, 2 },
+    { "qiao__jink", Card.Spade, 3 },
+  })
+  grant(player, LUOYI)
+  for _, id in ipairs(ids) do
+    FkTest.setNextReplies(player, { FkTest.ReplyDiscard({ id }) })
+    triggerPhase(room, player, Player.Draw, fk.EventPhaseEnd)
+  end
+  local labels = table.filter(SkillStatus.forPlayer(player), function(state) return state.id == SkillStatus.luoyi end)
+  lu.assertEquals(#labels, 2)
+  for _, label in ipairs(labels) do
+    lu.assertEquals(label.value, "")
+    lu.assertFalse(label.parameterized)
+  end
+  lu.assertEquals(player:getMark(SkillStatus.luoyi), 1)
 end
 
 -- 裸衣：取消唯一弃牌请求即不发动；请求提示写明消耗与加伤 -----------------

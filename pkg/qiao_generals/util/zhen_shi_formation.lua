@@ -10,6 +10,7 @@
 -- 服务端动态 Fk:addSkill。来源 mark 只是公开账本，供增删差分与客户端层数
 -- 同步；距离层数由 feiyingLayers 读取真实派生来源数计算。
 local H = require "packages.hegemony.util"
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 
 local M = {}
 
@@ -79,7 +80,7 @@ end
 function M.refreshLayers(room)
   if room == nil then return end
   for _, p in ipairs(room.players) do
-    room:setPlayerMark(p, M.FEIYING_LAYERS_MARK, M.feiyingLayers(p))
+    PublicState.setPlayerMark(room, p, M.FEIYING_LAYERS_MARK, M.feiyingLayers(p))
   end
 end
 
@@ -138,9 +139,9 @@ function M.refreshFormationSources(room)
     for sourceId in pairs(current) do
       if not nextSources[sourceId] then revokeFeiying(p, sourceId) end
     end
-    room:setPlayerMark(p, M.FEIYING_MARK,
+    PublicState.setPlayerMark(room, p, M.FEIYING_MARK,
       next(nextSources) ~= nil and nextSources or 0)
-    room:setPlayerMark(p, M.FEIYING_LAYERS_MARK, M.feiyingLayers(p))
+    PublicState.setPlayerMark(room, p, M.FEIYING_LAYERS_MARK, M.feiyingLayers(p))
   end
 end
 

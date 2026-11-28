@@ -107,6 +107,11 @@ function M.pileSuits(ids)
   return suits
 end
 
+function M.pileLabelValue(count, visibleCards)
+  local symbols = Deck.suitSymbols(M.pileSuits(visibleCards))
+  return symbols == "" and tostring(count) or (count .. " " .. symbols)
+end
+
 function M.isSameKingdom(lord, player)
   if lord == nil or player == nil then return false end
   if lord == player then return true end

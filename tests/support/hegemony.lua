@@ -71,6 +71,7 @@ function M.createRoom(options)
   RoomInstance = nil
   mode.logic = originalLogic
   assert(ok, err)
+  if options.allowPendingSetup and not room:getTag("qiao_test_ready") then return room end
   assert(room:getTag("qiao_test_ready"), "National-war setup did not reach the test loop")
   for _, p in ipairs(room.players) do FkTest.cleanNextReplies(p) end
   return room

@@ -2,6 +2,7 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local D = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
 
 local QIANBIAN = "qiao__skill_jin009_1"
 local ZHOUTING = "qiao__skill_jin009_2"
@@ -97,6 +98,7 @@ function Testqiao_jin_deck:testQianbianFirstHeartBansHandNotResponse()
       room:useCard { from = p, tos = { target }, card = Fk:getCardById(heartSlash) }
       captured.banned = table.simpleClone(D.bannedSuits(p))
       captured.display = p:getMark(D.BAN_DISPLAY)
+      captured.labels = table.filter(SkillStatus.forPlayer(p), function(state) return state.id == D.BAN_DISPLAY end)
       captured.prohibitUse = p:prohibitUse(Fk:getCardById(heartJink))
       captured.prohibitResponse = p:prohibitResponse(Fk:getCardById(heartJink))
       captured.spade = p:prohibitUse(Fk:getCardById(spade))
@@ -117,6 +119,9 @@ function Testqiao_jin_deck:testQianbianFirstHeartBansHandNotResponse()
 
   lu.assertTrue(table.contains(captured.banned, Card.Heart))
   lu.assertEquals(captured.display, "♥")
+  lu.assertEquals(#captured.labels, 1)
+  lu.assertEquals(captured.labels[1].value, "♥")
+  lu.assertEquals(captured.labels[1].description, "本阶段已使用的手牌花色：♥\n本阶段禁止使用的手牌花色：♥")
   lu.assertEquals(p:getMark(D.BAN_DISPLAY), 0)
   lu.assertTrue(captured.prohibitUse)
   lu.assertFalse(captured.prohibitResponse)

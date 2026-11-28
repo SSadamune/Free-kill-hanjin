@@ -160,6 +160,39 @@ function Testqiao_han_standard:testShiyuanDeclineAtEqualHpPreservesEachBranch()
     "#qiao__skill_han002_1-invoke:::2" })
 end
 
+function Testqiao_han_standard:testShiyuanOnlyClearsUsedMarksAtTurnBoundaries()
+  local room, owner, source = FkTest.room, p1(), p2()
+  local greater = SY .. "-greater-turn"
+  local notGreater = SY .. "-not-greater-turn"
+  local cleared = {}
+  local broadcast = room.doBroadcastNotify
+  function room:doBroadcastNotify(command, data, players)
+    if command == "SetPlayerMark" and data[3] == 0 and (data[2] == greater or data[2] == notGreater) then
+      table.insert(cleared, { data[1], data[2] })
+    end
+    return broadcast(self, command, data, players)
+  end
+
+  inRoom(function() GameEvent.Turn:create(TurnData:new(source, "game_rule", {})):exec() end)
+  lu.assertEquals(cleared, {})
+
+  setHand(room, owner, {})
+  setHand(room, source, {})
+  owner.hp, source.hp = 3, 4
+  FkTest.setNextReplies(owner, { "1", "" })
+  useSlash(room, source, owner)
+  owner.hp, source.hp = 3, 3
+  FkTest.setNextReplies(owner, { "1", "" })
+  useSlash(room, source, owner)
+  lu.assertEquals(owner:getMark(greater), 1)
+  lu.assertEquals(owner:getMark(notGreater), 1)
+
+  inRoom(function() GameEvent.Turn:create(TurnData:new(source, "game_rule", {})):exec() end)
+  lu.assertItemsEquals(cleared, { { owner.id, greater }, { owner.id, notGreater } })
+  lu.assertEquals(owner:getMark(greater), 0)
+  lu.assertEquals(owner:getMark(notGreater), 0)
+end
+
 function Testqiao_han_standard:testDushiOnlyProhibitsOthersPeach()
   local room = FkTest.room
   p1().hp = p1().maxHp - 2

@@ -41,10 +41,10 @@ skill:addEffect(fk.AfterCardsMove, {
 skill:addEffect(fk.TurnStart, {
   global = true,
   can_refresh = function(self, event, target, player)
-    return target ~= nil
+    return target == player
   end,
   on_refresh = function(self, event, target, player)
-    H.clear(target.room)
+    H.clear(player.room)
   end,
 })
 

@@ -3,6 +3,7 @@
 -- 限制按“目标 + 被弃置颜色”保存，由独立静态技能读取；回合结束时统一清除。
 -- 因此马岱后来失去潜袭或暗置都不会撤销已经建立的限制，客户端也能直接读取
 -- 公开标记判断可用性，不依赖服务端回合事件。
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local M = {}
 
 M.RULE_SKILL = "qiao__shu019_qianxi_rule"
@@ -34,7 +35,7 @@ end
 function M.clear(room)
   if room == nil then return end
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.RESTRICTIONS, 0)
+    PublicState.setPlayerMark(room, player, M.RESTRICTIONS, 0)
   end
 end
 

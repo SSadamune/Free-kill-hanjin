@@ -4,6 +4,7 @@ local BaseClient = require "ltk.client.client"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
+local ReqResponseCard = require "ltk.core.request_type.response_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
@@ -11,12 +12,14 @@ local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local SkillButtons = require "packages.qiao.pkg.qiao_mode.rules.skill_buttons"
 local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
+local SkillSources = require "packages.qiao.pkg.qiao_mode.rules.skill_sources"
 local Han = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
+local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
@@ -263,13 +266,75 @@ local QiaoClient = BaseClient:subclass("QiaoClient")
 
 local hiddenGeneralMarks = { __heg_general = true, __heg_deputy = true }
 
+local function canViewOwnHidden(client, playerId)
+  return not client.observing and not client.replaying and Self and Self.id == playerId
+end
+
 function QiaoClient:ownHiddenGenerals(playerId)
-  if self.observing or self.replaying or not Self or Self.id ~= playerId
-    or Self.general ~= "anjiang" or Self.deputyGeneral ~= "anjiang" then return false end
-  local main = Self:getMark("__heg_general")
-  local deputy = Self:getMark("__heg_deputy")
-  if not Fk.generals[main] or not Fk.generals[deputy] then return false end
-  return { main, deputy }
+  if not canViewOwnHidden(self, playerId) then return false end
+  local main = Self.general == "anjiang" and Self:getMark("__heg_general")
+  local deputy = Self.deputyGeneral == "anjiang" and Self:getMark("__heg_deputy")
+  main = Fk.generals[main] and main or false
+  deputy = Fk.generals[deputy] and deputy or false
+  return (main or deputy) and { main, deputy } or false
+end
+
+function QiaoClient:playerDetailSkills(playerId)
+  local player = self:getPlayerById(playerId)
+  if not player then return {} end
+  local own = canViewOwnHidden(self, playerId)
+  local public = player.qiaoPublicDetailSkills or Util.DummyTable
+  local skills = LtkUI:getPlayerSkills(playerId)
+  if not own then
+    skills = table.filter(skills, function(entry)
+      local skill = Fk.skills[entry.orig_name]
+      return not player:isFakeSkill(skill) or public[skill.name] == true
+    end)
+  end
+
+  local listed = {}
+  for _, entry in ipairs(skills) do listed[entry.orig_name] = true end
+  local function append(skill)
+    local skel = skill:getSkeleton()
+    if not skill.visible or not skel or listed[skel.name] then return end
+    listed[skel.name] = true
+    table.insert(skills, {
+      orig_name = skel.name,
+      name = Fk:getSkillName(skel.name, nil, player, true),
+      description = Fk:getDescription(skill.name, nil, player),
+      related_skills = skel.related_skills or {},
+    })
+  end
+  -- The engine removes the merged row when its fake source is withdrawn.
+  for name in pairs(public) do
+    local skill = Fk.skills[name]
+    if skill and (player == Self or not (skill.attached_equip or name:endsWith("&"))) then append(skill) end
+  end
+  if own then
+    for _, skill in ipairs(player._manually_fake_skills or {}) do
+      if player:isFakeSkill(skill) and SkillSources.isGeneralSkill(skill, player) then append(skill) end
+    end
+  end
+  return skills
+end
+
+-- Observer clients can receive a second, private skill notification. Record
+-- the public source separately because the native client merges both lists.
+function QiaoClient:addSkill(data)
+  if not data[3] then
+    local player = self:getPlayerById(data[1])
+    player.qiaoPublicDetailSkills = player.qiaoPublicDetailSkills or {}
+    player.qiaoPublicDetailSkills[data[2]] = true
+  end
+  BaseClient.addSkill(self, data)
+end
+
+function QiaoClient:loseSkill(data)
+  if not data[3] then
+    local player = self:getPlayerById(data[1])
+    if player.qiaoPublicDetailSkills then player.qiaoPublicDetailSkills[data[2]] = nil end
+  end
+  BaseClient.loseSkill(self, data)
 end
 
 function QiaoClient:handleSetPlayerMark(data)
@@ -284,6 +349,10 @@ end
 
 function QiaoClient:sendDataToUI(data)
   BaseClient.sendDataToUI(self, data)
+  for _, player in ipairs(self.players) do
+    player.qiaoPublicDetailSkills = {}
+    for _, skill in ipairs(player.player_skills) do player.qiaoPublicDetailSkills[skill.name] = true end
+  end
   self:notifyUI("QiaoSkillStatusChanged", {})
   self:notifyUI("QiaoGuestFactionsChanged", {})
   self:notifyUI("QiaoOwnHiddenGeneralsChanged", {})
@@ -292,7 +361,16 @@ function QiaoClient:sendDataToUI(data)
 end
 
 function QiaoClient:skillStates(playerId)
-  return SkillStatus.forPlayer(self:getPlayerById(playerId))
+  local player = self:getPlayerById(playerId)
+  local states = SkillStatus.forPlayer(player, canViewOwnHidden(self, playerId))
+  local edict = self:edictCardsForDisplay(playerId)
+  if edict then
+    table.insert(states, {
+      id = Han.PILE, title = Fk:translate(Han.BANNER), value = Han.pileLabelValue(Han.count(player), edict),
+      action = "edict", cards = edict,
+    })
+  end
+  return states
 end
 
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
@@ -390,10 +468,34 @@ local function installRoomSummary()
   end
 end
 
+function QiaoClient:syncStartRoster(data)
+  if not Self or not self.settings or self.gameStarted or self.observing or self.replaying
+    or not Modes.inRoom(self) then return end
+  local ids = {}
+  for _, player in ipairs(data) do ids[player[1]] = true end
+  if not ids[Self.id] then return end
+
+  for _, player in ipairs(table.simpleClone(self.players)) do
+    if not ids[player.id] then self:removePlayer({ player.id }) end
+  end
+  local players = { Self }
+  for _, setup in ipairs(data) do
+    local id = setup[1]
+    if id ~= Self.id then
+      if not self:getPlayerById(id) then self:addPlayer(setup) end
+      table.insert(players, self:getPlayerById(id))
+    end
+  end
+  -- 对局页面在 ArrangeSeats 前按名单顺序建立头像，本人先占右下角。
+  self.players = players
+  self.alive_players = table.simpleClone(players)
+end
+
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
   installRoomSummary()
   self.lockedPairing = nil
+  self:addCallback("QiaoStartRoster", self.syncStartRoster)
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)
@@ -545,6 +647,27 @@ local function isQiaoMode()
   return Modes.inRoom(room)
 end
 
+local getCardProhibitReason = LtkUI.getCardProhibitReason
+function LtkUI:getCardProhibitReason(id)
+  local handler = ClientInstance.current_request_handler
+  if isQiaoMode() and handler and not handler.skill_name and handler:isInstanceOf(ReqResponseCard) then
+    local card = Fk:getCardById(id)
+    local playing = handler:isInstanceOf(ReqPlayCard)
+    if card and (playing or card:matchPattern(handler.pattern or ".")) then
+      local player = handler.player
+      local using = handler:isInstanceOf(ReqUseCard)
+      local fixedUser = using and handler.extra_data and handler.extra_data.fix_user
+      if fixedUser then player = Fk:currentRoom():getPlayerById(fixedUser) end
+      local label = OnlyAs.prohibitionLabel(player, card)
+      if label then
+        local method = using and "method_use" or "method_response_play"
+        return label .. Fk:translate("prohibit") .. Fk:translate(method)
+      end
+    end
+  end
+  return getCardProhibitReason(self, id)
+end
+
 -- 上游国战红颜也通过锁视变更实体牌的有效花色。手牌面板仍显示印刷花色，
 -- 判定、出牌、筛选和花色统计继续读取引擎锁视后的牌。
 local getCardData = LtkUI.getCardData
@@ -660,12 +783,21 @@ function QiaoClient:notifyUI(command, data)
     uiCommand = "QiaoMoveCards"
   end
   BaseClient.notifyUI(self, uiCommand, data)
-  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.isJili(data[2]) and isQiaoMode() then
+  local textMark = command == "SetPlayerMark" and data[2]:startsWith("@") and not data[2]:startsWith("@!")
+  local rangeChanged = command == "PropertyUpdate" and (data[2] == "kingdom" or data[2] == "dead")
+  if (textMark or rangeChanged) and isQiaoMode() then
+    -- A native mark can be updated in place, and attack range can depend on another seat.
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
+  end
+  if (command == "AddSkill" or command == "LoseSkill") and isQiaoMode() then
+    BaseClient.notifyUI(self, "QiaoPlayerDetailSkillsChanged", {})
+    if SkillStatus.watchesSkill(data[2]) then BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {}) end
   end
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
     BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})
+    BaseClient.notifyUI(self, "QiaoPlayerDetailSkillsChanged", {})
+    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})

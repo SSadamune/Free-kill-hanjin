@@ -146,7 +146,7 @@ function playerText(catalog, theme, visibleSkills, tr, describe) {
     const heading = '<font color="' + color + '" size="5"><b>' + escapeText(skill.name) + "</b></font> ";
     const body = render(catalog, skill.description, skill.orig_name, theme);
     rows.push(heading + (invalid ? '<font color="grey">' + body + "</font>" : body));
-    for (const related of skill.related_skills) {
+    for (const related of Array.from(skill.related_skills ?? [])) {
       if (names.has(related)) continue;
       rows.push('<font color="pink"><b>' + escapeText(tr(related)) + "</b> "
         + render(catalog, describe(related), related, theme) + "</font>");

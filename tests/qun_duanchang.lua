@@ -6,6 +6,8 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_support = __dofile("../../../tests/support/skill_test.lua")
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local Q = require "packages.qiao.pkg.qiao_mode.rules.qun_duanchang"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
+local clientRoom = __dofile("../../../tests/support/client_room.lua")
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
 local SameName = require "packages.qiao.pkg.qiao_mode.rules.same_name_skills"
 local client_room = __dofile("../../../tests/support/client_room.lua")
@@ -149,6 +151,10 @@ local function killCaiwenji(room, source, victim, choice)
   lu.assertTrue(victim.dead)
 end
 
+local function duanchangLabel(player, own)
+  return table.find(SkillStatus.forPlayer(player, own), function(state) return state.id == Q.DISPLAY_MARK end)
+end
+
 -- 选中一张将牌失技，另一张将牌继续保有其技能 ------------------------------
 
 function Testqiao_qun_duanchang:testChooseOneCardKeepsTheOther()
@@ -193,6 +199,18 @@ function Testqiao_qun_duanchang:testHiddenCardStaysLostAfterReveal()
   -- 暗置时只显示位置：选择副将牌。
   killCaiwenji(room, source, victim, "deputyGeneral")
 
+  local private = cbor.decode(room:serialize(source).players[source.id].mark)
+  local public = cbor.decode(room:serialize(victim).players[source.id].mark)
+  lu.assertEquals(private[Q.PRIVATE_MARK], { XUCHU })
+  lu.assertNil(public[Q.PRIVATE_MARK])
+  lu.assertEquals(public[Q.DISPLAY_MARK], { shown = {}, hidden = 1 })
+  clientRoom.run(room, function(players)
+    local client = players[source.seat]
+    client:setMark(Q.PRIVATE_MARK, private[Q.PRIVATE_MARK])
+    lu.assertEquals(duanchangLabel(client).value, "暗置武将牌")
+    lu.assertEquals(duanchangLabel(client, true).value, Fk:translate(XUCHU))
+  end)
+
   inRoom(function()
     lu.assertFalse(source:isFakeSkill(S_LUOYI))
     source:revealGeneral(true)
@@ -202,6 +220,8 @@ function Testqiao_qun_duanchang:testHiddenCardStaysLostAfterReveal()
   lu.assertFalse(source:hasSkill(S_LUOYI))
   lu.assertTrue(source:hasSkill(S_LANGGU))
   lu.assertTrue(source:hasSkill(S_YINGQI))
+  lu.assertEquals(duanchangLabel(source).value, Fk:translate(XUCHU))
+  lu.assertNil(cbor.decode(room:serialize(source).players[source.id].mark)[Q.PRIVATE_MARK])
 end
 
 -- 交换该武将牌后，已失去的技能不得随新位置重新授回 --------------------------
@@ -229,8 +249,9 @@ function Testqiao_qun_duanchang:testExchangeDoesNotRestoreLostSkills()
   -- 司马懿的牌换到另一名角色主将位置，记录随牌保留；许褚的裸衣留在原角色。
   lu.assertEquals(other.general, SIMAYI)
   lu.assertEquals(source.general, "qiao_test__wei_1")
-  lu.assertEquals(source:getMark("@@qiao_duanchang"), 0)
-  lu.assertEquals(other:getMark("@@qiao_duanchang"), 1)
+  lu.assertNil(duanchangLabel(source))
+  lu.assertEquals(duanchangLabel(other).value, Fk:translate(SIMAYI))
+  lu.assertStrContains(duanchangLabel(other).description, "永久失去")
   lu.assertFalse(other:hasSkill(S_LANGGU))
   lu.assertFalse(other:hasSkill(S_YINGSHI))
   lu.assertFalse(other:hasSkill(S_YINGQI))

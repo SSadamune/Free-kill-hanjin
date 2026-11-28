@@ -295,6 +295,11 @@ local function verifyClientEdictConsumption(room, holder)
 
     local board = assert(Fk:getBoardGame("qiao_heg_mode"))
     local client = board.client_klass:new(ClientInstance.client)
+    client.players = clients
+    local label = table.find(client:skillStates(me.id), function(state) return state.id == P.PILE end)
+    lu.assertEquals(label.value, "5 ♠♥♣♦")
+    lu.assertEquals(label.action, "edict")
+    lu.assertEquals(label.cards, me:getPile(P.PILE))
     local play = client.request_handlers.PlayCard:new(me)
     client.current_request_handler = play
     local other = clients[holder.seat % #clients + 1]

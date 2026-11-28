@@ -1,18 +1,9 @@
 local S = require "packages.qiao.pkg.qiao_bingqing.shi"
 local E = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
 local skill = fk.CreateSkill { name = "qiao__skill_shu048_2" }
-local FIRST = "qiao_sheyan_first-turn"
--- 记录成为目标的事实，暗置、尚未获得技能和放弃首次发动都不能重置。
 skill:addEffect(fk.TargetConfirming, {
-  global = true,
-  can_refresh = function(self, event, target, p, data)
-    return target == p and data.card:isCommonTrick() and p:getMark(FIRST) == 0
-  end,
-  on_refresh = function(self, event, target, p, data)
-    p.room:setPlayerMark(p, FIRST, event.id)
-  end,
   can_trigger = function(self, event, target, p, data)
-    return target == p and p:hasSkill(skill.name) and p:getMark(FIRST) == event.id
+    return target == p and p:hasSkill(skill.name) and data.qiao_first_common_trick_target and not data.cancelled
       and (#data:getAllTargets() > 1 or #E.candidates(p.room, data.use) > 0)
   end,
   on_cost = function(self, event, target, p, data)

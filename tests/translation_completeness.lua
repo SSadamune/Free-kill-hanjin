@@ -44,6 +44,23 @@ function Testqiao_translation_completeness:testSkillReferenceCatalog()
   lu.assertStrContains(jiangWei.commander, "八阵兵")
 end
 
+function Testqiao_translation_completeness:testZhenshiOverviewOrderUsesCategoryPackKingdomAndNumber()
+  local ranks = require("packages.qiao.pkg.qiao_mode.general_overview").zhenshiRanks()
+  local ordered = {
+    "em_shu001", "em_qun010", "em_wu001", "em_wei001",
+    "han014", "han015", "wei018", "wei032", "shu012", "shu018b", "wu017", "qun011", "jin023",
+    "han019", "jin022b", "han023", "jin020", "han003", "jin024",
+    "retinue_bazhenbing", "retinue_qingzhou_jingrui", "retinue_lujiang_shangjia",
+    "retinue_feixiongjun", "retinue_wudang_feijun", "retinue_hucheer",
+  }
+  for i, name in ipairs(ordered) do
+    local rank = assert(ranks["qiao_heg__" .. name], name)
+    if i > 1 then lu.assertTrue(ranks["qiao_heg__" .. ordered[i - 1]] < rank, name) end
+  end
+  lu.assertNil(ranks.qiao_heg__han001)
+  lu.assertEquals(Fk:translate("qiao_guest_illustrations", "zh_CN"), "客将")
+end
+
 function Testqiao_translation_completeness:testEmbeddedDescriptionsAreRegisteredForDisplayOnly()
   local references = require "packages.qiao.pkg.qiao_mode.skill_references"
   local ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"

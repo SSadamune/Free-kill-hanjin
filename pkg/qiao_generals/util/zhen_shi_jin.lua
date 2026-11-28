@@ -30,13 +30,16 @@ local function phase(player)
   }
 end
 
-function U.resetTurn(player)
-  player.room:setPlayerMark(player, U.SANCHEN_TARGETS, {})
-  player.room:setPlayerMark(player, U.SANCHEN_PHASE, { uses = 0, restored = 0 })
+function U.resetPhase(player)
+  local state = phase(player)
+  if state.uses ~= 0 or state.restored ~= 0 then
+    player.room:setPlayerMark(player, U.SANCHEN_PHASE, 0)
+  end
 end
 
-function U.resetPhase(player)
-  player.room:setPlayerMark(player, U.SANCHEN_PHASE, { uses = 0, restored = 0 })
+function U.resetTurn(player)
+  if next(targets(player)) then player.room:setPlayerMark(player, U.SANCHEN_TARGETS, 0) end
+  U.resetPhase(player)
 end
 
 function U.sanChenTargeted(player, target)

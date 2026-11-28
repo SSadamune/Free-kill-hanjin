@@ -24,6 +24,8 @@ local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_card
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local TrickTargets = require "packages.qiao.pkg.qiao_mode.rules.trick_targets"
+local ReactiveReveal = require "packages.qiao.pkg.qiao_mode.ai.reactive_reveal"
 local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 local W = require "ui_emu.preferences"
 local M = {}
@@ -137,7 +139,17 @@ function M.create(base, name)
     function logic:trigger(event, target, data, refreshOnly)
       -- 死亡翻牌仍须更新牌面和势力。引擎派发延迟时机时，已死亡的角色不生成「明置后」。
       if event == fk.GeneralRevealed and target and target.dead then return false end
-      return parent.trigger(self, event, target, data, refreshOnly)
+      if event == fk.GameFinished then
+        Session.finish(self.room, data.players)
+        -- 初始化中止时可能还没有当前角色，引擎无法从该角色开始遍历触发技。
+        if not self.room.current then return false end
+      end
+      if event == fk.TargetConfirming then TrickTargets.record(target, data) end
+      local prepared = not refreshOnly and ReactiveReveal.prepare(self.room, event, target, data)
+      if not prepared then return parent.trigger(self, event, target, data, refreshOnly) end
+      local interrupted, trigger = parent.trigger(self, event, target, data, refreshOnly)
+      ReactiveReveal.restore(target, prepared)
+      return interrupted, trigger
     end
     if locked then
       function logic:run()
@@ -305,6 +317,12 @@ function M.create(base, name)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      local room = self.room
+      -- 本体回房时会先清除客户端的机器人席位。以本局实际名单开局，覆盖服务端仍保留机器人等续局情况。
+      room:doBroadcastNotify("QiaoStartRoster", table.map(room.players, function(player)
+        local native = player._splayer
+        return { player.id, native:getScreenName(), native:getAvatar(), false, native:getTotalGameTime() }
+      end))
       require("packages.qiao.pkg.qiao_mode.ai").install(self.room)
       if collection then
         local settings = self.room.settings
@@ -354,6 +372,7 @@ function M.create(base, name)
       self.room:addSkill("qiao__zhen_shi_history_rule")
       require("packages.qiao.pkg.qiao_mode.rules.skill_sources").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.tieqi").install(self.room)
+      require("packages.qiao.pkg.qiao_mode.rules.qun_duanchang").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.pojun").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.marker_cards").install()
       self.room:addSkill("qiao__skill_jin022b_range")

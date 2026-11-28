@@ -1038,10 +1038,18 @@ function Testqiao_card_reuse:testVineNullifiesNamedCardsAndAmplifiesFireDamage()
   local p, t = room.players[1], room.players[2]
   local armor = card("qiao__vine")
   local sendLog = room.sendLog
+  local doAnimate = room.doAnimate
   local blocked = {}
+  local animations = {}
   room.sendLog = function(self, log, ...)
     if log.type == "#qiao_vine_nullifies" then table.insert(blocked, log.arg) end
     return sendLog(self, log, ...)
+  end
+  room.doAnimate = function(self, kind, data, ...)
+    if kind == "InvokeSkill" and data.name == "qiao__vine_skill" then
+      table.insert(animations, { data.player, data.skill_type })
+    end
+    return doAnimate(self, kind, data, ...)
   end
   FkTest.runInRoom(function()
     clearAllAreas(room)
@@ -1084,7 +1092,10 @@ function Testqiao_card_reuse:testVineNullifiesNamedCardsAndAmplifiesFireDamage()
     use(room, t, { p }, fire)
     lu.assertEquals(p.hp, hp - 2, "藤甲应将实际受到的火焰伤害 +1")
     lu.assertEquals(blocked, { slash.name, nanman.name, archery.name })
+    lu.assertEquals(animations, { { p.id, "defensive" }, { p.id, "defensive" }, { p.id, "defensive" } })
   end)
+  room.doAnimate = doAnimate
+  room.sendLog = sendLog
 end
 
 -- 防具忽略机制：青釭剑令藤甲在该次【杀】结算中失效。

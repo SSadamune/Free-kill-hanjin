@@ -5,6 +5,7 @@ local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local RoomBans = require "packages.qiao.pkg.qiao_mode.rules.room_general_bans"
 local Cost = require "packages.qiao.pkg.qiao_mode.rules.commander_cost"
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local M = {}
 
 M.RULE_SKILL = "#qiao_commander_rule"
@@ -370,7 +371,7 @@ function M.refreshAvailability(room)
     local list = {}
     local sources = M.abilitySources(player)
     for _, source in ipairs(sources) do table.insert(list, source.general) end
-    room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, #list > 0 and list or 0)
     M.refreshCostSkills(room, player, sources)
     local descriptions = {}
     local faction = M.factionOf(player)
@@ -386,7 +387,7 @@ function M.refreshAvailability(room)
       end
     end
     table.sort(descriptions, function(a, b) return a.key < b.key end)
-    room:setPlayerMark(player, "qiao_commander_descriptions", #descriptions > 0 and descriptions or 0)
+    PublicState.setPlayerMark(room, player, "qiao_commander_descriptions", #descriptions > 0 and descriptions or 0)
     local hasAbility = player:hasSkill(M.ABILITY_SKILL, true, true)
     if #list > 0 and not hasAbility then
       M.grantAbility(player)
@@ -406,7 +407,7 @@ function M.refreshCostSkills(room, player, sources)
     end
     projection[source.general] = costs
   end
-  room:setPlayerMark(player, M.COST_MARK, next(projection) and projection or 0)
+  PublicState.setPlayerMark(room, player, M.COST_MARK, next(projection) and projection or 0)
 end
 
 function M.clientHasLegalCost(player, card, check)
@@ -909,7 +910,7 @@ function M.reset(room)
   room:setTag(M.RESERVE_TAG, nil)
   room:setTag(M.ADMITTED_RETINUE_TAG, nil)
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.SOURCE_MARK, 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, 0)
   end
 end
 

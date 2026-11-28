@@ -2,6 +2,8 @@
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local SkillStatus = require "packages.qiao.pkg.qiao_mode.skill_status"
+local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
 
 local TIEQI = "qiao__skill_shu006_2"
 local DEFAULT_KINGDOMS = { "shu", "shu", "shu", "shu", "shu", "shu", "shu", "shu" }
@@ -40,6 +42,10 @@ local function setupFighters()
     skill_test.installDualGenerals(room(), p2, { main = "qiao_heg__shu014", deputy = "qiao_heg__shu001", kingdom = "shu" })
   end)
   return p1, p2
+end
+
+local function tieqiStatus(player, own)
+  return table.find(SkillStatus.forPlayer(player, own), function(state) return state.id == Tieqi.POSITIONS end)
 end
 
 function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAfterFullDiscard()
@@ -88,6 +94,9 @@ function Testqiao_shu_tieqi:testTieqiInvalidatesSelectedPositionAndAllowsJinkAft
   lu.assertTrue(table.contains(p2:getTableMark("qiao_shu_tieqi_public-turn"), "qiao__skill_shu002_1"))
   lu.assertTrue(p2:hasSkill("qiao__skill_shu014_1")) -- 锁定祸首不受影响
   lu.assertTrue(p2:hasSkill("qiao__skill_shu001_1")) -- 未选副将不受影响
+  local name = Fk:translate(p2.general)
+  lu.assertEquals(tieqiStatus(p2).value, name)
+  lu.assertEquals(tieqiStatus(p2).description, name .. "的非锁定技于本回合内失效。")
   inRoom(function() room():handleAddLoseSkills(p2, "qiao__skill_shu002_1") end)
   lu.assertTrue(p2:hasSkill("qiao__skill_shu002_1")) -- 角色单独获得的同名技能仍生效
   lu.assertFalse(table.contains(p2:getTableMark("qiao_shu_tieqi_public-turn"), "qiao__skill_shu002_1"))
@@ -128,6 +137,8 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   lu.assertTrue(table.contains(owner["qiao_shu_tieqi_private-turn"], "qiao__skill_shu001_1"))
   lu.assertNil(other["qiao_shu_tieqi_private-turn"])
   lu.assertNil(other["qiao_shu_tieqi_public-turn"])
+  lu.assertEquals(tieqiStatus(p2).value, "副将牌")
+  lu.assertEquals(tieqiStatus(p2, true).value, Fk:translate("qiao_heg__shu001"))
   inRoom(function()
     local r, observed = room()
     local observer = {
@@ -147,6 +158,7 @@ function Testqiao_shu_tieqi:testTieqiHiddenDeputySelectedAndStillInvalidAfterRev
   -- 后续明置仍依据同一位置记录失效。
   inRoom(function() p2.deputyGeneral = "qiao_heg__shu001" end)
   lu.assertFalse(p2:hasSkill("qiao__skill_shu001_1"))
+  lu.assertEquals(tieqiStatus(p2).value, Fk:translate("qiao_heg__shu001"))
 end
 
 function Testqiao_shu_tieqi:testTieqiNoMatchingCardCannotRespond()

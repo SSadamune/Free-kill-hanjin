@@ -12,7 +12,8 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
-local MARK = "qiao_wei005_luoyi-turn"
+local Status = require "packages.qiao.pkg.qiao_mode.skill_status"
+local MARK = Status.luoyi
 
 local function isDamageCard(card)
   if card == nil then return false end
@@ -45,6 +46,8 @@ skill:addEffect(fk.EventPhaseEnd, {
   on_use = function(self, event, target, player, data)
     local room = player.room
     room:throwCard(event:getCostData(self).cards, skill.name, player, player)
+    -- 展示每次发动，延时加伤仍沿用原有的回合标记。
+    room:addPlayerMark(player, Status.luoyiCount, 1)
     room:setPlayerMark(player, MARK, 1)
   end,
 })

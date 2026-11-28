@@ -20,7 +20,11 @@ for _, timing in ipairs({ fk.TargetSpecified, fk.TargetConfirmed }) do
       if to:getHandcardNum() < 2 then table.insert(choices, "2") end
       if not to:isWounded() then table.insert(choices, "0") end
       table.insert(choices, "Cancel")
-      local n = tonumber(p.room:askToChoice(p, { skill_name = skill.name, choices = choices }))
+      local n = tonumber(p.room:askToChoice(p, {
+        skill_name = skill.name,
+        choices = choices,
+        prompt = "#qiao_yuexian-choice::" .. to.id,
+      }))
       event:setCostData(self, { n = n })
       return n ~= nil
     end,
@@ -60,4 +64,9 @@ function skill.install(room)
     end
   end
 end
+
+Fk:loadTranslationTable {
+  ["#qiao_yuexian-choice"] = "越险：令 %dest 摸所选张数的牌，其只能用因此摸到的牌响应此【杀】",
+}
+
 return skill

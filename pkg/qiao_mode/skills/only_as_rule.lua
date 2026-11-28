@@ -261,7 +261,6 @@ skill:addEffect(fk.TurnEnd, {
   on_use = function(self, event, target, player)
     O.clearAuthorization(player.room, player)
     O.expireTurn(player.room)
-    refresh(player.room)
   end,
 })
 
