@@ -468,10 +468,34 @@ local function installRoomSummary()
   end
 end
 
+function QiaoClient:syncStartRoster(data)
+  if not Self or not self.settings or self.gameStarted or self.observing or self.replaying
+    or not Modes.inRoom(self) then return end
+  local ids = {}
+  for _, player in ipairs(data) do ids[player[1]] = true end
+  if not ids[Self.id] then return end
+
+  for _, player in ipairs(table.simpleClone(self.players)) do
+    if not ids[player.id] then self:removePlayer({ player.id }) end
+  end
+  local players = { Self }
+  for _, setup in ipairs(data) do
+    local id = setup[1]
+    if id ~= Self.id then
+      if not self:getPlayerById(id) then self:addPlayer(setup) end
+      table.insert(players, self:getPlayerById(id))
+    end
+  end
+  -- 对局页面在 ArrangeSeats 前按名单顺序建立头像，本人先占右下角。
+  self.players = players
+  self.alive_players = table.simpleClone(players)
+end
+
 function QiaoClient:initialize(client)
   BaseClient.initialize(self, client)
   installRoomSummary()
   self.lockedPairing = nil
+  self:addCallback("QiaoStartRoster", self.syncStartRoster)
   self:addRequestHandler("PlayCard", QiaoPlayCard)
   self:addRequestHandler("AskForUseCard", QiaoUseCard)
   self:addRequestHandler("AskForUseActiveSkill", QiaoActiveSkill)

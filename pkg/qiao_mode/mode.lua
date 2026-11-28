@@ -317,6 +317,12 @@ function M.create(base, name)
     -- 之前安装；与长驱武将是否已选、明置或之后换将无关。
     local baseStart = parent.start or GameLogic.start
     function logic:start()
+      local room = self.room
+      -- 本体回房时会先清除客户端的机器人席位。以本局实际名单开局，覆盖服务端仍保留机器人等续局情况。
+      room:doBroadcastNotify("QiaoStartRoster", table.map(room.players, function(player)
+        local native = player._splayer
+        return { player.id, native:getScreenName(), native:getAvatar(), false, native:getTotalGameTime() }
+      end))
       require("packages.qiao.pkg.qiao_mode.ai").install(self.room)
       if collection then
         local settings = self.room.settings
