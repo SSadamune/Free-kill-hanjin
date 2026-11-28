@@ -1,8 +1,7 @@
 -- WU010 孙策 · 激昂
 --
 -- 自己指定或成为【决斗】或红色【杀】的目标后，可以摸一张；若该牌是转化牌，
--- 改为摸两张且本回合激昂失效。逐目标触发；按汉晋转化牌定义，须为含实体子牌的虚拟牌，
--- 不把所有虚拟牌或仅带 skillName 的牌都当作转化。
+-- 改为摸两张且本回合激昂失效。汉晋转化牌须为含实体子牌的虚拟牌。
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu010_1",
 }
@@ -48,11 +47,11 @@ local function invoke(self, player, data)
   player:drawCards(converted and 2 or 1, skill.name)
 end
 
--- 自己指定目标后：逐目标产生机会。
+-- 用牌者只在本次用牌第一次指定目标后获得机会。
 skill:addEffect(fk.TargetSpecified, {
   anim_type = "drawcard",
   can_trigger = function(self, event, target, player, data)
-    return target == player and canTrigger(player, data)
+    return target == player and data and data.firstTarget and canTrigger(player, data)
   end,
   on_cost = function(self, event, target, player, data)
     return player.room:askToSkillInvoke(player, {

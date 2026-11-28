@@ -1,8 +1,7 @@
 -- HAN014 朱儁 · 摧破
 --
 -- 锁定技：每回合使用第X张牌指定目标后（X为牌名字数），若自己也是此牌目标则
--- 摸1，否则本次牌对当前目标伤害+1。按整个回合真实用牌顺序计数；逐目标事件
--- 分别结算，不以 firstTarget 去重。
+-- 摸1，否则本次用牌的伤害+1。按整个回合真实用牌顺序计数，只在首次指定目标后检查。
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 
 local skill = fk.CreateSkill {
@@ -20,7 +19,7 @@ skill:addEffect(fk.TargetSpecified, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     if target ~= player or not player:hasSkill(skill.name) or data == nil
-      or data.use == nil or data.card == nil then return false end
+      or not data.firstTarget or data.use == nil or data.card == nil then return false end
     local useEvent = currentUse(player)
     return useEvent ~= nil and Cuipo.useIndex(player, useEvent, true) == Cuipo.cardNameLength(data.card)
   end,
@@ -29,7 +28,7 @@ skill:addEffect(fk.TargetSpecified, {
     if data.use:hasTarget(player) then
       if not player.dead then player:drawCards(1, skill.name) end
     else
-      data.additionalDamage = (data.additionalDamage or 0) + 1
+      data.use.additionalDamage = (data.use.additionalDamage or 0) + 1
     end
   end,
 })

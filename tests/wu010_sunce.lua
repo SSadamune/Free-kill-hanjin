@@ -160,6 +160,50 @@ function Testqiao_wu010_sunce:testJiangNormalVirtualThenConvertedDisables()
   lu.assertEquals(captured.afterThird, 2)
 end
 
+local function checkJiangOnHalberdSlash(user, first, extra, accept)
+  local room, sunce = FkTest.room, p(1)
+  local halberd = give(user, "qiao__halberd")
+  local slash = give(user, "qiao__slash", Card.Heart, 7)
+  local hp1, hp2 = first.hp, extra.hp
+  local prompts = 0
+  inRoom(function()
+    room:setCurrent(user)
+    room:setPlayerProperty(first, "kingdom", "wei")
+    room:moveCardTo(halberd, Card.PlayerEquip, user, fk.ReasonPut, "test", nil, true)
+  end)
+  FkTest.setNextReplies(user, {
+    FkTest.ReplyCard(Fk:getCardById(slash), { first }),
+    FkTest.ReplyUseSkill("#qiao__halberd_active", { extra }),
+  })
+  skill_test.withSkillRequests(room, JIANG, {
+    askToSkillInvoke = function(self, who, params, original)
+      lu.assertIs(who, sunce)
+      prompts = prompts + 1
+      FkTest.setNextReplies(who, { accept and "1" or "__cancel" })
+      return original(self, who, params)
+    end,
+  }, function()
+    inRoom(function()
+      GameEvent.Turn:create(TurnData:new(user, "game_rule", { Player.Play })):exec()
+    end)
+  end)
+  lu.assertEquals({ first.hp, extra.hp }, { hp1 - 1, hp2 - 1 })
+  lu.assertEquals(prompts, 1)
+  lu.assertEquals(sunce:getHandcardNum(), accept and 1 or 0)
+end
+
+function Testqiao_wu010_sunce:testJiangDrawsOnceForExpandedSlash()
+  checkJiangOnHalberdSlash(p(1), p(2), p(3), true)
+end
+
+function Testqiao_wu010_sunce:testJiangDeclineSkipsLaterTarget()
+  checkJiangOnHalberdSlash(p(1), p(2), p(3), false)
+end
+
+function Testqiao_wu010_sunce:testJiangStillDrawsAsLaterTarget()
+  checkJiangOnHalberdSlash(p(2), p(3), p(1), true)
+end
+
 function Testqiao_wu010_sunce:testYingyangChangesOwnPindianNumber()
   local room, player, other = FkTest.room, p(1), p(2)
   local own = give(player, "qiao__slash", Card.Spade, 5)
