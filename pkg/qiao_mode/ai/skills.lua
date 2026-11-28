@@ -14,6 +14,8 @@ local Play = require "packages.qiao.pkg.qiao_mode.ai.play_policies"
 local Judgment = require "packages.qiao.pkg.qiao_mode.ai.judgment"
 local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local WuPhases = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
+local ShiVector = require "packages.qiao.pkg.qiao_mode.ai.shi_vector"
+local Nu = require "packages.qiao.pkg.qiao_mode.ai.nu"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -115,6 +117,9 @@ function M.invoke(ai, data)
   local skill = type(name) == "string" and Fk.skills[name]
   local skeleton = skill and skill:getSkeleton()
   local original = skeleton and skeleton.name or name
+  local pack = ShiVector.invoke(ai, original, fields)
+  if pack == nil then pack = Nu.invoke(ai, original, fields) end
+  if pack ~= nil then return pack end
   local decision = Triggers.invoke(ai, original, fields)
   if decision ~= nil then return decision end
   if original == "qiao__eight_diagram_skill" then return true end
@@ -152,6 +157,9 @@ function M.active(ai, data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  local pack = ShiVector.active(ai, key, fields, extra)
+  if pack == nil then pack = Nu.active(ai, skill, key, fields, extra) end
+  if pack ~= nil then return pack end
   local expansion = Expansion.active(ai, key, fields)
   if expansion ~= nil then return expansion end
   if skill == "choose_players_to_move_card_in_board" and key == "#qiao__skill_wu021_2-move" then
@@ -480,10 +488,15 @@ function M.active(ai, data)
 end
 
 function M.play(ai, stage)
+  if stage == "draw" then
+    local reply = ShiVector.consumeEdict(ai)
+    if reply then return reply end
+  end
   local buttons = ai:getEnabledSkills()
   table.sort(buttons)
   for _, name in ipairs(buttons) do
     local reply = Play.play(ai, name, stage) or Expansion.play(ai, name, stage)
+      or ShiVector.play(ai, name, stage) or Nu.play(ai, name, stage)
     if reply then return reply end
   end
 end
@@ -539,6 +552,10 @@ function M.chosen(ai, data)
   local target, areas, prompt = table.unpack(data)
   if type(target) == "number" then target = ai.room:getPlayerById(target) end
   local key = (prompt or ""):split(":")[1]
+  if target then
+    local pack = ShiVector.chosen(ai, key, target, areas) or Nu.chosen(ai, key, target, areas)
+    if pack then return pack end
+  end
   if key == "#qiao__skill_wu022_1-card" and type(areas) == "string" and target then
     return Expansion.diaoduCard(ai, target, target:getCardIds(areas))
   end
@@ -616,7 +633,8 @@ end
 function M.choice(ai, data)
   local choices, _, limits, _, skillName, prompt = table.unpack(data)
   local fields = (prompt or ""):split(":")
-  local pick = Command.issueChoice(ai, skillName, choices) or Triggers.choice(ai, choices, fields)
+  local pick = ShiVector.choice(ai, skillName, choices, fields) or Nu.choice(ai, skillName, choices)
+    or Command.issueChoice(ai, skillName, choices) or Triggers.choice(ai, choices, fields)
     or Expansion.choice(ai, choices, fields)
   if fields[1] == "#qiao__skill_shu008_1-choice" or fields[1] == "#qiao__skill_shu013_1-choice" then
     pick = Triggers.slashChoice(ai, fields, parentData(ai, GameEvent.UseCard))

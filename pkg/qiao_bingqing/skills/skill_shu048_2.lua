@@ -25,6 +25,7 @@ skill:addEffect(fk.TargetConfirming, {
     local rule = E.ruleFor(data.card)
     if not table.contains(current, to) and rule and rule.sub_candidates then
       local eligible = E.subCandidates(p.room, data.use, to)
+      event:setCostData(self, { pending = to })
       if #eligible > 0 then subs = S.pick(p.room, p, eligible, skill.name, true) end
       if #subs == 0 and (#eligible > 0 or not rule.allow_no_sub) then return false end
     end

@@ -24,6 +24,7 @@ skill:addEffect(fk.EventPhaseChanging, {
       prompt = "#qiao_tijun-card" })
     local selected = table.filter(opt, function(row) return row.id == id end)
     local tos = table.map(selected, function(row) return row.to end)
+    event:setCostData(self, { id = id })
     local to = #tos == 1 and tos[1] or S.choose(p, tos, skill.name)[1]
     local row = table.find(selected, function(o) return o.to == to end)
     event:setCostData(self, row or {})

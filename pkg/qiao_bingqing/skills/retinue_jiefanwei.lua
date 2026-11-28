@@ -44,6 +44,7 @@ local function refreshOptions(p, scope)
   end
   return names
 end
+skill.qiaoRefreshOptions = refreshOptions
 skill:addEffect("active", {
   card_num = 2, target_num = 1,
   can_use = function(self, p)
