@@ -396,8 +396,8 @@ function M.consumeEdict(ai)
 end
 
 play[Edict.BANNER] = function(ai)
-  local holder = Edict.availableHolder(ai.room)
-  if not ai:isFriend(holder) then return "" end
+  local holder = Edict.availableHolder(ai.room, ai.player)
+  if not holder or not ai:isFriend(holder) then return "" end
   local suits = Edict.pileSuits(holder:getPile(Edict.PILE))
   if #suits == 4 or #Edict.trickNames(ai.room) == 0 then return "" end
   while true do

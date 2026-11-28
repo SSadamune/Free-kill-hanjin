@@ -1,9 +1,9 @@
 -- EM(HAN001) 君刘协：登记/升变、诏书标记、入口与四花色消费核心验收。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local client_room = __dofile("../../../tests/support/client_room.lua")
 local P = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
 local H = require "packages.hegemony.util"
-local ReqPlayCard = require "ltk.core.request_type.play_card"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 
@@ -240,28 +240,30 @@ function Testqiao_em_han001_liuxie:testNormalSealToZhaoshuDoesNotDraw()
 end
 
 
-local function withClientRoom(current, fn)
-  local ClientPlayer = require "ltk.client.clientplayer"
-  local clients = {}
-  for _, original in ipairs(current.players) do
-    local copy = ClientPlayer:new(original._splayer)
-    for key, value in pairs(original) do
-      if key ~= "room" and key ~= "class" and key ~= "serverplayer" then copy[key] = value end
-    end
-    local cards = {}
-    for area, ids in pairs(copy.player_cards or {}) do cards[area] = table.simpleClone(ids) end
-    copy.player_cards = cards
-    table.insert(clients, copy)
-  end
-  for index, player in ipairs(clients) do player.next = clients[index % #clients + 1] end
-  local clientRoom = setmetatable({ players = clients, alive_players = clients, current = clients[1] },
-    { __index = current })
-  local originalRoom = Fk.currentRoom
-  Fk.currentRoom = function() return clientRoom end
-  local ok, err = pcall(function() fn(clients, clientRoom) end)
-  Fk.currentRoom = originalRoom
-  if not ok then error(err, 0) end
-  return clients, clientRoom
+local function withEdictRequest(room, actor, fn)
+  local result
+  client_room.run(room, function(clients, clientRoom)
+    local originalClient, originalSelf = ClientInstance, Self
+    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
+    local client = board.client_klass:new(originalClient.client)
+    client.players = clients
+    client.banners = table.simpleClone(room.banners)
+    clientRoom.banners = client.banners
+    local notices = {}
+    client.notifyUI = function(_, command, data) notices[command] = data end
+    ClientInstance, Self = client, clients[actor.seat]
+    local ok, err = xpcall(function()
+      client:playCard({})
+      local play = clientRoom.current_request_handler
+      client.current_request_handler = play
+      fn(client, play, notices)
+      play:_finish()
+      result = notices.ReplyToServer
+    end, debug.traceback)
+    ClientInstance, Self = originalClient, originalSelf
+    if not ok then error(err, 0) end
+  end)
+  return result
 end
 
 local function verifyClientEdictConsumption(room, holder)
@@ -276,11 +278,11 @@ local function verifyClientEdictConsumption(room, holder)
       fourth = c.id
     end
     holder:addToPile(P.PILE, room:printCard("qiao__jink", Card.Heart, 9), true, BANNER)
+    room:obtainCard(holder, room:printCard("qiao__jink", Card.Heart, 6), false, fk.ReasonJustMove)
     holder.phase = Player.Play
   end)
-  local reply
-  withClientRoom(room, function(clients, clientRoom)
-    local me = clients[holder.seat]
+  local reply = withEdictRequest(room, holder, function(client, play, notices)
+    local me = Self
     lu.assertNil(me.room, "真实 ClientPlayer 不应有 room 字段")
     lu.assertTrue(Fk.skills[P.BANNER]:canUse(me), "客户端诏书入口应可用")
     lu.assertTrue(Fk.skills[P.CONSUME]:canUse(me), "客户端四花色消费应可用")
@@ -293,57 +295,40 @@ local function verifyClientEdictConsumption(room, holder)
     lu.assertEquals(popup.url, "packages/qiao/pkg/qiao_mode/qml/EdictPile.qml")
     lu.assertEquals(popup.prop.holderId, me.id)
 
-    local board = assert(Fk:getBoardGame("qiao_heg_mode"))
-    local client = board.client_klass:new(ClientInstance.client)
-    client.players = clients
     local label = table.find(client:skillStates(me.id), function(state) return state.id == P.PILE end)
     lu.assertEquals(label.value, "5 ♠♥♣♦")
     lu.assertEquals(label.action, "edict")
     lu.assertEquals(label.cards, me:getPile(P.PILE))
-    local play = client.request_handlers.PlayCard:new(me)
-    client.current_request_handler = play
-    local other = clients[holder.seat % #clients + 1]
-    lu.assertFalse(client:canConsumeEdict(other.id), "他人的诏书不可操作")
     me.phase = Player.Finish
-    lu.assertFalse(client:canConsumeEdict(me.id), "出牌阶段外不可操作")
+    lu.assertEquals(client:edictPanelState(me.id), {}, "出牌阶段外不可操作")
     me.phase = Player.Play
+    client.observing = true
+    lu.assertEquals(client:edictPanelState(me.id), {}, "旁观时只查看牌")
+    client.observing = false
+    play:update("QiaoEdict", me.id, "open", {})
+    lu.assertEquals(notices.QiaoOpenEdict, { me.id }, "头像入口应打开本人的诏书")
+    lu.assertTrue(client:edictPanelState(me.id).showTake)
     local pile = table.simpleClone(me:getPile(P.PILE))
     table.removeOne(pile, fourth)
     lu.assertEquals(mark.how_to_show(P.PILE, pile, me), "4 ♠♥♣")
     me.special_cards = table.simpleClone(me.special_cards)
     me.special_cards[P.PILE] = pile
-    lu.assertFalse(client:canConsumeEdict(me.id), "三花色不能消费")
+    lu.assertFalse(client:edictPanelState(me.id).canTake, "三花色不能消费")
+    play:update("QiaoEdict", me.id, "take", {})
+    lu.assertNil(notices.ReplyToServer)
     table.insert(pile, fourth)
 
-    client.banners = table.simpleClone(room.banners)
-    clientRoom.banners = client.banners
-    local notices = {}
-    client.notifyUI = function(_, command) table.insert(notices, command) end
     client:handleSetBanner({ P.TRICK_BANNER, {} })
-    lu.assertEquals(notices, { "QiaoPileActionChanged" })
-    lu.assertFalse(client:canConsumeEdict(me.id), "没有公开候选时不能消费")
+    lu.assertNotNil(notices.QiaoPileActionChanged)
+    lu.assertFalse(client:edictPanelState(me.id).canTake, "没有公开候选时不能消费")
     client:handleSetBanner({ P.TRICK_BANNER, P.trickNames(room) })
-    lu.assertTrue(client:canConsumeEdict(me.id))
-    play.selected_card = Fk:getCardById(me:getCardIds("h")[1])
-    lu.assertFalse(client:canConsumeEdict(me.id), "已有选牌操作时不能消费")
-    play.selected_card = nil
-    lu.assertTrue(client:canConsumeEdict(me.id))
-
-    local originalNotify = ClientInstance.notifyUI
-    ClientInstance.notifyUI = function(self, cmd, data)
-      if cmd == "ReplyToServer" then reply = data end
-    end
-    local ok, err = pcall(function()
-      play:update("QiaoEdict", me.id, "click", {})
-    end)
-    ClientInstance.notifyUI = originalNotify
-    if not ok then error(err, 0) end
-    lu.assertNotNil(reply, "点击弹窗按钮应直接产生标准技能回包")
-    lu.assertEquals(reply.card.skill, P.CONSUME)
-    lu.assertEquals(reply.card.subcards, {})
-    lu.assertEquals(reply.targets, {})
-    lu.assertFalse(client:canConsumeEdict(me.id), "请求提交后不可重复点击")
-    play:_finish()
+    play:update("CardItem", me:getCardIds("h")[1], "click", { selected = true })
+    lu.assertTrue(client:edictPanelState(me.id).canPlace)
+    lu.assertTrue(client:edictPanelState(me.id).canTake, "选了手牌仍可改点获得势力锦囊")
+    lu.assertTrue(play:update("QiaoEdict", me.id, "take", {}))
+    lu.assertEquals(notices.ReplyToServer.card, { skill = P.CONSUME, subcards = {} })
+    lu.assertEquals(notices.ReplyToServer.targets, {})
+    lu.assertFalse(play:update("QiaoEdict", me.id, "take", {}), "请求提交后不可重复点击")
   end)
 
   skill_test.withSkillRequests(room, P.CONSUME, {
@@ -364,18 +349,18 @@ end
 
 
 function Testqiao_em_han001_liuxie:testZhaoshuSelectSkillCardLimit()
-  local room, lord = FkTest.room, p(1)
+  local room, lord, ally = FkTest.room, p(1), p(2)
   local hand, equip = {}, nil
   inRoom(function()
-    lord.phase = Player.Play
+    ally.phase = Player.Play
     for i = 1, 3 do
       local c = room:printCard("qiao__jink", Card.Heart, i)
-      room:obtainCard(lord, c, false, fk.ReasonJustMove)
+      room:obtainCard(ally, c, false, fk.ReasonJustMove)
       hand[i] = c.id
     end
     equip = room:printCard("qiao__chitu", Card.Spade, 8)
-    room:moveCardIntoEquip(lord, equip, "test", true, lord)
-    for i = 2, 8 do
+    room:moveCardIntoEquip(ally, equip, "test", true, ally)
+    for i = 3, 8 do
       local k = i % 2 == 0 and "wei" or "qun"
       room:setPlayerProperty(p(i), "kingdom", k)
       room:setPlayerMark(p(i), "__heg_kingdom", k)
@@ -383,21 +368,25 @@ function Testqiao_em_han001_liuxie:testZhaoshuSelectSkillCardLimit()
     room:setPlayerProperty(lord, "kingdom", "han")
     room:setPlayerMark(lord, "__heg_kingdom", "han")
   end)
-  lu.assertTrue(H.isSmallKingdomPlayer(lord), "夹具应让刘协成为小势力")
-  withClientRoom(room, function(clients)
-    local me = clients[1]
-    local handler = ReqPlayCard:new(me)
-    handler.skill_name = P.BANNER
-    handler:setup()
-    lu.assertTrue(handler:skillButtonValidity(P.BANNER), "诏书按钮应可用")
-    handler:selectSkill(P.BANNER, { selected = true })
-    lu.assertTrue(handler:cardValidity(hand[1]), "第一张手牌应可选")
-    handler:selectCard(hand[1], { selected = true })
-    lu.assertTrue(handler:cardValidity(hand[2]), "小势力第二张手牌应可选")
-    handler:selectCard(hand[2], { selected = true })
-    lu.assertFalse(handler:cardValidity(hand[3]), "小势力不能选择第三张")
-    lu.assertFalse(handler:cardValidity(equip.id), "非手牌不能选择")
-    handler:_finish()
+  lu.assertTrue(H.isSmallKingdomPlayer(ally))
+  withEdictRequest(room, ally, function(client, play, notices)
+    lu.assertTrue(play.scene:getAllItems("SkillButton")[P.BANNER].enabled)
+    play:update("SkillButton", P.BANNER, "click", { selected = true })
+    lu.assertEquals(notices.QiaoOpenEdict, { lord.id }, "技能按钮应打开同势力持有者的诏书")
+    local state = client:edictPanelState(lord.id)
+    lu.assertEquals(state.maxCards, 2)
+    lu.assertFalse(state.showTake)
+    lu.assertFalse(state.canPlace)
+    for _, id in ipairs({ hand[1], hand[2], hand[3], equip.id }) do
+      play:update("CardItem", id, "click", { selected = true })
+    end
+    lu.assertEquals(play.pendings, { hand[1], hand[2] }, "只可选择至多两张手牌")
+    lu.assertTrue(client:edictPanelState(lord.id).canPlace)
+    lu.assertFalse(play.scene:getAllItems("Button").OK.enabled)
+    play:update("QiaoEdict", lord.id, "cancel", {})
+    lu.assertNil(play.skill_name)
+    lu.assertNil(notices.ReplyToServer, "取消只结束此次诏书选择")
+    lu.assertTrue(client:edictPanelState(lord.id).canOpen)
   end)
   inRoom(function()
     for i = 1, 8 do
@@ -405,17 +394,48 @@ function Testqiao_em_han001_liuxie:testZhaoshuSelectSkillCardLimit()
       room:setPlayerMark(p(i), "__heg_kingdom", "han")
     end
   end)
-  lu.assertFalse(H.isSmallKingdomPlayer(lord), "全为汉时刘协应不是小势力")
-  withClientRoom(room, function(clients)
-    local me = clients[1]
-    local handler = ReqPlayCard:new(me)
-    handler.skill_name = P.BANNER
-    handler:setup()
-    handler:selectSkill(P.BANNER, { selected = true })
-    lu.assertTrue(handler:cardValidity(hand[1]))
-    handler:selectCard(hand[1], { selected = true })
-    lu.assertFalse(handler:cardValidity(hand[2]), "非小势力不能选择第二张")
-    handler:_finish()
+  lu.assertFalse(H.isSmallKingdomPlayer(ally))
+  local reply = withEdictRequest(room, ally, function(client, play, notices)
+    play:update("QiaoEdict", lord.id, "open", {})
+    lu.assertEquals(notices.QiaoOpenEdict, { lord.id })
+    lu.assertEquals(client:edictPanelState(lord.id).maxCards, 1)
+    play:update("QiaoEdict", lord.id, "place", {})
+    lu.assertNil(notices.ReplyToServer, "选牌前不能提交")
+    play:update("CardItem", hand[1], "click", { selected = true })
+    lu.assertFalse(play:cardValidity(hand[2]), "非小势力不能选择第二张")
+    lu.assertTrue(play:update("QiaoEdict", lord.id, "place", {}))
+    lu.assertEquals(notices.ReplyToServer.card, { skill = P.BANNER, subcards = { hand[1] } })
+  end)
+  inRoom(function() room:handleUseCardReply(ally, reply) end)
+  lu.assertEquals(lord:getPile(P.PILE), { hand[1] })
+  lu.assertEquals(ally:usedSkillTimes(P.BANNER, Player.HistoryPhase), 1)
+end
+
+function Testqiao_em_han001_liuxie:testTwoEdictHoldersViewTheClickedPileWithoutAnAction()
+  local room, a, b = FkTest.room, p(1), p(2)
+  local cardA, cardB
+  inRoom(function()
+    -- 构造同势力双持有者，常规的授予路径仍受诏书唯一限制。
+    room:setPlayerMark(b, P.MARK, 1)
+    P.sync(room)
+    cardA = room:printCard("qiao__jink", Card.Heart, 6).id
+    cardB = room:printCard("qiao__slash", Card.Spade, 7).id
+    a:addToPile(P.PILE, cardA, true, BANNER)
+    b:addToPile(P.PILE, cardB, true, BANNER)
+    a.phase = Player.Play
+  end)
+  withEdictRequest(room, a, function(client, play, notices)
+    lu.assertTrue(client:edictPanelState(a.id).canOpen)
+    local label = table.find(client:skillStates(b.id), function(state) return state.action == "edict" end)
+    lu.assertEquals(label.cards, { cardB })
+    lu.assertEquals(client:edictCardsForDisplay(b.id), { cardB })
+    lu.assertEquals(client:edictCountForDisplay(b.id), 1)
+    lu.assertEquals(client:edictCardsForDisplay(a.id), { cardA })
+    lu.assertEquals(client:edictPanelState(b.id), {})
+    play:update("QiaoEdict", b.id, "open", {})
+    lu.assertNil(notices.QiaoOpenEdict)
+    lu.assertNil(play.skill_name)
+    lu.assertNil(notices.ReplyToServer)
   end)
 end
 
@@ -515,7 +535,7 @@ function Testqiao_em_han001_liuxie:testZhaoshuHolderRemovedStillOwnsTokenAndEntr
     P.sync(room)
   end)
   lu.assertIs(P.holder(room), lord, "被移出游戏期间仍拥有诏书")
-  lu.assertNil(P.availableHolder(room), "入口可用性另行过滤")
+  lu.assertNil(P.availableHolder(room, ally), "入口可用性另行过滤")
   lu.assertFalse(ally:hasSkill(P.BANNER), "暂离期间不向同势力开放入口")
   inRoom(function()
     local card = imperialToDiscard(room)

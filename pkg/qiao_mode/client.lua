@@ -379,7 +379,21 @@ local function exhaustedActiveSkill(request, name)
   return ActiveSkillLimits.exhausted(Fk.skills[name], request.player, Fk:currentRoom())
 end
 
+function QiaoPlayCard:edictHolder()
+  local player = self.player
+  local banner, consume = Fk.skills[Han.BANNER], Fk.skills[Han.CONSUME]
+  if self.finished or not Modes.inRoom(self.room) or player.phase ~= Player.Play
+    or not player:hasSkill(banner) or not banner:isEffectable(player) then return end
+  local holder = Han.availableHolder(self.room, player)
+  if holder and (not exhaustedActiveSkill(self, Han.BANNER) or (holder == player
+    and player:hasSkill(consume) and consume:isEffectable(player)
+    and not exhaustedActiveSkill(self, Han.CONSUME))) then return holder end
+end
+
 function QiaoPlayCard:skillButtonValidity(name)
+  if name == Han.BANNER and Modes.inRoom(self.room) then
+    return not self.sub_selection_flag and self:edictHolder() ~= nil
+  end
   if exhaustedActiveSkill(self, name) then return false end
   return ReqPlayCard.skillButtonValidity(self, name)
 end
@@ -395,12 +409,9 @@ function QiaoUseCard:feasible()
   return checkCommanderCost(self, ReqUseCard.targetValidity, function() return ReqUseCard.feasible(self) end)
 end
 
-local pileActions = {
-  QiaoEdict = Han.CONSUME,
-}
-
 local pileActionUpdates = {
   AddSkill = true,
+  CancelRequest = true,
   LoseSkill = true,
   MoveCards = true,
   PlayCard = true,
@@ -409,13 +420,79 @@ local pileActionUpdates = {
   UpdateRequestUI = true,
 }
 
-function QiaoPlayCard:canUsePileAction(holderId, skill)
-  return RemovedTargets.inMode(self.room) and self.player.id == holderId
-    and self.skill_name == nil and self.selected_card == nil
-    and self.player:hasSkill(skill) and self:skillButtonValidity(skill)
+function QiaoPlayCard:edictPanelState(holderId)
+  local holder = self:edictHolder()
+  if not holder or holder.id ~= holderId then return {} end
+  if self.edictSelection ~= holderId then
+    return { canOpen = self.skill_name == nil and not self.sub_selection_flag }
+  end
+  local ownsEdict = self.player == holder
+  return {
+    selecting = true,
+    maxCards = Han.maxPlacementCards(self.player),
+    showTake = ownsEdict,
+    canPlace = self:feasible() and Han.validPlacement(self.player, self.pendings),
+    canTake = ownsEdict and self.player:hasSkill(Han.CONSUME) and self:skillButtonValidity(Han.CONSUME),
+  }
+end
+
+function QiaoPlayCard:cardValidity(id)
+  if self.edictSelection then
+    local holder = self:edictHolder()
+    if not holder or holder.id ~= self.edictSelection or exhaustedActiveSkill(self, Han.BANNER) then
+      return false
+    end
+  end
+  return ReqPlayCard.cardValidity(self, id)
+end
+
+function QiaoPlayCard:updateButtons()
+  ReqPlayCard.updateButtons(self)
+  if self.edictSelection then self.scene:update("Button", "OK", { enabled = false }) end
+end
+
+function QiaoPlayCard:doCancelButton()
+  self.edictSelection = nil
+  return ReqPlayCard.doCancelButton(self)
+end
+
+function QiaoPlayCard:updateEdict(holderId, action)
+  if self.finished then return false end
+  local state = self:edictPanelState(holderId)
+  if action == "open" and state.canOpen then
+    if not ClientInstance or ClientInstance.observing or ClientInstance.replaying then return false end
+    self.edictSelection = holderId
+    self:selectSkill(Han.BANNER, { selected = true })
+    ClientInstance:notifyUI("QiaoOpenEdict", { holderId })
+  elseif action == "cancel" and self.edictSelection == holderId then
+    self:doCancelButton()
+  elseif (action == "place" and state.canPlace) or (action == "take" and state.canTake) then
+    if action == "take" then
+      self:doCancelButton()
+      self:selectSkill(Han.CONSUME, { selected = true })
+    end
+    self.edictSelection = nil
+    ReqPlayCard.update(self, "Button", "OK", action, {})
+    return true
+  end
+  return false
 end
 
 function QiaoPlayCard:update(elemType, id, action, data)
+  if elemType == "QiaoEdict" then return self:updateEdict(id, action) end
+  if elemType == "SkillButton" and id == Han.BANNER and Modes.inRoom(self.room) then
+    if data.selected then
+      local holder = self:edictHolder()
+      if holder then return self:updateEdict(holder.id, "open") end
+    elseif self.edictSelection then
+      self:doCancelButton()
+    end
+    return false
+  end
+  if self.edictSelection then
+    if elemType == "Button" and id == "OK" then return false end
+    if elemType == "CardItem" and data.selected and not self:cardValidity(id) then return false end
+  end
   if elemType == "Interaction" and self.skill_name == Ci.CONSUME then
     if action == "cancel" then
       self:doCancelButton()
@@ -425,17 +502,7 @@ function QiaoPlayCard:update(elemType, id, action, data)
     end
     return false
   end
-  local skill = pileActions[elemType]
-  if not skill then
-    return ReqPlayCard.update(self, elemType, id, action, data)
-  end
-  if action ~= "click" or not self:canUsePileAction(id, skill) then return false end
-  self:selectSkill(skill, { selected = true })
-  if not self:feasible() then
-    self:doCancelButton()
-    return false
-  end
-  return ReqPlayCard.update(self, "Button", "OK", action, data)
+  return ReqPlayCard.update(self, elemType, id, action, data)
 end
 
 local roomSummaryInstalled = false
@@ -513,15 +580,12 @@ function QiaoClient:getSettings(key)
   return BaseClient.getSettings(self, key)
 end
 
-function QiaoClient:canUsePileAction(holderId, action)
+function QiaoClient:edictPanelState(holderId)
   local request = self.current_request_handler
-  local skill = pileActions[action]
-  return not self.observing and not self.replaying and request ~= nil
-    and skill ~= nil and request:isInstanceOf(QiaoPlayCard) and request:canUsePileAction(holderId, skill)
-end
-
-function QiaoClient:canConsumeEdict(holderId)
-  return self:canUsePileAction(holderId, "QiaoEdict")
+  if not self.observing and not self.replaying and request and request:isInstanceOf(QiaoPlayCard) then
+    return request:edictPanelState(holderId)
+  end
+  return {}
 end
 
 function QiaoClient:ciCardsForDisplay(holderId)
@@ -529,10 +593,15 @@ function QiaoClient:ciCardsForDisplay(holderId)
   return holder and holder:getMark(Ci.MARK) ~= 0 and Ci.cards(holder) or false
 end
 
-function QiaoClient:edictCardsForDisplay(holderId)
+function QiaoClient:edictCountForDisplay(holderId)
   local holder = self:getPlayerById(holderId)
   if not holder or holder.dead or holder:getMark(Han.MARK) == 0 then return false end
-  return table.filter(holder:getPile(Han.PILE), function(id) return Self:cardVisible(id) end)
+  return Han.count(holder)
+end
+
+function QiaoClient:edictCardsForDisplay(holderId)
+  if self:edictCountForDisplay(holderId) == false then return false end
+  return table.filter(self:getPlayerById(holderId):getPile(Han.PILE), function(id) return Self:cardVisible(id) end)
 end
 
 function QiaoClient:handleSetBanner(data)

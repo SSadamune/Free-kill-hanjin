@@ -26,13 +26,13 @@ skill:addEffect("active", {
   max_phase_use_time = 1,
   can_use = function(self, player)
     local room = Fk:currentRoom()
-    local holder = P.availableHolder(room)
-    return player ~= nil and not player.dead and player.phase == Player.Play
+    local holder = P.availableHolder(room, player)
+    return holder ~= nil and player.phase == Player.Play
       and holder == player and hasFourSuits(player) and #P.trickNames(room) > 0
   end,
   on_use = function(self, room, effect)
     local holder = effect.from
-    if P.availableHolder(room) ~= holder or not hasFourSuits(holder) then return end
+    if P.availableHolder(room, holder) ~= holder or not hasFourSuits(holder) then return end
     local available = P.availableTricks(room)
     if #available == 0 then return end
     local choice
