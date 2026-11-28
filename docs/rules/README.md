@@ -10,6 +10,8 @@
 
 - 四位君主技能审阅：[君孙权](generals/em-wu001-sunquan.md)、[君曹操](generals/em-wei001-caocao.md)、[君司马炎](generals/em-jin001-simayan.md)、[君刘协](generals/em-han001-liuxie.md)。以石激桑 JSON 为基准；“赐”由旗拥有者持有，变更分支每名角色整局限一次且消耗标记；诏书是特殊标记，始终不进入玩家区域。实现与验收见[开发状态](../development/status.md)。
 
+- [纵横捭阖开发稿](zongheng-generals.md)收录六势力十二张武将牌的逐将结算、六张纵横技能卡及验收场景。
+- [不臣篇武将图纸](buchen-generals.md)收录上、中、下三篇的 79 张武将牌、关联翼从与君董卓大旗，末尾汇总五项已确认裁定。
 - [六势力阵包、势包审阅](zhen-shi-generals.md)：24 张普通武将与两张君主的来源、逐将结算及待明确边界。
 - [六势力权包审阅](quan-generals.md)：12 张普通武将与两种新增翼从（无当飞军、胡车儿）的逐将结算与已确认裁定；君曹操见上方四君主索引。
 - [六势力变包审阅](bian-generals.md)：12 张普通武将与一种新增翼从（飞熊军）的逐将结算与已确认裁定；君孙权见上方四君主索引。

@@ -33,7 +33,7 @@
 
 ## 公共结算依据
 
-- 时机、消耗、次数及“然后”依[通用约定](general-principles.md)，使用／打出／响应依[使用牌事件](../../rulebook/events/use-card.md)分别处理。“指定目标后”逐目标产生，不自行以firstTarget限制为整张牌一次。
+- 时机、消耗、次数及“然后”依[通用约定](general-principles.md)，使用／打出／响应依[使用牌事件](../../rulebook/events/use-card.md)分别处理。卡面的“指定目标后”在每次用牌的第一次该时机检查；“指定一个目标后”或“指定每个目标后”才逐目标检查。见[指定目标后的卡面用语](https://github.com/SSadamune/Free-kill-hanjin/blob/1e10867d8b0783c80599d955dae85e28f7bd038d/docs/rules/general-principles.md#指定目标后的卡面用语)。
 - 主将、副将是位置。普通士兵、翼从、偏将均为士兵牌，不是武将牌。变更主将／副将／武将允许操作士兵占据的位置；明确变更或移除武将牌则必须有武将牌。穿心的“副将武将牌”不包含副将位置上的士兵，其不能执行变更分支时结算“否则”。详见[位置与牌类别](general-principles.md#武将位置武将牌与士兵牌)、[变更](../../rulebook/terms/general-op-terms/change.md)及[移除](../../rulebook/terms/general-op-terms/remove.md)。
 - 汉晋在四人及以下仍按当前座次判定阵法技、队列和围攻。明置将牌上有阵法技的已确定势力角色（野心家除外），在自己的出牌阶段可以发动一次阵法召唤。多个阵法技共用这一次机会，无人亮将也算发动。见[汉晋 FAQ](../../assets/docs/规则向FAQ文件.md#阵法技阵法阵法召唤)、[队列](../../rulebook/terms/description-terms/queue.md)及[围攻](../../rulebook/terms/description-terms/siege.md)。
 - 两侧均符合时先下家、后上家。队列沿同势力角色向外延伸，遇到拒绝或不能加入的角色就结束该方向。围攻询问与发动者之间隔着一名明置异势力角色的暗将。响应者自行选择能使其与发动者同势力的明置方式。同一次召唤中同一人只问一次，拒绝或超时后从另一侧遇到也跳过。
