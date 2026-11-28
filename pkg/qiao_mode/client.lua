@@ -381,13 +381,10 @@ end
 
 function QiaoPlayCard:edictHolder()
   local player = self.player
-  local banner, consume = Fk.skills[Han.BANNER], Fk.skills[Han.CONSUME]
+  local banner = Fk.skills[Han.BANNER]
   if self.finished or not Modes.inRoom(self.room) or player.phase ~= Player.Play
     or not player:hasSkill(banner) or not banner:isEffectable(player) then return end
-  local holder = Han.availableHolder(self.room, player)
-  if holder and (not exhaustedActiveSkill(self, Han.BANNER) or (holder == player
-    and player:hasSkill(consume) and consume:isEffectable(player)
-    and not exhaustedActiveSkill(self, Han.CONSUME))) then return holder end
+  return Han.availableHolder(self.room, player)
 end
 
 function QiaoPlayCard:skillButtonValidity(name)
@@ -444,6 +441,13 @@ function QiaoPlayCard:cardValidity(id)
     end
   end
   return ReqPlayCard.cardValidity(self, id)
+end
+
+function QiaoPlayCard:setSkillPrompt(skill, selectedCards)
+  if self.edictSelection and skill.name == Han.BANNER and exhaustedActiveSkill(self, Han.BANNER) then
+    return self:setPrompt("#qiao__han001_zhaoshu-placed")
+  end
+  return ReqPlayCard.setSkillPrompt(self, skill, selectedCards)
 end
 
 function QiaoPlayCard:updateButtons()

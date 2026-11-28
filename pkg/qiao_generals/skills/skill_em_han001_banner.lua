@@ -63,6 +63,7 @@ Fk:loadTranslationTable {
   ["qiao__edict_place_one"] = "放置一张诏书牌",
   ["qiao__edict_place_two"] = "放置至多两张诏书牌",
   ["#qiao__han001_zhaoshu-entry"] = "诏书：将手牌置于诏书上",
+  ["#qiao__han001_zhaoshu-placed"] = "此阶段已放置过诏书牌",
 }
 
 return skill

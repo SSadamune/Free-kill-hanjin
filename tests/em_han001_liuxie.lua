@@ -409,6 +409,20 @@ function Testqiao_em_han001_liuxie:testZhaoshuSelectSkillCardLimit()
   inRoom(function() room:handleUseCardReply(ally, reply) end)
   lu.assertEquals(lord:getPile(P.PILE), { hand[1] })
   lu.assertEquals(ally:usedSkillTimes(P.BANNER, Player.HistoryPhase), 1)
+
+  withEdictRequest(room, ally, function(client, play, notices)
+    -- 再次点击技能仍可查看诏书，放置限制反映在读条提示和选牌上。
+    lu.assertTrue(play.scene:getAllItems("SkillButton")[P.BANNER].enabled)
+    UpdateRequestUI("SkillButton", P.BANNER, "click", { selected = true })
+    lu.assertEquals(notices.QiaoOpenEdict, { lord.id })
+    lu.assertEquals(Fk:translate(notices.UpdateRequestUI._prompt), "此阶段已放置过诏书牌")
+    lu.assertFalse(client:edictPanelState(lord.id).canPlace)
+    lu.assertFalse(play:cardValidity(hand[2]))
+    UpdateRequestUI("QiaoEdict", lord.id, "place", {})
+    lu.assertNil(notices.ReplyToServer)
+    UpdateRequestUI("QiaoEdict", lord.id, "cancel", {})
+    lu.assertEquals(notices.UpdateRequestUI._prompt, "#PlayCard")
+  end)
 end
 
 function Testqiao_em_han001_liuxie:testTwoEdictHoldersViewTheClickedPileWithoutAnAction()

@@ -157,12 +157,15 @@ Room {
 
   W.PopupItem {
     id: edictPopup
+    parent: Controls.Overlay.overlay
     property int holderId
     property bool selecting: false
-    width: Math.min(room.width - 16, Math.max(420 * Config.winScale, Config.winWidth * 0.6))
-    height: Math.max(0, Math.min(Config.winHeight * 0.8, room.dashboard.y - 20))
-    x: (room.width - width) / 2
-    y: (room.dashboard.y - height) / 2
+    // Size and position the popup in window coordinates, above the countdown and hand.
+    readonly property real bottomLimit: (room.dashboard.y - 24) * Config.winScale
+    width: Math.min(parent.width - 16 * Config.winScale, Math.max(420 * Config.winScale, parent.width * 0.6))
+    height: Math.max(0, Math.min(parent.height * 0.56, bottomLimit - 36 * Config.winScale))
+    x: (parent.width - width) / 2
+    y: (bottomLimit - height) / 2 + 16 * Config.winScale
     focus: true
     closePolicy: selecting ? Controls.Popup.CloseOnEscape
       : Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
