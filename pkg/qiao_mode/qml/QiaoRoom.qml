@@ -406,6 +406,27 @@ Room {
     id: mountRow
     DualMountRow {}
   }
+  Component {
+    id: equipSlotLabel
+    EquipSlotLabel {}
+  }
+
+  // 原生 SetCardMark 更新手牌和处理区。装备槽有自己的 CardModel。
+  function setCardMark(sender, data) {
+    dataModel.setCardMark(sender, data);
+    const [id, mark, value] = data;
+    if (mark !== "@qiao_bajia_yu") return;
+    for (let i = 0; i < photoModel.count; ++i) {
+      const slots = photoModel.get(i).modelData.photoItem?.areasSealed?.items ?? [];
+      for (const slot of slots) {
+        const card = slot.equips.find(equip => equip.cardId === id);
+        if (card) {
+          Ltk.setMark(card.marks, mark, value);
+          return;
+        }
+      }
+    }
+  }
 
   function bindPhotoExtras() {
     for (let i = 0; i < photoModel.count; ++i) {
@@ -432,6 +453,12 @@ Room {
         continue;
       const defensive = area.items[area.subtypes.indexOf("defensive_ride")];
       const offensive = area.items[area.subtypes.indexOf("offensive_ride")];
+      for (const slot of area.items) {
+        if (slot !== defensive && slot !== offensive &&
+            !slot.children.some(child => child.objectName === "qiaoEquipSlotLabel")) {
+          equipSlotLabel.createObject(slot, { slot });
+        }
+      }
       if (defensive && offensive) {
         mountRow.createObject(area, {
           defensiveItem: defensive,
@@ -495,6 +522,7 @@ Room {
         openingAnimation.restart();
       }
     });
+    addCallback(Command.SetCardMark, room.setCardMark);
     addCallback(Command.ShowVirtualCard, (sender, data) => {
       const previous = new Set(tablePile.cards);
       showVirtualCard(sender, data);

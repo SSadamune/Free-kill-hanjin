@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import Fk
 
 Item {
   id: layout
@@ -44,47 +43,14 @@ Item {
     when: layout.defensiveFull
   }
 
-  // EquipItem 的直接 Text 子项是牌名；点数由独立的 GlowText 组件显示。
-  component MountLabel: QtObject {
-    required property Item slot
-    required property bool dual
-    readonly property Text equipLabel: slot.children.find(child => child instanceof Text) ?? null
-    readonly property var card: slot.equips[slot.equips.length - 1]
-    readonly property string distance: layout.distanceLabels[card?.cardId] ?? ""
-    readonly property bool active: equipLabel !== null && distance !== ""
-
-    property Binding displayText: Binding {
-      target: equipLabel
-      property: "text"
-      when: active
-      value: dual && card ? distance + " " + Lua.tr(card.name) : distance
-    }
-    property Binding labelWidth: Binding {
-      target: equipLabel
-      property: "width"
-      when: active
-      value: Math.max(0, slot.width - (equipLabel?.x ?? 0) - 24)
-    }
-    property Binding fontFit: Binding {
-      target: equipLabel
-      property: "fontSizeMode"
-      when: active
-      value: Text.HorizontalFit
-    }
-    property Binding fontMinimum: Binding {
-      target: equipLabel
-      property: "minimumPixelSize"
-      when: active
-      value: 9
-    }
-  }
-
-  MountLabel {
+  EquipSlotLabel {
     slot: layout.defensiveItem
-    dual: layout.defensiveFull
+    dualMount: layout.defensiveFull
+    distance: layout.distanceLabels[card?.cardId] ?? ""
   }
-  MountLabel {
+  EquipSlotLabel {
     slot: layout.offensiveItem
-    dual: layout.offensiveFull
+    dualMount: layout.offensiveFull
+    distance: layout.distanceLabels[card?.cardId] ?? ""
   }
 }
