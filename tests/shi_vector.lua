@@ -229,6 +229,44 @@ function T:testChunyiRecipientConsumesCiAndGetsRealWine()
   end)
 end
 
+function T:testChunyiEntryFollowsRevealedProviderAndPublicKingdom()
+  local name = "qiao__chunyi_other&"
+  local function checkClient(playerId, expected)
+    FkTest.runInClient(function()
+      local player = ClientInstance:getPlayerById(playerId)
+      lu.assertEquals(player:hasSkill(name), expected)
+    end)
+  end
+
+  run(function(room, enemy, chengpu, ally)
+    fixture.installDualGenerals(room, chengpu, {
+      main = "qiao_heg__wu027", deputy = "qiao_test__wu_2", kingdom = "wu",
+    })
+    fixture.installDualGenerals(room, ally, {
+      main = "qiao_test__wu_1", deputy = "qiao_test__wu_2", kingdom = "wu",
+    })
+    chengpu:hideGeneral(false)
+    lu.assertFalse(ally:hasSkill(name))
+    lu.assertFalse(enemy:hasSkill(name))
+
+    chengpu:revealGeneral(false)
+    lu.assertTrue(ally:hasSkill(name))
+    lu.assertFalse(chengpu:hasSkill(name))
+    lu.assertFalse(enemy:hasSkill(name))
+    checkClient(enemy.id, false)
+    checkClient(ally.id, true)
+
+    room:changeKingdom(enemy, "wu")
+    lu.assertTrue(enemy:hasSkill(name))
+    checkClient(enemy.id, true)
+
+    chengpu:hideGeneral(false)
+    lu.assertFalse(ally:hasSkill(name))
+    lu.assertFalse(enemy:hasSkill(name))
+    checkClient(enemy.id, false)
+  end)
+end
+
 function T:testHufenMovesToDeputyAndUsesDependantSkills()
   run(function(room, p)
     asGeneral(room, p, "jin066")

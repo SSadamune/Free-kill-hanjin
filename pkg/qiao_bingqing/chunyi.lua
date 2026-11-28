@@ -12,10 +12,30 @@ local function choices(p)
   return list
 end
 
-local function available(p)
-  return S.present(p) and #choices(p) > 0 and table.find(Fk:currentRoom():getPresentPlayers(), function(provider)
-    return provider:hasShownSkill(M.root) and S.allies(provider, p)
+local function providerFor(p, players, ignoreNullified)
+  return table.find(players, function(provider)
+    return not provider:isFakeSkill(Fk.skills[M.root])
+      and provider:hasShownSkill(M.root, ignoreNullified) and S.allies(provider, p)
   end) ~= nil
+end
+
+function M.sync(room)
+  local providers = table.filter(room:getPresentPlayers(), function(p)
+    return p:hasShownSkill(M.root, true)
+  end)
+  for _, p in ipairs(room.players) do
+    local eligible = S.present(p) and not p:hasShownSkill(M.root, true) and providerFor(p, providers, true)
+    local attached = p:hasSkill(M.attached, true, true)
+    if eligible and not attached then
+      room:handleAddLoseSkills(p, M.attached, nil, false, true)
+    elseif attached and not eligible then
+      room:handleAddLoseSkills(p, "-" .. M.attached, nil, false, true)
+    end
+  end
+end
+
+local function available(p)
+  return S.present(p) and #choices(p) > 0 and providerFor(p, Fk:currentRoom():getPresentPlayers())
 end
 
 function M.addWine(skill)
