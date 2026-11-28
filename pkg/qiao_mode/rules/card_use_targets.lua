@@ -14,6 +14,7 @@
 local M = {}
 
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local SlashUseTiming = require "packages.qiao.pkg.qiao_mode.rules.slash_use_timing"
 
 M.RULE_SKILL = "#qiao_use_targets_rule"
@@ -268,7 +269,7 @@ function M.clearTokens(room)
   if not isServer(room) then return end
   room:setTag(M.POLICY_TAG, nil)
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.POLICY_MARK, 0)
+    PublicState.setPlayerMark(room, player, M.POLICY_MARK, 0)
   end
 end
 

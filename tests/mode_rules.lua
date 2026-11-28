@@ -2,12 +2,55 @@ local support = __dofile("../../../tests/support/hegemony.lua")
 local content = __dofile("../../../tests/support/ascension_content.lua")
 local H = require "packages.hegemony.util"
 local A = require "packages.qiao.pkg.qiao_mode.rules.ascension"
+local Commander = require "packages.qiao.pkg.qiao_mode.rules.commander_retinue"
+local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
+local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
+local Qianxi = require "packages.qiao.pkg.qiao_generals.util.shu019_qianxi"
+local Targets = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
 local Variants = require "packages.qiao.pkg.qiao_mode.rules.variants"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
 local client_room = __dofile("../../../tests/support/client_room.lua")
 
 Testmode_rules = { setup = support.initQiaoRoom, tearDown = support.clearRoom }
+
+function Testmode_rules:testPublicRulesOnlyBroadcastChangedState()
+  local room = FkTest.room
+  local marks = {
+    A.TURNS_MARK, A.WILD_ASCENDED_MARK, A.COMPANION_MARK, A.YINYANG_MARK, A.LORD_DEATH_MARK,
+    Commander.SOURCE_MARK, Commander.COST_MARK, "qiao_commander_descriptions", OnlyAs.SOURCE_MARK,
+    Qianxi.RESTRICTIONS, Formation.FEIYING_MARK, Formation.FEIYING_LAYERS_MARK, Targets.POLICY_MARK,
+  }
+  local markChanges, bannerChanges = {}, 0
+  local discardBanner = "qiao_discard_before_turn"
+  local broadcast = room.doBroadcastNotify
+  function room:doBroadcastNotify(command, data, players)
+    if command == "SetPlayerMark" and table.contains(marks, data[2]) then
+      table.insert(markChanges, data)
+    elseif command == "SetBanner" and data[1] == discardBanner then
+      bannerChanges = bannerChanges + 1
+    end
+    return broadcast(self, command, data, players)
+  end
+
+  local actor, target = room.current, room.players[2]
+  FkTest.runInRoom(function()
+    room.logic:trigger(fk.GameStart, actor, {})
+    GameEvent.Turn:create(TurnData:new(actor, "game_rule", {})):exec()
+  end)
+  -- 君主升变只需公开真实增加的回合计数，弃牌堆首次建立快照。
+  lu.assertEquals(markChanges, { { actor.id, A.TURNS_MARK, 1 } })
+  lu.assertEquals(bannerChanges, 1)
+
+  FkTest.runInRoom(function()
+    Qianxi.addRestriction(room, target, actor, Card.Black)
+    markChanges = {}
+    GameEvent.Turn:create(TurnData:new(actor, "game_rule", {})):exec()
+  end)
+  lu.assertItemsEquals(markChanges, { { actor.id, A.TURNS_MARK, 2 }, { target.id, Qianxi.RESTRICTIONS, 0 } })
+  lu.assertEquals(bannerChanges, 1)
+  lu.assertEquals(target:getMark(Qianxi.RESTRICTIONS), 0)
+end
 
 function Testmode_rules:testSkillButtonLabelsKeepActionableAndProtectedSkills()
   local clientClass = Fk:getBoardGame("qiao_heg_mode").client_klass

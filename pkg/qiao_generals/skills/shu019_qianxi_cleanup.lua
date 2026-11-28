@@ -11,7 +11,7 @@ local skill = fk.CreateSkill {
 skill:addEffect(fk.TurnEnd, {
   global = true,
   can_refresh = function(self, event, target, player)
-    return player ~= nil and player.room ~= nil
+    return target ~= nil and target == player
   end,
   on_refresh = function(self, event, target, player)
     Q.clear(player.room)

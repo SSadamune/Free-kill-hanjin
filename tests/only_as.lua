@@ -711,6 +711,18 @@ function Testqiao_only_as:testSkillSourceFollowsGeneralVisibilityAndLoss()
   end)
   lu.assertTrue(hasTarget(O.availableTargets(room(), player, slash.id, "use"), "qiao__collateral"))
 
+  local current = room()
+  local notices = {}
+  local broadcast = current.doBroadcastNotify
+  function current:doBroadcastNotify(command, data, players)
+    if command == "SetPlayerMark" and data[1] == player.id and data[2] == O.SOURCE_MARK then
+      table.insert(notices, data[3])
+    end
+    return broadcast(self, command, data, players)
+  end
+  run(function() O.refresh(current) end)
+  lu.assertEquals(notices, {})
+
   -- 暗置时技能暂时失效，但来源保留，重新明置后恢复。
   run(function() player:hideGeneral(false) end)
   lu.assertFalse(hasTarget(O.availableTargets(room(), player, slash.id, "use"), "qiao__collateral"))

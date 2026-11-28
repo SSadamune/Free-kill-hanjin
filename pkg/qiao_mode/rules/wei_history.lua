@@ -48,7 +48,7 @@ end
 function M.clear(room)
   if room == nil then return end
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.MARK, {})
+    if next(player:getTableMark(M.MARK)) then room:setPlayerMark(player, M.MARK, 0) end
   end
 end
 

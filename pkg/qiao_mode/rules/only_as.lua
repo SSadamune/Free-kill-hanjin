@@ -5,6 +5,7 @@
 -- 转化结果是一张以实体牌为子卡的新虚拟牌。客户端只读取服务端同步的玩家
 -- mark，不读取服务端 room tag；服务端在 before_use 与 PreCardUse/Respond
 -- 时重新核对来源、底牌、目标和当前请求模式。
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local M = {}
 -- card_use_targets 是并行任务的可选模块。本文件必须能在没有它时独立加载；
 -- 有该模块时只使用其静态注册的受信 hook，不把任意 use.extra_data 提升为可信。
@@ -322,7 +323,7 @@ function M.refresh(room)
   for _, player in ipairs(room.players) do
     local list = byHolder[player.id] or {}
     table.sort(list, function(a, b) return a.uid < b.uid end)
-    room:setPlayerMark(player, M.SOURCE_MARK, #list > 0 and list or 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, #list > 0 and list or 0)
   end
 end
 
@@ -333,7 +334,7 @@ function M.reset(room)
   room:setTag(M.AUTH_TAG, nil)
   room:setTag(M.TURN_TAG, 0)
   for _, player in ipairs(room.players) do
-    room:setPlayerMark(player, M.SOURCE_MARK, 0)
+    PublicState.setPlayerMark(room, player, M.SOURCE_MARK, 0)
   end
 end
 

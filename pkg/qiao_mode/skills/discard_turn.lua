@@ -1,3 +1,4 @@
+local PublicState = require "packages.qiao.pkg.qiao_mode.rules.public_state"
 local skill = fk.CreateSkill { name = "#qiao_discard_turn" }
 local banner = "qiao_discard_before_turn"
 
@@ -7,7 +8,7 @@ skill:addEffect(fk.TurnStart, {
   end,
   on_refresh = function(self, event, target, player)
     local room = player.room
-    room:setBanner(banner, table.simpleClone(room.discard_pile))
+    PublicState.setBanner(room, banner, table.simpleClone(room.discard_pile))
   end,
 })
 
@@ -34,7 +35,7 @@ skill:addEffect(fk.AfterCardsMove, {
 
 skill:addEffect(fk.AfterDrawPileShuffle, {
   can_refresh = function(self, event, target, player)
-    return player.seat == 1 and player.room:getBanner(banner) ~= nil
+    return player.seat == 1 and #(player.room:getBanner(banner) or {}) > 0
   end,
   on_refresh = function(self, event, target, player)
     player.room:setBanner(banner, {})
