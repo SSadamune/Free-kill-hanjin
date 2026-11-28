@@ -4,6 +4,7 @@ local BaseClient = require "ltk.client.client"
 local AbstractRoom = require "ltk.core.room.abstract_room"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
 local ReqUseCard = require "ltk.core.request_type.use_card"
+local ReqResponseCard = require "ltk.core.request_type.response_card"
 local ReqActiveSkill = require "ltk.core.request_type.active_skill"
 local RemovedTargets = require "packages.qiao.pkg.qiao_mode.rules.removed_targets"
 local ActiveSkillLimits = require "packages.qiao.pkg.qiao_mode.rules.active_skill_limits"
@@ -18,6 +19,7 @@ local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Ascension = require "packages.qiao.pkg.qiao_mode.rules.ascension"
 local Cards = require "packages.qiao.pkg.qiao_mode.rules.cards"
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
+local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local Guest = require "packages.qiao.pkg.qiao_mode.rules.guest_factions"
 local Versions = require "packages.qiao.pkg.qiao_mode.rules.general_versions"
 local MountDistance = require "packages.qiao.pkg.qiao_cards.mount_distance"
@@ -619,6 +621,27 @@ local function isQiaoMode()
   local room = Fk:currentRoom()
   if room == nil or type(room.getSettings) ~= "function" then return false end
   return Modes.inRoom(room)
+end
+
+local getCardProhibitReason = LtkUI.getCardProhibitReason
+function LtkUI:getCardProhibitReason(id)
+  local handler = ClientInstance.current_request_handler
+  if isQiaoMode() and handler and not handler.skill_name and handler:isInstanceOf(ReqResponseCard) then
+    local card = Fk:getCardById(id)
+    local playing = handler:isInstanceOf(ReqPlayCard)
+    if card and (playing or card:matchPattern(handler.pattern or ".")) then
+      local player = handler.player
+      local using = handler:isInstanceOf(ReqUseCard)
+      local fixedUser = using and handler.extra_data and handler.extra_data.fix_user
+      if fixedUser then player = Fk:currentRoom():getPlayerById(fixedUser) end
+      local label = OnlyAs.prohibitionLabel(player, card)
+      if label then
+        local method = using and "method_use" or "method_response_play"
+        return label .. Fk:translate("prohibit") .. Fk:translate(method)
+      end
+    end
+  end
+  return getCardProhibitReason(self, id)
 end
 
 -- 上游国战红颜也通过锁视变更实体牌的有效花色。手牌面板仍显示印刷花色，

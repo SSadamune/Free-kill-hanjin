@@ -15,7 +15,9 @@ local client_room = __dofile("../../../tests/support/client_room.lua")
 local ClientPlayer = require "ltk.client.clientplayer"
 local QiaoClient = require "packages.qiao.pkg.qiao_mode.client"
 local ReqPlayCard = require "ltk.core.request_type.play_card"
+local LtkUI = require "packages.freekill-core.ltk.client.util"
 local C = require "packages.qiao.pkg.qiao_mode.rules.card_use_targets"
+local OnlyAs = require "packages.qiao.pkg.qiao_mode.rules.only_as"
 local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
 local R = require "packages.qiao.pkg.qiao_generals.util.retinue_instances"
 local Z = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_retinues"
@@ -95,6 +97,62 @@ function Testqiao_client_query_paths:testOnlyOwnHiddenGeneralFrontsAreAvailableI
       lu.assertFalse(client:ownHiddenGenerals(me.id))
     end)
     Self = saved
+    if not ok then error(err, 0) end
+  end)
+end
+
+function Testqiao_client_query_paths:testOnlyAsWatermarksFollowRegisteredPlayUseAndResponseRequests()
+  local server = room()
+  local player = server.players[1]
+  local peach = give(player, "qiao__peach", Card.Heart, 3)
+  local jink = give(player, "qiao__jink", Card.Club, 4)
+  local normalJink = give(player, "qiao__jink", Card.Club, 5)
+  local beforeTuxi
+  run(function()
+    OnlyAs.addSource(server, { def = "battle_royal", holder = player })
+    beforeTuxi = player:getMark(OnlyAs.SOURCE_MARK)
+    OnlyAs.addSource(server, { def = "tuxi", holder = player, cards = { peach.id, jink.id } })
+  end)
+
+  client_room.run(server, function(players, clientRoom)
+    local client = QiaoClient:new(ClientInstance.client)
+    client.players = players
+    function client:notifyUI() end
+    local savedSelf, savedClient, savedRoom = Self, ClientInstance, RoomInstance
+    Self, ClientInstance, RoomInstance = players[1], client, nil
+    local ok, err = pcall(function()
+      local function request(command, pattern)
+        client:setupRequestHandler(Self, command, pattern and { "", pattern, "", true, {} } or nil)
+        client.current_request_handler = clientRoom.current_request_handler
+        return client.current_request_handler
+      end
+      local function watermark(card)
+        return LtkUI:getCardProhibitReason(card.id)
+      end
+
+      local play = request("PlayCard")
+      lu.assertFalse(play:cardValidity(peach.id))
+      lu.assertEquals(watermark(peach), "鏖战禁使用")
+      lu.assertEquals(watermark(jink), "突袭禁使用")
+      lu.assertEquals(watermark(normalJink), "")
+
+      local use = request("AskForUseCard", "jink")
+      lu.assertFalse(use:cardValidity(jink.id))
+      lu.assertTrue(use:cardValidity(normalJink.id))
+      lu.assertEquals(watermark(jink), "突袭禁使用")
+      lu.assertEquals(watermark(peach), "")
+
+      local response = request("AskForResponseCard", "jink")
+      lu.assertFalse(response:cardValidity(jink.id))
+      lu.assertEquals(watermark(jink), "突袭禁打出")
+      Self:setMark(OnlyAs.SOURCE_MARK, beforeTuxi)
+      lu.assertTrue(response:cardValidity(jink.id))
+      lu.assertEquals(watermark(jink), "")
+
+      client.current_request_handler = nil
+      lu.assertEquals(watermark(peach), "")
+    end)
+    Self, ClientInstance, RoomInstance = savedSelf, savedClient, savedRoom
     if not ok then error(err, 0) end
   end)
 end
