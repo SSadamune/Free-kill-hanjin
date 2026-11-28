@@ -126,8 +126,11 @@ Room {
       required property Item photo
       readonly property var managedStates: {
         room.skillStatusRevision;
+        room.playerDetailSkillsRevision;
         photo.general;
         photo.deputyGeneral;
+        photo.dataModel.hp;
+        photo.dataModel.maxHp;
         if (photo.dead || photo.playerid === 0 || photo.playerid === -1) return [];
         return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
       }
@@ -453,7 +456,10 @@ Room {
       Qt.callLater(room.bindPhotoExtras);
       Qt.callLater(room.refreshDiscard);
     }
-    function onSeatChanged() { Qt.callLater(room.bindPhotoExtras); }
+    function onSeatChanged() {
+      ++room.skillStatusRevision;
+      Qt.callLater(room.bindPhotoExtras);
+    }
   }
 
   function setVirtualPicture(card, name) {

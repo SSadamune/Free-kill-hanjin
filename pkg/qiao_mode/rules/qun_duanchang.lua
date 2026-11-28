@@ -14,6 +14,7 @@
 -- 延时效果（例如裸衣的回合标记），只由引擎清理技能自己的派生牌。
 local Exchange = require "packages.qiao.pkg.qiao_mode.rules.general_exchange"
 local CardSkills = require "packages.qiao.pkg.qiao_mode.rules.general_card_skills"
+local PrivateMarks = require "packages.qiao.pkg.qiao_mode.rules.private_marks"
 
 local M = {}
 
@@ -122,20 +123,51 @@ local function pairHasLost(room, player)
   return false
 end
 
-local DISPLAY_MARK = "@@qiao_duanchang"
+M.DISPLAY_MARK = "@@qiao_duanchang"
+M.PRIVATE_MARK = "qiao_duanchang_private_names"
 local DISPLAY_TAG = "qiao_duanchang_cards"
-Fk:loadTranslationTable { [DISPLAY_MARK] = "断肠" }
+Fk:loadTranslationTable { [M.DISPLAY_MARK] = "断肠" }
 
-CardSkills.addChangeListener(function(room)
+local function displayedCards(player, affected)
+  local shown, hidden = {}, {}
+  if not player.dead then
+    for _, deputy in ipairs({ false, true }) do
+      local name = Exchange.actualGeneral(player, deputy)
+      if affected[name] then
+        table.insert(Exchange.isRevealed(player, deputy) and shown or hidden, name)
+      end
+    end
+  end
+  return shown, hidden
+end
+
+function M.install(room)
+  PrivateMarks.register(room, M.PRIVATE_MARK, function(currentRoom, viewer)
+    local _, hidden = displayedCards(viewer, currentRoom:getTag(DISPLAY_TAG) or {})
+    if #hidden > 0 then return hidden end
+  end)
+end
+
+local function refreshDisplay(room)
   local affected = room:getTag(DISPLAY_TAG)
   if not affected then return end
   for _, player in ipairs(room.players) do
-    local main = Exchange.actualGeneral(player, false)
-    local deputy = Exchange.actualGeneral(player, true)
-    local value = not player.dead and (affected[main] or affected[deputy]) and 1 or 0
-    if player:getMark(DISPLAY_MARK) ~= value then room:setPlayerMark(player, DISPLAY_MARK, value) end
+    local shown, hidden = displayedCards(player, affected)
+    local before = player:getMark(M.DISPLAY_MARK)
+    if #shown + #hidden == 0 then
+      if before ~= 0 then room:setPlayerMark(player, M.DISPLAY_MARK, 0) end
+    elseif type(before) ~= "table" or before.hidden ~= #hidden or not table.isEqual(before.shown, shown) then
+      -- A public tag names only revealed cards. A hidden card contributes just its count.
+      room:setPlayerMark(player, M.DISPLAY_MARK, { shown = shown, hidden = #hidden })
+    end
+    if not table.isEqual(player.tag.qiaoDuanchangHidden or {}, hidden) then
+      player.tag.qiaoDuanchangHidden = hidden
+      PrivateMarks.notify(player, M.PRIVATE_MARK, #hidden > 0 and hidden or 0)
+    end
   end
-end)
+end
+
+CardSkills.addChangeListener(refreshDisplay)
 
 --- 只在“本角色双将有断肠记录”时，为与另一张将牌共享的同名基础技能计算明置
 --- 恢复候选（引擎 revealGeneral 的 tolose 可能误删存活来源）。不处理 related，

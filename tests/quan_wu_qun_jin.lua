@@ -114,7 +114,11 @@ function Testqiao_quan_wu_qun_jin:testWu019LukangJueyanAndKeshou()
   end)
   lu.assertEquals(slashMax, 2, "决堰出杀次数+1应生效")
   local states = SkillStatus.forPlayer(lukang)
-  lu.assertTrue(table.find(states, function(s) return s.id == Quan.JUEYAN_DRAW_MARK end) ~= nil)
+  local draw = table.find(states, function(s) return s.id == Quan.JUEYAN_DRAW_MARK end)
+  lu.assertEquals(draw.value, "摸牌+1")
+  local range = table.find(states, function(s) return s.id == Quan.JUEYAN_RANGE_MARK end)
+  lu.assertEquals(range.value, "范围+1")
+  lu.assertEquals(range.description, "本回合攻击范围+1。")
 
   -- 恪守：限使用不限打出；孤军（本势力仅存活自己 1 人）应变在 0 鱼时获得 1 鱼，有鱼时可消耗 1 鱼摸 1 牌
   inRoom(function()

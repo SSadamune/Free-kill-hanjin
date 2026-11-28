@@ -360,7 +360,7 @@ end
 
 function QiaoClient:skillStates(playerId)
   local player = self:getPlayerById(playerId)
-  local states = SkillStatus.forPlayer(player)
+  local states = SkillStatus.forPlayer(player, canViewOwnHidden(self, playerId))
   local edict = self:edictCardsForDisplay(playerId)
   if edict then
     table.insert(states, {
@@ -736,8 +736,10 @@ function QiaoClient:notifyUI(command, data)
     uiCommand = "QiaoMoveCards"
   end
   BaseClient.notifyUI(self, uiCommand, data)
-  if command == "SetPlayerMark" and data[2]:startsWith("@") and not data[2]:startsWith("@!") and isQiaoMode() then
-    -- Existing MarkArea entries can be updated in place without marksChanged.
+  local textMark = command == "SetPlayerMark" and data[2]:startsWith("@") and not data[2]:startsWith("@!")
+  local rangeChanged = command == "PropertyUpdate" and (data[2] == "kingdom" or data[2] == "dead")
+  if (textMark or rangeChanged) and isQiaoMode() then
+    -- A native mark can be updated in place, and attack range can depend on another seat.
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if (command == "AddSkill" or command == "LoseSkill") and isQiaoMode() then

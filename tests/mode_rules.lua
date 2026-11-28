@@ -85,10 +85,18 @@ function Testmode_rules:testStateSkillsCannotPrelightButMixedSkillsCan()
     client:notifyUI("LoseSkill", { player.id, hongyan, true })
     client:notifyUI("ChangeSelf", player.id)
   end)
-  lu.assertEquals(notices[1], { "AddSkill", { player.id, hongyan } })
-  lu.assertEquals(notices[3], { "AddSkill", { player.id, paoxiao, true } })
-  lu.assertEquals(notices[5], { "LoseSkill", { player.id, hongyan } })
-  lu.assertEquals(notices[8], { "QiaoRefreshPrelightButtons", {} })
+  local prelightNotices = table.filter(notices, function(notice)
+    return table.contains({ "AddSkill", "LoseSkill", "QiaoRefreshPrelightButtons" }, notice[1])
+  end)
+  lu.assertEquals(prelightNotices, {
+    { "AddSkill", { player.id, hongyan } },
+    { "AddSkill", { player.id, paoxiao, true } },
+    { "LoseSkill", { player.id, hongyan } },
+    { "QiaoRefreshPrelightButtons", {} },
+  })
+  lu.assertEquals(#table.filter(notices, function(notice)
+    return notice[1] == "QiaoPlayerDetailSkillsChanged"
+  end), 4)
 end
 
 function Testmode_rules:testActiveAndPrelightButtonsFromHiddenSkillNotifications()
