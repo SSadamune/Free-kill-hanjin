@@ -10,16 +10,6 @@ local skill = fk.CreateSkill {
 }
 skill.qiaoImplemented = true
 
---- 距离1的其他存活角色；正常距离0不能选择自己。
----@param player ServerPlayer
----@return ServerPlayer[]
-local function candidates(player)
-  return table.filter(player.room:getPresentPlayers(), function(p)
-    return p ~= player and p:isAlive() and not p:isRemoved()
-      and player:distanceTo(p) == 1
-  end)
-end
-
 skill:addEffect(fk.EventPhaseStart, {
   anim_type = "control",
   can_trigger = function(self, event, target, player, data)
@@ -58,7 +48,7 @@ skill:addEffect(fk.EventPhaseStart, {
     room:throwCard({ id }, skill.name, player, player)
     if color ~= Card.Red and color ~= Card.Black then return end
 
-    local targets = candidates(player)
+    local targets = Q.candidates(room, player)
     if #targets == 0 then return end
     local chosen = room:askToChoosePlayers(player, {
       min_num = 1,
@@ -67,6 +57,7 @@ skill:addEffect(fk.EventPhaseStart, {
       skill_name = skill.name,
       prompt = "#qiao__skill_shu019_2-target",
       cancelable = false,
+      extra_data = { color = color },
     })
     local to = chosen and chosen[1]
     if to == nil or to.dead or to:isRemoved() then return end

@@ -10,6 +10,12 @@ M.RULE_SKILL = "qiao__shu019_qianxi_rule"
 M.CLEANUP_SKILL = "qiao__shu019_qianxi_cleanup"
 M.RESTRICTIONS = "qiao_shu019_qianxi_restrictions"
 
+function M.candidates(room, player)
+  return table.filter(room:getPresentPlayers(), function(target)
+    return target ~= player and player:distanceTo(target) == 1
+  end)
+end
+
 --- 确保静态限制与回合结束清理技能已安装到房间；可重复调用。
 ---@param room Room
 function M.ensureRule(room)

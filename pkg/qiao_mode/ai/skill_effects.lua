@@ -18,6 +18,8 @@ local playStages = {
   qiao__skill_qun018_1 = "disrupt", -- 祸水
   qiao__skill_wu012_1 = "attack_prep", -- 天义
   qiao__skill_wei012_1 = "damage", -- 强袭
+  qiao__skill_wei013_1 = "damage", -- 驱虎
+  qiao__skill_han013_1 = "attack_prep", -- 奋钺
   qiao__skill_qun007_2 = "damage", -- 乱武
   qiao__retinue_skill_qingzhou_jingrui = "damage",
   qiao__skill_shu001_1 = "support", -- 仁德
@@ -62,10 +64,10 @@ end
 
 local longdan, wuku, xiewei = "qiao__skill_shu005_1", "qiao__skill_jin006_3", "qiao__skill_qun139_1"
 M.viewAs = {
-  slash = { "qiao__skill_shu002_1", longdan, wuku, xiewei, "qiao__skill_shu054_1" },
+  slash = { "qiao__skill_shu002_1", longdan, wuku, xiewei, "qiao__skill_shu054_1", "qiao_battle_royal&" },
   dismantlement = { "qiao__skill_wu002_1" }, -- 奇袭
   supply_shortage = { "qiao__skill_wei010_1" },
-  jink = { "qiao__skill_wei007_1", longdan, wuku, xiewei },
+  jink = { "qiao__skill_wei007_1", longdan, wuku, xiewei, "qiao_battle_royal&" },
   peach = { longdan, "qiao__skill_qun001_1", wuku },
   nullification = { "qiao__skill_shu011_3", "qiao__retinue_skill_bazhenbing_viewas", wuku },
   iron_chain = { "qiao__skill_shu010_1" },
@@ -92,6 +94,11 @@ M.extraSlash = {
 }
 
 M.ignoreSlashArmor = { "#qinggang_sword_skill" }
+M.extraJink = {
+  qiao__skill_qun002_1 = true,
+  qiao__skill_wu016_1 = true,
+  qiao__skill_wu017_2 = true,
+}
 
 local function hasGeneral(target, deputy)
   local name = Exchange.publicGeneral(target, deputy)

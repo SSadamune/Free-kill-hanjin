@@ -1,6 +1,10 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
+local Qianxi = require "packages.qiao.pkg.qiao_mode.ai.qianxi"
+local AttackSkills = require "packages.qiao.pkg.qiao_mode.ai.attack_skills"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local ReactiveReveal = require "packages.qiao.pkg.qiao_mode.ai.reactive_reveal"
 local Command = require "packages.qiao.pkg.qiao_mode.ai.command"
@@ -18,6 +22,7 @@ local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local WuPhases = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
 local ShiVector = require "packages.qiao.pkg.qiao_mode.ai.shi_vector"
 local Nu = require "packages.qiao.pkg.qiao_mode.ai.nu"
+local Fudi = require "packages.qiao.pkg.qiao_generals.skills.skill_qun023_2"
 
 local Adaptation = require "packages.qiao.pkg.qiao_mode.ai.adaptation"
 
@@ -80,6 +85,7 @@ function M.invoke(ai, data)
   local name, prompt = data[1], data[2] or ""
   local fields = prompt:split(":")
   local key, player = fields[1], ai.player
+  if key == "#qiao__skill_shu019_2-invoke" then return Qianxi.invoke(ai) end
   local expansion = Expansion.invoke(ai, key, fields)
   if expansion ~= nil then return expansion end
   if key == "#qiao__skill_wu024_1-invoke" then
@@ -163,6 +169,35 @@ function M.active(ai, data)
   extra = extra or {}
   local fields = (prompt or ""):split(":")
   local key, budget = fields[1], nil
+  if key == "#qiao__skill_wei008_1-judge" or key == "#qiao__skill_wei008_1-play" or key == "#qiao__skill_wei008_1-discard" then
+    return AttackSkills.shensu(ai, key, extra)
+  end
+  if key == "#qiao__skill_wei013_1-damage" then
+    local source = extra.extra_data and ai.room:getPlayerById(extra.extra_data.source)
+    if not source then return "" end
+    return chooseTargets(ai, function(target)
+      local value = AttackSkills.driveTigerScore(ai, source, target)
+      return value or (ai:isFriend(target) and -10 or -1)
+    end)
+  end
+  if key == "#askForPindian" and (extra.reason == AttackSkills.driveTiger or extra.reason == AttackSkills.fenyue) then
+    local pindian = parentData(ai, GameEvent.Pindian)
+    if pindian and pindian.from == ai.player then
+      local id = AttackSkills.pindianCard(ai, extra.reason, pindian.tos[1], ai:getEnabledCards())
+      if id then
+        ai:selectCard(id, true)
+        return Requests.reply(ai)
+      end
+    end
+  end
+  if key == "#qiao__skill_shu019_2-discard" then return Qianxi.discard(ai) end
+  if key == "#qiao__skill_shu019_2-target" then
+    local color = extra.extra_data and extra.extra_data.color
+    return chooseTargets(ai, function(target)
+      local gain = Qianxi.hitValue(ai, target, color)
+      return ai:hostileScore(target, gain) or (ai:isFriend(target) and -1 or 0)
+    end)
+  end
   local pack = ShiVector.active(ai, key, fields, extra)
   if pack == nil then pack = Nu.active(ai, skill, key, fields, extra) end
   if pack ~= nil then return pack end
@@ -199,7 +234,7 @@ function M.active(ai, data)
         card.skillName = extra.skillName
         local target = Cards.bestCandidate(ai, card:getAvailableTargets(ai.player, extra), function(to)
           if name == "qiao__peach" then
-            if to == ai.player and to:isWounded() then return 1 end
+            if to == ai.player and Health.canRecover(to) then return Health.recovery(ai, to, 1) end
           else
             return Cards.scoreTarget(ai, card, to)
           end
@@ -239,35 +274,48 @@ function M.active(ai, data)
   if key == "#qiao__skill_qun081_1-invoke" then
     local use = parentData(ai, GameEvent.UseCard)
     if not use or not use.card then return "" end
-    local nature = Damage.cardNature(use.card, use)
-    local amount = Damage.cardAmount(use.card, use, ai.player) + 1
-    local function score(target)
-      if ai:isEnemy(target) and Damage.worth(Damage.assess(ai, target, amount, nature,
-        { source = ai.player, card = use.card })) then return ai:hostileScore(target, 20 - target.hp) end
-    end
-    local id, value
+    local id, target, value
     for _, material in ipairs(ai:getEnabledCards()) do
       local owner = ai.room:getCardOwner(material)
-      if owner and table.contains((extra.targetsByCard or {})[tostring(material)] or {}, owner.id) and score(owner) then
-        local payoff = Board.equipScore(owner:getVirtualEquip(material) or Fk:getCardById(material))
-        if not value or payoff > value or (payoff == value and material < id) then id, value = material, payoff end
+      for _, targetId in ipairs((extra.targetsByCard or {})[tostring(material)] or {}) do
+        local to = ai.room:getPlayerById(targetId)
+        if owner and ai:isEnemy(to) then
+          local before = Cards.attackValue(ai, use.card, to, use) or 0
+          local after = Cards.attackValue(ai, use.card, to, use, nil, 1)
+          if after then
+            local gear = owner:getVirtualEquip(material) or Fk:getCardById(material)
+            local equipment = owner == ai.player and -Cost.value(ai, material) or 1 + Board.equipScore(gear)
+            local payoff = after - before + equipment
+            if payoff > 0 and (not value or payoff > value) then id, target, value = material, to, payoff end
+          end
+        end
       end
     end
     if not id then return "" end
     ai:selectCard(id, true)
-    return chooseTargets(ai, score)
+    return chooseTargets(ai, function(to) if to == target then return value end end)
   end
   if key == "#qiao__halberd-ask" then
     local use = parentData(ai, GameEvent.UseCard)
     if not use or not use.card then return "" end
-    local function likelyHit(target)
-      return Cards.safeDamage(ai, use.card, target, use) and target:isKongcheng()
-        and #target:getEquipments(Card.SubtypeArmor) == 0
+    local expected = 0
+    for _, target in ipairs(use.tos) do
+      local value = Cards.attackValue(ai, use.card, target, use)
+      if not value then return "" end
+      expected = expected + value
     end
-    if not table.every(use.tos, likelyHit) then return "" end
-    return chooseTargets(ai, function(target)
-      if likelyHit(target) then return ai:hostileScore(target, 20 - target.hp) end
-    end, #extra.targets)
+    for _ = 1, #extra.targets do
+      local target, gain = Cards.bestTarget(ai, function(to)
+        local value = Cards.attackValue(ai, use.card, to, use)
+        if not value then return end
+        local incremental = value - expected * (1 - SlashDefense.hitChance(ai.player, use.card, to, use))
+        if incremental > 0 then return incremental end
+      end)
+      if not target then break end
+      ai:selectTarget(target, true)
+      expected = expected + gain
+    end
+    return Requests.reply(ai)
   end
   if skill == "choose_players_to_move_card_in_board" and (key == "#qiao_wei_move_board" or key == "#qiao_wu_move_board") then
     return Board.choosePlayers(ai)
@@ -347,11 +395,14 @@ function M.active(ai, data)
       ai:selectCard(best, true)
       return Requests.reply(ai)
     elseif key == "#qiao__skill_wei005_1-discard" then
-      if not Triggers.luoyiWorth(ai) then return "" end
-      return Cost.select(ai, 1, 2, function(id)
+      local value = Triggers.luoyiValue(ai)
+      if value <= 0 then return "" end
+      return Cost.select(ai, 1, value, function(id)
         local name = Fk:getCardById(id).trueName
         return name ~= "slash" and name ~= "duel"
       end) and Requests.reply(ai) or ""
+    elseif key == "#qiao__skill_wei012_1-weapon" then
+      return Cost.discard(ai, 1) and Requests.reply(ai) or ""
     elseif key == "#qiao__skill_han001_1-discard" then
       budget = 4
     elseif key == "#qiao__skill_han003_1-invoke" then
@@ -451,19 +502,33 @@ function M.active(ai, data)
     elseif key == "#qiao__retinue_skill_huangjin_leishi-discard" then
       local frame = Selection.currentCost(ai.player)
       local damage = frame and frame.data
-      if not damage or damage.chain or not ai:isFriend(damage.from) or not ai:isEnemy(damage.to)
-        or damage.damage ~= damage.to.hp + damage.to.shield - 1 then return "" end
-      if not Damage.worth(Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType, { source = damage.from })) then return "" end
-      budget = 2
+      if not damage or not ai:isFriend(damage.from) or not ai:isEnemy(damage.to) then return "" end
+      local options = { source = damage.from, card = damage.card, alreadyChained = damage.chain }
+      local before = Damage.assess(ai, damage.to, damage.damage, damage.damageType, options)
+      local after = Damage.assess(ai, damage.to, damage.damage + 1, damage.damageType, options)
+      if not Damage.worth(after) then return "" end
+      local draw = not damage.from:isHandAreaSealed() and 3 or 0
+      budget = (Damage.value(after) - Damage.value(before) + draw) / 2
     elseif key == "#qiao__skill_wei001_1-discard" then
       local damage = parentData(ai, GameEvent.Damage)
       local card = damage and damage.card
       if not card then return "" end
       budget = card:getEffectiveId() and Cost.value(ai, card:getEffectiveId()) - 1 or 2
+    elseif key == "#qiao__skill_qun023_2-invoke" then
+      local source = M.promptTarget(ai, fields, 3)
+      if not ai:isEnemy(source) then return "" end
+      local _, value = Cards.bestCandidate(ai, Fudi.damageCandidates(ai.player, source), function(to)
+        return Damage.enemyValue(ai, to, 1, fk.NormalDamage, { source = ai.player })
+      end)
+      local gift = source:isHandAreaSealed() and 0 or 3
+      if not value or value <= gift then return "" end
+      budget = value - gift
     elseif key == "#fire_attack-discard" then
       local target = M.promptTarget(ai, fields, 2)
-      if not Cards.safeDamage(ai, Fk:cloneCard("qiao__fire_attack"), target, Damage.effect(ai, target)) then return "" end
-      budget = target.hp <= 1 and 3 or 2
+      local effect = Damage.effect(ai, target)
+      local outcome = Cards.damageOutcome(ai, effect and effect.card or Fk:cloneCard("qiao__fire_attack"), target, effect)
+      if not outcome or not Damage.worth(outcome) then return "" end
+      budget = Damage.value(outcome)
     elseif cancelable and extra.skillName ~= "phase_discard" then
       return
     end
@@ -472,12 +537,12 @@ function M.active(ai, data)
     return ""
   end
   if key == "#qiao__triblade-invoke" then
-    if not Cost.select(ai, 1, 3) then return "" end
-    return chooseTargets(ai, function(target)
-      if target.hp <= 1 or (target.hp == 2 and ai.player:getHandcardNum() > ai.player:getMaxCards()) then
-        return ai:hostileScore(target, 20 - target.hp)
-      end
+    local target, value = Cards.bestTarget(ai, function(to)
+      return Damage.enemyValue(ai, to, 1, fk.NormalDamage, { source = ai.player })
     end)
+    if not target or not Cost.select(ai, 1, value) then return "" end
+    ai:selectTarget(target, true)
+    return Requests.reply(ai)
   end
   if key == "#qiao__taigong_tactics-choose" then
     return chooseTargets(ai, function(target)
@@ -660,6 +725,8 @@ function M.choice(ai, data)
     pick = choices[1]
   elseif skillName == "qiao__restore_heartland_skill" then
     pick = "restore_heartland_draw"
+  elseif fields[1] == "#qiao__skill_han013_1-choice" then
+    pick = AttackSkills.fenyueFailure(ai)
   elseif skillName == "qiao__retinue_skill_qingzhou_jingrui"
     and (prompt or ""):startsWith("#qiao__retinue_skill_qingzhou_jingrui-choose:") then
     local discard = "#qiao__retinue_skill_qingzhou_jingrui-option-discard"
@@ -676,7 +743,7 @@ function M.choice(ai, data)
     local accept, outcome
     if effect then accept, outcome = Damage.acceptIncoming(ai, effect, loss) end
     if outcome and (accept or (not outcome.propagates and not outcome.unsafe
-      and player.hp > 2 and loss >= 9)) then
+      and player.hp > 2 and loss >= -Damage.value(outcome) + Health.baseUnit(ai) / 2)) then
       pick = table.find(choices, function(choice) return choice:startsWith("qiao__drowning_damage:") end)
     else
       pick = "qiao__drowning_throw"

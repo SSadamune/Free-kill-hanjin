@@ -3,6 +3,8 @@ local Request = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Minsi = require "packages.qiao.pkg.qiao_generals.util.minsi"
 local Heg = require "packages.hegemony.util"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
+local AttackSkills = require "packages.qiao.pkg.qiao_mode.ai.attack_skills"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
@@ -59,10 +61,23 @@ function play.qiao__skill_wei012_1(ai)
   local combo = Cost.zhaxiangTrade(player)
   if not weapon and player.hp < 3 then return end
   ai.handler:updateInteraction((weapon and not combo) and "#qiao__skill_wei012_1-discard" or "#qiao__skill_wei012_1-hp")
+  local cost = weapon and not combo and Cost.value(ai, weapon) or Health.damage(ai, 1) - (combo and 9 or 0)
   return Request.targets(ai, function(target)
-    if combo or target.hp + target.shield == 1 then return ai:hostileScore(target, 20 - target.hp) end
+    local value = Damage.enemyValue(ai, target, 1, fk.NormalDamage, { source = player })
+    if value and value > cost then return ai:hostileScore(target, value - cost) end
   end)
 end
+
+local function attackPindian(ai, name)
+  local cards = ai.player:getCardIds("h")
+  return Request.targets(ai, function(target)
+    local _, value = AttackSkills.pindianCard(ai, name, target, cards)
+    if value and value > 0 then return ai:hostileScore(target, value) end
+  end)
+end
+
+function play.qiao__skill_wei013_1(ai) return attackPindian(ai, AttackSkills.driveTiger) end
+function play.qiao__skill_han013_1(ai) return attackPindian(ai, AttackSkills.fenyue) end
 
 function play.qiao__skill_qun013_2(ai)
   local allies = #table.filter(ai.room:getPresentPlayers(), function(target)
@@ -137,7 +152,8 @@ function play.qiao__skill_wu008_1(ai)
   local function benefit(target)
     if ai:isFriend(target) and target.hp ~= player.hp then
       local lower = player.hp < target.hp and player or target
-      if lower:isWounded() then return 20 - lower.hp end
+      local value = Health.recovery(ai, lower, 1)
+      if value > 0 then return value + 0.25 * math.max(0, 5 - lower.hp) end
     end
   end
   ai.handler:updateInteraction("#qiao__skill_wu008_1-place")
@@ -186,11 +202,11 @@ function play.qiao__skill_shu001_1(ai)
   local player = ai.player
   if player:getMark("qiao__skill_shu001_1-given-phase") >= 2 then return end
   local peach, slash = Fk:cloneCard("qiao__peach"), Fk:cloneCard("qiao__slash")
-  local heal = player:isWounded() and player:canUseTo(peach, player)
-  if not heal and not table.find(slash:getAvailableTargets(player, { bypass_times = true }), function(target)
+  local heal = player:canUseTo(peach, player) and Health.recovery(ai, player, 1) or 0
+  if heal == 0 and not table.find(slash:getAvailableTargets(player, { bypass_times = true }), function(target)
     return Cards.safeDamage(ai, slash, target)
   end) then return end
-  if not Cost.select(ai, 2, heal and 5 or 4) then return end
+  if not Cost.select(ai, 2, math.max(heal, Health.damage(ai, 2 / 3))) then return end
   return Request.targets(ai, function(target)
     if ai:isFriend(target) and not target:isHandAreaSealed() then return 4 / (1 + target:getHandcardNum()) end
   end)
