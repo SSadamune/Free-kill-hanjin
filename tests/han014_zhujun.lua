@@ -84,6 +84,63 @@ function Testqiao_han014_zhujun:testCuipuoFirstCardAddsDamageToTarget()
   lu.assertEquals(target.hp, target.maxHp - 2)
 end
 
+function Testqiao_han014_zhujun:testCuipoAddsDamageToTheWholeUseOnce()
+  local room, owner, first, second = FkTest.room, p(1), p(2), p(8)
+  local slash = give(owner, "qiao__slash", Card.Spade, 2)
+  local hp1, hp2 = first.hp, second.hp
+  local use = UseCardData:new { from = owner, tos = { first, second }, card = Fk:getCardById(slash) }
+  inRoom(function()
+    room:setCurrent(owner)
+    room:useCard(use)
+  end)
+  lu.assertEquals(use.additionalDamage, 1)
+  lu.assertEquals({ first.hp, second.hp }, { hp1 - 2, hp2 - 2 })
+  lu.assertEquals(owner:usedSkillTimes(CUICUO, Player.HistoryTurn), 1)
+end
+
+function Testqiao_han014_zhujun:testCuipoDrawsOnceWhenOwnerIsAmongTargets()
+  local room, owner, other = FkTest.room, p(1), p(2)
+  local replies = {}
+  for i = 1, 4 do
+    local id = give(owner, "qiao__iron_chain", Card.Club, 12)
+    local targets = i == 4 and { other, owner } or { other }
+    table.insert(replies, FkTest.ReplyCard(Fk:getCardById(id), targets))
+  end
+  FkTest.setNextReplies(owner, replies)
+  inRoom(function()
+    room:setCurrent(owner)
+    GameEvent.Phase:create(PhaseData:new { who = owner, phase = Player.Play }):exec()
+  end)
+  lu.assertTrue(owner.chained)
+  lu.assertFalse(other.chained)
+  lu.assertEquals(owner:getHandcardNum(), 1)
+  lu.assertEquals(owner:usedSkillTimes(CUICUO, Player.HistoryTurn), 1)
+end
+
+function Testqiao_han014_zhujun:testCuipoUnavailableAtFirstTargetSkipsWholeUse()
+  local room, owner, first, second = FkTest.room, p(1), p(2), p(8)
+  local slash = give(owner, "qiao__slash", Card.Spade, 2)
+  local hp1, hp2 = first.hp, second.hp
+  local probe = fk.CreateSkill { name = "#qiao_test_cuipo_restore" }
+  probe:addEffect(fk.TargetSpecified, {
+    global = true,
+    can_refresh = function(self, event, target, player, data)
+      return target == owner and player == owner and data.to == second
+    end,
+    on_refresh = function() room:validateSkill(owner, CUICUO) end,
+  })
+  inRoom(function()
+    room:setCurrent(owner)
+    room:addSkill(probe:createSkill())
+    room:invalidateSkill(owner, CUICUO)
+    lu.assertFalse(owner:hasSkill(CUICUO))
+    room:useCard { from = owner, tos = { first, second }, card = Fk:getCardById(slash) }
+    lu.assertTrue(owner:hasSkill(CUICUO))
+  end)
+  lu.assertEquals({ first.hp, second.hp }, { hp1 - 1, hp2 - 1 })
+  lu.assertEquals(owner:usedSkillTimes(CUICUO, Player.HistoryTurn), 0)
+end
+
 function Testqiao_han014_zhujun:testHuyiOtherBesiegerFollowsWithRealSlash()
   local room, owner, victim, ally = FkTest.room, p(1), p(2), p(3)
   inRoom(function()
