@@ -725,8 +725,7 @@ function Testqiao_wu_damage:testHaoshiDrawsTwoThenGivesHalf()
 
   FkTest.setNextReplies(p(1), {
     "1",
-    FkTest.ReplyChoosePlayer({ p(2) }),
-    FkTest.ReplyChooseCards(give),
+    FkTest.ReplyUseSkill("ex__choose_skill", { p(2) }, give),
   })
   local data = PhaseData:new { who = p(1), reason = "game_rule", phase = Player.Draw, n = 2 }
   inRoom(function()
@@ -762,8 +761,7 @@ function Testqiao_wu_damage:testHaoshiGiveSurvivesSkillLossBeforeAfterDraw()
 
   FkTest.setNextReplies(p(1), {
     "1",
-    FkTest.ReplyChoosePlayer({ p(2) }),
-    FkTest.ReplyChooseCards(give),
+    FkTest.ReplyUseSkill("ex__choose_skill", { p(2) }, give),
   })
   local data = PhaseData:new { who = p(1), reason = "game_rule", phase = Player.Draw, n = 2 }
   inRoom(function()

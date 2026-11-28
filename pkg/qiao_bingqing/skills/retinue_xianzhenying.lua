@@ -14,7 +14,7 @@ skill:addEffect(fk.DamageCaused, {
   end,
   on_cost = function(self, event, target, p)
     local cards = p.room:askToDiscard(p, { min_num = 1, max_num = 1, pattern = tostring(Exppattern { id = costs(p) }),
-      skill_name = skill.name, include_equip = true, cancelable = true, skip = true })
+      skill_name = skill.name, include_equip = true, cancelable = true, skip = true, prompt = "#qiao_xianzhenying-discard" })
     event:setCostData(self, { cards = cards })
     return #cards == 1
   end,
@@ -23,4 +23,5 @@ skill:addEffect(fk.DamageCaused, {
     data:changeDamage(1)
   end,
 })
+Fk:loadTranslationTable { ["#qiao_xianzhenying-discard"] = "陷阵营：你可以弃置一张【桃】、【酒】或装备牌，令此伤害+1" }
 return skill

@@ -19,7 +19,8 @@ local function resolve(room, p, id, to)
   local canDiscard = table.find(to:getCardIds("he"), function(i) return not to:prohibitDiscard(i) end)
   local choice = canDiscard and room:askToChoice(p, { choices = { "qiao_pindi_draw:::" .. count, "qiao_pindi_discard:::" .. count }, skill_name = skill.name })
   if choice == "qiao_pindi_discard:::" .. count then
-    room:askToDiscard(to, { min_num = count, max_num = count, include_equip = true, skill_name = skill.name, cancelable = false })
+    room:askToDiscard(to, { min_num = count, max_num = count, include_equip = true, skill_name = skill.name,
+      cancelable = false, prompt = "#qiao_pindi-discard:::" .. count })
   else
     to:drawCards(count, skill.name)
   end
@@ -50,5 +51,7 @@ skill:addEffect(fk.Damaged, {
     resolve(p.room, p, ret.cards[1], ret.targets[1])
   end,
 })
-Fk:loadTranslationTable { qiao_pindi_draw = "令其摸%arg张牌", qiao_pindi_discard = "令其弃置%arg张牌", ["#qiao_shi_pindi"] = "品第：弃置一张本回合未选过类别的牌，选择一名未选过的其他角色" }
+Fk:loadTranslationTable { qiao_pindi_draw = "令其摸%arg张牌", qiao_pindi_discard = "令其弃置%arg张牌",
+  ["#qiao_shi_pindi"] = "品第：弃置一张本回合未选过类别的牌，选择一名未选过的其他角色",
+  ["#qiao_pindi-discard"] = "品第：弃置%arg张牌" }
 return skill

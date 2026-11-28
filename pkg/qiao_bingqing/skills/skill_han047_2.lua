@@ -9,7 +9,8 @@ skill:addEffect(fk.CardUseFinished, {
     return target == player and player.room.current == player and player:hasSkill(skill.name) and #candidates(player) > 0
   end,
   on_cost = function(self, event, target, player)
-    local to = S.pick(player.room, player, candidates(player), skill.name, true)[1]
+    local to = S.pick(player.room, player, candidates(player), skill.name, true, nil,
+      "#qiao__skill_han047_2-remove")[1]
     event:setCostData(self, { to = to })
     return to ~= nil
   end,
@@ -26,9 +27,14 @@ skill:addEffect(fk.CardUseFinished, {
     if S.present(other) and S.present(player) and not player:isNude() then
       S.give(room, player, other, room:askToCards(player, {
         min_num = 1, max_num = 1, include_equip = true, skill_name = skill.name, cancelable = false,
+        prompt = "#qiao__skill_han047_2-give::" .. other.id,
       }), skill.name)
     end
     S.exchange(room, other, S.pairs(room, other, player, nil, "qiao_heg__han047"), skill.name, true)
   end,
 })
+Fk:loadTranslationTable {
+  ["#qiao__skill_han047_2-remove"] = "径出：选择一名角色，令其本回合移出游戏",
+  ["#qiao__skill_han047_2-give"] = "径出：选择一张牌交给 %dest",
+}
 return skill

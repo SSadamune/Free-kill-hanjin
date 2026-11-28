@@ -9,8 +9,8 @@ function M.allies(p, other)
   return H.compareKingdomWith(p, other)
 end
 
-function M.pick(room, chooser, targets, skill, optional, max)
-  return Interaction.choosePlayers(room, chooser, targets, skill, max, optional)
+function M.pick(room, chooser, targets, skill, optional, max, prompt)
+  return Interaction.choosePlayers(room, chooser, targets, skill, max, optional, prompt)
 end
 
 -- 只生成公共交换接口此刻允许的组合，保留选中时的牌名供最终防陈旧校验。

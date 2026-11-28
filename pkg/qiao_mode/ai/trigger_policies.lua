@@ -382,8 +382,8 @@ function M.choice(ai, choices, fields)
     for _, id in ipairs(player:getCardIds("he")) do total = total + Cost.value(ai, id) end
     return total > 9 and "qiao__skill_han011_2-cards" or "qiao__skill_han011_2-draw"
   elseif key == "#qiao__skill_jin011_1-branch" then
-    local equipment = "qiao__skill_jin011_1-equip"
-    local hand = "qiao__skill_jin011_1-hand"
+    local equipment = "qiao__skill_jin011_1-equip:" .. fields[2]
+    local hand = "qiao__skill_jin011_1-hand:" .. fields[2]
     if not table.contains(choices, hand) then return equipment end
     if not table.contains(choices, equipment) then return hand end
     if ai.player:getHandcardNum() >= 3 or not Cost.effectable(player, "qiao__skill_wu008_2") then return hand end

@@ -189,7 +189,7 @@ function Testqiao_jin_basic:testGuoyiTargetWithBothBranchesChoosesOne()
     askToChoice = function(self, player, params, original)
       if player == p2() and params.skill_name == GUOYI then
         seen = table.simpleClone(params.choices)
-        return GUOYI_EQUIP
+        return GUOYI_EQUIP .. ":" .. p.id
       end
       return original(self, player, params)
     end,
@@ -200,7 +200,7 @@ function Testqiao_jin_basic:testGuoyiTargetWithBothBranchesChoosesOne()
     })
   end)
 
-  lu.assertEquals(seen, { GUOYI_EQUIP, GUOYI_HAND })
+  lu.assertEquals(seen, { GUOYI_EQUIP .. ":" .. p.id, GUOYI_HAND .. ":" .. p.id })
   lu.assertEquals(room:getCardArea(equip), Card.DiscardPile)
   lu.assertEquals(p2().hp, before - 1)
 end

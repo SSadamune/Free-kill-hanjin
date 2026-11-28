@@ -17,7 +17,8 @@ skill:addEffect(fk.GeneralRevealed, {
     local owner = S.choose(p, sources, skill.name)[1]
     if not owner then return end
     local ids = legal(p, owner)
-    local id = room:askToChooseCard(p, { target = owner, flag = { card_data = {{ "$Equip", ids }} }, skill_name = skill.name })
+    local id = room:askToChooseCard(p, { target = owner, flag = { card_data = {{ "$Equip", ids }} }, skill_name = skill.name,
+      prompt = "#qiao_bajia-equip::" .. owner.id })
     if not table.contains(ids, id) then return end
     Placement.put(room, p, id, skill.name)
     if room:getCardOwner(id) == p and room:getCardArea(id) == Card.PlayerEquip then
@@ -118,5 +119,6 @@ skill:addEffect("atkrange", {
   end,
 })
 skill:addEffect("invalidity", { recheck_invalidity = true, invalidity_func = function(self, p, sk) return Y.suppressed(p, sk) end })
-Fk:loadTranslationTable { ["@qiao_bajia_yu"] = "舆", qiao_bajia_yu = "舆" }
+Fk:loadTranslationTable { ["@qiao_bajia_yu"] = "舆", qiao_bajia_yu = "舆",
+  ["#qiao_bajia-equip"] = "拔驾：选择 %dest 装备区里的一张牌置入你的装备区，称为“舆”" }
 return skill

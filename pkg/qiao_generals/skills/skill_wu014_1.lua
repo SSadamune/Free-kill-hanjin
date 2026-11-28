@@ -46,8 +46,7 @@ Fk:loadTranslationTable {
   ["qiao__skill_wu014_1"] = "好施",
   [":qiao__skill_wu014_1"] = "摸牌阶段，你可以多摸两张牌，然后若你的手牌数大于5，你将半数（向下取整）手牌交给一名手牌最少的其他角色。",
   ["#qiao__skill_wu014_1-invoke"] = "好施：你可以多摸两张牌",
-  ["#qiao__skill_wu014_1-target"] = "好施：选择一名手牌最少的其他角色",
-  ["#qiao__skill_wu014_1-cards"] = "好施：将 %arg 张手牌交给其",
+  ["#qiao__skill_wu014_1-give"] = "好施：选择 %arg 张手牌，交给一名手牌最少的其他角色",
 }
 
 return skill

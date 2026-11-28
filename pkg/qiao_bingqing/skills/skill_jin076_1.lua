@@ -12,7 +12,7 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, p)
     local ids = p.room:askToCards(p, { min_num = 1, max_num = 5 - #p:getPile(pile),
-      pattern = ".|.|.|hand|.|basic,normal_trick", skill_name = skill.name, cancelable = true })
+      pattern = ".|.|.|hand|.|basic,normal_trick", skill_name = skill.name, cancelable = true, prompt = "#qiao_jinu-store" })
     event:setCostData(self, { cards = ids })
     return #ids > 0
   end,
@@ -44,5 +44,5 @@ for _, timing in ipairs({ fk.CardUsing, fk.CardResponding }) do
     end,
   })
 end
-Fk:loadTranslationTable { [pile] = "积弩" }
+Fk:loadTranslationTable { [pile] = "积弩", ["#qiao_jinu-store"] = "积弩：你可以扣置基本牌或普通锦囊牌" }
 return skill

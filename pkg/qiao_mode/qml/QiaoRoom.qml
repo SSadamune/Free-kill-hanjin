@@ -29,6 +29,24 @@ Room {
   property int skillStatusRevision: 0
   property int discardCount: 0
 
+  readonly property string supportButtonLabel: {
+    const fields = (dataModel.prompt ?? "").split(":");
+    return fields[0] === "#qiao_adaptation_support" && fields[4]
+      ? Lua.tr("qiao_condition_zhuzhan") + "→" + Lua.tr(fields[4]) : "";
+  }
+  Binding {
+    target: room.okButton
+    property: "text"
+    when: room.supportButtonLabel !== ""
+    value: room.supportButtonLabel
+  }
+  Binding {
+    target: room.okButton
+    property: "width"
+    when: room.supportButtonLabel !== ""
+    value: Math.max(136, room.supportButtonLabel.length * 21 + 20)
+  }
+
   TextMetrics {
     id: choiceMetrics
     font.pixelSize: 20

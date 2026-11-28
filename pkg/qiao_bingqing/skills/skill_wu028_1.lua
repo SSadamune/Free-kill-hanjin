@@ -11,9 +11,13 @@ skill:addEffect("active", {
     if not equip or not S.present(p) then return end
     local targets = table.filter(room:getPresentPlayers(), function(to) return to ~= p and not to:isNude() end)
     local to = S.choose(p, targets, skill.name)[1]
-    if to then room:throwCard(room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name }), skill.name, to, p) end
+    if to then
+      local id = room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name,
+        prompt = "#qiao_gongqi-discard::" .. to.id })
+      room:throwCard(id, skill.name, to, p)
+    end
   end,
 })
 skill:addEffect("atkrange", { correct_func = function(self, p) return p:getMark("@qiao_gongqi-turn") end })
-Fk:loadTranslationTable { ["@qiao_gongqi-turn"] = "弓骑" }
+Fk:loadTranslationTable { ["@qiao_gongqi-turn"] = "弓骑", ["#qiao_gongqi-discard"] = "弓骑：选择并弃置 %dest 的一张牌" }
 return skill

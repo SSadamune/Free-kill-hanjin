@@ -39,6 +39,7 @@ function M.put(room, player, id, skillName, proposer)
     if #equipped == 0 then return end
     local old = #equipped == 1 and equipped[1] or room:askToChooseCard(proposer, {
       target = player, flag = { card_data = {{ "$Equip", equipped }} }, skill_name = "replaceEquip",
+      prompt = "#qiao_replace_equip::" .. player.id,
     })
     if not table.contains(player:getEquipments(incoming.sub_type), old) or not M.canPut(player, id, proposer) then return end
     local extra = { qiao_equipment_replacement = { incoming = id, outgoing = old, target = player.id } }
@@ -86,5 +87,7 @@ function M.checkReplacement(room, moves)
     end)
   end
 end
+
+Fk:loadTranslationTable { ["#qiao_replace_equip"] = "选择要替换的装备牌（%dest）" }
 
 return M

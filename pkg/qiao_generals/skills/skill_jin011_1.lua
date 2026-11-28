@@ -59,20 +59,22 @@ local function resolveTarget(room, player, to)
   end)
   local handIds = to:getCardIds(Player.Hand)
 
+  local equipment = OPTION_EQUIP .. ":" .. player.id
+  local hand = OPTION_HAND .. ":" .. player.id
   local choices = {}
-  if #equipIds > 0 then table.insert(choices, OPTION_EQUIP) end
-  if #handIds > 0 then table.insert(choices, OPTION_HAND) end
+  if #equipIds > 0 then table.insert(choices, equipment) end
+  if #handIds > 0 then table.insert(choices, hand) end
   if #choices == 0 then return false, false end
 
   local option = Selection.askOption(room, to, {
     choices = choices,
-    all_choices = { OPTION_EQUIP, OPTION_HAND },
+    all_choices = { equipment, hand },
     skill_name = skill.name,
     prompt = "#qiao__skill_jin011_1-branch:" .. player.id,
     cancelable = false,
   })
-  local choseEquip = option == OPTION_EQUIP
-  local choseHand = option == OPTION_HAND
+  local choseEquip = option == equipment
+  local choseHand = option == hand
 
   if choseEquip then
     local id = equipIds[1]
@@ -193,8 +195,8 @@ skill:addEffect("active", {
 skill.qiaoImplemented = true
 
 Fk:loadTranslationTable {
-  [OPTION_EQUIP] = "你弃置其装备区一张牌",
-  [OPTION_HAND] = "你获得其一张手牌",
+  [OPTION_EQUIP] = "%src 弃置你装备区一张牌",
+  [OPTION_HAND] = "%src 获得你一张手牌",
   ["#qiao__skill_jin011_1-prompt"] = "果毅：弃置至少一张基本牌并选择等量名有牌的其他角色",
   ["#qiao__skill_jin011_1-branch"] = "果毅：%src 令你选择一项",
   ["#qiao__skill_jin011_1-equip"] = "果毅：选择 %dest 装备区一张牌弃置",

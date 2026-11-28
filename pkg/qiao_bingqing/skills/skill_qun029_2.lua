@@ -21,7 +21,8 @@ for _, timing in ipairs({ fk.TargetSpecified, fk.TargetConfirmed }) do
       local other = event == fk.TargetSpecified and data.to or data.from
       local list = eligible(p, other)
       if #list == 0 then return end
-      local id = p.room:askToChooseCard(p, { target = other, flag = { card_data = {{ "$Equip", list }} }, skill_name = skill.name })
+      local id = p.room:askToChooseCard(p, { target = other, flag = { card_data = {{ "$Equip", list }} }, skill_name = skill.name,
+        prompt = "#qiao_huanjia-equip::" .. other.id })
       if not table.contains(list, id) then return end
       local types = subtypes(other:getVirtualEquip(id) or Fk:getCardById(id))
       Placement.put(p.room, p, id, skill.name)
@@ -40,4 +41,5 @@ for _, timing in ipairs({ fk.TargetSpecified, fk.TargetConfirmed }) do
     end,
   })
 end
+Fk:loadTranslationTable { ["#qiao_huanjia-equip"] = "擐甲：选择 %dest 装备区里的一张牌置入你的装备区" }
 return skill
