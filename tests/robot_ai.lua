@@ -68,8 +68,15 @@ function Testqiao_robot_ai:testHiddenLuXunKeepsBenefitAndDoesNotRevealForSecondT
   scenario(function(room, source, target)
     hideRobotDeputy(room, target, "qiao_heg__wu007", "wu")
     local before = target:getHandcardNum()
-    room:useCard { from = source, tos = { target }, card = Fk:cloneCard("ex_nihilo") }
+    local drawn = {
+      room:printCard("qiao__jink", Card.Heart, 2).id,
+      room:printCard("qiao__jink", Card.Diamond, 3).id,
+    }
+    room:moveCardTo(drawn, Card.DrawPile)
+    room:useCard { from = source, tos = { target }, card = Fk:cloneCard("ex_nihilo"),
+      disresponsiveList = table.simpleClone(room:getPresentPlayers()) }
     lu.assertEquals(target:getHandcardNum(), before + 2)
+    for _, id in ipairs(drawn) do lu.assertEquals(room:getCardOwner(id).id, target.id) end
     local indulgence = give(room, source, "qiao__indulgence")
     room:useCard { from = source, tos = { target }, card = indulgence }
     lu.assertEquals(target.deputyGeneral, "anjiang")
@@ -520,10 +527,11 @@ function Testqiao_robot_ai:testSlashAvoidsEightDiagramUnlessAttackerCanRetrialOr
 
     local red = room:printCard("qiao__slash", Card.Heart, 3)
     room:moveCardTo(red, Card.DrawPile)
-    room:setPlayerProperty(enemy, "hp", 2)
+    -- An extra point is nonlethal here, so its discounted value ties guaranteed damage.
+    room:setPlayerProperty(enemy, "hp", 3)
     enemy.serverplayer:setState(fk.Player_Robot)
     room:useCard(room:handleUseCardReply(player, action))
-    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(enemy.hp, 2)
     lu.assertEquals(room:getCardArea(red.id), Card.DrawPile, "烈勇应跳过八卦阵的判定")
   end)
 end
