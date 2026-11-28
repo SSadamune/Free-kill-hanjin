@@ -60,6 +60,84 @@ function Testqiao_scenarios:testConsecutiveGamesRespectWinnerAndPreviousBan()
   end
 end
 
+function Testqiao_scenarios:testGameOverBeforeCurrentPlayerClearsPreviousResult()
+  local room = create()
+  FkTest.runInRoom(function()
+    room:setSessionData {
+      qiao_faction_ban_v1 = { version = 1, winners = { "wei" }, banned = { "jin" } },
+      unrelated = { value = 1 },
+    }
+    room:setCurrent(nil)
+    room:gameOver("")
+  end)
+
+  lu.assertTrue(room.game_finished)
+  lu.assertEquals(room:getSessionData(), { unrelated = { value = 1 } })
+end
+
+function Testqiao_scenarios:testSchedulerAbortDoesNotReusePreviousResult()
+  for _, mode in ipairs({ "qiao_free_mode", "new_heg_mode" }) do
+    local room = create {
+      mode = mode,
+      allowPendingSetup = true,
+      configure = function(current)
+        current:setSessionData {
+          qiao_faction_ban_v1 = { version = 1, winners = { "wei" }, banned = { "jin" } },
+          unrelated = { value = 1 },
+        }
+        if mode == "qiao_free_mode" then
+          local broadcast = current.doBroadcastNotify
+          function current:doBroadcastNotify(command, data, players)
+            broadcast(self, command, data, players)
+            if command == "StartGame" then self:yield() end
+          end
+        else
+          current._test_disable_delay = false
+          for _, player in ipairs(current.room.players) do
+            player.waitForReply = function() return "__notready" end
+          end
+        end
+      end,
+    }
+    lu.assertTrue(room.game_started)
+    lu.assertNil(room:getTag("qiao_test_ready"))
+    lu.assertEquals(coroutine.status(room.main_co), "suspended")
+    if mode == "qiao_free_mode" then
+      lu.assertNil(room.current)
+    else
+      lu.assertEquals(room.current_request.focus_text, "AskForGeneral")
+    end
+
+    local backend = room.room
+    for _, player in ipairs(backend.players) do player:setState(fk.Player_Offline) end
+    FkTest.runInRoom()
+    for _, player in ipairs(backend.players) do
+      player:setState(fk.Player_Online)
+      player.waitForReply = nil
+    end
+    lu.assertTrue(room.game_finished)
+    lu.assertEquals(room:getSessionData(), { unrelated = { value = 1 } })
+    support.clearRoom()
+
+    local nextRoom = create {
+      backend = backend,
+      settings = { qiao_candidate_kingdoms = { "wei", "shu", "wu", "qun", "jin" }, qiao_kingdom_limit = 4 },
+      configure = function(current)
+        local pick = current.tableRandomPick
+        function current:tableRandomPick(list, n)
+          if n == 1 and #list == 5 and table.contains(list, "wei") and table.contains(list, "jin") then
+            return { "jin" }
+          end
+          return pick(self, list, n)
+        end
+      end,
+    }
+    lu.assertEquals(nextRoom:getBanner("qiao_banned_kingdoms"), { "jin" })
+    lu.assertTrue(table.contains(nextRoom:getBanner("all_kingdoms"), "wei"))
+    if mode == "qiao_free_mode" then support.clearRoom() end
+  end
+end
+
 function Testqiao_scenarios:testPreviousWinnerOutsideCandidatesIsIgnored()
   local first = create { settings = { qiao_wild_count = 0 } }
   local winner = first.players[1]

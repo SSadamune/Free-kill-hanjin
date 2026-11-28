@@ -1,4 +1,3 @@
-local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local skill = fk.CreateSkill { name = "#qiao_session_history" }
 local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
 
@@ -10,15 +9,6 @@ skill:addEffect(fk.GamePrepared, {
   end,
   on_refresh = function(self, event, target, player)
     Session.clearForeignGame(player.room)
-  end,
-})
-skill:addEffect(fk.GameFinished, {
-  global = true,
-  can_refresh = function(self, event, target, player)
-    return player == player.room.players[1] and Modes.inRoom(player.room)
-  end,
-  on_refresh = function(self, event, target, player, data)
-    Session.finish(player.room, data.players)
   end,
 })
 return skill

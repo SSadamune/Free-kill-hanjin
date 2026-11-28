@@ -1,6 +1,7 @@
 local Modes = require "packages.qiao.pkg.qiao_mode.modes"
 local Mode = require "packages.qiao.pkg.qiao_mode.mode"
 local Client = require "packages.qiao.pkg.qiao_mode.client"
+local Session = require "packages.qiao.pkg.qiao_mode.rules.session"
 local extension = Package:new("qiao_mode", Package.SpecialPack)
 extension.extensionName = "qiao"
 extension:loadSkillSkelsByPath("./packages/qiao/pkg/qiao_mode/skills")
@@ -18,6 +19,7 @@ local unusedGameSettings = {
 Fk:addPostLoadFunc(function()
   local base = assert(Fk.game_modes.new_heg_mode, "Qiao requires the hegemony extension")
   Mode.installRules()
+  Session.installServer()
   local board = assert(Fk:getBoardGame(base.name), "Qiao requires the hegemony boardgame")
   board.client_klass = Client
   local boards = {}

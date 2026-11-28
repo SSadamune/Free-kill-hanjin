@@ -137,6 +137,11 @@ function M.create(base, name)
     function logic:trigger(event, target, data, refreshOnly)
       -- 死亡翻牌仍须更新牌面和势力。引擎派发延迟时机时，已死亡的角色不生成「明置后」。
       if event == fk.GeneralRevealed and target and target.dead then return false end
+      if event == fk.GameFinished then
+        Session.finish(self.room, data.players)
+        -- 初始化中止时可能还没有当前角色，引擎无法从该角色开始遍历触发技。
+        if not self.room.current then return false end
+      end
       return parent.trigger(self, event, target, data, refreshOnly)
     end
     if locked then
