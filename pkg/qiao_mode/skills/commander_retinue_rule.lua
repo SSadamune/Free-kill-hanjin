@@ -16,7 +16,6 @@ skill:addEffect(fk.GameStart, {
   on_refresh = function(self, event, target, player)
     local room = player.room
     C.reset(room)
-    for _, p in ipairs(room.players) do C.grantAbility(p) end
     C.refreshAvailability(room)
   end,
 })

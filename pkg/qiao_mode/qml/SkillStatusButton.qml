@@ -9,8 +9,9 @@ Controls.AbstractButton {
   id: button
   objectName: "qiaoSkillStatus"
   required property var states
+  property var allStates: states
   property Item photo
-  readonly property var stateMarks: new Set(states.map(state => state.id))
+  readonly property var stateMarks: new Set(allStates.map(state => state.id))
   visible: states.length > 0
   hoverEnabled: true
   implicitWidth: Math.min(104, Math.max(34, label.implicitWidth + 12))
@@ -57,7 +58,19 @@ Controls.AbstractButton {
   Controls.ToolTip.text: states.map(state =>
     state.title + (state.value ? " " + state.value : "") + "　" + state.description).join("\n")
 
-  onClicked: Ltk.roomScene.showInfoPopup(details, { states: Qt.binding(() => button.states) })
+  onClicked: {
+    const state = states[0];
+    if (states.length === 1 && state.cards?.length) {
+      const pile = Qt.createComponent("LunarLtk.Pages.InfoPopups", "ViewPile");
+      Ltk.roomScene.showInfoPopup(pile, {
+        name: "qiao__skill_wu020_2",
+        ids: Qt.binding(() => button.states[0]?.cards ?? []),
+        additional_prop: { selectable: true, known: true },
+      });
+    } else {
+      Ltk.roomScene.showInfoPopup(details, { states: Qt.binding(() => button.states) });
+    }
+  }
 
   Component {
     id: details

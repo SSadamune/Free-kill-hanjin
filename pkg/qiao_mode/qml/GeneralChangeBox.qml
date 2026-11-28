@@ -99,7 +99,7 @@ GraphicsBox {
             }
           }
         }
-        onClicked: root.selectedName = selected ? generalName : ""
+        onClicked: root.selectedName = root.selectedName === generalName ? "" : generalName
         Connections {
           target: root
           function onSelectedNameChanged() { card.selected = root.selectedName === card.generalName; }

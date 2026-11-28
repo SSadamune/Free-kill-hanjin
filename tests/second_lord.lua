@@ -786,7 +786,7 @@ function Testsecond_lord:testWinnerWithLordEndsForUniqueFactionAboveHalf()
   end)
   -- Five of eight players are Wei, but the remaining faction is unique. A lord
   -- must not be required for this board to end.
-  lu.assertEquals(#winner, 2)
+  lu.assertEquals(#winner, 5)
   lu.assertTrue(winner[1] == p1)
   lu.assertTrue(winner[2] == p2)
 end
@@ -803,7 +803,7 @@ function Testsecond_lord:testWinnerWithoutLordEndsForUniqueFactionAboveHalf()
     winner = mode:getWinner(dead)
   end)
   -- Same five-of-eight board as above, without a lord: the result is unchanged.
-  lu.assertEquals(#winner, 2)
+  lu.assertEquals(#winner, 5)
   lu.assertTrue(winner[1] == p1)
   lu.assertTrue(winner[2] == p2)
 end
@@ -822,8 +822,8 @@ function Testsecond_lord:testWinnerWithAndWithoutLordSameUniqueFaction()
     revealed(p1, G.wei_monarch.name, G.wei_deputy.name, "wei")
     withLord = mode:getWinner(dead)
   end)
-  lu.assertEquals(#withoutLord, 2)
-  lu.assertEquals(#withLord, 2)
+  lu.assertEquals(#withoutLord, 5)
+  lu.assertEquals(#withLord, 5)
   lu.assertEquals(withoutLord[1].id, withLord[1].id)
   lu.assertEquals(withoutLord[2].id, withLord[2].id)
 end
@@ -889,6 +889,20 @@ function Testsecond_lord:testWinnerSingleWildWins()
   lu.assertTrue(winner[1] == p1)
 end
 
+function Testsecond_lord:testLastSurvivorSharesFactionWinWithDeadAllies()
+  local mode, survivor, ally = Fk.game_modes.qiao_heg_mode, player(1), player(2)
+  local winner
+  FkTest.runInRoom(function()
+    revealed(survivor, G.wei_normal.name, G.wei_deputy.name, "wei")
+    markDead(ally, "wei")
+    markDead(player(3), "wei")
+    player(3).surrendered = true
+    for index = 4, 8 do markDead(player(index), "shu") end
+    winner = mode:getWinner(player(8))
+  end)
+  lu.assertEquals(table.map(winner, Util.IdMapper), { survivor.id, ally.id })
+end
+
 function Testsecond_lord:testWinnerHiddenGeneralsFollowExpectedFactionSemantics()
   local mode = Fk.game_modes.qiao_heg_mode
   local p1, p2 = player(1), player(2)
@@ -949,13 +963,13 @@ function Testsecond_lord:testRealDeathSuccessionThenGameOver()
   FkTest.setNextReplies(successor, { { A.ASCEND_ACCEPT } })
   FkTest.runInRoom(function() room():killPlayer { who = lord } end)
   -- Succession runs in BeforeGameOverJudge, then the real GameOverJudge sees the
-  -- unique Wei faction and ends the game with the successor as a winner.
+  -- unique Wei faction and awards the win to all three members.
   lu.assertEquals(successor.general, G.wei_monarch.name)
   lu.assertTrue(room().game_finished)
   local summary = room():getBanner("GameSummary")
   lu.assertEquals(summary[successor.seat].win, "Game Win")
   lu.assertEquals(summary[ally.seat].win, "Game Win")
-  lu.assertEquals(summary[lord.seat].win, "Game Lose")
+  lu.assertEquals(summary[lord.seat].win, "Game Win")
   local saved = json.decode(room().room:getSessionData()).qiao_faction_ban_v1
   lu.assertEquals(saved.winners, { "wei" })
 end

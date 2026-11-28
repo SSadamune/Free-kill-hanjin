@@ -1,6 +1,7 @@
 -- Read only public, synchronized state for the character panel. Keep the
 -- underlying marks and their existing cleanup rules as the source of truth.
 local Deck = require "packages.qiao.pkg.qiao_generals.util.jin_deck"
+local Pojun = require "packages.qiao.pkg.qiao_mode.rules.pojun"
 local Tieqi = require "packages.qiao.pkg.qiao_mode.rules.tieqi"
 local Quan = require "packages.qiao.pkg.qiao_generals.util.quan_common"
 local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formation"
@@ -76,7 +77,14 @@ local entries = {
   { "@@lure_tiger-turn", "@@lure_tiger-turn", "暂时移出游戏。" },
 }
 
-local watched = { [M.jiliCount] = true }
+local watched = {
+  [M.jiliCount] = true,
+  [Deck.BAN_DISPLAY] = true,
+  [Deck.BAN_SUITS] = true,
+  [Deck.USED_SUITS] = true,
+  [Pojun.COUNT] = true,
+  [Pojun.CARDS] = true,
+}
 for _, entry in ipairs(entries) do watched[entry[1]] = true end
 for _, mark in ipairs(fuli) do watched[mark] = true end
 
@@ -106,6 +114,23 @@ function M.forPlayer(player)
   if #banned > 0 then
     append(states, "fuli", "qiao__skill_jin016_1",
       "本回合不能使用或打出所示花色的牌。", Deck.suitSymbols(banned))
+  end
+
+  local usedSuits = Deck.suitSymbols(player:getTableMark(Deck.USED_SUITS))
+  local bannedSuits = Deck.suitSymbols(Deck.bannedSuits(player))
+  if bannedSuits ~= "" or (usedSuits ~= "" and player:hasShownSkill(Deck.QIANBIAN)) then
+    local description = "此阶段已使用过" .. (usedSuits == "" and bannedSuits or usedSuits) .. "的手牌。"
+    if bannedSuits ~= "" then description = description .. "\n此阶段不能使用" .. bannedSuits .. "的手牌。" end
+    append(states, Deck.BAN_DISPLAY, Deck.QIANBIAN, description, usedSuits == "" and bannedSuits or usedSuits)
+    states[#states].individual = true
+  end
+
+  local pojunCount = player:getMark(Pojun.COUNT)
+  if pojunCount > 0 then
+    local ownCards = Self == player and not Fk:currentRoom().observing and player:getTableMark(Pojun.CARDS) or {}
+    append(states, Pojun.COUNT, "qiao__skill_wu020_2", "本回合移出游戏的牌。", tostring(pojunCount))
+    states[#states].individual = true
+    if #ownCards > 0 then states[#states].cards = ownCards end
   end
 
   for _, name in ipairs(jiliSkills) do

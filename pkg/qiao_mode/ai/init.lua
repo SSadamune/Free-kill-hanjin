@@ -12,6 +12,7 @@ local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local Nu = require "packages.qiao.pkg.qiao_mode.ai.nu"
 local Heg = require "packages.hegemony.util"
 
 local Robot = SmartAI:subclass("HanjinRobot")
@@ -90,7 +91,7 @@ function Robot:handlePlayCard()
     if stage == "cheap_recast" then
       reply = Cards.recast(self, true)
     else
-      if stage == "damage" then reply = Skills.play(self, "attack_prep") or ViewAs.fiveElements(self) end
+      if stage == "damage" then reply = Skills.play(self, "attack_prep") or ViewAs.fiveElements(self) or ViewAs.wine(self) end
       reply = reply or Cards.play(self, stage) or (stage == "support" and Cards.placeBreastplate(self))
         or Skills.play(self, stage) or ViewAs.play(self, stage)
     end
@@ -182,7 +183,7 @@ function Robot:handleCustomDialog(data)
     end)
     return table.slice(cards, 1, component.prop.maxGain + 1)
   end
-  return Expansion.damageDialog(self, component)
+  return Expansion.damageDialog(self, component) or Nu.dialog(self, component)
 end
 
 function Robot:handleAskForArrangeCards(data)

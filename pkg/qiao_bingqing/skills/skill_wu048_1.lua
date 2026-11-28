@@ -6,7 +6,8 @@ skill:addEffect("active", {
   target_filter = function(self, p, to, selected) return #selected == 0 and to ~= p and S.present(to) and not to:isNude() end,
   on_use = function(self, room, effect)
     local p, to, first = effect.from, effect.tos[1], effect.cards[1]
-    local second = room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name })
+    local second = room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name,
+      prompt = "#qiao_shanji-discard::" .. to.id })
     local before = to:inMyAttackRange(p)
     local parent, eventId = room.logic:getCurrentEvent(), room.logic.current_event_id
     room:moveCards(
@@ -36,9 +37,14 @@ skill:addEffect("active", {
       return false
     end, Player.HistoryTurn)
     if #available > 0 then
-      local chosen = room:askToChooseCard(p, { target = p, flag = { card_data = {{ "$DiscardPile", available }} }, skill_name = skill.name })
+      local chosen = room:askToChooseCard(p, { target = p, flag = { card_data = {{ "$DiscardPile", available }} }, skill_name = skill.name,
+        prompt = "#qiao_shanji-obtain::" .. to.id })
       if table.contains(available, chosen) and room:getCardArea(chosen) == Card.DiscardPile then room:obtainCard(p, chosen, true, fk.ReasonPrey, p, skill.name) end
     end
   end,
 })
+Fk:loadTranslationTable {
+  ["#qiao_shanji-discard"] = "闪击：选择并弃置 %dest 的一张牌",
+  ["#qiao_shanji-obtain"] = "闪击：获得弃牌堆中 %dest 本回合失去过的一张牌",
+}
 return skill

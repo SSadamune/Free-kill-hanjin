@@ -273,6 +273,7 @@ function M.create(base, name)
       -- player's offers; never put any selected card back into the general pile.
       if freeAssign then unused = Selection.pruneUnused(unused, selected) end
       room:returnToGeneralPile(unused, "random")
+      room:setBanner("qiao_selection_finished", true)
     end
     -- 开局体力上限：引擎（上游 HegLogic:broadcastGeneral）按双将组合写入
     -- maxHp / hp / HalfMaxHpLeft。这里在同一开局时点补上配将体力贡献修正
@@ -353,6 +354,7 @@ function M.create(base, name)
       self.room:addSkill("qiao__zhen_shi_history_rule")
       require("packages.qiao.pkg.qiao_mode.rules.skill_sources").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.tieqi").install(self.room)
+      require("packages.qiao.pkg.qiao_mode.rules.pojun").install(self.room)
       require("packages.qiao.pkg.qiao_mode.rules.marker_cards").install()
       self.room:addSkill("qiao__skill_jin022b_range")
       self.room:addSkill("qiao__general_card_skills_rule")

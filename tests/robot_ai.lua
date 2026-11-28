@@ -2168,4 +2168,276 @@ function Testqiao_robot_ai:testPackJubaoDoesNotTakeItsOwnPearlWhenItCanReclaimAW
   end)
 end
 
+function Testqiao_robot_ai:testShiPindiUsesCheapCostAndHelpsAnAllyThroughNativeChoice()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    for _, other in ipairs(room:getPresentPlayers()) do
+      if player.ai:isEnemy(other) then room:throwCard(other:getCardIds("h"), "test", other, other) end
+    end
+    room:handleAddLoseSkills(player, "qiao__skill_wei035_1", nil, false, true)
+    local spare = give(room, player, "qiao__lightning")
+    local peach = give(room, player, "qiao__peach")
+    give(room, ally, "qiao__jink")
+    local n = ally:getHandcardNum()
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__skill_wei035_1")
+    lu.assertEquals(action.card.subcards, { spare.id })
+    lu.assertEquals(action.targets, { ally.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(ally:getHandcardNum(), n + 1)
+    lu.assertTrue(table.contains(player:getCardIds("h"), peach.id))
+  end)
+end
+
+function Testqiao_robot_ai:testShiBingzhengDrawsForAllyAndNotAnEnemy()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 1)
+    give(room, ally, "qiao__slash")
+    local allyHand, enemyHand = ally:getHandcardNum(), enemy:getHandcardNum()
+    room:setPlayerProperty(enemy, "hp", enemyHand)
+    room:setPlayerProperty(ally, "hp", allyHand + 1)
+    local own = give(room, player, "qiao__jink")
+    room:handleAddLoseSkills(player, "qiao__skill_shu048_1", nil, false, true)
+    room.logic:trigger(fk.TurnEnd, player, {})
+    lu.assertTrue(ally:getHandcardNum() > allyHand)
+    lu.assertEquals(enemy:getHandcardNum(), enemyHand)
+    lu.assertTrue(table.contains(player:getCardIds("h"), own.id))
+  end)
+end
+
+function Testqiao_robot_ai:testShiPindiSelectsAndResolvesAfterTakingDamage()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 4)
+    room:setPlayerProperty(player, "shield", 0)
+    for _, other in ipairs(room:getPresentPlayers()) do
+      local hand = other:getCardIds("h")
+      if #hand > 0 and player.ai:isEnemy(other) then room:throwCard(hand, "test", other, other) end
+    end
+    room:handleAddLoseSkills(player, "qiao__skill_wei035_1", nil, false, true)
+    local material = give(room, player, "qiao__lightning")
+    local hand = ally:getHandcardNum()
+    room:damage { from = enemy, to = player, damage = 1 }
+    lu.assertEquals(ally:getHandcardNum(), hand + 1)
+    lu.assertEquals(room:getCardArea(material.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testShiFaenDrawsOnlyForANativeAllyChainEvent()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei035_2", nil, false, true)
+    local allyHand, enemyHand = ally:getHandcardNum(), enemy:getHandcardNum()
+    ally:setChainState(true)
+    enemy:setChainState(true)
+    ally:setChainState(false)
+    lu.assertEquals(ally:getHandcardNum(), allyHand + 1)
+    lu.assertEquals(enemy:getHandcardNum(), enemyHand)
+  end)
+end
+
+function Testqiao_robot_ai:testShiZhuanpengPaysACheapCardToStopAnActualSlash()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:setPlayerProperty(player, "hp", 1)
+    room:setPlayerProperty(player, "shield", 0)
+    room:handleAddLoseSkills(player, "qiao__skill_em_han001_2", nil, false, true)
+    local cost = give(room, player, "qiao__lightning")
+    give(room, player, "qiao__peach")
+    room:useCard { from = enemy, tos = { player }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(player.hp, 1)
+    lu.assertIs(room:getCardOwner(cost.id), enemy)
+  end)
+end
+
+function Testqiao_robot_ai:testShiEdictContributesOnlyMissingSuitsAndUsesTheMark()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local edict = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_han"
+    local prefix = {}
+    for _, suit in ipairs({ Card.Spade, Card.Club, Card.Heart }) do
+      table.insert(prefix, give(room, player, "qiao__lightning", 5, suit).id)
+    end
+    lu.assertTrue(edict.grant(room, player))
+    player:addToPile(edict.PILE, prefix, true, edict.BANNER)
+    local duplicate = give(room, player, "qiao__lightning", 5, Card.Club)
+    local missing = give(room, player, "qiao__lightning", 5, Card.Diamond)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, edict.BANNER)
+    lu.assertEquals(action.card.subcards, { missing.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(#edict.pileSuits(player:getPile(edict.PILE)), 4)
+    action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, edict.CONSUME)
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(edict.count(player), 0)
+    lu.assertIs(room:getCardOwner(duplicate.id), player)
+    lu.assertEquals(player:getHandcardNum(), 2)
+  end)
+end
+
+function Testqiao_robot_ai:testNuXieweiUsesAnActualJinkWindowAndKeepsThePeach()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    skillTest.installDualGenerals(room, player, { main = "qiao_heg__qun139", deputy = "qiao_test__qun_2", kingdom = "qun" })
+    room:setPlayerProperty(player, "hp", 1)
+    room:setPlayerProperty(player, "shield", 0)
+    local bait = give(room, player, "qiao__lightning", 2)
+    local peach = give(room, player, "qiao__peach")
+    room:useCard { from = enemy, tos = { player }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(player.hp, 1)
+    lu.assertEquals(player:getPile("qiao_nu_er"), { bait.id })
+    lu.assertEquals(player:getCardIds("h"), { peach.id })
+  end)
+end
+
+function Testqiao_robot_ai:testNuJinuStoresAndAnswersWithTheOriginalStoredCard()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    skillTest.installDualGenerals(room, player, { main = "qiao_heg__jin076", deputy = "qiao_test__jin_2", kingdom = "jin" })
+    room:setPlayerProperty(player, "hp", 3)
+    local jink = give(room, player, "qiao__jink")
+    local spare = give(room, player, "qiao__slash")
+    room.logic:trigger(fk.EventPhaseStart, player, { phase = Player.Finish })
+    lu.assertTrue(table.contains(player:getPile("qiao_nu_jinu"), jink.id))
+    lu.assertTrue(table.contains(player:getHandlyIds(), jink.id))
+    local hp = player.hp
+    room:useCard { from = enemy, tos = { player }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(player.hp, hp)
+    lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+    lu.assertIs(room:getCardOwner(spare.id), player)
+  end)
+end
+
+function Testqiao_robot_ai:testNuShizhongAddsAHostileTargetWithDifferentBoardCount()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_jin067_2", nil, false, true)
+    local other = room.players[#room.players]
+    room:setPlayerProperty(other, "kingdom", "jin")
+    room:setPlayerProperty(other, "shield", 0)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local blade = give(room, player, "qiao__spear")
+    room:moveCardTo(blade, Card.PlayerEquip, player, fk.ReasonPut)
+    local gear = give(room, other, "qiao__crossbow")
+    room:moveCardTo(gear, Card.PlayerEquip, other, fk.ReasonPut)
+    local hp = other.hp
+    local allyHp = ally.hp
+    room:useCard { from = player, tos = { enemy }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(other.hp, hp - 1)
+    lu.assertEquals(ally.hp, allyHp)
+    lu.assertEquals(player:getHandcardNum(), 2)
+  end)
+end
+
+function Testqiao_robot_ai:testNuGongqiTradesSpareEquipmentForEnemyArmor()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wu028_1", nil, false, true)
+    local weapon = give(room, player, "qiao__crossbow")
+    local spare = give(room, player, "qiao__spear")
+    local armor = give(room, enemy, "qiao__eight_diagram")
+    room:moveCardTo(weapon, Card.PlayerEquip, player, fk.ReasonPut)
+    room:moveCardTo(armor, Card.PlayerEquip, enemy, fk.ReasonPut)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__skill_wu028_1")
+    lu.assertEquals(action.card.subcards, { spare.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(room:getCardArea(armor.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(weapon.id), Card.PlayerEquip)
+  end)
+end
+
+function Testqiao_robot_ai:testNuJiefanweiUsesTwoCheapCardsToHealAWeakenedAlly()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__retinue_skill_jiefanwei", nil, false, true)
+    room:setPlayerProperty(ally, "hp", 1)
+    local a = give(room, player, "qiao__lightning")
+    local b = give(room, player, "qiao__lure_tiger")
+    local peach = give(room, player, "qiao__peach")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, "qiao__retinue_skill_jiefanwei")
+    lu.assertEquals(action.targets, { ally.id })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(ally.hp, 2)
+    lu.assertEquals(room:getCardArea(a.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(b.id), Card.DiscardPile)
+    lu.assertIs(room:getCardOwner(peach.id), player)
+  end)
+end
+
+function Testqiao_robot_ai:testNuXianzhenyingPaysForLethalEnemySlashButNotAllyDamage()
+  scenario(function(room, player, enemy, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__retinue_skill_xianzhenying", nil, false, true)
+    room:setPlayerProperty(ally, "shield", 0)
+    local gear = give(room, player, "qiao__crossbow")
+    room:damage { from = player, to = ally, damage = 1, card = Fk:cloneCard("qiao__slash") }
+    lu.assertIs(room:getCardOwner(gear.id), player)
+    room:setPlayerProperty(enemy, "hp", 2)
+    room:setPlayerProperty(enemy, "shield", 0)
+    room:damage { from = player, to = enemy, damage = 1, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(room:getCardArea(gear.id), Card.DiscardPile)
+    lu.assertTrue(enemy.hp <= 0 or enemy.dead)
+  end)
+end
+
+function Testqiao_robot_ai:testNuCiUsesLegalDrawBranchWithoutChangingGenerals()
+  scenario(function(room, player)
+    player.serverplayer:setState(fk.Player_Robot)
+    local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
+    Ci.save(room, player, { "qiao_heg__jin076" })
+    local main, deputy = player.general, player.deputyGeneral
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card.skill, Ci.CONSUME)
+    lu.assertEquals(action.interaction_data, { general = "qiao_heg__jin076", action = "draw" })
+    room:handleUseCardReply(player, action)
+    lu.assertEquals(player:getHandcardNum(), 4)
+    lu.assertEquals(player.general, main)
+    lu.assertEquals(player.deputyGeneral, deputy)
+  end)
+end
+
+function Testqiao_robot_ai:testNuSizhenTargetsAnEnemyInTheNativeVirtualSlashRequest()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_wei034_1", nil, false, true)
+    room:setPlayerMark(player, "qiao_sizhen-phase", 1)
+    room:setPlayerProperty(enemy, "hp", 2)
+    room:setPlayerProperty(enemy, "shield", 0)
+    room.logic:trigger(fk.EventPhaseEnd, player, { phase = Player.Play })
+    lu.assertEquals(enemy.hp, 1)
+  end)
+end
+
+function Testqiao_robot_ai:testNuYuexianDeniesAFullHpEnemysExistingJink()
+  scenario(function(room, player, enemy)
+    player.serverplayer:setState(fk.Player_Robot)
+    enemy.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_shu036_1", nil, false, true)
+    room:setPlayerProperty(enemy, "hp", enemy.maxHp)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local jink = give(room, enemy, "qiao__jink")
+    room:useCard { from = player, tos = { enemy }, card = Fk:cloneCard("qiao__slash") }
+    lu.assertEquals(enemy.hp, enemy.maxHp - 1)
+    lu.assertIs(room:getCardOwner(jink.id), enemy)
+  end)
+end
+
+function Testqiao_robot_ai:testNuTijunClearsAnAllyDelayAndReplacesThePhase()
+  scenario(function(room, player, _, ally)
+    player.serverplayer:setState(fk.Player_Robot)
+    room:handleAddLoseSkills(player, "qiao__skill_jin067_1", nil, false, true)
+    local delay = give(room, ally, "qiao__indulgence")
+    room:moveCardTo(delay, Card.PlayerJudge, ally, fk.ReasonPut)
+    local change = { phase = Player.Judge }
+    room.logic:trigger(fk.EventPhaseChanging, player, change)
+    lu.assertEquals(change.phase, Player.Play)
+    lu.assertIs(room:getCardOwner(delay.id), player)
+    lu.assertEquals(room:getCardArea(delay.id), Card.PlayerJudge)
+  end)
+end
+
 return { name = "qiao_robot_ai" }

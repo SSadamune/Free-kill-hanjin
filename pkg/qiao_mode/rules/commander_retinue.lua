@@ -387,6 +387,12 @@ function M.refreshAvailability(room)
     end
     table.sort(descriptions, function(a, b) return a.key < b.key end)
     room:setPlayerMark(player, "qiao_commander_descriptions", #descriptions > 0 and descriptions or 0)
+    local hasAbility = player:hasSkill(M.ABILITY_SKILL, true, true)
+    if #list > 0 and not hasAbility then
+      M.grantAbility(player)
+    elseif #list == 0 and hasAbility then
+      room:handleAddLoseSkills(player, "-" .. M.ABILITY_SKILL, nil, false, true)
+    end
   end
 end
 

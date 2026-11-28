@@ -159,12 +159,12 @@ function Testqiao_quan_han_wei_shu:testHanjinJunlingRules()
     room():setPlayerMark(removed, "@@lure_tiger-turn", 1)
   end)
 
-  -- 军令一：排除执行者本人与移出游戏角色
+  -- 军令一：执行者可以伤害自己，但不能伤害移出游戏的角色。
   local seenTargets
   skill_test.withSkillRequests(room(), "test_cmd1", {
     askToChoosePlayers = function(self, who, params)
       seenTargets = table.map(params.targets, function(pl) return pl.id end)
-      return { bystander }
+      return { to }
     end,
   }, function()
     inRoom(function()
@@ -174,9 +174,10 @@ function Testqiao_quan_han_wei_shu:testHanjinJunlingRules()
     end)
   end)
   lu.assertNotNil(seenTargets)
-  lu.assertFalse(table.contains(seenTargets, to.id), "军令一不得选择执行者本人")
+  lu.assertTrue(table.contains(seenTargets, to.id), "军令一可选择执行者本人")
   lu.assertFalse(table.contains(seenTargets, removed.id), "军令一不得选择移出游戏角色")
-  lu.assertEquals(bystander.hp, bystander.maxHp - 1)
+  lu.assertEquals(to.hp, to.maxHp - 1)
+  lu.assertEquals(bystander.hp, bystander.maxHp)
 
   -- 军令二：摸1交2且以执行者为 proposer 触发法正【恩怨】；对自身跳过交牌
   give(to, "qiao__slash", Card.Spade, 5)

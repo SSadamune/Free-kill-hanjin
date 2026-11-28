@@ -11,7 +11,7 @@ skill:addEffect(fk.EventPhaseStart, {
   end,
   on_cost = function(self, event, target, p)
     local ids = p.room:askToDiscard(p, { min_num = 1, max_num = 1, include_equip = true,
-      cancelable = true, skip = true, skill_name = skill.name })
+      cancelable = true, skip = true, skill_name = skill.name, prompt = "#qiao_xizhen-cost" })
     event:setCostData(self, { cards = ids })
     return #ids == 1
   end,
@@ -25,7 +25,8 @@ skill:addEffect(fk.EventPhaseStart, {
         if to:isNude() or not S.present(p) or room:askToChoice(to, { choices = { "qiao_xizhen_ban", "discard" }, skill_name = skill.name }) == "qiao_xizhen_ban" then
           room:setPlayerMark(to, ban, 1)
         else
-          room:throwCard(room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name }), skill.name, to, p)
+          room:throwCard(room:askToChooseCard(p, { target = to, flag = "he", skill_name = skill.name,
+            prompt = "#qiao_xizhen-card::" .. to.id }), skill.name, to, p)
         end
       end
     end
@@ -35,5 +36,7 @@ skill:addEffect("prohibit", {
   prohibit_use = function(self, p) return p:getMark(ban) > 0 end,
   prohibit_response = function(self, p) return p:getMark(ban) > 0 end,
 })
-Fk:loadTranslationTable { [ban] = "袭阵", qiao_xizhen_ban = "本回合不能使用或打出牌" }
+Fk:loadTranslationTable { [ban] = "袭阵", qiao_xizhen_ban = "本回合不能使用或打出牌",
+  ["#qiao_xizhen-cost"] = "袭阵：你可以弃置一张牌，发动袭阵",
+  ["#qiao_xizhen-card"] = "袭阵：选择并弃置 %dest 的一张牌" }
 return skill

@@ -34,7 +34,8 @@ skill:addEffect(fk.EventPhaseStart, {
     local room = p.room
     local legal = table.filter(target:getCardIds("e"), function(id) return canTake(target, p, id) end)
     if #legal > 0 and room:askToChoice(p, { choices = { "draw1", "qiao_qieting_equip" }, skill_name = skill.name }) == "qiao_qieting_equip" then
-      local id = room:askToChooseCard(p, { target = target, flag = { card_data = {{ "$Equip", legal }} }, skill_name = skill.name })
+    local id = room:askToChooseCard(p, { target = target, flag = { card_data = {{ "$Equip", legal }} }, skill_name = skill.name,
+      prompt = "#qiao_qieting-equip::" .. target.id })
       if table.contains(legal, id) and canTake(target, p, id) then
         room:moveCardTo(id, Card.PlayerEquip, p, fk.ReasonPut, skill.name, nil, true, p)
       end
@@ -43,5 +44,6 @@ skill:addEffect(fk.EventPhaseStart, {
     end
   end,
 })
-Fk:loadTranslationTable { ["qiao_qieting_equip"] = "将其装备移动到你的装备区" }
+Fk:loadTranslationTable { ["qiao_qieting_equip"] = "将其装备移动到你的装备区",
+  ["#qiao_qieting-equip"] = "窃听：选择 %dest 装备区里的一张牌移动到你的装备区" }
 return skill

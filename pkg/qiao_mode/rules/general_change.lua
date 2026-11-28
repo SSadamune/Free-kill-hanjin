@@ -314,6 +314,7 @@ function M.performSkillChangeDeputy(room, target, sourceHolder, skillName, optio
 end
 
 Fk:loadTranslationTable {
+  ["changeDeputy"] = "变更副将",
   ["#qiao_change_general-choose"] = "变更武将：选择一名同势力武将",
   ["qiao_change_general-commander"] = "统领能力",
   ["qiao_change_general-commander-used"] = "此限一统领能力本局已使用。",

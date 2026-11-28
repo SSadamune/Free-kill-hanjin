@@ -3,6 +3,7 @@ local M = {}
 
 M.BAN_DISPLAY = "@qiao_qianbian-phase"
 M.BAN_SUITS = "qiao_jin009_1_ban_suits-phase"
+M.USED_SUITS = "qiao_jin009_1_used_suits-phase"
 M.RULE_SKILL = "qiao__jin_deck_rule"
 M.QIANBIAN = "qiao__skill_jin009_1"
 M.ZHOUTING = "qiao__skill_jin009_2"

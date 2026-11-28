@@ -4,17 +4,21 @@ local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 
 local M = {}
 
 local wusheng = "qiao__skill_shu002_1"
 local longdan = "qiao__skill_shu005_1"
 local wuku = "qiao__skill_jin006_3"
+local xiewei, dianjun = "qiao__skill_qun139_1", "qiao__skill_shu054_1"
+local tieji, gufen = "qiao__skill_wu027_1", "qiao__skill_shu091_2"
 local converters = {
-  slash = { wusheng, longdan, wuku },
+  slash = { wusheng, longdan, wuku, xiewei, dianjun },
   dismantlement = { "qiao__skill_wu002_1" },
   supply_shortage = { "qiao__skill_wei010_1" },
-  jink = { "qiao__skill_wei007_1", longdan, wuku },
+  jink = { "qiao__skill_wei007_1", longdan, wuku, xiewei },
   peach = { longdan, "qiao__skill_qun001_1", wuku },
   nullification = { "qiao__skill_shu011_3", "qiao__retinue_skill_bazhenbing_viewas", wuku },
   iron_chain = { "qiao__skill_shu010_1" },
@@ -23,17 +27,23 @@ local converters = {
   unexpectation = { "qiao__skill_jin006_2", wuku },
 }
 
-local function targetedReply(ai, card, cost)
+local function targetedReply(ai, card, cost, skill)
   local function score(target)
     if card.trueName == "dismantlement" and cost > 2 then
       local payoff = Removal.effectValue(ai, card, target)
       if not payoff or payoff < 5 or payoff <= cost + 0.5 then return end
     end
-    return Cards.scoreTarget(ai, card, target)
+    local value = Cards.scoreTarget(ai, card, target)
+    if value and skill == dianjun then
+      local damage = Damage.cardAmount(card, nil, ai.player)
+      if damage < target.hp + target.shield or target:getHandcardNum() > 2 then return end
+    end
+    return value
   end
   local fixed = card:getFixedTargets(ai.player, ai.handler.extra_data)
   if fixed and (#fixed == 0 or not table.every(fixed, function(target) return score(target) ~= nil end)) then return "" end
   local targetLimit = card.trueName == "slash" and ai.player:getMark("qiao_wu012_tianyi_win-turn") > 0 and 2 or 1
+  if skill == tieji then targetLimit = 2 end
   if card.trueName == "iron_chain" then targetLimit = 2 end
   return Requests.targets(ai, score, targetLimit)
 end
@@ -41,8 +51,9 @@ end
 local function convert(ai, result, budget, useTarget, cuipoIndex)
   local enabled = ai:getEnabledSkills()
   for _, name in ipairs(converters[result]) do
-    if table.contains(enabled, name) then
+    if table.contains(enabled, name) and (name ~= dianjun or ai.player.hp >= 3) then
       ai:selectSkill(name, true)
+      if name == xiewei then ai.handler:updateInteraction(result) end
       local cards = ai:getEnabledCards()
       table.sort(cards, function(a, b)
         local va, vb = Cost.value(ai, a), Cost.value(ai, b)
@@ -55,13 +66,72 @@ local function convert(ai, result, budget, useTarget, cuipoIndex)
         local card = ai.handler:getUsingCard()
         if card and card.trueName == result and (not useTarget or Cards.priority(ai, card))
           and (not cuipoIndex or Cards.matchesCuipo(ai, card, cuipoIndex)) then
-          local reply = useTarget and targetedReply(ai, card, cost) or Requests.reply(ai)
+          local reply = useTarget and targetedReply(ai, card, cost, name) or Requests.reply(ai)
           if reply ~= "" then return reply end
         end
         ai:unSelectAllTargets()
         ai:selectCard(id, false)
       end
       ai:unSelectAll()
+    end
+  end
+end
+
+local function ironSpine(ai, cuipoIndex)
+  if not table.contains(ai:getEnabledSkills(), tieji) then return end
+  ai:selectSkill(tieji, true)
+  if Cost.select(ai, 2, 5) then
+    local card = ai.handler:getUsingCard()
+    if card and (not cuipoIndex or Cards.matchesCuipo(ai, card, cuipoIndex)) then
+      local reply = targetedReply(ai, card, 5, tieji)
+      if reply ~= "" and (#ai:getSelectedTargets() >= 2 or
+        table.find(ai:getSelectedTargets(), function(to)
+          return to.hp + to.shield <= 1 or Cost.effectable(to, "qiao__vine_skill")
+        end)) then return reply end
+    end
+  end
+  ai:unSelectAll()
+end
+
+local function wine(ai, dying)
+  local player = ai.player
+  local useful
+  if not dying then
+    local plan = Slash.plan(ai, { safe = Cards.safeDamage })
+    useful = plan.free + math.min(plan.normal, plan.limit) > 0
+    if not useful then return end
+  end
+  local enabled = ai:getEnabledSkills()
+  if table.contains(enabled, gufen) then
+    ai:selectSkill(gufen, true)
+    if Cost.select(ai, 1, dying and math.huge or 3) then
+      local card = ai.handler:getUsingCard()
+      if card and card.trueName == "analeptic" then
+        local reply = Requests.reply(ai)
+        if reply ~= "" then return reply end
+      end
+    end
+    ai:unSelectAll()
+  end
+  for _, name in ipairs({ "qiao__skill_wu027_2", "qiao__chunyi_other&" }) do
+    if table.contains(enabled, name) then
+      local mark
+      for _, general in ipairs(Ci.cards(player)) do
+        if Fk.generals[general].maxHp <= 3 then mark = general; break end
+      end
+      if dying and not mark then
+        for _, entry in ipairs({ "yinyangfish", "vanguard", "companion" }) do
+          if player:getMark("@!!" .. entry) > 0 then mark = "@!!" .. entry; break end
+        end
+        mark = mark or Ci.cards(player)[1]
+      end
+      if mark then
+        ai:selectSkill(name, true)
+        ai.handler:updateInteraction(mark)
+        local reply = Requests.reply(ai)
+        if reply ~= "" then return reply end
+        ai:unSelectAll()
+      end
     end
   end
 end
@@ -122,6 +192,7 @@ function M.play(ai, stage, cuipoIndex)
   if stage == "disrupt" then return convert(ai, "dismantlement", 7, true, cuipoIndex) end
   if stage == "damage" then
     return convert(ai, "slash", 3, true, cuipoIndex)
+      or ironSpine(ai, cuipoIndex)
       or convert(ai, "duel", 3, true, cuipoIndex)
       or convert(ai, "unexpectation", 3, true, cuipoIndex)
       or convert(ai, "fire_attack", 2, true, cuipoIndex)
@@ -133,8 +204,10 @@ function M.play(ai, stage, cuipoIndex)
 end
 
 function M.slash(ai)
-  return convert(ai, "slash", 3, true)
+  return convert(ai, "slash", 3, true) or ironSpine(ai)
 end
+
+function M.wine(ai) return wine(ai, false) end
 
 local function keshou(ai, name, budget)
   local skill = "qiao__skill_wu019_2"
@@ -180,7 +253,8 @@ function M.rescue(ai, data)
   local target = prompt:startsWith("#AskForPeachesSelf") and ai.player
     or (id and ai.room:getPlayerById(id))
   if not ai:isFriend(target) then return "" end
-  return Cards.respond(ai, data[2]) or convert(ai, "peach", 5, false) or ""
+  return Cards.respond(ai, data[2]) or convert(ai, "peach", 5, false)
+    or (target == ai.player and data[2]:find("analeptic", 1, true) and wine(ai, true)) or ""
 end
 
 return M

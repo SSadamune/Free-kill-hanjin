@@ -22,7 +22,8 @@ skill:addEffect(fk.EventPhaseStart, {
     local firsts = table.filter(damaged, function(to) return #partners(room, damaged, to) > 0 end)
     local first = S.pick(room, p, firsts, skill.name, true)[1]
     if not first then return false end
-    local second = S.pick(room, p, partners(room, damaged, first), skill.name, true)[1]
+    local second = S.pick(room, p, partners(room, damaged, first), skill.name, true, nil,
+      "#qiao_shandi-second::" .. first.id)[1]
     event:setCostData(self, { first = first, second = second })
     return second ~= nil
   end,
@@ -31,4 +32,5 @@ skill:addEffect(fk.EventPhaseStart, {
     S.exchange(p.room, p, S.pairs(p.room, cost.first, cost.second), skill.name)
   end,
 })
+Fk:loadTranslationTable { ["#qiao_shandi-second"] = "芟敌：选择与 %dest 交换武将牌的另一名角色" }
 return skill

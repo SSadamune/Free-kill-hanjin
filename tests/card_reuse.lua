@@ -1851,6 +1851,7 @@ function Testqiao_card_reuse:testAllianceFeastResolvesUserMixedChoicesBeforeOthe
     local answers = { "alliance_feast_recover:::1", "alliance_feast_draw:::1" }
     room.askToChoice = function(self, player, params)
       if params.skill_name == "alliance_feast_skill" then
+        lu.assertEquals(table.contains(params.choices, "alliance_feast_recover:::1"), #seen == 0)
         table.insert(seen, {
           hand2 = #p2:getCardIds("h"),
           hand3 = #p3:getCardIds("h"),

@@ -2,6 +2,7 @@
 -- 使用【杀】指定目标后，可扣置目标至多X张手牌/装备（X为目标势力角色数），
 -- 本回合移出游戏；回合末目标存活则回手，死亡则入弃牌堆。
 local H = require "packages.hegemony.util"
+local Pojun = require "packages.qiao.pkg.qiao_mode.rules.pojun"
 
 local skill = fk.CreateSkill {
   name = "qiao__skill_wu020_2",
@@ -55,11 +56,12 @@ skill:addEffect(fk.TargetSpecified, {
     }
     local removed = table.filter(chosen, function(id) return room:getCardArea(id) == Card.Void end)
     if #removed == 0 then return end
-    local list = room:getTag("qiao_wu020_pojun_pending") or {}
+    local list = room:getTag(Pojun.PENDING) or {}
     table.insert(list, {
       target = to.id, turn = turn and turn.id or 0, ids = removed,
     })
-    room:setTag("qiao_wu020_pojun_pending", list)
+    room:setTag(Pojun.PENDING, list)
+    Pojun.refresh(room, to)
   end,
 })
 

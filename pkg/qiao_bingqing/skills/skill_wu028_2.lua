@@ -11,10 +11,11 @@ skill:addEffect("active", {
     for _, p in ipairs(actors) do
       if S.present(to) and S.present(p) then
         local paid = room:askToDiscard(p, { min_num = 1, max_num = 1, pattern = ".|.|.|.|.|weapon",
-          include_equip = true, cancelable = true, skill_name = skill.name })
+          include_equip = true, cancelable = true, skill_name = skill.name, prompt = "#qiao_chiyuan-discard::" .. to.id })
         if #paid == 0 and S.present(to) then to:drawCards(1, skill.name) end
       end
     end
   end,
 })
+Fk:loadTranslationTable { ["#qiao_chiyuan-discard"] = "驰援：你可以弃置一张武器牌，否则令 %dest 摸一张牌" }
 return skill

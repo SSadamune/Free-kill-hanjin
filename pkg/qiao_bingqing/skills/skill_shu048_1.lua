@@ -17,15 +17,21 @@ skill:addEffect(fk.TurnEnd, {
     if not S.present(to) then return end
     local legal = table.find(to:getCardIds("h"), function(id) return not to:prohibitDiscard(id) end)
     if legal and room:askToChoice(p, { choices = { "draw1", "discard" }, skill_name = skill.name }) == "discard" then
-      room:askToDiscard(to, { min_num = 1, max_num = 1, include_equip = false, skill_name = skill.name, cancelable = false })
+      room:askToDiscard(to, { min_num = 1, max_num = 1, include_equip = false, skill_name = skill.name,
+        cancelable = false, prompt = "#qiao_bingzheng-discard" })
     else
       to:drawCards(1, skill.name)
     end
     if not S.present(to) or not S.present(p) or to:getHandcardNum() ~= to.hp then return end
     p:drawCards(1, skill.name)
     if p ~= to and S.present(p) and S.present(to) and not p:isNude() then
-      S.give(room, p, to, room:askToCards(p, { min_num = 1, max_num = 1, include_equip = true, skill_name = skill.name, cancelable = true }), skill.name)
+      S.give(room, p, to, room:askToCards(p, { min_num = 1, max_num = 1, include_equip = true, skill_name = skill.name,
+        cancelable = true, prompt = "#qiao_bingzheng-give::" .. to.id }), skill.name)
     end
   end,
 })
+Fk:loadTranslationTable {
+  ["#qiao_bingzheng-discard"] = "秉正：弃置一张手牌",
+  ["#qiao_bingzheng-give"] = "秉正：你可以交给 %dest 一张牌",
+}
 return skill

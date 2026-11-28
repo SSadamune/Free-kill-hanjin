@@ -78,30 +78,24 @@ skill:addEffect(fk.AfterDrawNCards, {
 
     local tos = leastHandOthers(player)
     if #tos == 0 then return end
-    local chosen = room:askToChoosePlayers(player, {
+    local count = math.floor(#hand / 2)
+    local chosen, cards = room:askToChooseCardsAndPlayers(player, {
       targets = tos,
       min_num = 1,
       max_num = 1,
+      min_card_num = count,
+      max_card_num = count,
+      pattern = ".|.|.|hand",
       skill_name = "qiao__skill_wu014_1",
-      prompt = "#qiao__skill_wu014_1-target",
+      prompt = "#qiao__skill_wu014_1-give:::" .. count,
       cancelable = false,
     })
     local to = chosen and chosen[1]
-    if to == nil or to.dead or to:isRemoved() then return end
-
-    local count = math.floor(#player:getCardIds(Player.Hand) / 2)
-    if count <= 0 then return end
-    local cards = room:askToCards(player, {
-      min_num = count,
-      max_num = count,
-      include_equip = false,
-      skill_name = "qiao__skill_wu014_1",
-      prompt = "#qiao__skill_wu014_1-cards:::" .. count,
-      cancelable = false,
-    })
+    if to == nil or not table.contains(leastHandOthers(player), to) then return end
+    local currentHand = player:getCardIds(Player.Hand)
     local give = {}
     for _, id in ipairs(cards or {}) do
-      if table.contains(player:getCardIds(Player.Hand), id) and not table.contains(give, id) then
+      if table.contains(currentHand, id) and not table.contains(give, id) then
         table.insert(give, id)
       end
     end

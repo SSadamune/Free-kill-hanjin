@@ -20,9 +20,11 @@ skill:addEffect(fk.EventPhaseChanging, {
     local opt, ids = options(p), {}
     for _, row in ipairs(opt) do table.insertIfNeed(ids, row.id) end
     if not S.invoke(p, skill.name) then return false end
-    local id = p.room:askToChooseCard(p, { target = p, flag = { card_data = {{ skill.name, ids }} }, skill_name = skill.name })
+    local id = p.room:askToChooseCard(p, { target = p, flag = { card_data = {{ skill.name, ids }} }, skill_name = skill.name,
+      prompt = "#qiao_tijun-card" })
     local selected = table.filter(opt, function(row) return row.id == id end)
     local tos = table.map(selected, function(row) return row.to end)
+    event:setCostData(self, { id = id })
     local to = #tos == 1 and tos[1] or S.choose(p, tos, skill.name)[1]
     local row = table.find(selected, function(o) return o.to == to end)
     event:setCostData(self, row or {})
@@ -44,4 +46,5 @@ skill:addEffect(fk.EventPhaseChanging, {
     end
   end,
 })
+Fk:loadTranslationTable { ["#qiao_tijun-card"] = "替军：选择要移动的一张延时锦囊牌或装备牌" }
 return skill

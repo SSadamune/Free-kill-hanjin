@@ -395,6 +395,8 @@ function A.askForSupport(room, use, entry)
   local candidates = table.filter(room:getPresentPlayers(), function(p)
     return p ~= use.from and not table.contains(use.tos or {}, p) and not p:isKongcheng()
   end)
+  local prompt = "#qiao_adaptation_support:" .. use.from.id .. "::" .. use.card:getTypeString()
+  if entry then prompt = prompt .. ":qiao_adaptation_" .. entry.effect end
   while #candidates > 0 do
     local req = Request:new(candidates, "AskForUseActiveSkill", 1)
     req.focus_text = "qiao_condition_zhuzhan"
@@ -403,11 +405,9 @@ function A.askForSupport(room, use, entry)
         num = 1, min_num = 1, include_equip = false, skillName = "#qiao_adaptation_rule",
         pattern = ".|.|.|hand|.|" .. use.card:getTypeString(),
       }
-      -- Keep the live use and the current entry on the server. Human request
-      -- contents and eligibility stay identical.
+      -- Keep the live use on the server. Only the public effect label goes to the client.
       if entry then supportContexts[extraData] = { use = use, entry = entry } end
-      req:setData(p, { "discard_skill", "#qiao_adaptation_support:" .. use.from.id .. "::" .. use.card:getTypeString(),
-        true, extraData })
+      req:setData(p, { "discard_skill", prompt, true, extraData })
     end
     -- Invalid replies are cancellations, not race winners. All requests are still sent together.
     local originalCheck = req._checkReply

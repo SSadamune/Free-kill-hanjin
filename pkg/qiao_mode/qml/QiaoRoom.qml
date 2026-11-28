@@ -28,6 +28,29 @@ Room {
   property int ownHiddenGeneralsRevision: 0
   property int skillStatusRevision: 0
   property int discardCount: 0
+  property bool showSeats: false
+
+  function refreshSeatVisibility() {
+    showSeats = !!Lua.ev("ClientInstance:showSelectionSeats()");
+  }
+
+  readonly property string supportButtonLabel: {
+    const fields = (dataModel.prompt ?? "").split(":");
+    return fields[0] === "#qiao_adaptation_support" && fields[4]
+      ? Lua.tr("qiao_condition_zhuzhan") + "→" + Lua.tr(fields[4]) : "";
+  }
+  Binding {
+    target: room.okButton
+    property: "text"
+    when: room.supportButtonLabel !== ""
+    value: room.supportButtonLabel
+  }
+  Binding {
+    target: room.okButton
+    property: "width"
+    when: room.supportButtonLabel !== ""
+    value: Math.max(136, room.supportButtonLabel.length * 21 + 20)
+  }
 
   TextMetrics {
     id: choiceMetrics
@@ -93,7 +116,64 @@ Room {
   Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
   Component { id: markTooltips; PortraitMarkTooltips {} }
   Component { id: referencePane; SkillReferencePane { generalCardPresentation: roomGeneralAppearance } }
-  Component { id: stateButton; SkillStatusButton {} }
+  Component { id: edictPile; EdictPile { name: "qiao__skill_em_han001_banner" } }
+  Component {
+    id: edictMark
+    Controls.AbstractButton {
+      id: marker
+      objectName: "qiaoEdictButton"
+      required property int holderId
+      readonly property var cards: {
+        room.skillStatusRevision;
+        const value = JSON.parse(Lua.ev(`json.encode(ClientInstance:edictCardsForDisplay(${holderId}))`) ?? "false");
+        return value === false ? null : Array.from(value);
+      }
+      visible: cards !== null
+      implicitWidth: 21
+      implicitHeight: 21
+      padding: 0
+      hoverEnabled: true
+      Accessible.name: Lua.tr("qiao__skill_em_han001_banner")
+      Controls.ToolTip.visible: marker.visible && marker.hovered
+      Controls.ToolTip.text: marker.Accessible.name
+      contentItem: Image {
+        source: SkinBank.getMarkPic("qiao_edict")
+        fillMode: Image.PreserveAspectFit
+      }
+      onClicked: room.showInfoPopup(edictPile, {
+        holderId, ids: Qt.binding(() => marker.cards ?? []),
+      })
+    }
+  }
+  Component {
+    id: statusRow
+    Row {
+      id: row
+      objectName: "qiaoStatusRow"
+      required property Item photo
+      readonly property var states: {
+        room.skillStatusRevision;
+        photo.general;
+        photo.deputyGeneral;
+        if (photo.dead || !photo.playerid) return [];
+        return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
+      }
+      spacing: 4
+      visible: states.length > 0
+      SkillStatusButton {
+        photo: row.photo
+        allStates: row.states
+        states: row.states.filter(state => !state.individual)
+      }
+      Repeater {
+        model: row.states.filter(state => state.individual)
+        delegate: SkillStatusButton {
+          required property var modelData
+          states: [modelData]
+        }
+      }
+    }
+  }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
   Component {
     id: focusedSeat
@@ -124,7 +204,7 @@ Room {
         return photo.progressBar.y + photo.progressBar.height + 2;
       }
       z: 5
-      visible: photo.playerid !== 0 && photo.playerid !== -1 && numeral !== "" && inFocus
+      visible: room.showSeats && photo.playerid !== 0 && photo.playerid !== -1 && numeral !== "" && inFocus
       color: "#fff2ce"
       font.family: Config.libianName
       font.pixelSize: 15
@@ -134,7 +214,7 @@ Room {
       Binding {
         target: seat.normalSeat
         property: "visible"
-        when: seat.normalSeat !== null && seat.visible
+        when: seat.normalSeat !== null && (!room.showSeats || seat.visible)
         value: false
       }
     }
@@ -313,17 +393,9 @@ Room {
       const marks = photo?.picMarkArea;
       if (marks && !marks.children.some(child => child.objectName === "qiaoPortraitMarkTooltips"))
         markTooltips.createObject(marks);
-      if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
-        stateButton.createObject(marks, {
-          photo,
-          states: Qt.binding(() => {
-            room.skillStatusRevision;
-            photo.general;
-            photo.deputyGeneral;
-            if (photo.dead || !photo.playerid) return [];
-            return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
-          }),
-        });
+      if (marks && !marks.children.some(child => child.objectName === "qiaoStatusRow")) {
+        statusRow.createObject(marks, { photo });
+        edictMark.createObject(marks, { holderId: Qt.binding(() => photo.playerid) });
       }
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {
@@ -372,10 +444,12 @@ Room {
   }
 
   Component.onCompleted: {
+    refreshSeatVisibility();
     refreshGeneralCardPresentation();
     roomGeneralAppearance.watch(room);
     addCallback("QiaoMoveCards", (_, data) => CardMoveVisibility.moveCards(dataModel, data, Ltk.Card, Cpp.self.id, tablePile));
     addCallback("QiaoGuestFactionsChanged", refreshGeneralCardPresentation);
+    addCallback("QiaoSelectionFinished", refreshSeatVisibility);
     addCallback("QiaoSkillStatusChanged", () => { ++room.skillStatusRevision; });
     addCallback("QiaoPindianStart", () => {
       pindianDisplay.clear();

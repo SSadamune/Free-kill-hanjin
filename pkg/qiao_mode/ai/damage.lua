@@ -25,6 +25,7 @@ function M.cardAmount(card, use, source)
     amount = amount + source:getMark("qiao_wei005_luoyi-turn")
     if not use and card.trueName == "slash" then amount = amount + (source.drank or 0) end
   end
+  if source and card.is_damage_card then amount = amount + source:getMark("qiao_kangrui_damage-turn") end
   if not use and source and card.is_damage_card and source.room.current == source and source.phase == Player.Play
     and Cost.effectable(source, "qiao__skill_han014_1")
     and Cuipo.useIndex(source, source.room.logic:getCurrentEvent()) == Cuipo.cardNameLength(card) then
@@ -46,6 +47,7 @@ local function modifiedAmount(hits, player, amount, nature, options)
   local hit = hits[player]
   if not hit or hit.damage == 0 then amount = amount + player:getMark("qiao_skill_han006_1_next_damage-turn") end
   if WuProtection.pending(player) > (hit and hit.attempts or 0) then amount = amount - 1 end
+  if player:getHandcardNum() == player.hp and Cost.effectable(player, "qiao__skill_wu032_1") then amount = amount - 1 end
   return math.max(0, amount)
 end
 
