@@ -116,7 +116,64 @@ Room {
   Component { id: ciPile; CiPile { onCanceled: room.closeInfoPopup() } }
   Component { id: markTooltips; PortraitMarkTooltips {} }
   Component { id: referencePane; SkillReferencePane { generalCardPresentation: roomGeneralAppearance } }
-  Component { id: stateButton; SkillStatusButton {} }
+  Component { id: edictPile; EdictPile { name: "qiao__skill_em_han001_banner" } }
+  Component {
+    id: edictMark
+    Controls.AbstractButton {
+      id: marker
+      objectName: "qiaoEdictButton"
+      required property int holderId
+      readonly property var cards: {
+        room.skillStatusRevision;
+        const value = JSON.parse(Lua.ev(`json.encode(ClientInstance:edictCardsForDisplay(${holderId}))`) ?? "false");
+        return value === false ? null : Array.from(value);
+      }
+      visible: cards !== null
+      implicitWidth: 21
+      implicitHeight: 21
+      padding: 0
+      hoverEnabled: true
+      Accessible.name: Lua.tr("qiao__skill_em_han001_banner")
+      Controls.ToolTip.visible: marker.visible && marker.hovered
+      Controls.ToolTip.text: marker.Accessible.name
+      contentItem: Image {
+        source: SkinBank.getMarkPic("qiao_edict")
+        fillMode: Image.PreserveAspectFit
+      }
+      onClicked: room.showInfoPopup(edictPile, {
+        holderId, ids: Qt.binding(() => marker.cards ?? []),
+      })
+    }
+  }
+  Component {
+    id: statusRow
+    Row {
+      id: row
+      objectName: "qiaoStatusRow"
+      required property Item photo
+      readonly property var states: {
+        room.skillStatusRevision;
+        photo.general;
+        photo.deputyGeneral;
+        if (photo.dead || !photo.playerid) return [];
+        return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
+      }
+      spacing: 4
+      visible: states.length > 0
+      SkillStatusButton {
+        photo: row.photo
+        allStates: row.states
+        states: row.states.filter(state => !state.individual)
+      }
+      Repeater {
+        model: row.states.filter(state => state.individual)
+        delegate: SkillStatusButton {
+          required property var modelData
+          states: [modelData]
+        }
+      }
+    }
+  }
   Component { id: privateGeneralModel; Binding { property: "dataModel" } }
   Component {
     id: focusedSeat
@@ -336,17 +393,9 @@ Room {
       const marks = photo?.picMarkArea;
       if (marks && !marks.children.some(child => child.objectName === "qiaoPortraitMarkTooltips"))
         markTooltips.createObject(marks);
-      if (marks && !marks.children.some(child => child.objectName === "qiaoSkillStatus")) {
-        stateButton.createObject(marks, {
-          photo,
-          states: Qt.binding(() => {
-            room.skillStatusRevision;
-            photo.general;
-            photo.deputyGeneral;
-            if (photo.dead || !photo.playerid) return [];
-            return Array.from(JSON.parse(Lua.ev(`json.encode(ClientInstance:skillStates(${photo.playerid}))`) ?? "[]"));
-          }),
-        });
+      if (marks && !marks.children.some(child => child.objectName === "qiaoStatusRow")) {
+        statusRow.createObject(marks, { photo });
+        edictMark.createObject(marks, { holderId: Qt.binding(() => photo.playerid) });
       }
       if (marks && !marks.children.some(child => child.objectName === "qiaoCiButton")) {
         const button = ciMark.createObject(marks, {

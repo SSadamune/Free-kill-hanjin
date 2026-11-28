@@ -274,7 +274,7 @@ end
 
 function QiaoClient:handleSetPlayerMark(data)
   BaseClient.handleSetPlayerMark(self, data)
-  if SkillStatus.watches(data[2]) then
+  if SkillStatus.watches(data[2]) or data[2] == Han.MARK then
     self:notifyUI("QiaoSkillStatusChanged", {})
   end
   if hiddenGeneralMarks[data[2]] and Self and data[1] == Self.id then
@@ -425,6 +425,12 @@ end
 function QiaoClient:ciCardsForDisplay(holderId)
   local holder = self:getPlayerById(holderId)
   return holder and holder:getMark(Ci.MARK) ~= 0 and Ci.cards(holder) or false
+end
+
+function QiaoClient:edictCardsForDisplay(holderId)
+  local holder = self:getPlayerById(holderId)
+  if not holder or holder.dead or holder:getMark(Han.MARK) == 0 then return false end
+  return table.filter(holder:getPile(Han.PILE), function(id) return Self:cardVisible(id) end)
 end
 
 function QiaoClient:handleSetBanner(data)

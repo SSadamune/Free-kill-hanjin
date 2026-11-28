@@ -7,6 +7,19 @@ local skill = fk.CreateSkill {
   name = D.RULE_SKILL,
 }
 
+-- 已使用的牌是公开信息。即使权变尚未明置，也保留本阶段此前的花色。
+skill:addEffect(fk.AfterCardUseDeclared, {
+  global = true,
+  can_refresh = function(self, event, target, player, data)
+    return target == player and player.phase == Player.Play
+      and D.validSuit(data.card.suit) and data:isUsingHandcard(player)
+      and not table.contains(player:getTableMark(D.USED_SUITS), data.card.suit)
+  end,
+  on_refresh = function(self, event, target, player, data)
+    player.room:addTableMarkIfNeed(player, D.USED_SUITS, data.card.suit)
+  end,
+})
+
 skill:addEffect("prohibit", {
   prohibit_use = function(self, player, card)
     if player == nil or card == nil then return false end

@@ -13,8 +13,9 @@
 | 卡牌正面 | `image/card/qiao__slash.png` |
 | 装备图标 | `image/card/equipIcon/qiao__axe.png` |
 | 延时锦囊图标 | `image/card/delayedTrick/qiao__indulgence.png` |
+| 头像标记图标 | `image/mark/qiao_edict.png` |
 
-依据是 `Fk/Base/SkinBank.qml` 的 `getGeneralPicture`、`getCardPicture`、`getEquipIcon` 和 `getDelayedTrickPicture`。这些入口按固定目录与程序 ID 查找文件，不递归搜索分包目录。正式武将使用 `qiao_heg__` 前缀，其中 `heg__` 片段用于命中引擎的国战体力显示；技能、卡牌、标记、包名和模式 ID 均使用 qiao 命名空间（技能、卡牌为 `qiao__`），qiao 命名空间本身不参与该识别，不得混用。
+依据是 `Fk/Base/SkinBank.qml` 的 `getGeneralPicture`、`getCardPicture`、`getEquipIcon`、`getDelayedTrickPicture` 和 `getMarkPic`。这些入口按固定目录与程序 ID 查找文件，不递归搜索分包目录。正式武将使用 `qiao_heg__` 前缀，其中 `heg__` 片段用于命中引擎的国战体力显示；技能、卡牌、标记、包名和模式 ID 均使用 qiao 命名空间（技能、卡牌为 `qiao__`），qiao 命名空间本身不参与该识别，不得混用。
 
 ## 独立武将版本
 

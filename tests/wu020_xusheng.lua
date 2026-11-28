@@ -1,6 +1,7 @@
 -- WU020 徐盛：疑城延迟弃牌、破军移出/回合末回归真实主流程。
 local support = __dofile("../../../tests/support/hegemony.lua")
 local skill_test = __dofile("../../../tests/support/skill_test.lua")
+local Pojun = require "packages.qiao.pkg.qiao_mode.rules.pojun"
 
 local XUSHENG = "qiao_heg__wu020"
 local YICHENG = "qiao__skill_wu020_1"
@@ -183,6 +184,9 @@ local function checkPojunAtTurnEnd(targetDies)
   end)
   lu.assertEquals(room:getCardArea(first), Card.Void)
   lu.assertEquals(room:getCardArea(second), Card.Void)
+  lu.assertEquals(target:getMark(Pojun.COUNT), 2)
+  lu.assertEquals(Pojun.cards(room, target), { first, second })
+  lu.assertEquals(Pojun.cards(room, p(3)), {})
   local assertMoveViews = __dofile("../../../tests/support/move_visibility.lua")
   assertMoveViews(first, Card.PlayerHand, Card.Void, { target })
   local returnedLabel
@@ -203,6 +207,7 @@ local function checkPojunAtTurnEnd(targetDies)
   local viewers = targetDies and room.players or { target }
   assertMoveViews(first, Card.Void, area, viewers)
   assertMoveViews(second, Card.Void, area, viewers)
+  lu.assertEquals(target:getMark(Pojun.COUNT), 0)
 end
 
 function Testqiao_wu020_xusheng:testPojunRemovesCardsAndReturnsAtTurnEnd()
@@ -211,6 +216,48 @@ end
 
 function Testqiao_wu020_xusheng:testPojunDiscardsPubliclyIfTargetDies()
   checkPojunAtTurnEnd(true)
+end
+
+function Testqiao_wu020_xusheng:testPojunReturnedNullificationCanRespondUnlessGufenRestrictsIt()
+  local room, attacker, yang = FkTest.room, p(1), p(2)
+  local ids = {}
+  inRoom(function()
+    skill_test.installDualGenerals(room, yang, {
+      main = "qiao_heg__shu091", deputy = "qiao_test__shu_2", kingdom = "shu",
+    })
+    skill_test.installDualGenerals(room, p(3), {
+      main = "qiao_test__shu_3", deputy = "qiao_test__shu_4", kingdom = "shu",
+    })
+    local weapon = room:printCard("qiao__dragon_phoenix", Card.Spade, 2)
+    room:moveCardTo(weapon, Card.PlayerEquip, attacker, fk.ReasonPut)
+    room.current = attacker
+    attacker.phase = Player.Play
+  end)
+  local slash = give(attacker, "qiao__slash", Card.Spade, 2)
+  local black = give(yang, "qiao__nullification", Card.Spade, 11)
+  local diamond = give(yang, "qiao__guozhan__nullification", Card.Diamond, 12)
+  skill_test.withSkillRequests(room, POJUN, {
+    askToSkillInvoke = function() return true end,
+    askToChooseCards = function() return { black, diamond } end,
+  }, function()
+    inRoom(function()
+      room:useCard { from = attacker, tos = { yang }, card = Fk:getCardById(slash) }
+      ids = Pojun.cards(room, yang)
+      room.logic:trigger(fk.TurnEnd, attacker, TurnData:new(attacker, "game_rule", { Player.Start }))
+    end)
+  end)
+  lu.assertItemsEquals(ids, { black, diamond })
+  lu.assertTrue(table.contains(yang:getCardIds("h"), black))
+  lu.assertTrue(table.contains(yang:getCardIds("h"), diamond))
+  lu.assertTrue(yang:prohibitUse(Fk:getCardById(diamond)))
+  lu.assertFalse(yang:prohibitUse(Fk:getCardById(black)))
+  local result
+  FkTest.setNextReplies(yang, { { card = black } })
+  inRoom(function()
+    result = room:askToNullification({ yang }, { pattern = "nullification", skill_name = "duel_skill" })
+  end)
+  lu.assertNotNil(result)
+  lu.assertEquals(result.card.id, black)
 end
 
 return { name = "qiao_wu020_xusheng" }
