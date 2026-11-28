@@ -2,6 +2,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local WuProtection = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_lord_wu"
+local Zouyu = require "packages.qiao.pkg.qiao_cards.skills.zouyu_fan"
 
 local M = {}
 
@@ -107,6 +108,22 @@ local function spread(hits, chained, origin, amount, nature, options)
   return propagates
 end
 
+local function slashFollowups(source, hits)
+  local kuanggu = Cost.effectable(source, "qiao__skill_shu009_1")
+  local triggers = 0
+  for target, hit in pairs(hits) do
+    if hit.damage > 0 then
+      if Zouyu.hasPendingLoss(target) and hit.damage < target.hp + target.shield then
+        hit.hpLoss = hit.hpLoss + 1
+      end
+      if kuanggu and source:distanceTo(target) <= 1 then triggers = triggers + 1 end
+    end
+  end
+  local recoveries = source:getMark("@@command5_effect-turn") == 0 and math.min(source:getLostHp(), triggers) or 0
+  local draws = not source:isHandAreaSealed() and triggers - recoveries or 0
+  return 3 * recoveries + 2 * draws
+end
+
 -- Forecast only the current damage and its first propagation. Equipment and
 -- active modifiers are public. Optional prevention and rescue are uncertain.
 function M.assess(ai, target, amount, nature, options)
@@ -118,7 +135,9 @@ function M.assess(ai, target, amount, nature, options)
   if not options.alreadyChained and target.chained and Fk:canChain(nature) then
     propagates = spread(hits, chainedPlayers(ai.room), target, direct, nature, options)
   end
+  local followupValue = options.slashFollowups and slashFollowups(options.source, hits) or 0
   local result = summarize(ai, hits, options.partner)
+  result.balance = result.balance + followupValue
   result.direct, result.propagates = direct, propagates
   return result
 end

@@ -509,23 +509,8 @@ play[WeiLord.HUIBIAN] = function(ai)
   end)
 end
 
-local stages = {
-  qiao__skill_shu022_1 = "damage",
-  qiao__skill_jin018_2 = "disrupt",
-  qiao__retinue_skill_feixiongjun = "damage",
-  qiao__skill_wei020_1 = "draw",
-  qiao__skill_wei021b_1 = "disrupt",
-  qiao__skill_wei021b_2 = "last",
-  qiao__skill_shu023_1 = "draw",
-  qiao__skill_qun022a_1 = "draw",
-  qiao__skill_jin020_2 = "last",
-  qiao__skill_wu021_2 = "disrupt",
-  qiao__skill_wu024_2 = "disrupt",
-  [WeiLord.HUIBIAN] = "draw",
-}
-
-function M.play(ai, name, stage)
-  if not play[name] or stages[name] ~= stage then return end
+function M.play(ai, name)
+  if not play[name] then return end
   if name == "qiao__skill_wei020_1" and ai.player:getHandcardNum() ~= 1 then return end
   ai:selectSkill(name, true)
   local result = play[name](ai)

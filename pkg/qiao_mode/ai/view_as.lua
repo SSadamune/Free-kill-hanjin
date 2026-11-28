@@ -5,27 +5,14 @@ local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local SkillEffects = require "packages.qiao.pkg.qiao_mode.ai.skill_effects"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
 local Ci = require "packages.qiao.pkg.qiao_generals.util.jin_ci"
 
 local M = {}
 
-local wusheng = "qiao__skill_shu002_1"
-local longdan = "qiao__skill_shu005_1"
-local wuku = "qiao__skill_jin006_3"
 local xiewei, dianjun = "qiao__skill_qun139_1", "qiao__skill_shu054_1"
 local tieji, gufen = "qiao__skill_wu027_1", "qiao__skill_shu091_2"
-local converters = {
-  slash = { wusheng, longdan, wuku, xiewei, dianjun },
-  dismantlement = { "qiao__skill_wu002_1" },
-  supply_shortage = { "qiao__skill_wei010_1" },
-  jink = { "qiao__skill_wei007_1", longdan, wuku, xiewei },
-  peach = { longdan, "qiao__skill_qun001_1", wuku },
-  nullification = { "qiao__skill_shu011_3", "qiao__retinue_skill_bazhenbing_viewas", wuku },
-  iron_chain = { "qiao__skill_shu010_1" },
-  fire_attack = { "qiao__skill_shu011_2" },
-  duel = { "qiao__qun_cards_state", wuku },
-  unexpectation = { "qiao__skill_jin006_2", wuku },
-}
 
 local function targetedReply(ai, card, cost, skill)
   local function score(target)
@@ -50,7 +37,7 @@ end
 
 local function convert(ai, result, budget, useTarget, cuipoIndex)
   local enabled = ai:getEnabledSkills()
-  for _, name in ipairs(converters[result]) do
+  for _, name in ipairs(SkillEffects.viewAs[result]) do
     if table.contains(enabled, name) and (name ~= dianjun or ai.player.hp >= 3) then
       ai:selectSkill(name, true)
       if name == xiewei then ai.handler:updateInteraction(result) end
@@ -176,7 +163,7 @@ function M.fiveElements(ai)
           local old = table.contains(previous, target) and outcome(original, target)
           if Damage.worth(converted) and (not old or not Damage.worth(old)
             or Damage.value(converted) >= Damage.value(old) + 2) then
-            return ai:hostileScore(target, Damage.value(converted))
+            return ai:hostileScore(target, Damage.value(converted) - SlashDefense.penalty(ai.player, card, target))
           end
         end)
         if reply ~= "" then return reply end

@@ -446,6 +446,104 @@ function Testqiao_robot_ai:testAttackOnlyConfirmedEnemy()
   end)
 end
 
+local function slashArmorTargets(room, player, enemy, armorName)
+  local alternative = player:getLastAlive()
+  for _, target in ipairs(room.players) do
+    if target ~= player then
+      room:setPlayerProperty(target, "kingdom", (target == enemy or target == alternative) and "shu" or "unknown")
+    end
+  end
+  room:setPlayerProperty(enemy, "hp", 1)
+  room:setPlayerProperty(enemy, "shield", 0)
+  room:setPlayerProperty(alternative, "hp", 2)
+  room:throwCard(enemy:getCardIds("h"), "test", enemy, enemy)
+  room:moveCardTo(give(room, enemy, armorName), Card.PlayerEquip, enemy, fk.ReasonPut)
+  player.serverplayer:setState(fk.Player_Robot)
+  return alternative
+end
+
+function Testqiao_robot_ai:testSlashSkipsEffectiveVineUnlessArmorIsIgnored()
+  scenario(function(room, player, enemy)
+    local alternative = slashArmorTargets(room, player, enemy, "qiao__vine")
+    local slash = give(room, player, "qiao__slash")
+    for _, target in ipairs({ enemy, alternative }) do
+      lu.assertTrue(player:canUseTo(slash, target))
+    end
+    lu.assertEquals(Request:new(player, "PlayCard"):getResult(player).targets, { alternative.id })
+    room:setPlayerProperty(alternative, "kingdom", "unknown")
+    lu.assertEquals(Request:new(player, "PlayCard"):getResult(player), "")
+
+    local fire = give(room, player, "qiao__fire__slash")
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card, fire.id)
+    lu.assertEquals(action.targets, { enemy.id })
+    room:throwCard(fire.id, "test", player, player)
+
+    local sword = give(room, player, "qiao__qinggang_sword")
+    room:moveCardTo(sword, Card.PlayerEquip, player, fk.ReasonPut)
+    action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.card, slash.id)
+    lu.assertEquals(action.targets, { enemy.id })
+    room:useCard(room:handleUseCardReply(player, action))
+    lu.assertEquals(enemy.hp, 0)
+  end)
+end
+
+function Testqiao_robot_ai:testSlashAvoidsEightDiagramUnlessAttackerCanRetrialOrForceHit()
+  scenario(function(room, player, enemy)
+    local alternative = slashArmorTargets(room, player, enemy, "qiao__eight_diagram")
+    give(room, player, "qiao__fire__slash")
+    local function target()
+      return Request:new(player, "PlayCard"):getResult(player).targets
+    end
+    lu.assertEquals(target(), { alternative.id })
+    room:setPlayerProperty(alternative, "kingdom", "unknown")
+    lu.assertEquals(target(), { enemy.id })
+    room:setPlayerProperty(alternative, "kingdom", "shu")
+
+    local sword = give(room, player, "qiao__qinggang_sword")
+    room:moveCardTo(sword, Card.PlayerEquip, player, fk.ReasonPut)
+    lu.assertEquals(target(), { enemy.id })
+    room:throwCard(sword.id, "test", player, player)
+
+    local retrial = "qiao__skill_wei002_2"
+    room:handleAddLoseSkills(player, retrial, nil, false, true)
+    lu.assertEquals(target(), { enemy.id })
+    room:handleAddLoseSkills(player, "-" .. retrial .. "|qiao__skill_shu008_1", nil, false, true)
+    local action = Request:new(player, "PlayCard"):getResult(player)
+    lu.assertEquals(action.targets, { enemy.id })
+
+    local red = room:printCard("qiao__slash", Card.Heart, 3)
+    room:moveCardTo(red, Card.DrawPile)
+    room:setPlayerProperty(enemy, "hp", 2)
+    enemy.serverplayer:setState(fk.Player_Robot)
+    room:useCard(room:handleUseCardReply(player, action))
+    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(room:getCardArea(red.id), Card.DrawPile, "烈勇应跳过八卦阵的判定")
+  end)
+end
+
+function Testqiao_robot_ai:testSlashAvoidsZouyuOnlyBeforeItProvidesAResponse()
+  scenario(function(room, player, enemy)
+    local alternative = slashArmorTargets(room, player, enemy, "qiao__zouyu_fan")
+    give(room, player, "qiao__thunder__slash")
+    room:handleAddLoseSkills(player, "qiao__skill_qun010_2", nil, false, true)
+    lu.assertEquals(Request:new(player, "PlayCard"):getResult(player).targets, { alternative.id })
+
+    local sword = give(room, player, "qiao__qinggang_sword")
+    room:moveCardTo(sword, Card.PlayerEquip, player, fk.ReasonPut)
+    lu.assertEquals(Request:new(player, "PlayCard"):getResult(player).targets, { enemy.id })
+    room:throwCard(sword.id, "test", player, player)
+
+    FkTest.setNextReplies(enemy, { "1" })
+    local response = room:askToResponse(enemy, { pattern = "jink", skill_name = "jink", cancelable = true })
+    lu.assertNotNil(response)
+    lu.assertEquals(response.card.skillName, "qiao__zouyu_fan_skill")
+    room:responseCard(response)
+    lu.assertEquals(Request:new(player, "PlayCard"):getResult(player).targets, { enemy.id })
+  end)
+end
+
 function Testqiao_robot_ai:testRemovalDoesNotHitAllyOrUnknown()
   scenario(function(room, player, enemy, ally, unknown)
     for _, target in ipairs(room.players) do
@@ -488,6 +586,93 @@ function Testqiao_robot_ai:testAxePaysOnlyLowCostForFinishingAttack()
     lu.assertItemsEquals(choose(enemy), { cheap.id, otherCheap.id })
     room:throwCard(otherCheap, "test", player, player)
     lu.assertEquals(#choose(enemy), 0)
+  end)
+end
+
+local function equipRobotAxe(room, player)
+  player.serverplayer:setState(fk.Player_Robot)
+  room:moveCardTo(give(room, player, "qiao__axe"), Card.PlayerEquip, player, fk.ReasonPut)
+end
+
+local function jinkAgainstSlash(room, player, target, name)
+  local jink = give(room, target, "qiao__jink")
+  FkTest.setNextReplies(target, { FkTest.ReplyCard(jink) })
+  room:useCard { from = player, tos = { target }, card = give(room, player, name) }
+  lu.assertEquals(room:getCardArea(jink.id), Card.DiscardPile)
+end
+
+function Testqiao_robot_ai:testAxeValuesWineAndFireAgainstVine()
+  scenario(function(room, player, enemy)
+    equipRobotAxe(room, player)
+    room:moveCardTo(give(room, enemy, "qiao__vine"), Card.PlayerEquip, enemy, fk.ReasonPut)
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local first, second = give(room, player, "qiao__duel"), give(room, player, "qiao__duel")
+    room:useCard { from = player, tos = { player }, card = give(room, player, "qiao__analeptic") }
+    jinkAgainstSlash(room, player, enemy, "qiao__fire__slash")
+    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testAxeValuesEstablishedLuoyiAndActualCuipo()
+  scenario(function(room, player, enemy)
+    equipRobotAxe(room, player)
+    room:handleAddLoseSkills(player, "qiao__skill_wei005_1|qiao__skill_han014_1", nil, false, true)
+    room:setPlayerMark(player, "qiao_wei005_luoyi-turn", 1)
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local first, second = give(room, player, "qiao__duel"), give(room, player, "qiao__duel")
+    jinkAgainstSlash(room, player, enemy, "qiao__slash")
+    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testAxeValuesKuangguButRefusesDangerousChain()
+  scenario(function(room, player, enemy, ally)
+    equipRobotAxe(room, player)
+    room:handleAddLoseSkills(player, "qiao__skill_shu009_1", nil, false, true)
+    room:setPlayerProperty(player, "hp", 2)
+    room:setPlayerProperty(enemy, "hp", 4)
+    room:setPlayerProperty(enemy, "shield", 0)
+    room:setPlayerProperty(ally, "hp", 1)
+    room:setPlayerProperty(ally, "shield", 0)
+    local first = give(room, player, "qiao__lightning")
+    local second = give(room, player, "qiao__lure_tiger")
+    room:setPlayerProperty(enemy, "chained", true)
+    room:setPlayerProperty(ally, "chained", true)
+    jinkAgainstSlash(room, player, enemy, "qiao__fire__slash")
+    lu.assertEquals(enemy.hp, 4)
+    lu.assertEquals(ally.hp, 1)
+    lu.assertItemsEquals(player:getCardIds("h"), { first.id, second.id })
+
+    room:setPlayerProperty(ally, "chained", false)
+    jinkAgainstSlash(room, player, enemy, "qiao__slash")
+    lu.assertEquals(enemy.hp, 3)
+    lu.assertEquals(player.hp, 3)
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
+  end)
+end
+
+function Testqiao_robot_ai:testAxeCountsPendingZouyuLossAfterTheFansJink()
+  scenario(function(room, player, enemy)
+    equipRobotAxe(room, player)
+    local fan = give(room, enemy, "qiao__zouyu_fan")
+    room:moveCardTo(fan, Card.PlayerEquip, enemy, fk.ReasonPut)
+    room:setPlayerProperty(enemy, "hp", 3)
+    room:setPlayerProperty(enemy, "shield", 0)
+    local first = give(room, player, "qiao__lightning")
+    local second = give(room, player, "qiao__lure_tiger")
+    FkTest.setNextReplies(enemy, { "1" })
+    room:useCard { from = player, tos = { enemy }, card = give(room, player, "qiao__slash") }
+    lu.assertEquals(enemy.hp, 1)
+    lu.assertEquals(room:getCardArea(fan.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(first.id), Card.DiscardPile)
+    lu.assertEquals(room:getCardArea(second.id), Card.DiscardPile)
   end)
 end
 

@@ -1,4 +1,5 @@
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
@@ -309,6 +310,23 @@ function M.shangshiMaterial(ai, target, id)
     and not ai.player:isProhibited(target, card)
 end
 
+function M.axeBudget(ai, effect)
+  local target, source, card = effect.to, effect.from, effect.card
+  if not ai:isEnemy(target) or SlashDefense.vineBlocks(source, card, target, effect) then return end
+  local amount = Damage.cardAmount(card, effect)
+  local event = ai.room.logic:getCurrentEvent()
+  local use = event and event:findParent(GameEvent.UseCard, true)
+  local lieyong = use and use.data.qiao__skill_shu008_1_damage
+  if lieyong and use.data.card == card and lieyong[target.id] then amount = amount + 1 end
+  local forecast = Damage.assess(ai, target, amount, Damage.cardNature(card, effect), {
+    source = source, card = card, slashFollowups = true,
+    ignoreTargetArmor = SlashDefense.ignoresArmor(source, card, effect),
+  })
+  if not Damage.worth(forecast) then return end
+  local budget = forecast.balance - 3 + (forecast.enemyDying > 0 and 1 or 0)
+  return math.min(8, budget)
+end
+
 function M.slashChoice(ai, fields, use)
   local target = playerAt(ai, fields, 2)
   if fields[1] == "#qiao__skill_shu008_1-choice" then
@@ -317,7 +335,8 @@ function M.slashChoice(ai, fields, use)
     local nature = Damage.cardNature(use.card, use)
     local amount = Damage.cardAmount(use.card, use, ai.player)
     local boosted = Damage.assess(ai, target, amount + 1, nature, { source = ai.player, card = use.card })
-    if target:isKongcheng() and Damage.worth(boosted) then return "#qiao__skill_shu008_1-damage" end
+    if target:isKongcheng() and not SlashDefense.jinkArmor(ai.player, use.card, target, use)
+      and Damage.worth(boosted) then return "#qiao__skill_shu008_1-damage" end
     return noResponse
   end
   local nullify = "#qiao__skill_shu013_1-nullify"
@@ -442,7 +461,8 @@ function M.choice(ai, choices, fields)
     end
   elseif key == "#qiao__skill_shu009_1-choice" then
     local recovery = "#qiao__skill_shu009_1-recover"
-    return table.contains(choices, recovery) and recovery or "#qiao__skill_shu009_1-draw"
+    if table.contains(choices, recovery) and player:getMark("@@command5_effect-turn") == 0 then return recovery end
+    return "#qiao__skill_shu009_1-draw"
   elseif key == "#qiao__skill_shu016_1-choice" then
     local target = playerAt(ai, fields, 2)
     if target and target.hp <= 2 and target:isWounded() then return "#qiao__skill_shu016_1-recover" end

@@ -475,13 +475,8 @@ function play.qiao__skill_em_jin001_consume(ai, stage)
   return ""
 end
 
-local stages = {
-  [youque] = "last", [gongqi] = "attack_prep", [chiyuan] = "draw", [shanji] = "disrupt",
-  [jiefanwei] = "support",
-}
-
 function M.play(ai, name, stage)
-  if stages[name] ~= stage and (name ~= Ci.CONSUME or (stage ~= "last" and stage ~= "draw")) then return end
+  if not play[name] then return end
   ai:selectSkill(name, true)
   local reply = play[name](ai, stage)
   if reply ~= "" then return reply end

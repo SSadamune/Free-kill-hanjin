@@ -1,15 +1,10 @@
 local Adaptation = require "packages.qiao.pkg.qiao_mode.rules.adaptation"
 local Personality = require "packages.qiao.pkg.qiao_mode.ai.personality"
 local Slash = require "packages.qiao.pkg.qiao_mode.ai.slash_supply"
+local SkillEffects = require "packages.qiao.pkg.qiao_mode.ai.skill_effects"
 local Heg = require "packages.hegemony.util"
 
 local M = {}
-
-local pindianSkills = {
-  "qiao__skill_han008_1", "qiao__skill_han010_1", "qiao__skill_han013_1", "qiao__skill_han017_1",
-  "qiao__skill_han017_2", "qiao__skill_jin008_2", "qiao__skill_qun015_1", "qiao__skill_shu015_2",
-  "qiao__skill_wei013_1", "qiao__skill_wu010_2", "qiao__skill_wu012_1", "qiao__skill_wu012_2",
-}
 
 local adaptationPoints = {
   draw = 2, damage = 2, execute_both = 2, thunder_damage = 2,
@@ -97,7 +92,7 @@ function M.value(ai, id)
     and M.effectable(player, "qiao__skill_shu007_1") then
     result = result + 1.5
   end
-  if card.number >= 9 and table.find(pindianSkills, function(skill) return M.effectable(player, skill) end) then
+  if card.number >= 9 and table.find(SkillEffects.pindian, function(skill) return M.effectable(player, skill) end) then
     result = result + 0.25 * (card.number - 8)
   end
   if owner == player and area == Card.PlayerHand then result = result + adaptationBonus(ai, card) end

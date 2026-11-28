@@ -12,6 +12,7 @@ local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
 local Triggers = require "packages.qiao.pkg.qiao_mode.ai.trigger_policies"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Play = require "packages.qiao.pkg.qiao_mode.ai.play_policies"
+local SkillEffects = require "packages.qiao.pkg.qiao_mode.ai.skill_effects"
 local Judgment = require "packages.qiao.pkg.qiao_mode.ai.judgment"
 local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local WuPhases = require "packages.qiao.pkg.qiao_generals.util.wu_phases"
@@ -408,11 +409,10 @@ function M.active(ai, data)
       end
     elseif key == "#axe-invoke" then
       local target = M.promptTarget(ai, fields, 3)
-      local effect = parentData(ai, GameEvent.CardEffect)
-      local damage = 1 + (effect and effect.additionalDamage or 0)
-      if not ai:isEnemy(target) or (effect and not Cards.safeDamage(ai, effect.card, target, effect))
-        or (target.hp > damage and damage < 2) then return "" end
-      budget = 4
+      local effect = Damage.effect(ai, target)
+        or { from = ai.player, to = target, card = Fk:cloneCard("qiao__slash") }
+      budget = Triggers.axeBudget(ai, effect)
+      if not budget then return "" end
     elseif key == "#qiao__skill_han012_1-recast" or key == "#qiao__taigong_tactics-recast" then
       budget = 2
     elseif key == "#qiao__retinue_skill_jinfanjun-discard" then
@@ -500,9 +500,11 @@ function M.play(ai, stage)
   local buttons = ai:getEnabledSkills()
   table.sort(buttons)
   for _, name in ipairs(buttons) do
-    local reply = Play.play(ai, name, stage) or Expansion.play(ai, name, stage)
-      or ShiVector.play(ai, name, stage) or Nu.play(ai, name, stage)
-    if reply then return reply end
+    if SkillEffects.playsAt(name, stage) then
+      local reply = Play.play(ai, name, stage) or Expansion.play(ai, name)
+        or ShiVector.play(ai, name) or Nu.play(ai, name, stage)
+      if reply then return reply end
+    end
   end
 end
 

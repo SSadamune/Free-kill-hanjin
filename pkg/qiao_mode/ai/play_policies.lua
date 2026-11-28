@@ -375,38 +375,9 @@ function M.yinghun(ai)
   end)
 end
 
-local stages = {
-  qiao__skill_han007_1 = "draw", -- 敏思
-  qiao__skill_wu001_1 = "draw", -- 制衡
-  qiao__luminous_pearl_skill = "draw",
-  qiao__skill_qun001_2 = "disrupt", -- 除疠
-  qiao__skill_wu006_1 = { disrupt = true, delayed = true }, -- 国色
-  qiao__skill_wu004_1 = "draw", -- 苦肉与诈降
-  qiao__skill_qun013_2 = "draw", -- 雄异
-  qiao__retinue_skill_lujiang_shangjia = { draw = true, attack_prep = true },
-  qiao__skill_wu008_1 = "support", -- 结姻
-  qiao__skill_wu015a_1 = "support", -- 直谏
-  qiao__skill_jin013_2 = "disrupt", -- 克清
-  qiao__skill_qun018_1 = "disrupt", -- 祸水
-  qiao__skill_wu012_1 = "attack_prep", -- 天义
-  qiao__skill_wei012_1 = "damage", -- 强袭
-  qiao__skill_qun007_2 = "damage", -- 乱武
-  qiao__retinue_skill_qingzhou_jingrui = "damage",
-  qiao__skill_shu001_1 = "support", -- 仁德
-  qiao__skill_shu012_1 = "disrupt", -- 挑衅
-  qiao__skill_qun003_1 = "damage", -- 离间
-  qiao__skill_jin006_1 = "draw", -- 三陈
-  qiao__skill_jin016_2 = "last", -- 风物
-  qiao__skill_shu010_1_recast = "recast",
-  qiao__skill_jin011_1 = "disrupt", -- 果毅
-  qiao__skill_em_qun010_3 = "setup", -- 问道
-  qiao__skill_qun021_1 = "disrupt", -- 庸肆
-}
-
 function M.play(ai, name, stage)
   local action = play[name]
-  local assigned = stages[name]
-  if not action or (assigned ~= stage and (type(assigned) ~= "table" or not assigned[stage])) then return end
+  if not action then return end
   ai:selectSkill(name, true)
   local reply = action(ai, stage)
   if reply and reply ~= "" then return reply end

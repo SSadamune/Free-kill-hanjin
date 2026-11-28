@@ -2,6 +2,7 @@ local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Cuipo = require "packages.qiao.pkg.qiao_generals.util.cuipo"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
+local SlashDefense = require "packages.qiao.pkg.qiao_mode.ai.slash_defense"
 
 local M = {}
 
@@ -18,11 +19,12 @@ local selfBenefit = { qiao__foresight = 100, qiao__strengthen_state = 100, qiao_
 
 function M.safeDamage(ai, card, target, use, source)
   if not ai:isEnemy(target) then return false end
+  source = source or (use and use.from) or ai.player
+  if SlashDefense.vineBlocks(source, card, target, use) then return false end
   local nature = Damage.cardNature(card, use)
   if not target.chained or not Fk:canChain(nature) then return true end
-  source = source or ai.player
   local amount = Damage.cardAmount(card, use, source)
-  local ignoreTargetArmor = not use and card.trueName == "slash" and Cost.effectable(source, "#qinggang_sword_skill")
+  local ignoreTargetArmor = SlashDefense.ignoresArmor(source, card, use)
   return Damage.worth(Damage.assess(ai, target, amount, nature,
     { ignoreTargetArmor = ignoreTargetArmor, source = source, card = card }))
 end
@@ -35,7 +37,10 @@ end
 function M.scoreTarget(ai, card, target, use)
   local name = card.name
   if damage[name] or enemyGroup[name] then
-    if M.safeDamage(ai, card, target, use) then return ai:hostileScore(target, 20 - target.hp) end
+    if M.safeDamage(ai, card, target, use) then
+      local source = (use and use.from) or ai.player
+      return ai:hostileScore(target, 20 - target.hp - SlashDefense.penalty(source, card, target, use))
+    end
   elseif Removal.isCard(card) then
     local value = Removal.effectValue(ai, card, target)
     if value then return ai:isEnemy(target) and ai:hostileScore(target, value) or value end
