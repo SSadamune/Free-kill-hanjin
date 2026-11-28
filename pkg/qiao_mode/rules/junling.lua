@@ -2,7 +2,7 @@
 --
 -- 只在汉晋房间（Modes.inRoom）生效，保留上游 H.askToCommand 的事件与询问入口，
 -- 使既有测试与军令触发器无缝兼容，同时统一修复锁定国战军令与汉晋规则的差异：
---   * 军令一：伤害目标排除军令执行者本人及已移出游戏的角色；
+--   * 军令一：伤害目标为任意在场角色，包括执行者本人；
 --   * 军令二：先摸 1 牌，再交给发起者 2 张牌（不足全交，不能交给自己），
 --     以执行者为 proposer 触发【恩怨】等“交给”时机；
 --   * 军令五：按汉晋定向叠置（已叠置不反向平置），并禁止本回合回复体力；
@@ -33,9 +33,7 @@ local hanjinCommands = {
   command1 = {
     on_prepare = function(from, data)
       local room = from.room
-      local targets = table.filter(room:getPresentPlayers(), function(p)
-        return not table.contains(data.tos or {}, p)
-      end)
+      local targets = room:getPresentPlayers()
       if #targets == 0 then
         data.command_data = { tos = {} }
         return

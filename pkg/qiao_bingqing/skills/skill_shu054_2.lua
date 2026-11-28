@@ -9,7 +9,11 @@ skill:addEffect(fk.HpChanged, {
   on_refresh = function(self, event, target, p) p.room:setPlayerMark(p, mark, event.id) end,
   can_trigger = function(self, event, target, p) return target and target:getMark(mark) == event.id and S.present(target) and p:hasSkill(skill.name) end,
   on_cost = function(self, event, target, p)
-    local choice = p.room:askToChoice(p, { choices = { "recover", "qiao_kangrui_damage", "Cancel" }, skill_name = skill.name })
+    local all = { "recover", "qiao_kangrui_damage", "Cancel" }
+    local choice = p.room:askToChoice(p, {
+      choices = target:isWounded() and all or { "qiao_kangrui_damage", "Cancel" },
+      all_choices = all, skill_name = skill.name,
+    })
     event:setCostData(self, { choice = choice })
     return choice ~= "Cancel"
   end,

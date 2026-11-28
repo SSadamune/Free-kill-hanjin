@@ -20,20 +20,20 @@ local ELIGIBLE = "qiao__skill_shu009_1_eligible"
 local OPT_DRAW = "#qiao__skill_shu009_1-draw"
 local OPT_RECOVER = "#qiao__skill_shu009_1-recover"
 
--- 伤害前快照距离：濒死/死亡会改变结算后的座次距离，按造成伤害时的实际距离
--- 记录本次是否满足，DamageFinished 不再以死者或结算后距离排除。
-skill:addEffect(fk.DamageCaused, {
+-- 扣减体力前记录最终伤害目标的距离。濒死和死亡会改变之后的座次距离。
+skill:addEffect(fk.BeforeHpChanged, {
   global = true,
   can_refresh = function(self, event, target, player, data)
-    return player:hasSkill(skill.name) and data.from == player and data.to ~= nil
-      and player:distanceTo(data.to) <= 1
+    local damage = data.damageEvent
+    return data.reason == "damage" and damage and damage.from == player
+      and player:hasSkill(skill.name) and player:distanceTo(data.who) <= 1
   end,
   on_refresh = function(self, event, target, player, data)
-    data[ELIGIBLE] = true
+    data.damageEvent[ELIGIBLE] = true
   end,
 })
 
-skill:addEffect(fk.DamageFinished, {
+skill:addEffect(fk.Damage, {
   anim_type = "drawcard",
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) or data.from ~= player or data.to == nil then return false end

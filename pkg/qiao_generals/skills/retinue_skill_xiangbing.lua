@@ -43,7 +43,7 @@ skill:addEffect(fk.CardUseFinished, {
 })
 
 -- 受到火焰伤害后，按座次取相邻合法角色，一次多目标视为杀，不因攻击范围丢目标。
-skill:addEffect(fk.DamageFinished, {
+skill:addEffect(fk.Damaged, {
   on_trigger = triggerEach,
   can_trigger = function(self, event, target, player, data)
     return data.to == player and data.damageType == fk.FireDamage and player:hasSkill(skill.name)

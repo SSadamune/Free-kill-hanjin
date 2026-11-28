@@ -381,6 +381,30 @@ function Testqiao_shu_effects:testShenzhiDiscardsAllAndComparesWithHp()
 end
 
 
+function Testqiao_shu_effects:testKuangguDoesNotTriggerWhenIceDamageIsPrevented()
+  local from, victim = p(1), p(2)
+  grant(from, KUANGGU)
+  give(victim, "qiao__peach", Card.Heart, 3)
+  local hp = victim.hp
+  local invoked = 0
+  skill_test.withSkillRequests(room(), KUANGGU, {
+    askToChoice = function()
+      invoked = invoked + 1
+      return "#qiao__skill_shu009_1-draw"
+    end,
+  }, function()
+    skill_test.withSkillRequests(room(), "qiao_ice_damage_skill", {
+      askToSkillInvoke = function() return true end,
+    }, function()
+      inRoom(function()
+        room():useCard { from = from, tos = { victim }, card = Fk:cloneCard("qiao__ice__slash") }
+      end)
+    end)
+  end)
+  lu.assertEquals(victim.hp, hp)
+  lu.assertEquals(invoked, 0)
+end
+
 function Testqiao_shu_effects:testKuangguStillResolvesAfterKillingTarget()
   local from, victim = p(1), p(2)
   for _, player in ipairs(room().players) do clearCards(player) end

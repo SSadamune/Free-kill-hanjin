@@ -10,7 +10,7 @@ Fk:loadTranslationTable {
   ["#qiao__skill_shu015_2-card"] = "烈刃：选择 %src 的一张牌获得",
 }
 
-skill:addEffect(fk.DamageFinished, {
+skill:addEffect(fk.Damage, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) or data.from ~= player or data.card == nil

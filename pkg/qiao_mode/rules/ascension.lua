@@ -609,27 +609,32 @@ function M.get_winner(self, victim)
   local room = victim.room
   local alive = table.filter(room.alive_players, function(player) return not player.surrendered end)
   if #alive == 0 then return "" end
-  if #alive == 1 then return alive end
-  local anchor
-  for _, player in ipairs(alive) do
-    if not isUnknown(player.kingdom) then anchor = player; break end
+  local anchor = table.find(alive, function(player) return not isUnknown(player.kingdom) end)
+  if #alive > 1 then
+    -- 全部暗置时不能把 unknown 当成一个共同势力。
+    if anchor == nil or anchor.kingdom == "wild" then return "" end
+    for _, player in ipairs(alive) do
+      if not same_expected_faction(player, anchor, anchor.kingdom) then return "" end
+    end
   end
-  -- 全部暗置时不能把 unknown 当成一个共同势力。
-  if anchor == nil or anchor.kingdom == "wild" then return "" end
-  local anchorKingdom = anchor.kingdom
-  for _, player in ipairs(alive) do
-    if not same_expected_faction(player, anchor, anchorKingdom) then return "" end
-  end
+  anchor = anchor or alive[1]
+  local kingdom = anchor.kingdom
+  if isUnknown(kingdom) then kingdom = anchor:getMark("__heg_kingdom") end
 
-  for _, player in ipairs(room.players) do
-    if player.general == "anjiang" then
-      room:setPlayerProperty(player, "general", player:getMark("__heg_general"))
-    end
-    if player.deputyGeneral == "anjiang" then
-      room:setPlayerProperty(player, "deputyGeneral", player:getMark("__heg_deputy"))
+  if #alive > 1 then
+    for _, player in ipairs(room.players) do
+      if player.general == "anjiang" then
+        room:setPlayerProperty(player, "general", player:getMark("__heg_general"))
+      end
+      if player.deputyGeneral == "anjiang" then
+        room:setPlayerProperty(player, "deputyGeneral", player:getMark("__heg_deputy"))
+      end
     end
   end
-  return alive
+  if type(kingdom) ~= "string" or isUnknown(kingdom) or kingdom == "wild" then return alive end
+  return table.filter(room.players, function(player)
+    return not player.surrendered and same_expected_faction(player, anchor, kingdom)
+  end)
 end
 
 return M

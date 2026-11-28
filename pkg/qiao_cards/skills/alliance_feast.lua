@@ -65,13 +65,16 @@ skill:addEffect("cardskill", {
     end
     for index = 1, others do
       if from.dead then return end
+      local recover, draw = "alliance_feast_recover:::1", "alliance_feast_draw:::1"
+      local choices = from:isWounded() and { recover, draw } or { draw }
       local choice = room:askToChoice(from, {
-        choices = { "alliance_feast_recover:::1", "alliance_feast_draw:::1" },
+        choices = choices,
+        all_choices = { recover, draw },
         skill_name = "alliance_feast_skill",
         prompt = "#qiao__alliance_feast-choice:::" .. (others - index + 1),
       })
       if choice == nil then return end
-      if choice:startsWith("alliance_feast_recover") then
+      if choice == recover and from:isWounded() then
         room:recover {
           who = from,
           recoverBy = from,

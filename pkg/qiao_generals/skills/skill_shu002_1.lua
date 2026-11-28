@@ -50,11 +50,11 @@ skill:addEffect("targetmod", {
   end,
 })
 
-skill:addEffect(fk.DamageFinished, {
+skill:addEffect(fk.Damage, {
   anim_type = "offensive",
   can_trigger = function(self, event, target, player, data)
     if not player:hasSkill(skill.name) then return false end
-    if data.from ~= player or target ~= data.to then return false end
+    if target ~= player or data.from ~= player then return false end
     if data.to == nil or data.to.dead or data.chain then return false end
     if data.card == nil or data.card.suit ~= Card.Heart then return false end
     if #data.to:getCardIds("e") == 0 then return false end
