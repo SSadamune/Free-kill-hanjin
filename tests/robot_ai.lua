@@ -35,6 +35,87 @@ local function give(room, player, name, number, suit)
   return card
 end
 
+local function hideRobotDeputy(room, player, general, kingdom)
+  skillTest.installDualGenerals(room, player, { main = "qiao_test__" .. kingdom .. "_1", deputy = general, kingdom = kingdom })
+  player:hideGeneral(true)
+  player:hideGeneral(false)
+  room:setPlayerProperty(player, "kingdom", "unknown")
+  player.serverplayer:setState(fk.Player_Robot)
+end
+
+function Testqiao_robot_ai:testHiddenLuXunRevealsToCancelFirstIndulgence()
+  scenario(function(room, source, target)
+    local qianxun = "qiao__skill_wu007_1"
+    hideRobotDeputy(room, target, "qiao_heg__wu007", "wu")
+    lu.assertFalse(target:hasSkill(qianxun))
+    local indulgence = give(room, source, "qiao__indulgence")
+    local legal = indulgence:getAvailableTargets(source)
+    lu.assertTrue(table.contains(legal, target))
+    lu.assertTrue(table.find(legal, function(other) return other ~= target end) ~= nil)
+    room:useCard { from = source, tos = { target }, card = indulgence }
+    lu.assertEquals(target.general, "anjiang")
+    lu.assertEquals(target.deputyGeneral, "qiao_heg__wu007")
+    lu.assertEquals(target:usedSkillTimes(qianxun, Player.HistoryTurn), 1)
+    lu.assertFalse(table.contains(target:getCardIds("j"), indulgence.id))
+  end)
+end
+
+function Testqiao_robot_ai:testHiddenLuXunKeepsBenefitAndDoesNotRevealForSecondTrick()
+  scenario(function(room, source, target)
+    hideRobotDeputy(room, target, "qiao_heg__wu007", "wu")
+    local before = target:getHandcardNum()
+    room:useCard { from = source, tos = { target }, card = Fk:cloneCard("ex_nihilo") }
+    lu.assertEquals(target:getHandcardNum(), before + 2)
+    local indulgence = give(room, source, "qiao__indulgence")
+    room:useCard { from = source, tos = { target }, card = indulgence }
+    lu.assertEquals(target.deputyGeneral, "anjiang")
+    lu.assertEquals(target:usedSkillTimes("qiao__skill_wu007_1", Player.HistoryTurn), 0)
+    lu.assertTrue(table.contains(target:getCardIds("j"), indulgence.id))
+  end)
+end
+
+function Testqiao_robot_ai:testHiddenLuXunCannotRevealWhenProhibited()
+  scenario(function(room, source, target)
+    hideRobotDeputy(room, target, "qiao_heg__wu007", "wu")
+    room:setPlayerMark(target, MarkEnum.RevealProhibited, { "d" })
+    local indulgence = give(room, source, "qiao__indulgence")
+    room:useCard { from = source, tos = { target }, card = indulgence }
+    lu.assertEquals(target.deputyGeneral, "anjiang")
+    lu.assertEquals(target:usedSkillTimes("qiao__skill_wu007_1", Player.HistoryTurn), 0)
+    lu.assertTrue(table.contains(target:getCardIds("j"), indulgence.id))
+  end)
+end
+
+function Testqiao_robot_ai:testHiddenLiuShanRevealsToNullifySlash()
+  scenario(function(room, source, target)
+    hideRobotDeputy(room, target, "qiao_heg__shu013", "shu")
+    local hp = target.hp
+    local slash = give(room, source, "qiao__slash")
+    room:useCard { from = source, tos = { target }, card = slash }
+    lu.assertEquals(target.deputyGeneral, "qiao_heg__shu013")
+    lu.assertEquals(target:usedSkillTimes("qiao__skill_shu013_1", Player.HistoryTurn), 1)
+    lu.assertEquals(target.hp, hp)
+  end)
+end
+
+function Testqiao_robot_ai:testTemporaryLiuliPrelightEndsWhenThereIsNoDiscardCost()
+  scenario(function(room, source, target)
+    local liuli = "qiao__skill_wu006_2"
+    hideRobotDeputy(room, target, "qiao_heg__wu006", "wu")
+    room:throwCard(target:getCardIds("h"), "test", target, target)
+    local changes = {}
+    local prelightSkill = target.prelightSkill
+    function target:prelightSkill(skill, enabled)
+      if skill == liuli or skill == Fk.skills[liuli] then table.insert(changes, enabled) end
+      return prelightSkill(self, skill, enabled)
+    end
+    room:useCard { from = source, tos = { target }, card = give(room, source, "qiao__slash") }
+    lu.assertEquals(changes, { true, false })
+    lu.assertEquals(target.deputyGeneral, "anjiang")
+    lu.assertFalse(target:hasSkill(liuli))
+  end)
+end
+
 local function reply(player, command, data)
   local ai = player.ai
   ai.command, ai.data = command, data

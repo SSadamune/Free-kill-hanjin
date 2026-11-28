@@ -2,6 +2,7 @@ local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
 local Reactions = require "packages.qiao.pkg.qiao_mode.ai.damage_reactions"
+local ReactiveReveal = require "packages.qiao.pkg.qiao_mode.ai.reactive_reveal"
 local Command = require "packages.qiao.pkg.qiao_mode.ai.command"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Expansion = require "packages.qiao.pkg.qiao_mode.ai.expansion"
@@ -117,6 +118,10 @@ function M.invoke(ai, data)
   local skill = type(name) == "string" and Fk.skills[name]
   local skeleton = skill and skill:getSkeleton()
   local original = skeleton and skeleton.name or name
+  if prompt == "" then
+    local reveal = ReactiveReveal.invoke(ai, original, Selection.currentCost(player))
+    if reveal ~= nil then return reveal end
+  end
   local pack = ShiVector.invoke(ai, original, fields)
   if pack == nil then pack = Nu.invoke(ai, original, fields) end
   if pack ~= nil then return pack end

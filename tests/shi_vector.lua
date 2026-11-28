@@ -482,6 +482,9 @@ function T:testSheyanAddsTargetOnlyOnFirstCommonTrick()
   run(function(room, user, dong, extra)
     asGeneral(room, dong, "shu048")
     local queries, before = 0, extra:getHandcardNum()
+    local indulgence = give(room, user, "qiao__indulgence")
+    room:useCard { from = user, tos = { dong }, card = indulgence }
+    lu.assertTrue(table.contains(dong:getCardIds("j"), indulgence.id))
     fixture.withSkillRequests(room, id("shu048_2"), {
       askToChoosePlayers = function(_, _, params)
         queries = queries + 1

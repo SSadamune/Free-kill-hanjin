@@ -334,7 +334,7 @@ function Testqiao_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemains(
     })
   end)
   lu.assertEquals(#p1:getCardIds(Player.Judge), 0)
-  lu.assertEquals(p1:getMark("qiao__skill_wu007_1_used-turn"), 1)
+  lu.assertEquals(p1:usedSkillTimes(QIANXUN, Player.HistoryTurn), 1)
 
   -- 同回合第二次成为锦囊目标：机会已消耗，不再取消。
   local second = give(p2, "qiao__indulgence", Card.Heart)
@@ -349,6 +349,13 @@ function Testqiao_wu_phases:testQianxunCancelsOnlyWhenAnotherLegalTargetRemains(
     })
   end)
   lu.assertEquals(#p1:getCardIds(Player.Judge), 1)
+
+  clearCards(p1, "j")
+  inRoom(function() room():clearHistory(Player.HistoryTurn) end)
+  local nextTurn = give(p2, "qiao__indulgence", Card.Heart)
+  use(p2, Fk:getCardById(nextTurn), { p1 })
+  lu.assertEquals(#p1:getCardIds(Player.Judge), 0)
+  lu.assertEquals(p1:usedSkillTimes(QIANXUN, Player.HistoryTurn), 1)
 end
 
 function Testqiao_wu_phases:testQianxunSilentlyConsumesFirstTrickWithoutAnotherTarget()
@@ -372,7 +379,6 @@ function Testqiao_wu_phases:testQianxunSilentlyConsumesFirstTrickWithoutAnotherT
   local ok, err = pcall(inRoom, function()
     r.current, p1.phase = p1, Player.Play
     r:useCard { from = p1, tos = { p1 }, card = Fk:cloneCard("ex_nihilo") }
-    lu.assertEquals(p1:getMark("qiao__skill_wu007_1_used-turn"), 1)
     lu.assertEquals(p1:usedSkillTimes(name, Player.HistoryTurn), 0)
     r:useCard { from = p2, tos = { p1 }, card = Fk:getCardById(indulgence) }
   end)
@@ -381,6 +387,74 @@ function Testqiao_wu_phases:testQianxunSilentlyConsumesFirstTrickWithoutAnotherT
   lu.assertEquals(notified, 0)
   lu.assertEquals(logged, 0)
   lu.assertEquals(#p1:getCardIds(Player.Judge), 1)
+end
+
+function Testqiao_wu_phases:testQianxunCountsDelayedTrickBeforeImperialOrderRevealsLuXun()
+  local target, source = p(1), p(2)
+  local luXun = "qiao_heg__wu007"
+  clearCards(target)
+  inRoom(function()
+    skill_test.installBlankGenerals(room(), { "wu", "shu", "wei", "qun", "han", "jin", "wei", "qun" })
+    skill_test.installDualGenerals(room(), target, { main = "qiao_test__wu_1", deputy = luXun, kingdom = "wu" })
+    target:hideGeneral(true)
+    target:hideGeneral(false)
+    room():setPlayerProperty(target, "kingdom", "unknown")
+    source.phase = Player.Play
+  end)
+  lu.assertTrue(target:isFakeSkill(QIANXUN))
+  lu.assertFalse(target:hasSkill(QIANXUN))
+  local indulgence = give(source, "qiao__indulgence", Card.Heart)
+  use(source, Fk:getCardById(indulgence), { target })
+  lu.assertEquals(target:getCardIds("j"), { indulgence })
+
+  local order = give(source, "qiao__imperial_order", Card.Club)
+  inRoom(function()
+    skill_test.withSkillRequests(room(), "qiao__imperial_order_skill", {
+      askToChoice = function(_, who, params)
+        lu.assertIs(who, target)
+        if params.prompt == "#qiao__imperial_order-choice" then return "imperial_order_reveal" end
+        local deputy = "revealDeputy:::" .. luXun
+        lu.assertTrue(table.contains(params.choices, deputy))
+        return deputy
+      end,
+    }, function()
+      room():useCard { from = source, tos = { target }, card = Fk:getCardById(order) }
+    end)
+  end)
+  lu.assertEquals(target.deputyGeneral, luXun)
+
+  local surprise = give(source, "qiao__unexpectation", Card.Heart)
+  local card = Fk:getCardById(surprise)
+  inRoom(function()
+    local legal = card:getAvailableTargets(source)
+    lu.assertTrue(table.contains(legal, target))
+    lu.assertTrue(table.find(legal, function(other) return other ~= target end) ~= nil)
+  end)
+  use(source, card, { target })
+  lu.assertEquals(target:usedSkillTimes(QIANXUN, Player.HistoryTurn), 0)
+end
+
+function Testqiao_wu_phases:testQianxunCountsTrickBeforeAcquiringSkill()
+  local target, source = p(1), p(2)
+  whiteboard(target)
+  whiteboard(source)
+  clearCards(target)
+  inRoom(function() source.phase = Player.Play end)
+  lu.assertFalse(target:isFakeSkill(QIANXUN))
+  lu.assertFalse(target:hasSkill(QIANXUN))
+  local first = give(source, "qiao__indulgence", Card.Heart)
+  use(source, Fk:getCardById(first), { target })
+  grant(target, QIANXUN)
+  local second = give(source, "qiao__supply_shortage", Card.Spade)
+  local card = Fk:getCardById(second)
+  inRoom(function()
+    local legal = card:getAvailableTargets(source)
+    lu.assertTrue(table.contains(legal, target))
+    lu.assertTrue(table.find(legal, function(other) return other ~= target end) ~= nil)
+  end)
+  use(source, card, { target })
+  lu.assertEquals(target:usedSkillTimes(QIANXUN, Player.HistoryTurn), 0)
+  lu.assertEquals(target:getCardIds("j"), { first, second })
 end
 
 function Testqiao_wu_phases:testGuoseBothBranchesIndependentLimits()

@@ -24,6 +24,8 @@ local MandatoryCards = require "packages.qiao.pkg.qiao_mode.rules.mandatory_card
 local FaqRules = require "packages.qiao.pkg.qiao_mode.rules.faq_core_rules"
 local SkillPrelight = require "packages.qiao.pkg.qiao_mode.rules.skill_prelight"
 local TriggerSelection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
+local TrickTargets = require "packages.qiao.pkg.qiao_mode.rules.trick_targets"
+local ReactiveReveal = require "packages.qiao.pkg.qiao_mode.ai.reactive_reveal"
 local Junling = require "packages.qiao.pkg.qiao_mode.rules.junling"
 local W = require "ui_emu.preferences"
 local M = {}
@@ -142,7 +144,12 @@ function M.create(base, name)
         -- 初始化中止时可能还没有当前角色，引擎无法从该角色开始遍历触发技。
         if not self.room.current then return false end
       end
-      return parent.trigger(self, event, target, data, refreshOnly)
+      if event == fk.TargetConfirming then TrickTargets.record(target, data) end
+      local prepared = not refreshOnly and ReactiveReveal.prepare(self.room, event, target, data)
+      if not prepared then return parent.trigger(self, event, target, data, refreshOnly) end
+      local interrupted, trigger = parent.trigger(self, event, target, data, refreshOnly)
+      ReactiveReveal.restore(target, prepared)
+      return interrupted, trigger
     end
     if locked then
       function logic:run()
