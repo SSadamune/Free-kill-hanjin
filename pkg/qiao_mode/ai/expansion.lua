@@ -2,6 +2,7 @@ local Board = require "packages.qiao.pkg.qiao_mode.ai.board"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 local Requests = require "packages.qiao.pkg.qiao_mode.ai.requests"
 local Selection = require "packages.qiao.pkg.qiao_mode.rules.trigger_selection"
@@ -34,9 +35,7 @@ local function damageScore(ai, target)
   if Damage.worth(outcome) then return ai:hostileScore(target, outcome.balance) end
 end
 
-local function canHeal(player)
-  return player:isWounded() and player:getMark("@@command5_effect-turn") == 0
-end
+local canHeal = Health.canRecover
 
 local function fudiScore(ai, source)
   if not ai:isEnemy(source) then return end
@@ -114,8 +113,8 @@ end
 local function xuanhuScore(ai, target)
   local hand = target:getHandcardNum()
   if ai:isFriend(target) and not target:isHandAreaSealed() then
-    if canHeal(target) and hand + 1 == target.hp then return 8 - math.min(3, target.hp) end
-    return 2 + 1 / (hand + 1)
+    local recovery = hand + 1 == target.hp and Health.recovery(ai, target, 1) or 0
+    return 3 + recovery + 1 / (hand + 1)
   end
   if ai:isEnemy(target) and (not canHeal(target) or (hand ~= target.hp and hand - 1 ~= target.hp))
     and table.find(target:getCardIds("e"), function(id) return not target:prohibitDiscard(id) end) then
@@ -183,7 +182,8 @@ function M.targetScore(ai, key, fields)
     end
   elseif key == "#qiao__em_wei001_huibian-recover" then
     return function(target)
-      if ai:isFriend(target) and canHeal(target) then return ai:supportScore(target, 6 - target.hp) end
+      local score = Health.recovery(ai, target, 1)
+      if ai:isFriend(target) and score > 0 then return score + 0.25 * math.max(0, 5 - target.hp) end
     end
   elseif key == "#qiao__skill_wu022_1-choose" then
     return function(target) if target == ai.player then return 1 end end
@@ -502,10 +502,14 @@ play[WeiLord.HUIBIAN] = function(ai)
     if not ai:isFriend(first) or first:isHandAreaSealed() or first.shield == 0 then return end
     local outcome = normalDamage(ai, first)
     if outcome.unsafe or outcome.direct > first.shield then return end
-    local second = table.find(ai.room:getPresentPlayers(), function(target)
-      return target ~= first and target.kingdom == "wei" and ai:isFriend(target) and canHeal(target)
-    end)
-    if second then return ai:supportScore(first, 5 + first.shield - first:getHandcardNum() * 0.25) end
+    local recovery = 0
+    for _, target in ipairs(ai.room:getPresentPlayers()) do
+      if target ~= first and target.kingdom == "wei" and ai:isFriend(target) then
+        recovery = math.max(recovery, Health.recovery(ai, target, 1))
+      end
+    end
+    local gain = recovery + 6 + Damage.value(outcome)
+    if recovery > 0 and gain > 0 then return gain - first:getHandcardNum() * 0.25 end
   end)
 end
 

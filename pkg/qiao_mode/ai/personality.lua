@@ -37,9 +37,8 @@ end
 function M.cardBonus(ai, card)
   local profile = ai.personality
   local name = card.trueName
-  if profile == "aggressive" and card.is_damage_card then return 0.5 end
   if profile == "conservative" then
-    if name == "peach" or name == "jink" or name == "nullification" then return 1 end
+    if name == "jink" or name == "nullification" then return 1 end
     if card.sub_type == Card.SubtypeArmor or card.sub_type == Card.SubtypeDefensiveRide then return 0.5 end
   end
   if profile == "supportive" and (name == "god_salvation" or name == "iron_chain"

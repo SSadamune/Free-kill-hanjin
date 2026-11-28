@@ -3,6 +3,7 @@ local ExtraTargets = require "packages.qiao.pkg.qiao_mode.rules.extra_targets"
 local Cards = require "packages.qiao.pkg.qiao_mode.ai.cards"
 local Cost = require "packages.qiao.pkg.qiao_mode.ai.costs"
 local Damage = require "packages.qiao.pkg.qiao_mode.ai.damage"
+local Health = require "packages.qiao.pkg.qiao_mode.ai.health_value"
 local Removal = require "packages.qiao.pkg.qiao_mode.ai.removal"
 
 local M = {}
@@ -12,12 +13,9 @@ local function damageBenefit(ai, use, target, bonus, options)
   local amount = Damage.cardAmount(use.card, use) + bonus
   local projected = Damage.assess(ai, target, amount, nature, options)
   if not Damage.worth(projected) then return end
-
-  local resilience = target.hp + target.shield
-  if bonus > 0 and projected.direct - bonus >= resilience then return 1.25 end
-  if projected.direct >= resilience then return 4.5 end
-  if resilience <= 2 then return 3.25 end
-  return 2.25
+  local before = bonus > 0 and Damage.assess(ai, target, amount - bonus, nature, options)
+  local gain = Damage.value(projected) - (before and before.balance or 0)
+  if gain > 0 then return gain end
 end
 
 local function equipmentBenefit(target, all)
@@ -109,7 +107,7 @@ function M.support(ai, extra)
   local temporary = not ai:isFriend(use.from)
   if temporary and (ai:attitude(use.from) <= 0 or not use.from.ai or not use.from.ai.hostileScore) then return end
   local value = benefit(ai, use, entry, temporary)
-  if not value or (temporary and value < 3.5) then return end
+  if not value or (temporary and value < 1.25 * Health.baseUnit(ai)) then return end
   value = ai:supportScore(use.from, value)
 
   local lowReserve = ai.player.hp <= 1 or ai.player:getHandcardNum() <= 2
