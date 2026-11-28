@@ -144,6 +144,12 @@ local function checkWendao(payment, armorArea)
     me.phase = Player.Play
     me.hp = 3
     room:throwCard(me:getCardIds("he"), "test", me, me)
+    -- A copy dealt in the initial hand would otherwise be the first eligible
+    -- Peace Spell, before the one whose move is under test.
+    local existing = table.filter(room.discard_pile, function(id)
+      return Fk:getCardById(id).name == "qiao__peace_spell"
+    end)
+    if #existing > 0 then room:moveCardTo(existing, Card.Void, nil, fk.ReasonJustMove) end
     local armor = room:printCard("qiao__peace_spell", Card.Heart, 3)
     local cost = payment == "armor" and armor or room:printCard("qiao__jink", Card.Heart, 2)
     room:obtainCard(me, cost, false, fk.ReasonJustMove)

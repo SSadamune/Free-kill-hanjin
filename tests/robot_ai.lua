@@ -718,6 +718,21 @@ function Testqiao_robot_ai:testRemovalDoesNotHitAllyOrUnknown()
   end)
 end
 
+function Testqiao_robot_ai:testFallbackNullificationBuildsAServerReply()
+  scenario(function(room, player, _, ally)
+    local card = give(room, player, "qiao__nullification")
+    local handler = room.request_handlers.AskForUseCard
+    local confirm = handler.doOKButton
+    handler.doOKButton = function() error("Physical robot replies must not notify the client dashboard") end
+    local ok, action = pcall(reply, player, "AskForUseCard", {
+      "nullification", "nullification", "#AskForNullificationWithoutTo:" .. ally.id, true, {}, {},
+    })
+    handler.doOKButton = confirm
+    assert(ok, action)
+    lu.assertEquals(action.card, card.id)
+  end)
+end
+
 function Testqiao_robot_ai:testRobotInvokesBiyueInRoom()
   scenario(function(room, player)
     player.serverplayer:setState(fk.Player_Robot)

@@ -125,6 +125,14 @@ function Robot:handleAskForOptions(data)
   return Skills.choice(self, data)
 end
 
+function Robot:doOKButton()
+  if self.command == "AskForUseCard" and self.data[2] == "nullification" and not self:getSelectedSkill() then
+    local card = self:getSelectedCard()
+    if card and self:okButtonEnabled() then return { card = card.id, targets = {} } end
+  end
+  return SmartAI.doOKButton(self)
+end
+
 function Robot:handleAskForUseCard(data)
   if data[1] == "qiao__retinue_skill_niujin" or data[1] == "qiao__skill_jin016_2"
     or data[1] == "qiao__skill_shu023_1" then return Cards.play(self) end
