@@ -292,7 +292,16 @@ function QiaoClient:sendDataToUI(data)
 end
 
 function QiaoClient:skillStates(playerId)
-  return SkillStatus.forPlayer(self:getPlayerById(playerId))
+  local player = self:getPlayerById(playerId)
+  local states = SkillStatus.forPlayer(player)
+  local edict = self:edictCardsForDisplay(playerId)
+  if edict then
+    table.insert(states, {
+      id = Han.PILE, title = Fk:translate(Han.BANNER), value = Han.pileLabelValue(Han.count(player), edict),
+      action = "edict", cards = edict,
+    })
+  end
+  return states
 end
 
 --- 普通出牌请求中，主动技按钮与确认键共用服务端同一份次数声明检查。
@@ -660,12 +669,17 @@ function QiaoClient:notifyUI(command, data)
     uiCommand = "QiaoMoveCards"
   end
   BaseClient.notifyUI(self, uiCommand, data)
-  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.isJili(data[2]) and isQiaoMode() then
+  if command == "SetPlayerMark" and data[2]:startsWith("@") and not data[2]:startsWith("@!") and isQiaoMode() then
+    -- Existing MarkArea entries can be updated in place without marksChanged.
+    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
+  end
+  if (command == "AddSkill" or command == "LoseSkill") and SkillStatus.watchesSkill(data[2]) and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if command == "ChangeSelf" and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoRefreshPrelightButtons", {})
     BaseClient.notifyUI(self, "QiaoOwnHiddenGeneralsChanged", {})
+    BaseClient.notifyUI(self, "QiaoSkillStatusChanged", {})
   end
   if pileActionUpdates[command] and isQiaoMode() then
     BaseClient.notifyUI(self, "QiaoPileActionChanged", {})

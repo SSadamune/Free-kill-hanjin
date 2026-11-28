@@ -8,7 +8,6 @@ local Formation = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_formati
 local ZhenShiJin = require "packages.qiao.pkg.qiao_generals.util.zhen_shi_jin"
 local M = {}
 Fk:loadTranslationTable {
-  ["qiao_skill_status"] = "状态",
   ["qiao_skill_status_hand_limit"] = "手牌上限",
 }
 
@@ -19,10 +18,13 @@ end
 local fuli = table.map(suits, M.fuliSuitMark)
 
 M.hengjiang = "qiao_hengjiang_limit-turn"
+M.luoyi = "qiao_wei005_luoyi-turn"
+M.luoyiCount = "qiao_wei005_luoyi_activations-turn"
 
 M.jiliCount = "qiao_use_respond_count-turn"
 local jiliSkills = { "qiao__skill_shu020_1", "ld__jilis" }
 function M.isJili(skillName) return table.contains(jiliSkills, skillName) end
+function M.watchesSkill(skillName) return skillName == Deck.QIANBIAN or M.isJili(skillName) end
 
 local entries = {
   { "qiao_wei022_yuejian-turn", "qiao__skill_wei022_2", "本回合手牌上限的初值为体力上限。弃牌阶段结束时，若本阶段未弃置牌，摸一张牌。" },
@@ -30,7 +32,7 @@ local entries = {
   { "@[qiao_luanji_suits]", "qiao__skill_qun004_1", "本回合发动【乱击】时，不能再选择这些花色。", Deck.suitSymbols },
   { M.hengjiang, "qiao__skill_wei023_1", "本回合手牌上限减少所示数值。", function(value) return "−" .. value end },
   { "qiao_jin017_2_cruise", "qiao__skill_jin017_2", "本回合杀死角色的奖惩改为摸三张牌。" },
-  { "qiao_wei005_luoyi-turn", "qiao__skill_wei005_1", "本回合使用【杀】或【决斗】造成的伤害增加所示数值。", function(value) return "+" .. value end },
+  { M.luoyi, "qiao__skill_wei005_1", "本回合使用【杀】或【决斗】造成的伤害+1。" },
   { "qiao_shuangxiong_color", "qiao__qun_cards_state", "本回合可以将所示颜色的牌当【决斗】使用。", function(value)
     if value == "red" then return "黑色" end
     if value == "black" then return "红色" end
@@ -69,7 +71,6 @@ local entries = {
   { "@qiao_zhaoran-phase", "qiao__skill_jin003_1", "本出牌阶段手牌公开，所示花色已结算过失去最后一张手牌的效果。", function(value)
     return value == " " and "" or value
   end },
-  { Deck.BAN_DISPLAY, Deck.QIANBIAN, "本阶段不能使用所示花色的手牌。" },
   { "qiao__skill_wu010_3-cleanup-granted", "qiao__skill_wu010_3", "本回合拥有【英魂】与【英姿】。" },
   { "qiao_mushun_punish-turn", "qiao__retinue_skill_mushun", "本回合下次弃置牌或被其他角色弃置牌后，失去一点体力。" },
   { "qiao__skill_han017_1-locked-turn", "qiao__skill_han017_1", "本回合不能再次发动【戡难】。" },
@@ -79,6 +80,7 @@ local entries = {
 
 local watched = {
   [M.jiliCount] = true,
+  [M.luoyiCount] = true,
   [Deck.BAN_DISPLAY] = true,
   [Deck.BAN_SUITS] = true,
   [Deck.USED_SUITS] = true,
@@ -93,6 +95,7 @@ function M.watches(mark) return watched[mark] == true end
 local function append(states, id, skill, description, value)
   table.insert(states, {
     id = id, title = Fk:translate(skill), description = description, value = value or "",
+    parameterized = value ~= nil,
   })
 end
 
@@ -103,7 +106,15 @@ function M.forPlayer(player)
     local mark, skill, description, format = table.unpack(entry)
     local value = player:getMark(mark)
     if value ~= 0 and (type(value) ~= "table" or next(value)) then
-      append(states, mark, skill, description, format and format(value))
+      if format then
+        append(states, mark, skill, description, format(value))
+      else
+        local count = type(value) == "number" and math.max(1, value) or 1
+        if mark == M.luoyi then
+          count = math.max(count, player:getMark(M.luoyiCount))
+        end
+        for _ = 1, count do append(states, mark, skill, description) end
+      end
     end
   end
 
@@ -118,19 +129,22 @@ function M.forPlayer(player)
 
   local usedSuits = Deck.suitSymbols(player:getTableMark(Deck.USED_SUITS))
   local bannedSuits = Deck.suitSymbols(Deck.bannedSuits(player))
+  local legacySuits = player:getMark(Deck.BAN_DISPLAY)
+  if bannedSuits == "" and type(legacySuits) == "string" then bannedSuits = legacySuits end
   if bannedSuits ~= "" or (usedSuits ~= "" and player:hasShownSkill(Deck.QIANBIAN)) then
-    local description = "此阶段已使用过" .. (usedSuits == "" and bannedSuits or usedSuits) .. "的手牌。"
-    if bannedSuits ~= "" then description = description .. "\n此阶段不能使用" .. bannedSuits .. "的手牌。" end
+    local description = "本阶段已使用的手牌花色：" .. (usedSuits == "" and "无" or usedSuits)
+      .. "\n本阶段禁止使用的手牌花色：" .. (bannedSuits == "" and "无" or bannedSuits)
     append(states, Deck.BAN_DISPLAY, Deck.QIANBIAN, description, usedSuits == "" and bannedSuits or usedSuits)
-    states[#states].individual = true
   end
 
   local pojunCount = player:getMark(Pojun.COUNT)
   if pojunCount > 0 then
     local ownCards = Self == player and not Fk:currentRoom().observing and player:getTableMark(Pojun.CARDS) or {}
     append(states, Pojun.COUNT, "qiao__skill_wu020_2", "本回合移出游戏的牌。", tostring(pojunCount))
-    states[#states].individual = true
-    if #ownCards > 0 then states[#states].cards = ownCards end
+    if #ownCards > 0 then
+      states[#states].cards = ownCards
+      states[#states].action = "pojun"
+    end
   end
 
   for _, name in ipairs(jiliSkills) do
