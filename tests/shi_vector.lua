@@ -368,7 +368,12 @@ function T:testBingzhengResolvesOnlyAtDongyunsTurnEnd()
     local before = dong:getHandcardNum()
     fixture.withSkillRequests(room, id("shu048_1"), {
       askToChoosePlayers = function() return { other } end,
-      askToChoice = function() return "draw1" end,
+      askToChoice = function(_, who, params)
+        lu.assertTrue(who == dong)
+        lu.assertEquals(params.choices, { "draw1", "discard1" })
+        lu.assertEquals(Fk:translate("discard1"), "弃一张牌")
+        return "draw1"
+      end,
       askToCards = function() return {} end,
     }, function()
       room.logic:trigger(fk.TurnEnd, other, { who = other })

@@ -16,7 +16,7 @@ skill:addEffect(fk.TurnEnd, {
     local room, to = p.room, event:getCostData(self).to
     if not S.present(to) then return end
     local legal = table.find(to:getCardIds("h"), function(id) return not to:prohibitDiscard(id) end)
-    if legal and room:askToChoice(p, { choices = { "draw1", "discard" }, skill_name = skill.name }) == "discard" then
+    if legal and room:askToChoice(p, { choices = { "draw1", "discard1" }, skill_name = skill.name }) == "discard1" then
       room:askToDiscard(to, { min_num = 1, max_num = 1, include_equip = false, skill_name = skill.name,
         cancelable = false, prompt = "#qiao_bingzheng-discard" })
     else

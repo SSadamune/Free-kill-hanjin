@@ -307,7 +307,7 @@ function M.choice(ai, name, choices, fields)
   if name == "qiao__skill_shu048_1" then
     local _, effect = Requests.context(ai, name)
     local to = effect and effect.cost_data and effect.cost_data.to
-    return ai:isFriend(to) and "draw1" or "discard"
+    return ai:isFriend(to) and "draw1" or "discard1"
   end
   if name == "qiao__skill_qun033_1" then
     local target = eventTarget(ai, name) or ai.room.current

@@ -252,7 +252,13 @@ function T:testYuexianRejectsOldJinkAndAcceptsDrawnJinkInNextUse()
     local hp = to.hp
     local n = 0
     fixture.withSkillRequests(room, id("shu036_1"), {
-      askToChoice = function() n = n + 1; return n == 1 and "0" or "1" end,
+      askToChoice = function(_, who, params)
+        lu.assertTrue(who == zhang)
+        lu.assertEquals(params.prompt, "#qiao_yuexian-choice::" .. to.id)
+        lu.assertStrContains(Fk:translate("#qiao_yuexian-choice"), "只能用因此摸到的牌响应")
+        n = n + 1
+        return n == 1 and "0" or "1"
+      end,
     }, function()
       FkTest.setNextReplies(to, { { card = old.id } })
       room:useCard { from = zhang, tos = { to }, card = Fk:cloneCard("qiao__slash") }

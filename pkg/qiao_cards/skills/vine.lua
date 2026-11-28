@@ -40,7 +40,9 @@ skill:addEffect(fk.PreCardEffect, {
       and data.card ~= nil and isNullifiedCard(data.card)
   end,
   on_use = function(self, event, target, player, data)
-    player.room:sendLog {
+    local room = player.room
+    room:doAnimate("InvokeSkill", { name = skill.name, player = player.id, skill_type = "defensive" })
+    room:sendLog {
       type = "#qiao_vine_nullifies", from = player.id, arg = data.card.name,
     }
     data.nullified = true
